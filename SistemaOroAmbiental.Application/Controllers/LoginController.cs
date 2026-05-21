@@ -18,17 +18,13 @@ namespace SistemaBronx.Application.Controllers
 
         private readonly ILoginService _loginService;
         private readonly IConfiguration _config;
-        private readonly IUsuariosPermisosService _permisosService;
-
 
         public LoginController(
-      ILoginService loginService,
-      IConfiguration config,
-      IUsuariosPermisosService permisosService)
+            ILoginService loginService,
+            IConfiguration config)
         {
             _loginService = loginService;
             _config = config;
-            _permisosService = permisosService;
         }
 
 
@@ -64,37 +60,6 @@ namespace SistemaBronx.Application.Controllers
                 {
                     var token = GenerarToken(user);
 
-                    // 🔥 NUEVO SISTEMA DINÁMICO
-                    var (modulos, permisosUsuario, catalogo) = await _permisosService.ObtenerFull(user.Id);
-
-                    var permisosFinal = modulos.Select(modulo =>
-                    {
-                        // 🔥 permisos válidos para este módulo (global + específicos)
-                        var permisosDisponibles = catalogo
-                            .Where(p => p.IdModulo == null || p.IdModulo == modulo.Id)
-                            .ToList();
-
-                        var permisosUsuarioModulo = permisosUsuario
-                            .Where(x => x.IdModulo == modulo.Id && x.Activo == true)
-                            .ToList();
-
-                        return new
-                        {
-                            IdModulo = modulo.Id,
-                            Modulo = modulo.Nombre,
-                            CodigoModulo = modulo.Codigo,
-
-                            Permisos = permisosDisponibles.Select(p => new
-                            {
-                                p.Id,
-                                p.Codigo,
-                                p.Nombre,
-                                p.Descripcion,
-                                Activo = permisosUsuarioModulo.Any(x => x.IdPermiso == p.Id)
-                            }).ToList()
-                        };
-                    }).ToList();
-
                     return Ok(new
                     {
                         success = true,
@@ -108,10 +73,7 @@ namespace SistemaBronx.Application.Controllers
                             user.Apellido,
                             user.Direccion,
                             user.Dni,
-                            user.Telefono,
-
-                            // 🔥 AHORA DINÁMICO
-                            Permisos = permisosFinal
+                            user.Telefono
                         }
                     });
                 }

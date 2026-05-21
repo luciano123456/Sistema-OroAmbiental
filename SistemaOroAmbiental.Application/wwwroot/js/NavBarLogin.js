@@ -2,11 +2,59 @@
 let vieneDeModalConfiguraciones = false;
 window.esModoAtajo = false;
 
+function showModalById(modalId) {
+    const el = document.getElementById(modalId);
+    if (!el) return;
+
+    if (window.bootstrap?.Modal) {
+        bootstrap.Modal.getOrCreateInstance(el).show();
+    } else if (window.jQuery) {
+        window.jQuery(el).modal("show");
+    }
+}
+
+function hideModalById(modalId) {
+    const el = document.getElementById(modalId);
+    if (!el) return;
+
+    const inst = window.bootstrap?.Modal?.getInstance(el);
+    if (inst) {
+        inst.hide();
+    } else if (window.jQuery) {
+        window.jQuery(el).modal("hide");
+    }
+}
+
+function hideAllModals() {
+    document.querySelectorAll(".modal.show").forEach(el => {
+        const inst = window.bootstrap?.Modal?.getInstance(el);
+        if (inst) inst.hide();
+        else if (window.jQuery) window.jQuery(el).modal("hide");
+    });
+}
+
+/** Apila modales: el que se abre queda siempre encima (ej. config sobre editar cliente). */
+if (!window._rpModalStackInit) {
+    window._rpModalStackInit = true;
+
+    document.addEventListener("show.bs.modal", (event) => {
+        const modalesAbiertos = document.querySelectorAll(".modal.show").length;
+        const zIndex = 1055 + (10 * modalesAbiertos);
+        event.target.style.zIndex = String(zIndex);
+
+        setTimeout(() => {
+            const backdrops = document.querySelectorAll(".modal-backdrop");
+            const backdrop = backdrops[backdrops.length - 1];
+            if (backdrop) backdrop.style.zIndex = String(zIndex - 1);
+        }, 0);
+    });
+}
+
 document.addEventListener("DOMContentLoaded", function () {
 
     var userSession = JSON.parse(localStorage.getItem('userSession'));
 
-    aplicarPermisosNavbar();
+    mostrarMenuCompleto();
 
     if (userSession) {
 
@@ -65,60 +113,10 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 });
 
-function aplicarPermisosNavbar() {
-
-    try {
-
-        const user = JSON.parse(localStorage.getItem("userSession"));
-        if (!user || !user.Permisos) return;
-
-        const permisos = user.Permisos;
-
-        document.querySelectorAll("[data-modulo]").forEach(el => {
-
-            const modulo = (el.getAttribute("data-modulo") || "").toLowerCase().trim();
-            const permisoCodigo = (el.getAttribute("data-permiso") || "VER").toLowerCase().trim();
-
-            const tienePermiso = permisos.some(p => {
-
-                const nombreModulo = (p.Modulo || "").toLowerCase().trim();
-                const codigoModulo = (p.CodigoModulo || "").toLowerCase().trim();
-
-                if (nombreModulo !== modulo && codigoModulo !== modulo) return false;
-
-                if (!p.Permisos) return false;
-
-                const permiso = p.Permisos.find(x =>
-                    (x.Codigo || "").toLowerCase() === permisoCodigo
-                );
-
-                return !!permiso?.Activo;
-            });
-
-            if (tienePermiso) {
-                el.removeAttribute("hidden");
-            } else {
-                el.setAttribute("hidden", "hidden");
-            }
-
-        });
-
-        // 🔥 ocultar dropdowns vacíos
-        document.querySelectorAll(".nav-item.dropdown").forEach(drop => {
-
-            const hijosVisibles = drop.querySelectorAll("li:not([hidden])");
-
-            if (hijosVisibles.length === 0) {
-                drop.setAttribute("hidden", "hidden");
-            } else {
-                drop.removeAttribute("hidden");
-            }
-
-        });
-
-    } catch (e) {
-        console.error("Error aplicando permisos navbar", e);
-    }
+function mostrarMenuCompleto() {
+    document.querySelectorAll("#navbarSupportedContent .nav-item").forEach(el => {
+        el.removeAttribute("hidden");
+    });
 }
 
 async function listaConfiguracion() {
@@ -165,8 +163,8 @@ async function abrirConfiguracion(
             return;
         }
 
-        $('#ModalEdicionConfiguraciones').modal('hide');
-        $('#modalConfiguracion').modal('show');
+        hideModalById("ModalEdicionConfiguraciones");
+        showModalById("modalConfiguracion");
 
         cancelarModificarConfiguracion();
 
@@ -461,7 +459,7 @@ function guardarCambiosConfiguracion() {
                 // 🔥🔥🔥 CLAVE
                 if (window.esModoAtajo) {
                     setTimeout(() => {
-                        $('#modalConfiguracion').modal('hide');
+                        hideModalById("modalConfiguracion");
                     }, 300);
                 }
 
@@ -509,7 +507,7 @@ function agregarConfiguracion() {
 function abrirConfiguraciones() {
     vieneDeModalConfiguraciones = true;
 
-    $('#ModalEdicionConfiguraciones').modal('show');
+    showModalById("ModalEdicionConfiguraciones");
     $("#btnGuardarConfiguracion").text("Aceptar");
     $("#modalEdicionLabel").text("Configuraciones");
 }
@@ -535,20 +533,19 @@ function volverConfiguraciones() {
 
     if (vieneDeModalConfiguraciones) {
         // volver al modal anterior
-        $('#modalConfiguracion').modal('hide');
-        $('#ModalEdicionConfiguraciones').modal('show');
+        hideModalById("modalConfiguracion");
+        showModalById("ModalEdicionConfiguraciones");
     } else {
-        // 🔥 cerrar TODO
-        $('.modal').modal('hide');
+        hideAllModals();
     }
 }
 
 async function abrirContratosPlantillas() {
     try {
         // cierra el modal general y abre el de plantillas
-        $('#ModalEdicionConfiguraciones').modal('hide');
+        hideModalById("ModalEdicionConfiguraciones");
         await cargarContratosPlantillasUI();
-        $('#modalContratosPlantillas').modal('show');
+        showModalById("modalContratosPlantillas");
     } catch (e) {
         console.error(e);
         errorModal("No se pudieron cargar las plantillas de contratos.");

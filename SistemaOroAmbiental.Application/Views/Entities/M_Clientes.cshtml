@@ -1,0 +1,182 @@
+@* Modal reutilizable de Clientes (Oro Ambiental) *@
+
+<div class="modal fade cliente-modal-root"
+     data-cliente-modal="cliente"
+     tabindex="-1"
+     data-bs-backdrop="static"
+     data-bs-keyboard="false">
+
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+
+        <div class="modal-content">
+
+            <div class="modal-header colorEncabezado">
+
+                <h5 class="modal-title fw-bold" id="modalEdicionLabel">
+                    Nuevo Cliente
+                </h5>
+
+                <button type="button"
+                        class="btn-close"
+                        data-bs-dismiss="modal"></button>
+
+            </div>
+
+            <div class="modal-body">
+
+                <div id="errorCampos"
+                     class="rp-error-panel d-none mb-2">
+
+                    <div class="rp-error-icon">
+                        <i class="fa fa-exclamation-triangle"></i>
+                    </div>
+
+                    <div class="rp-error-content">
+                        <div class="rp-error-title">
+                            No se pudo guardar
+                        </div>
+                        <div class="rp-error-message"></div>
+                    </div>
+
+                    <button type="button"
+                            class="rp-error-close"
+                            onclick="cerrarErrorCampos()">
+                        <i class="fa fa-times"></i>
+                    </button>
+                </div>
+
+                <form class="row g-3">
+
+                    <input type="text" id="txtId" hidden />
+
+                    <div class="col-md-4">
+                        <label class="form-label">Nombre</label>
+                        <input id="txtNombre" class="form-control" required />
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">CUIT</label>
+                        <input id="txtCuit" class="form-control" required />
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">Sucursal</label>
+                        <div class="rp-select-plus">
+                            <select id="cmbSucursal" class="form-control"></select>
+                            <button type="button"
+                                    id="btnAtajoSucursal"
+                                    class="rp-btn-plus"
+                                    title="Agregar sucursal"
+                                    data-config-nombre="Sucursales"
+                                    data-config-controller="Sucursales">
+                                <i class="fa fa-plus"></i>
+                            </button>
+                        </div>
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">Provincia</label>
+                        <div class="rp-select-plus">
+                            <select id="cmbProvincia" class="form-control"></select>
+                            <button type="button"
+                                    id="btnAtajoProvincia"
+                                    class="rp-btn-plus"
+                                    title="Agregar provincia"
+                                    data-config-nombre="Provincias"
+                                    data-config-controller="Provincias">
+                                <i class="fa fa-plus"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">Localidad</label>
+                        <input id="txtLocalidad" class="form-control" />
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">Profesión</label>
+                        <div class="rp-select-plus">
+                            <select id="cmbProfesion" class="form-control"></select>
+                            <button type="button"
+                                    id="btnAtajoProfesion"
+                                    class="rp-btn-plus"
+                                    title="Agregar profesión"
+                                    data-config-nombre="Profesiones de Clientes"
+                                    data-config-controller="ClientesProfesiones">
+                                <i class="fa fa-plus"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">Condición IVA</label>
+                        <div class="rp-select-plus">
+                            <select id="cmbCondicionIva" class="form-control"></select>
+                            <button type="button"
+                                    id="btnAtajoCondicionIva"
+                                    class="rp-btn-plus"
+                                    title="Agregar condición IVA"
+                                    data-config-nombre="Condiciones IVA"
+                                    data-config-controller="CondicionesIva">
+                                <i class="fa fa-plus"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">Teléfono</label>
+                        <input id="txtTelefono" class="form-control" />
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">Teléfono alternativo</label>
+                        <input id="txtTelefonoAlt" class="form-control" />
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">Email</label>
+                        <input id="txtEmail" class="form-control" type="email" />
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">Domicilio</label>
+                        <input id="txtDomicilio" class="form-control" />
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label">Código postal</label>
+                        <input id="txtCodPostal" class="form-control" />
+                    </div>
+
+                </form>
+
+                <div class="rp-auditoria d-none mt-3" id="infoAuditoria">
+                    <div id="infoRegistro"></div>
+                    <div id="infoModificacion"></div>
+                </div>
+
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fa fa-arrow-left"></i>
+                    Volver
+                </button>
+
+                <button id="btnGuardar"
+                        class="btn btn-primary"
+                        onclick="guardarCliente()">
+                    <i class="fa fa-check"></i>
+                    Registrar
+                </button>
+            </div>
+
+        </div>
+
+    </div>
+
+</div>

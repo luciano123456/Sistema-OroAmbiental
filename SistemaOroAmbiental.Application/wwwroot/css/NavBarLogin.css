@@ -97,17 +97,17 @@
 
 .btnModificarConfiguracion-container {
     display: flex;
-    justify-content: center; /* Centra el botÛn horizontalmente */
-    align-items: center; /* Centra el botÛn verticalmente (si es necesario) */
-    width: 100%; /* Aseg˙rate de que el contenedor tome el ancho completo del modal */
+    justify-content: center; /* Centra el botùn horizontalmente */
+    align-items: center; /* Centra el botùn verticalmente (si es necesario) */
+    width: 100%; /* Asegùrate de que el contenedor tome el ancho completo del modal */
     margin-bottom: 10px;
 }
 
 .btnAgregarConfiguracion-container {
     display: flex;
-    justify-content: right; /* Centra el botÛn horizontalmente */
-    align-items: center; /* Centra el botÛn verticalmente (si es necesario) */
-    width: 100%; /* Aseg˙rate de que el contenedor tome el ancho completo del modal */
+    justify-content: right; /* Centra el botùn horizontalmente */
+    align-items: center; /* Centra el botùn verticalmente (si es necesario) */
+    width: 100%; /* Asegùrate de que el contenedor tome el ancho completo del modal */
     margin-bottom: 10px;
     margin-top: 30px;
 }
@@ -214,10 +214,52 @@
    GRID CONFIGURACIONES
 ============================= */
 
+#ModalEdicionConfiguraciones .modal-config-panel {
+    max-width: 1180px;
+    width: 94vw;
+}
+
+#ModalEdicionConfiguraciones .modal-header {
+    padding: 12px 18px;
+}
+
+#ModalEdicionConfiguraciones .modal-body {
+    padding: 14px 18px 16px;
+}
+
+#ModalEdicionConfiguraciones .modal-footer {
+    padding: 10px 18px;
+}
+
+#ModalEdicionConfiguraciones .rp-modal-title {
+    font-size: 15px;
+}
+
+#ModalEdicionConfiguraciones .rp-modal-subtitle {
+    font-size: 11px;
+}
+
 .rp-config-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
     gap: 20px;
+}
+
+#ModalEdicionConfiguraciones .rp-config-grid {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 10px;
+}
+
+@media (min-width: 992px) {
+    #ModalEdicionConfiguraciones .rp-config-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+@media (min-width: 1400px) {
+    #ModalEdicionConfiguraciones .rp-config-grid {
+        grid-template-columns: repeat(5, 1fr);
+    }
 }
 
 .rp-config-card {
@@ -230,6 +272,13 @@
     gap: 14px;
     cursor: pointer;
     transition: all .25s ease;
+    text-align: left;
+}
+
+#ModalEdicionConfiguraciones .rp-config-card {
+    padding: 10px 12px;
+    gap: 10px;
+    border-radius: 12px;
 }
 
     .rp-config-card:hover {
@@ -237,6 +286,11 @@
         background: rgba(255,255,255,0.12);
         box-shadow: 0 18px 45px rgba(0,0,0,.5);
     }
+
+#ModalEdicionConfiguraciones .rp-config-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0,0,0,.35);
+}
 
 .rp-config-icon {
     width: 52px;
@@ -246,8 +300,16 @@
     align-items: center;
     justify-content: center;
     font-size: 22px;
+    flex-shrink: 0;
     background: linear-gradient(135deg, #fde047, #facc15);
     color: #111;
+}
+
+#ModalEdicionConfiguraciones .rp-config-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 9px;
+    font-size: 14px;
 }
 
     .rp-config-icon.blue {
@@ -270,9 +332,20 @@
     font-size: 16px;
 }
 
+#ModalEdicionConfiguraciones .rp-config-title {
+    font-size: 13px;
+    line-height: 1.25;
+}
+
 .rp-config-sub {
     font-size: 12px;
     color: rgba(255,255,255,0.7);
+}
+
+#ModalEdicionConfiguraciones .rp-config-sub {
+    font-size: 11px;
+    line-height: 1.3;
+    margin-top: 1px;
 }
 
 /* =============================
@@ -417,15 +490,21 @@
 
     .rp-config-card .rp-config-title {
         color: #ffffff !important;
-        font-size: 18px;
         font-weight: 700;
-        letter-spacing: .3px;
+        letter-spacing: .2px;
     }
 
     .rp-config-card .rp-config-sub {
         color: rgba(255,255,255,0.75);
-        font-size: 13px;
     }
+
+#ModalEdicionConfiguraciones .rp-config-card .rp-config-title {
+    font-size: 13px !important;
+}
+
+#ModalEdicionConfiguraciones .rp-config-card .rp-config-sub {
+    font-size: 11px !important;
+}
 
 
 
@@ -440,7 +519,7 @@
 
 
 
-/* Si us·s clase personalizada */
+/* Si usùs clase personalizada */
 .rp-input select,
 .rp-input option {
     color: #000 !important;

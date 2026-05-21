@@ -1,48 +1,29 @@
 ﻿let gridClientes;
 let clienteModal;
 
-/**
- * Columnas:
- * 0 Acciones
- * 1 Nombre (TEXT)
- * 2 Productora (SELECT2 remoto)
- * 3 País (SELECT2 remoto)
- * 4 Dni (TEXT)
- * 5 Provincia (SELECT local)
- * 6 Tipo Doc (SELECT2 remoto)
- * 7 Nro Doc (TEXT)
- * 8 Condición IVA (SELECT2 remoto)
- * 9 Teléfono (TEXT)
- * 10 Email (TEXT)
- */
 const columnConfig = [
     { index: 1, filterType: 'text' },
-    { index: 2, filterType: 'select', fetchDataFunc: listaProductorasFilter },
-    { index: 3, filterType: 'select', fetchDataFunc: listaPaisesFilter },
-    { index: 4, filterType: 'text' },
-    { index: 5, filterType: 'select_local' },
-    { index: 6, filterType: 'select', fetchDataFunc: listaTiposDocumentoFilter },
+    { index: 2, filterType: 'text' },
+    { index: 3, filterType: 'select', fetchDataFunc: listaSucursalesFilter },
+    { index: 4, filterType: 'select', fetchDataFunc: listaProvinciasFilter },
+    { index: 5, filterType: 'select', fetchDataFunc: listaProfesionesFilter },
+    { index: 6, filterType: 'select', fetchDataFunc: listaCondicionesIvaFilter },
     { index: 7, filterType: 'text' },
-    { index: 8, filterType: 'select', fetchDataFunc: listaCondicionesIvaFilter },
-    { index: 9, filterType: 'text' },
-    { index: 10, filterType: 'text' }
+    { index: 8, filterType: 'text' }
 ];
 
 $(document).ready(() => {
 
-    Permisos.init();
-    Permisos.aplicarUI("Clientes");
+    const modalEl = document.querySelector("[data-cliente-modal]");
+    if (!modalEl) {
+        console.error("No se encontró [data-cliente-modal]. Verifique que el partial M_Clientes esté en la vista.");
+        return;
+    }
 
-    clienteModal = new ClienteModal(document.body, {
+    clienteModal = new ClienteModal(modalEl, {
         token: token,
-
-        onSaved: async () => {
-            await listaClientes();
-        },
-
-        onDeleted: async () => {
-            await listaClientes();
-        }
+        onSaved: async () => { await listaClientes(); },
+        onDeleted: async () => { await listaClientes(); }
     });
 
     window.verCliente = (id) => clienteModal.abrirVer(id);
@@ -51,7 +32,6 @@ $(document).ready(() => {
     window.verFicha = (id) => clienteModal.abrirVer(id);
     window.nuevoCliente = () => clienteModal.abrirNuevo();
 
-    // UX select2 abierta al click
     $(document)
         .off("click.select2fix.clientes")
         .on("click.select2fix.clientes", ".select2-container--default .select2-selection--single", function () {
@@ -62,33 +42,12 @@ $(document).ready(() => {
             }
         });
 
-    // limpiar pegado raro
-    $(document).on("paste", "input[type=text], textarea", function (e) {
-        e.preventDefault();
-
-        let texto = (e.originalEvent || e).clipboardData.getData('text');
-
-        texto = texto
-            .replace(/[“”]/g, '"')
-            .replace(/[‘’]/g, "'")
-            .replace(/\u00A0/g, ' ')
-            .trim();
-
-        document.execCommand("insertText", false, texto);
-    });
-
     listaClientes();
 });
 
-/* =========================
-   SELECT2 HELPERS
-========================= */
-
 function ensureSelect2($el, options) {
     if (!$el || !$el.length) return;
-
     if ($el.data('select2')) return;
-
     $el.select2(Object.assign({
         width: '100%',
         allowClear: true,
@@ -104,10 +63,6 @@ function inicializarSelect2Filtro($select) {
         placeholder: "Todos"
     });
 }
-
-/* =========================
-   LISTA + DATATABLE
-========================= */
 
 async function listaClientes() {
     let paginaActual = gridClientes != null ? gridClientes.page() : 0;
@@ -147,7 +102,6 @@ async function configurarDataTable(data) {
             },
             scrollX: true,
             scrollCollapse: true,
-
             columns: [
                 {
                     data: "Id",
@@ -164,57 +118,37 @@ async function configurarDataTable(data) {
                     searchable: false,
                 },
                 { data: 'Nombre' },
-                { data: 'Productora' },
-                { data: 'Pais' },
-                { data: 'Dni' },
+                { data: 'Cuit' },
+                { data: 'Sucursal' },
                 { data: 'Provincia' },
-                { data: 'TipoDocumento' },
-                { data: 'NumeroDocumento' },
+                { data: 'Profesion' },
                 { data: 'CondicionIva' },
                 { data: 'Telefono' },
                 { data: 'Email' },
             ],
-
             dom: 'Bfrtip',
             buttons: getBotonesExportacion(gridClientes, "Clientes"),
-
             orderCellsTop: true,
             fixedHeader: true,
-
             initComplete: async function () {
                 const api = this.api();
 
                 for (const config of columnConfig) {
-
                     const cell = $('.filters th').eq(config.index);
                     if (!cell.length) continue;
-
                     cell.empty();
 
-                    if (config.filterType === 'select' || config.filterType === 'select_local') {
-
+                    if (config.filterType === 'select') {
                         const $select = $(`
                             <select class="rp-filter-select" style="width:100%">
                                 <option value="">Todos</option>
                             </select>
                         `).appendTo(cell);
 
-                        if (config.filterType === 'select') {
-                            const datos = await config.fetchDataFunc();
-                            (datos || []).forEach(item => {
-                                $select.append(`<option value="${item.Id}">${item.Nombre}</option>`);
-                            });
-                        } else {
-                            const uniques = new Set();
-                            api.column(config.index).data().each(v => {
-                                const txt = (v ?? "").toString().trim();
-                                if (txt) uniques.add(txt);
-                            });
-
-                            [...uniques].sort().forEach(txt => {
-                                $select.append(`<option value="${txt}">${txt}</option>`);
-                            });
-                        }
+                        const datos = await config.fetchDataFunc();
+                        (datos || []).forEach(item => {
+                            $select.append(`<option value="${item.Id}">${item.Nombre}</option>`);
+                        });
 
                         inicializarSelect2Filtro($select);
 
@@ -224,19 +158,15 @@ async function configurarDataTable(data) {
 
                         $select.on('change', function () {
                             const value = $(this).val();
-
                             if (!value) {
                                 api.column(config.index).search('').draw(false);
                                 return;
                             }
-
                             const text = $(this).find('option:selected').text();
-
                             api.column(config.index)
                                 .search('^' + escapeRegex(text) + '$', true, false)
                                 .draw(false);
                         });
-
                     } else {
                         $('<input class="rp-filter-input" type="text" placeholder="Buscar...">')
                             .appendTo(cell)
@@ -247,7 +177,6 @@ async function configurarDataTable(data) {
                 }
 
                 $('.filters th').eq(0).html('');
-
                 configurarOpcionesColumnas();
                 actualizarKpis(data);
             }
@@ -259,50 +188,38 @@ async function configurarDataTable(data) {
     }
 }
 
-/* =========================
-   FILTROS - DATOS
-========================= */
-
-async function listaProductorasFilter() {
-    const response = await fetch(`/Productoras/Lista`, {
-        headers: { 'Authorization': 'Bearer ' + token }
-    });
-    const data = await response.json();
-    return (data || []).map(x => ({ Id: x.Id, Nombre: x.Nombre }));
-}
-
-async function listaPaisesFilter() {
-    const response = await fetch(`/Paises/Lista`, {
+async function listaSucursalesFilter() {
+    const response = await fetch(`/Sucursales/Lista`, {
         headers: { 'Authorization': 'Bearer ' + token }
     });
     return await response.json();
 }
 
-async function listaTiposDocumentoFilter() {
-    const response = await fetch(`/PaisesTiposDocumentos/Lista`, {
+async function listaProvinciasFilter() {
+    const response = await fetch(`/Provincias/Lista`, {
         headers: { 'Authorization': 'Bearer ' + token }
     });
-    const data = await response.json();
-    return (data || []).map(x => ({ Id: x.Id, Nombre: x.Nombre }));
+    return await response.json();
+}
+
+async function listaProfesionesFilter() {
+    const response = await fetch(`/ClientesProfesiones/Lista`, {
+        headers: { 'Authorization': 'Bearer ' + token }
+    });
+    return await response.json();
 }
 
 async function listaCondicionesIvaFilter() {
-    const response = await fetch(`/PaisesCondicionesIVA/Lista`, {
+    const response = await fetch(`/CondicionesIva/Lista`, {
         headers: { 'Authorization': 'Bearer ' + token }
     });
-    const data = await response.json();
-    return (data || []).map(x => ({ Id: x.Id, Nombre: x.Nombre }));
+    return await response.json();
 }
-
-/* =========================
-   CONFIG COLUMNAS
-========================= */
 
 function configurarOpcionesColumnas() {
     const grid = $('#grd_Clientes').DataTable();
     const columnas = grid.settings().init().columns;
     const container = $('#configColumnasMenu');
-
     const storageKey = `Clientes_Columnas`;
     const savedConfig = JSON.parse(localStorage.getItem(storageKey)) || {};
 
@@ -310,7 +227,6 @@ function configurarOpcionesColumnas() {
 
     columnas.forEach((col, index) => {
         if (col.data && col.data !== "Id") {
-
             const isChecked = savedConfig[`col_${index}`] !== undefined
                 ? savedConfig[`col_${index}`]
                 : true;
@@ -336,17 +252,11 @@ function configurarOpcionesColumnas() {
     $('.toggle-column').off('change').on('change', function () {
         const columnIdx = parseInt($(this).data('column'), 10);
         const isChecked = $(this).is(':checked');
-
         savedConfig[`col_${columnIdx}`] = isChecked;
         localStorage.setItem(storageKey, JSON.stringify(savedConfig));
-
         grid.column(columnIdx).visible(isChecked);
     });
 }
-
-/* =========================
-   KPI + HELPERS
-========================= */
 
 function actualizarKpis(data) {
     const cant = Array.isArray(data) ? data.length : 0;
@@ -355,35 +265,4 @@ function actualizarKpis(data) {
 
 function escapeRegex(text) {
     return (text || "").replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
-function formatearFecha(fecha) {
-    try {
-        const d = new Date(fecha);
-        return d.toLocaleString("es-AR");
-    } catch {
-        return fecha;
-    }
-}
-
-function toDecimal(val) {
-    if (val == null) return 0;
-    const s = (val + "").trim();
-    if (!s) return 0;
-    const n = Number(s.replace(",", "."));
-    return Number.isFinite(n) ? n : 0;
-}
-
-function normalizarDateInput(fecha) {
-    if (!fecha) return "";
-    try {
-        const d = new Date(fecha);
-        if (isNaN(d.getTime())) return "";
-        const yyyy = d.getFullYear();
-        const mm = String(d.getMonth() + 1).padStart(2, '0');
-        const dd = String(d.getDate()).padStart(2, '0');
-        return `${yyyy}-${mm}-${dd}`;
-    } catch {
-        return "";
-    }
 }

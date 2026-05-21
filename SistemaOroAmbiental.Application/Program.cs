@@ -1,48 +1,14 @@
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using SistemaOroAmbiental.BLL.Service;
 using SistemaOroAmbiental.DAL.DataContext;
 using SistemaOroAmbiental.DAL.Repository;
 using SistemaOroAmbiental.Models;
-using Microsoft.AspNetCore.Authentication.Cookies;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc.Authorization;
-using Microsoft.Extensions.FileProviders;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.IdentityModel.Tokens;
 using System.Text;
-using Microsoft.Extensions.DependencyInjection;
 
 var builder = WebApplication.CreateBuilder(args);
-
-// Add services to the container.
-builder.Services.AddControllersWithViews();
-
-
-builder.Services.AddDbContext<SistemaOroAmbientalContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("SistemaDB")));
-
-
-// Agregar Razor Pages
-builder.Services.AddRazorPages().AddRazorRuntimeCompilation();
-
-// Registrar repositorios y servicios
-builder.Services.AddScoped<IUsuariosRepository<User>, UsuariosRepository>();
-builder.Services.AddScoped<IUsuariosService, UsuariosService>();
-
-builder.Services.AddScoped<IEstadosUsuariosRepository<UsuariosEstado>, UsuariosEstadosRepository>();
-builder.Services.AddScoped<IEstadosUsuariosService, EstadosUsuariosService>();
-
-builder.Services.AddScoped<IRolesRepository<UsuariosRol>, RolesRepository>();
-builder.Services.AddScoped<IRolesService, RolesService>();
-
-builder.Services.AddScoped<ILoginRepository<User>, LoginRepository>();
-builder.Services.AddScoped<ILoginService, LoginService>();
-
-
-builder.Services.AddScoped<IUsuariosPermisosRepository, UsuariosPermisosRepository>();
-builder.Services.AddScoped<IUsuariosPermisosService, UsuariosPermisosService>();
-
-
 
 builder.Services.AddControllersWithViews()
     .AddJsonOptions(o =>
@@ -51,7 +17,85 @@ builder.Services.AddControllersWithViews()
         o.JsonSerializerOptions.PropertyNamingPolicy = null;
     });
 
+builder.Services.AddRazorPages().AddRazorRuntimeCompilation();
 
+builder.Services.AddDbContext<SistemaOroAmbientalContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("SistemaDB")));
+
+builder.Services.AddScoped(typeof(IConfiguracionNombreRepository<>), typeof(ConfiguracionNombreRepository<>));
+builder.Services.AddScoped(typeof(IConfiguracionNombreService<>), typeof(ConfiguracionNombreService<>));
+
+builder.Services.AddScoped<IUsuariosRepository<User>, UsuariosRepository>();
+builder.Services.AddScoped<IUsuariosService, UsuariosService>();
+
+builder.Services.AddScoped<ILoginRepository<User>, LoginRepository>();
+builder.Services.AddScoped<ILoginService, LoginService>();
+
+builder.Services.AddScoped<IUsuariosPermisosRepository, UsuariosPermisosRepository>();
+builder.Services.AddScoped<IUsuariosPermisosService, UsuariosPermisosService>();
+
+builder.Services.AddScoped<IRolesRepository<UsuariosRol>, RolesRepository>();
+builder.Services.AddScoped<IRolesService, RolesService>();
+
+builder.Services.AddScoped<IClientesRepository, ClientesRepository>();
+builder.Services.AddScoped<IClientesService, ClientesService>();
+
+builder.Services.AddScoped<IClientesProfesionesRepository, ClientesProfesionesRepository>();
+builder.Services.AddScoped<IClientesProfesionesService, ClientesProfesionesService>();
+
+builder.Services.AddScoped<ICatalogosRepository, CatalogosRepository>();
+builder.Services.AddScoped<ICatalogosService, CatalogosService>();
+
+builder.Services.AddScoped<IBancosRepository, BancosRepository>();
+builder.Services.AddScoped<IBancosService, BancosService>();
+
+builder.Services.AddScoped<IDiasRepository, DiasRepository>();
+builder.Services.AddScoped<IDiasService, DiasService>();
+
+builder.Services.AddScoped<IEntregasEstadosRepository, EntregasEstadosRepository>();
+builder.Services.AddScoped<IEntregasEstadosService, EntregasEstadosService>();
+
+builder.Services.AddScoped<IEstadosUsuariosRepository, EstadosUsuariosRepository>();
+builder.Services.AddScoped<IEstadosUsuariosService, EstadosUsuariosService>();
+
+builder.Services.AddScoped<IProductosCategoriasRepository, ProductosCategoriasRepository>();
+builder.Services.AddScoped<IProductosCategoriasService, ProductosCategoriasService>();
+
+builder.Services.AddScoped<IProvinciasRepository, ProvinciasRepository>();
+builder.Services.AddScoped<IProvinciasService, ProvinciasService>();
+
+builder.Services.AddScoped<ICondicionesIvaRepository, CondicionesIvaRepository>();
+builder.Services.AddScoped<ICondicionesIvaService, CondicionesIvaService>();
+
+builder.Services.AddScoped<ISemanasRepository, SemanasRepository>();
+builder.Services.AddScoped<ISemanasService, SemanasService>();
+
+builder.Services.AddScoped<IUnidadesMedidaRepository, UnidadesMedidaRepository>();
+builder.Services.AddScoped<IUnidadesMedidaService, UnidadesMedidaService>();
+
+builder.Services.AddScoped<IUsuariosRolesRepository, UsuariosRolesRepository>();
+builder.Services.AddScoped<IUsuariosRolesService, UsuariosRolesService>();
+
+builder.Services.AddScoped<IRolRepository, RolRepository>();
+builder.Services.AddScoped<IRolService, RolService>();
+
+builder.Services.AddScoped<IGastosCategoriasRepository, GastosCategoriasRepository>();
+builder.Services.AddScoped<IGastosCategoriasService, GastosCategoriasService>();
+
+builder.Services.AddScoped<ISucursalesRepository, SucursalesRepository>();
+builder.Services.AddScoped<ISucursalesService, SucursalesService>();
+
+builder.Services.AddScoped<IListasPreciosRepository, ListasPreciosRepository>();
+builder.Services.AddScoped<IListasPreciosService, ListasPreciosService>();
+
+builder.Services.AddScoped<ICuentasRepository, CuentasRepository>();
+builder.Services.AddScoped<ICuentasService, CuentasService>();
+
+builder.Services.AddScoped<IProductosPreciosRepository, ProductosPreciosRepository>();
+builder.Services.AddScoped<IProductosPreciosService, ProductosPreciosService>();
+
+builder.Services.AddScoped<IProductosRepository, ProductosRepository>();
+builder.Services.AddScoped<IProductosService, ProductosService>();
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -64,11 +108,11 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateIssuerSigningKey = true,
             ValidIssuer = builder.Configuration["JwtSettings:Issuer"],
             ValidAudience = builder.Configuration["JwtSettings:Audience"],
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["JwtSettings:SecretKey"]))
+            IssuerSigningKey = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(builder.Configuration["JwtSettings:SecretKey"]!))
         };
     });
 
-// Definir el esquema de autenticación predeterminado
 builder.Services.AddAuthorization(options =>
 {
     options.DefaultPolicy = new AuthorizationPolicyBuilder()
@@ -77,14 +121,11 @@ builder.Services.AddAuthorization(options =>
         .Build();
 });
 
-
-
 var app = builder.Build();
 
-// Configurar el pipeline de middleware
 if (!app.Environment.IsDevelopment())
 {
-    app.UseExceptionHandler("/Clientes/Error");
+    app.UseExceptionHandler("/Home/Error");
     app.UseHsts();
 }
 
@@ -96,15 +137,8 @@ app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
 
-
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Login}/{action=Index}/{id?}");
 
-// Asegúrate de que las rutas de login estén excluidas del middleware de autenticación
-app.MapControllerRoute(
-    name: "login",
-    pattern: "Login/{action=Index}",
-    defaults: new { controller = "Login", action = "Index" });
 app.Run();
-    

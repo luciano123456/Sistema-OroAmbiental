@@ -419,30 +419,7 @@ GS-UI — Render Acciones Grid GLOBAL
 
 function renderAccionesGrid(id, acciones, modulo = null) {
 
-    const user = JSON.parse(localStorage.getItem("userSession"));
-    const permisos = user?.Permisos || [];
-
-    const tienePermiso = (mod, tipo) => {
-
-        const moduloBuscado = (mod || "").toLowerCase().trim();
-        const tipoBuscado = (tipo || "").toLowerCase().trim();
-
-        return permisos.some(p => {
-
-            const nombreModulo = (p.Modulo || "").toLowerCase().trim();
-            const codigoModulo = (p.CodigoModulo || "").toLowerCase().trim();
-
-            if (nombreModulo !== moduloBuscado && codigoModulo !== moduloBuscado) return false;
-
-            if (!p.Permisos) return false;
-
-            const permiso = p.Permisos.find(x =>
-                (x.Codigo || "").toLowerCase() === tipoBuscado
-            );
-
-            return !!permiso?.Activo;
-        });
-    };
+    const tienePermiso = () => true;
 
     const mod = modulo || acciones.modulo || "";
 
@@ -812,15 +789,8 @@ function vnIsoDateOnly(value) {
 }
 
 
-function tienePermiso(modulo, tipo) {
-
-    const user = JSON.parse(localStorage.getItem("userSession"));
-    const permisos = user?.Permisos || [];
-
-    return permisos.some(p =>
-        p.Modulo?.toLowerCase() === modulo.toLowerCase() &&
-        p[tipo] === true
-    );
+function tienePermiso() {
+    return true;
 }
 
 function getBotonesExportacion(grid,modulo) {

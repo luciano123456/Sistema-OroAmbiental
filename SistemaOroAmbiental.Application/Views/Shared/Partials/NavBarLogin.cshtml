@@ -11,236 +11,22 @@
         <div class="collapse navbar-collapse" id="navbarSupportedContent">
             <ul class="navbar-nav me-auto mb-2 mb-lg-0">
 
-                <li class="nav-item dropdown"
-                    id="seccionPersonal"
-                    data-modulo="Personal"
-                    data-permiso="Ver"
-                    hidden>
-
-                    <a class="nav-link dropdown-toggle"
-                       href="#"
-                       id="personalDropdownLink"
-                       role="button"
-                       data-bs-toggle="dropdown"
-                       aria-expanded="false"
-                       aria-haspopup="true">
-
-                        Personal
-
-                    </a>
-
-                    <ul class="dropdown-menu" aria-labelledby="personalDropdownLink">
-
-                        <li data-modulo="Personal" data-permiso="Ver">
-                            <a class="dropdown-item"
-                               href="@Url.Action("Index", "Personal")">
-                                Personal
-                            </a>
-                        </li>
-
-                        <li data-modulo="Personal CC" data-permiso="Ver">
-                            <a class="dropdown-item"
-                               href="@Url.Action("Index", "PersonalCuentaCorriente")">
-                                Cuenta Corriente
-                            </a>
-                        </li>
-
-                        <li data-modulo="Personal Sueldos" data-permiso="Ver">
-                            <a class="dropdown-item"
-                               href="@Url.Action("Index", "PersonalSueldos")">
-                                Pago de sueldos
-                            </a>
-                        </li>
-
-                    </ul>
-
-                </li>
-
-
-                <li class="nav-item dropdown"
-                    id="seccionArtistas"
-                    data-modulo="Artistas"
-                    data-permiso="Ver"
-                    hidden>
-
-                    <a class="nav-link dropdown-toggle"
-                       href="#"
-                       id="artistasDropdownLink"
-                       role="button"
-                       data-bs-toggle="dropdown"
-                       aria-expanded="false"
-                       aria-haspopup="true">
-
-                        Artistas
-
-                    </a>
-
-                    <ul class="dropdown-menu" aria-labelledby="artistasDropdownLink">
-
-                        <li data-modulo="Artistas" data-permiso="Ver">
-                            <a class="dropdown-item"
-                               href="@Url.Action("Index", "Artistas")">
-                                Artistas
-                            </a>
-                        </li>
-
-                        <li data-modulo="Artistas CC" data-permiso="Ver">
-                            <a class="dropdown-item"
-                               href="@Url.Action("Index", "ArtistasCuentaCorriente")">
-                                Cuenta Corriente
-                            </a>
-                        </li>
-
-                    </ul>
-
-                </li>
-
-                <li class="nav-item dropdown"
-                    id="seccionClientes"
-                    data-modulo="Clientes"
-                    data-permiso="Ver" hidden>
-
-                    <a class="nav-link dropdown-toggle"
-                       href="#"
-                       id="clientesDropdownLink"
-                       role="button"
-                       data-bs-toggle="dropdown"
-                       aria-expanded="false">
-
+                <li class="nav-item" id="seccionClientes">
+                    <a class="nav-link" href="@Url.Action("Index", "Clientes")">
                         Clientes
-
-                    </a>
-
-                    <ul class="dropdown-menu" aria-labelledby="clientesDropdownLink">
-
-                        <li data-modulo="Clientes" data-permiso="Ver">
-                            <a class="dropdown-item"
-                               href="@Url.Action("Index", "Clientes")">
-                                Clientes
-                            </a>
-                        </li>
-
-                        <li data-modulo="Clientes CC" data-permiso="Ver">
-                            <a class="dropdown-item"
-                               href="@Url.Action("Index", "ClientesCuentaCorriente")">
-                                Cuenta Corriente
-                            </a>
-                        </li>
-
-                    </ul>
-
-                </li>
-
-                <li class="nav-item"
-                    id="seccionProductoras"
-                    data-modulo="Productoras"
-                    data-permiso="Ver" hidden>
-                    <a class="nav-link" href="@Url.Action("Index", "Productoras")">
-                        Productoras
                     </a>
                 </li>
 
-
-                <li class="nav-item"
-                    id="seccionVentas"
-                    data-modulo="Ventas"
-                    data-permiso="Ver"
-                    hidden>
-                    <a class="nav-link" href="@Url.Action("Index", "Ventas")">
-                        Ventas
+                <li class="nav-item" id="seccionUsuarios">
+                    <a class="nav-link" href="@Url.Action("Index", "Usuarios")">
+                        Usuarios
                     </a>
                 </li>
 
-                <li class="nav-item"
-                    id="seccionCajas"
-                    data-modulo="Cajas"
-                    data-permiso="Ver"
-                    hidden>
-                    <a class="nav-link" href="@Url.Action("Index", "Caja")">
-                        Cajas
+                <li class="nav-item" id="seccionExtras">
+                    <a class="nav-link" href="#" onclick="abrirConfiguraciones(); return false;">
+                        Extras
                     </a>
-                </li>
-
-                <li class="nav-item"
-                    id="seccionMonedas"
-                    data-modulo="Monedas"
-                    data-permiso="Ver"
-                    hidden>
-                    <a class="nav-link" href="@Url.Action("Index", "PaisesMoneda")">
-                        Monedas
-                    </a>
-                </li>
-
-                <li class="nav-item"
-                    id="seccionTareas"
-                    data-modulo="Tareas"
-                    data-permiso="Ver"
-                    hidden>
-                    <a class="nav-link" href="@Url.Action("Index", "Tareas")">
-                        Tareas
-                    </a>
-                </li>
-
-                <li class="nav-item"
-                    id="seccionGastos"
-                    data-modulo="Gastos"
-                    data-permiso="Ver"
-                    hidden>
-                    <a class="nav-link" href="@Url.Action("Index", "Gastos")">
-                        Gastos
-                    </a>
-                </li>
-
-
-                <!-- CONFIGURACIONES -->
-                <li class="nav-item dropdown"
-                    id="seccionConfiguraciones"
-                    data-modulo="Configuraciones"
-                    data-permiso="Ver"
-                    hidden>
-
-                    <a class="nav-link dropdown-toggle"
-                       href="#"
-                       id="configDropdownLink"
-                       role="button"
-                       data-bs-toggle="dropdown">
-                        Configuraciones
-                    </a>
-
-                    <ul class="dropdown-menu" aria-labelledby="configDropdownLink">
-
-                        <!-- USUARIOS -->
-                        <li id="seccionUsuarios"
-                            data-modulo="Usuarios"
-                            data-permiso="Ver">
-                            <a class="dropdown-item"
-                               href="@Url.Action("Index", "Usuarios")">
-                                Usuarios
-                            </a>
-                        </li>
-
-                        <!-- UBICACIONES -->
-                        <li id="seccionUbicaciones"
-                            data-modulo="Ubicaciones"
-                            data-permiso="Ver">
-                            <a class="dropdown-item"
-                               href="@Url.Action("Index", "Ubicaciones")">
-                                Ubicaciones
-                            </a>
-                        </li>
-
-                        <!-- OTRAS -->
-                        <li id="seccionOtras"
-                            data-modulo="Otras"
-                            data-permiso="Ver">
-                            <a class="dropdown-item"
-                               href="#"
-                               onclick="abrirConfiguraciones()">
-                                Otras
-                            </a>
-                        </li>
-
-                    </ul>
                 </li>
 
             </ul>
@@ -271,7 +57,7 @@
      MODAL: PANEL DE CONFIGURACIONES
 ================================ -->
 <div class="modal fade rp-modal" id="ModalEdicionConfiguraciones" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-dialog modal-dialog-centered modal-xl modal-config-panel">
         <div class="modal-content rp-modal-content">
 
             <!-- HEADER -->
@@ -296,191 +82,141 @@
             <div class="modal-body">
                 <div class="rp-config-grid">
 
-                    <button class="rp-config-card"
-                            onclick="abrirConfiguracion('Roles', 'Roles')">
-                        <div class="rp-config-icon blue">
-                            <i class="fa fa-cog"></i>
+                    <button class="rp-config-card" onclick="abrirConfiguracion('Sucursales', 'Sucursales')">
+                        <div class="rp-config-icon blue"><i class="fa fa-building"></i></div>
+                        <div>
+                            <div class="rp-config-title">Sucursales</div>
+                            <div class="rp-config-sub">Sucursales del sistema</div>
                         </div>
+                    </button>
+
+                    <button class="rp-config-card" onclick="abrirConfiguracion('Usuarios Roles', 'UsuariosRoles')">
+                        <div class="rp-config-icon blue"><i class="fa fa-shield"></i></div>
+                        <div>
+                            <div class="rp-config-title">Usuarios Roles</div>
+                            <div class="rp-config-sub">Roles de permisos</div>
+                        </div>
+                    </button>
+
+                    <button class="rp-config-card" onclick="abrirConfiguracion('Unidades de Medida', 'UnidadesMedida')">
+                        <div class="rp-config-icon blue"><i class="fa fa-balance-scale"></i></div>
+                        <div>
+                            <div class="rp-config-title">Unidades de Medida</div>
+                            <div class="rp-config-sub">Unidades para productos</div>
+                        </div>
+                    </button>
+
+                    <button class="rp-config-card" onclick="abrirConfiguracion('Semanas', 'Semanas')">
+                        <div class="rp-config-icon blue"><i class="fa fa-calendar"></i></div>
+                        <div>
+                            <div class="rp-config-title">Semanas</div>
+                            <div class="rp-config-sub">Semanas de recolección</div>
+                        </div>
+                    </button>
+
+                    <button class="rp-config-card" onclick="abrirConfiguracion('Roles', 'Roles')">
+                        <div class="rp-config-icon blue"><i class="fa fa-user"></i></div>
                         <div>
                             <div class="rp-config-title">Roles</div>
-                            <div class="rp-config-sub">
-                                Permisos de usuarios
-                            </div>
+                            <div class="rp-config-sub">Roles de usuarios</div>
                         </div>
                     </button>
 
-
-                    <button class="rp-config-card"
-                            onclick="abrirConfiguracion('Paises', 'Paises')">
-                        <div class="rp-config-icon blue">
-                            <i class="fa fa-cog"></i>
-                        </div>
-                        <div>
-                            <div class="rp-config-title">Paises</div>
-                            <div class="rp-config-sub">
-                                Configuracion de paises
-                            </div>
-                        </div>
-                    </button>
-
-                    <button class="rp-config-card"
-                            onclick="abrirConfiguracion('Paises Tipos Documentos', 'PaisesTiposDocumentos', 'Paises', 'Paises', 'Pais')">
-                        <div class="rp-config-icon blue">
-                            <i class="fa fa-cog"></i>
-                        </div>
-                        <div>
-                            <div class="rp-config-title">Tipos Documentos</div>
-                            <div class="rp-config-sub">
-                                Por Pais
-                            </div>
-                        </div>
-                    </button>
-
-                    <button class="rp-config-card"
-                            onclick="abrirConfiguracion('Paises Condiciones IVA', 'PaisesCondicionesIva', 'Paises', 'Paises', 'Pais')">
-                        <div class="rp-config-icon blue">
-                            <i class="fa fa-cog"></i>
-                        </div>
-                        <div>
-                            <div class="rp-config-title">Condiciones IVA</div>
-                            <div class="rp-config-sub">
-                                Por Pais
-                            </div>
-                        </div>
-                    </button>
-
-                    <button class="rp-config-card"
-                            onclick="abrirConfiguracion('Provincias', 'PaisesProvincia', 'Paises', 'Paises', 'Pais')">
-                        <div class="rp-config-icon blue">
-                            <i class="fa fa-cog"></i>
-                        </div>
+                    <button class="rp-config-card" onclick="abrirConfiguracion('Provincias', 'Provincias')">
+                        <div class="rp-config-icon blue"><i class="fa fa-map"></i></div>
                         <div>
                             <div class="rp-config-title">Provincias</div>
-                            <div class="rp-config-sub">
-                                Por Pais
-                            </div>
+                            <div class="rp-config-sub">Provincias</div>
                         </div>
                     </button>
 
-                    <button class="rp-config-card"
-                            onclick="abrirConfiguracion('Tareas', 'TareasEstados')">
-                        <div class="rp-config-icon blue">
-                            <i class="fa fa-cog"></i>
-                        </div>
+                    <button class="rp-config-card" onclick="abrirConfiguracion('Productos Precios', 'ProductosPrecios', 'Productos', 'Productos', 'Producto')">
+                        <div class="rp-config-icon blue"><i class="fa fa-usd"></i></div>
                         <div>
-                            <div class="rp-config-title">Tareas Estados</div>
-                            <div class="rp-config-sub">
-                                Configuracion de tareas
-                            </div>
+                            <div class="rp-config-title">Productos Precios</div>
+                            <div class="rp-config-sub">Precio por producto (1ª lista)</div>
                         </div>
                     </button>
 
-                    <button class="rp-config-card"
-                            onclick="abrirConfiguracion('Gastos Categorias', 'GastosCategorias')">
-                        <div class="rp-config-icon blue">
-                            <i class="fa fa-cog"></i>
-                        </div>
+                    <button class="rp-config-card" onclick="abrirConfiguracion('Productos Categorias', 'ProductosCategorias')">
+                        <div class="rp-config-icon blue"><i class="fa fa-tags"></i></div>
                         <div>
-                            <div class="rp-config-title">Gastos Categorias</div>
-                            <div class="rp-config-sub">
-                                Configuracion de gastos categorias
-                            </div>
+                            <div class="rp-config-title">Productos Categorías</div>
+                            <div class="rp-config-sub">Categorías de productos</div>
                         </div>
                     </button>
 
-                    <button class="rp-config-card"
-                            onclick="abrirConfiguracion('Cuentas', 'MonedasCuenta', 'PaisesMoneda', 'PaisesMoneda', 'Moneda')">
-                        <div class="rp-config-icon blue">
-                            <i class="fa fa-cog"></i>
+                    <button class="rp-config-card" onclick="abrirConfiguracion('Listas de Precio', 'ListasPrecios')">
+                        <div class="rp-config-icon blue"><i class="fa fa-list-alt"></i></div>
+                        <div>
+                            <div class="rp-config-title">Listas de Precio</div>
+                            <div class="rp-config-sub">Listas de precios</div>
                         </div>
+                    </button>
+
+                    <button class="rp-config-card" onclick="abrirConfiguracion('Gastos Categorías', 'GastosCategorias')">
+                        <div class="rp-config-icon blue"><i class="fa fa-money"></i></div>
+                        <div>
+                            <div class="rp-config-title">Gastos Categorías</div>
+                            <div class="rp-config-sub">Categorías de gastos</div>
+                        </div>
+                    </button>
+
+                    <button class="rp-config-card" onclick="abrirConfiguracion('Estados Usuarios', 'EstadosUsuarios')">
+                        <div class="rp-config-icon blue"><i class="fa fa-user-circle"></i></div>
+                        <div>
+                            <div class="rp-config-title">Estados Usuarios</div>
+                            <div class="rp-config-sub">Estados del usuario</div>
+                        </div>
+                    </button>
+
+                    <button class="rp-config-card" onclick="abrirConfiguracion('Estados Entregas', 'EntregasEstados')">
+                        <div class="rp-config-icon blue"><i class="fa fa-truck"></i></div>
+                        <div>
+                            <div class="rp-config-title">Entregas Estados</div>
+                            <div class="rp-config-sub">Estados de entregas</div>
+                        </div>
+                    </button>
+
+                    <button class="rp-config-card" onclick="abrirConfiguracion('Días', 'Dias')">
+                        <div class="rp-config-icon blue"><i class="fa fa-calendar-o"></i></div>
+                        <div>
+                            <div class="rp-config-title">Días</div>
+                            <div class="rp-config-sub">Días de la semana</div>
+                        </div>
+                    </button>
+
+                    <button class="rp-config-card" onclick="abrirConfiguracion('Cuentas', 'Cuentas', 'Sucursales', 'Sucursales', 'Sucursal')">
+                        <div class="rp-config-icon blue"><i class="fa fa-bank"></i></div>
                         <div>
                             <div class="rp-config-title">Cuentas</div>
-                            <div class="rp-config-sub">
-                                Por Monedas
-                            </div>
+                            <div class="rp-config-sub">Cuentas por sucursal</div>
                         </div>
                     </button>
 
-                    <button class="rp-config-card"
-                            onclick="abrirConfiguracion('Personal Rol', 'PersonalRol')">
-                        <div class="rp-config-icon blue">
-                            <i class="fa fa-cog"></i>
-                        </div>
+                    <button class="rp-config-card" onclick="abrirConfiguracion('Condiciones IVA', 'CondicionesIva')">
+                        <div class="rp-config-icon blue"><i class="fa fa-percent"></i></div>
                         <div>
-                            <div class="rp-config-title">Personal Roles</div>
-                            <div class="rp-config-sub">
-                                Configuracion de roles de personal
-                            </div>
+                            <div class="rp-config-title">Condiciones IVA</div>
+                            <div class="rp-config-sub">Condiciones de IVA</div>
                         </div>
                     </button>
 
-                    <button class="rp-config-card"
-                            onclick="abrirConfiguracion('Estados', 'VentasEstados')">
-                        <div class="rp-config-icon blue">
-                            <i class="fa fa-cog"></i>
-                        </div>
+                    <button class="rp-config-card" onclick="abrirConfiguracion('Profesiones de Clientes', 'ClientesProfesiones')">
+                        <div class="rp-config-icon blue"><i class="fa fa-briefcase"></i></div>
                         <div>
-                            <div class="rp-config-title">Ventas Estados</div>
-                            <div class="rp-config-sub">
-                                Configuracion de estados
-                            </div>
+                            <div class="rp-config-title">Profesiones de Clientes</div>
+                            <div class="rp-config-sub">Profesiones para clientes</div>
                         </div>
                     </button>
 
-                    <button class="rp-config-card"
-                            onclick="abrirConfiguracion('Contratos', 'TiposContratos')">
-                        <div class="rp-config-icon blue">
-                            <i class="fa fa-cog"></i>
-                        </div>
+                    <button class="rp-config-card" onclick="abrirConfiguracion('Bancos', 'Bancos')">
+                        <div class="rp-config-icon blue"><i class="fa fa-university"></i></div>
                         <div>
-                            <div class="rp-config-title">Tipos de Contratos</div>
-                            <div class="rp-config-sub">
-                                Configuracion de contratos
-                            </div>
+                            <div class="rp-config-title">Bancos</div>
+                            <div class="rp-config-sub">Bancos</div>
                         </div>
                     </button>
-
-
-                    <button class="rp-config-card"
-                            onclick="abrirConfiguracion('Comisiones', 'TiposComisiones')">
-                        <div class="rp-config-icon blue">
-                            <i class="fa fa-cog"></i>
-                        </div>
-                        <div>
-                            <div class="rp-config-title">Tipos de Comisiones</div>
-                            <div class="rp-config-sub">
-                                Configuracion de comisiones
-                            </div>
-                        </div>
-                    </button>
-
-
-                    <button class="rp-config-card"
-                            onclick="abrirConfiguracion('Opciones Binarias', 'OpcionesBinarias')">
-                        <div class="rp-config-icon blue">
-                            <i class="fa fa-cog"></i>
-                        </div>
-                        <div>
-                            <div class="rp-config-title">Opciones Binarias</div>
-                            <div class="rp-config-sub">
-                                Opciones Binarias
-                            </div>
-                        </div>
-                    </button>
-
-                    <button class="rp-config-card"
-                            onclick="abrirContratosPlantillas()">
-                        <div class="rp-config-icon blue">
-                            <i class="fa fa-file-text-o"></i>
-                        </div>
-                        <div>
-                            <div class="rp-config-title">Contratos</div>
-                            <div class="rp-config-sub">
-                                Plantillas (.docx) por tipo de contrato
-                            </div>
-                        </div>
-                    </button>
-
 
                 </div>
             </div>

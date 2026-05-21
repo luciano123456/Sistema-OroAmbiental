@@ -5,40 +5,17 @@ namespace SistemaOroAmbiental.BLL.Service
 {
     public class EstadosUsuariosService : IEstadosUsuariosService
     {
+        private readonly IEstadosUsuariosRepository _repo;
 
-        private readonly IEstadosUsuariosRepository<UsuariosEstado> _contactRepo;
-
-        public EstadosUsuariosService(IEstadosUsuariosRepository<UsuariosEstado> contactRepo)
+        public EstadosUsuariosService(IEstadosUsuariosRepository repo)
         {
-            _contactRepo = contactRepo;
-        }
-        public async Task<bool> Actualizar(UsuariosEstado model)
-        {
-            return await _contactRepo.Actualizar(model);
+            _repo = repo;
         }
 
-        public async Task<bool> Eliminar(int id)
-        {
-            return await _contactRepo.Eliminar(id);
-        }
-
-        public async Task<bool> Insertar(UsuariosEstado model)
-        {
-            return await _contactRepo.Insertar(model);
-        }
-
-        public async Task<UsuariosEstado> Obtener(int id)
-        {
-            return await _contactRepo.Obtener(id);
-        }
-
-
-        public async Task<IQueryable<UsuariosEstado>> ObtenerTodos()
-        {
-            return await _contactRepo.ObtenerTodos();
-        }
-
-
-
+        public Task<bool> Actualizar(EstadosUsuario model) => _repo.Actualizar(model);
+        public Task<bool> Eliminar(int id) => _repo.Eliminar(id);
+        public Task<bool> Insertar(EstadosUsuario model) => _repo.Insertar(model);
+        public Task<EstadosUsuario?> Obtener(int id) => _repo.Obtener(id);
+        public Task<IQueryable<EstadosUsuario>> ObtenerTodos() => _repo.ObtenerTodos();
     }
 }

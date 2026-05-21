@@ -8,57 +8,25 @@
 
   <ItemGroup>
     <Content Remove="wwwroot\css\NavBarLogin.css~RF1f800e21.TMP" />
-    <Content Remove="wwwroot\js\Artistas.js" />
-    <Content Remove="wwwroot\js\ArtistasCuentaCorriente.js" />
-    <Content Remove="wwwroot\js\Caja.js" />
     <Content Remove="wwwroot\js\Clientes.js" />
-    <Content Remove="wwwroot\js\ClientesCuentaCorriente.js" />
     <Content Remove="wwwroot\js\CurrencyWidget.js" />
     <Content Remove="wwwroot\js\Dashboard.js" />
-    <Content Remove="wwwroot\js\Gastos.js" />
     <Content Remove="wwwroot\js\Home.js" />
     <Content Remove="wwwroot\js\Login.js" />
     <Content Remove="wwwroot\js\NavBarLogin.js" />
-    <Content Remove="wwwroot\js\PaisesMonedas.js" />
     <Content Remove="wwwroot\js\Permisos.js" />
-    <Content Remove="wwwroot\js\Personal.js" />
-    <Content Remove="wwwroot\js\PersonalCuentaCorriente.js" />
-    <Content Remove="wwwroot\js\PersonalSueldos.js" />
-    <Content Remove="wwwroot\js\PersonalSueldosNuevoModif.js" />
-    <Content Remove="wwwroot\js\Productoras.js" />
-    <Content Remove="wwwroot\js\Representantes.js" />
-    <Content Remove="wwwroot\js\Tareas.js" />
-    <Content Remove="wwwroot\js\Ubicaciones.js" />
     <Content Remove="wwwroot\js\Usuarios.js" />
     <Content Remove="wwwroot\js\UsuariosConfiguracion.js" />
     <Content Remove="wwwroot\js\Utils\moment.js" />
-    <Content Remove="wwwroot\js\Ventas.js" />
-    <Content Remove="wwwroot\js\VentasNuevoModif.js" />
   </ItemGroup>
 
   <ItemGroup>
     <None Include="wwwroot\Imagenes\Clientes.png" />
     <None Include="wwwroot\js\Dashboard.js" />
     <None Include="wwwroot\js\Permisos.js" />
-    <None Include="wwwroot\js\Caja.js" />
-    <None Include="wwwroot\js\PersonalSueldosNuevoModif.js" />
-    <None Include="wwwroot\js\PersonalSueldos.js" />
-    <None Include="wwwroot\js\PersonalCuentaCorriente.js" />
-    <None Include="wwwroot\js\ClientesCuentaCorriente.js" />
-    <None Include="wwwroot\js\ArtistasCuentaCorriente.js" />
-    <None Include="wwwroot\js\VentasNuevoModif.js" />
-    <None Include="wwwroot\js\Ventas.js" />
     <None Include="wwwroot\js\Login.js" />
     <None Include="wwwroot\js\Clientes.js" />
     <None Include="wwwroot\js\CurrencyWidget.js" />
-    <None Include="wwwroot\js\Ubicaciones.js" />
-    <None Include="wwwroot\js\Personal.js" />
-    <None Include="wwwroot\js\PaisesMonedas.js" />
-    <None Include="wwwroot\js\Gastos.js" />
-    <None Include="wwwroot\js\Tareas.js" />
-    <None Include="wwwroot\js\Productoras.js" />
-    <None Include="wwwroot\js\Artistas.js" />
-    <None Include="wwwroot\js\Representantes.js" />
     <None Include="wwwroot\js\UsuariosConfiguracion.js" />
     <None Include="wwwroot\js\Usuarios.js" />
     <None Include="wwwroot\js\NavBarLogin.js" />
@@ -79,6 +47,10 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="wwwroot\js\Entities\" />
   </ItemGroup>
 
 </Project>

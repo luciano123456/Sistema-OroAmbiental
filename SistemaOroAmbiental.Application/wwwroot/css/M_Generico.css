@@ -19,7 +19,70 @@
 
 .modal input.form-control.is-valid,
 .modal textarea.form-control.is-valid,
-.modal select.form-select.is-valid {
+.modal select.form-select.is-valid,
+.modal select.form-control.is-valid {
     border-color: #198754 !important;
     box-shadow: none !important;
+}
+
+select.is-invalid + .select2 .select2-selection {
+    border-color: #dc3545 !important;
+    box-shadow: 0 0 0 .18rem rgba(220, 53, 69, .18) !important;
+}
+
+select.is-valid + .select2 .select2-selection {
+    border-color: #198754 !important;
+    box-shadow: none !important;
+}
+
+/* Select + atajo (alta rápida de catálogo) */
+.rp-select-plus {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.rp-select-plus .select2-container {
+    width: 100% !important;
+}
+
+.rp-select-plus select.form-control,
+.rp-select-plus .select2-selection {
+    padding-right: 42px !important;
+}
+
+.rp-select-plus .select2-selection__arrow {
+    right: 38px !important;
+}
+
+.rp-btn-plus {
+    position: absolute;
+    right: 4px;
+    top: 4px;
+    z-index: 4;
+    width: 34px;
+    height: 34px;
+    border: none;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #22c55e, #16a34a);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.rp-btn-plus:hover {
+    transform: scale(1.05);
+    background: linear-gradient(135deg, #4ade80, #22c55e);
+    color: #fff;
+}
+
+.rp-btn-plus:active {
+    transform: scale(0.95);
+}
+
+.rp-btn-plus i {
+    font-size: 13px;
+    pointer-events: none;
 }
