@@ -1,0 +1,134 @@
+﻿@{
+    ViewData["Title"] = "Sistema de Gestión";
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>@ViewData["Title"]</title>
+
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/Login.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+</head>
+
+<body>
+
+    <div class="login-container">
+
+        <!-- IMAGEN -->
+
+        <div class="left-side">
+
+            <img src="~/Imagenes/Logo_Main.png">
+
+        </div>
+
+        <!-- FORM -->
+
+        <div class="right-side">
+
+            <div class="login-title">
+                Iniciar sesión
+            </div>
+
+            <form id="loginForm">
+
+                @Html.AntiForgeryToken()
+
+                <!-- Usuario -->
+
+                <div class="input-group">
+
+                    <span class="input-group-text">
+                        <i class="fa fa-user"></i>
+                    </span>
+
+                    <input type="text"
+                           class="form-control"
+                           id="username"
+                           placeholder="Usuario"
+                           required>
+
+                </div>
+
+                <!-- Password -->
+
+                <div class="input-group">
+
+                    <span class="input-group-text">
+                        <i class="fa fa-lock"></i>
+                    </span>
+
+                    <input type="password"
+                           class="form-control"
+                           id="password"
+                           placeholder="Contraseña"
+                           required>
+
+                    <span class="input-group-text password-toggle" id="togglePassword">
+                        <i class="fa fa-eye"></i>
+                    </span>
+
+                </div>
+
+                <!-- Recordar -->
+
+                <div class="remember-box">
+
+                    <label class="switch">
+
+                        <input type="checkbox" id="rememberMe">
+
+                        <span class="slider"></span>
+
+                    </label>
+
+                    <span class="remember-label">
+                        Recordar credenciales
+                    </span>
+
+                </div>
+
+                <!-- ERROR -->
+
+                <div id="diverrorMessage"
+                     class="alert alert-danger alert-login"
+                     style="display:none">
+
+                    <span id="errorMessage"></span>
+
+                </div>
+
+                <!-- BOTON -->
+
+                <button type="submit"
+                        class="btn btn-login w-100">
+
+                    Ingresar
+
+                </button>
+
+            </form>
+
+        </div>
+
+    </div>
+
+    <script>
+
+        var loginUrl='@Url.Action("IniciarSesion", "Login")';
+
+    </script>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/js/login.js?v=1.1"></script>
+
+</body>
+</html>

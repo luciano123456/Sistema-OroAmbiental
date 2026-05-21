@@ -1,0 +1,268 @@
+﻿<!-- MISMO ESTILO CLIENTES -->
+<link href="~/css/productora.css?v=1.0" rel="stylesheet" />
+<link href="~/css/disenopantallas.css?v=1.0" rel="stylesheet" />
+<link href="~/css/M_Generico.css" rel="stylesheet" />
+
+<div class="modal fade artista-modal-root"
+     data-artista-modal="artistas"
+     tabindex="-1"
+     data-bs-backdrop="static"
+     data-bs-keyboard="false">
+
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+
+            <div class="modal-header colorEncabezado">
+                <h5 class="modal-title fw-bold" data-role="tituloModal">
+                    Nuevo Artista
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+
+                <input type="hidden" data-field="Id" />
+                <input type="hidden" data-field="SoloLectura" value="0" />
+
+                <div id="errorCampos" class="rp-error-panel d-none mb-2">
+                    <div class="rp-error-icon">
+                        <i class="fa fa-exclamation-triangle"></i>
+                    </div>
+
+                    <div class="rp-error-content">
+                        <div class="rp-error-title">No se pudo guardar</div>
+                        <div class="rp-error-message"></div>
+                    </div>
+
+                    <button type="button" class="rp-error-close"
+                            onclick="cerrarErrorCampos()">
+                        <i class="fa fa-times"></i>
+                    </button>
+                </div>
+
+                <!-- TABS -->
+                <ul class="nav rp-tabs-modern mb-3">
+                    <li class="nav-item">
+                        <button class="nav-link active"
+                                data-bs-toggle="tab"
+                                data-bs-target=".tab-datos-artista">
+                            <i class="fa fa-user"></i>
+                            Datos del Artista
+                        </button>
+                    </li>
+
+                    <li class="nav-item">
+                        <button class="nav-link"
+                                data-bs-toggle="tab"
+                                data-bs-target=".tab-personal-artista">
+                            <i class="fa fa-users"></i>
+                            Personal asignado
+                            <span data-role="cntPersonal" class="rp-tab-count">(0)</span>
+                        </button>
+                    </li>
+                </ul>
+
+                <div class="tab-content">
+
+                    <!-- TAB DATOS -->
+                    <div class="tab-pane fade show active tab-datos-artista">
+
+                        <form class="row g-3" autocomplete="off" data-role="formArtista">
+
+                            <div class="col-md-3">
+                                <label class="form-label">Nombre Completo</label>
+                                <input data-field="Nombre"
+                                       data-required="1"
+                                       class="form-control" />
+                                <div class="invalid-feedback">Campo obligatorio</div>
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label">Nombre Artístico</label>
+                                <input data-field="NombreArtistico"
+                                       data-required="1"
+                                       class="form-control" />
+                                <div class="invalid-feedback">Campo obligatorio</div>
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label">Productora</label>
+                                <select data-field="IdProductora" class="form-control"></select>
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label">Fecha Nacimiento</label>
+                                <input data-field="FechaNacimiento"
+                                       type="date"
+                                       class="form-control" />
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label">País</label>
+                                <select data-field="IdPais"
+                                        data-required="1"
+                                        class="form-control"></select>
+                                <div class="invalid-feedback">Campo obligatorio</div>
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label">Provincia</label>
+                                <select data-field="IdProvincia" class="form-control"></select>
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label">Condición IVA</label>
+                                <select data-field="IdCondicionIva" class="form-control"></select>
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label">Tipo Documento</label>
+                                <select data-field="IdTipoDocumento" class="form-control"></select>
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label">Número Documento</label>
+                                <input data-field="NumeroDocumento"
+                                       data-required="1"
+                                       class="form-control" />
+                                <div class="invalid-feedback">Campo obligatorio</div>
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label">DNI</label>
+                                <input data-field="Dni"
+                                       data-required="1"
+                                       class="form-control" />
+                                <div class="invalid-feedback">Campo obligatorio</div>
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label">Teléfono</label>
+                                <input data-field="Telefono" class="form-control" />
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label">Teléfono Alternativo</label>
+                                <input data-field="TelefonoAlternativo" class="form-control" />
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label">Email</label>
+                                <input data-field="Email" class="form-control" />
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label">Dirección</label>
+                                <input data-field="Direccion" class="form-control" />
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label">Localidad</label>
+                                <input data-field="Localidad" class="form-control" />
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label">Entre Calles</label>
+                                <input data-field="EntreCalles" class="form-control" />
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label">Código Postal</label>
+                                <input data-field="CodigoPostal" class="form-control" />
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label">Moneda</label>
+                                <select data-field="IdMoneda" class="form-control"></select>
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label">Precio Unitario</label>
+                                <input data-field="PrecioUnitario" class="form-control" />
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label">Precio Neg. Mín</label>
+                                <input data-field="PrecioNegMin" class="form-control" />
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label">Precio Neg. Máx</label>
+                                <input data-field="PrecioNegMax" class="form-control" />
+                            </div>
+
+                        </form>
+                    </div>
+
+                    <!-- TAB PERSONAL -->
+                    <div class="tab-pane fade tab-personal-artista">
+
+                        <div class="mb-3">
+                            <input type="text"
+                                   class="form-control"
+                                   data-role="buscarPersonal"
+                                   placeholder="Buscar personal..." />
+                        </div>
+
+                        <div class="rp-checklist-box">
+                            <div class="rp-checklist" data-role="listaPersonal"></div>
+                        </div>
+
+                        <div class="rp-auto-card mt-3">
+                            <div class="rp-auto-left">
+                                <div class="rp-auto-icon">
+                                    <i class="fa fa-link"></i>
+                                </div>
+
+                                <div class="rp-auto-text">
+                                    <div class="rp-auto-title">
+                                        Asociación automática de productoras
+                                    </div>
+
+                                    <div class="rp-auto-desc">
+                                        Las productoras principales se asignarán automáticamente al cliente.
+                                    </div>
+                                </div>
+                            </div>
+
+                            <label class="rp-switch">
+                                <input type="checkbox"
+                                       data-field="AsociacionAutomatica"
+                                       checked />
+                                <span class="rp-slider"></span>
+                            </label>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- AUDITORIA -->
+                <div class="rp-auditoria d-none mt-3" data-role="infoAuditoria">
+                    <div data-role="infoRegistro"></div>
+                    <div data-role="infoModificacion"></div>
+                </div>
+
+            </div>
+
+            <div class="modal-footer">
+
+                <button class="btn btn-secondary"
+                        type="button"
+                        data-bs-dismiss="modal">
+                    <i class="fa fa-arrow-left"></i> Volver
+                </button>
+
+                <button class="btn btn-primary"
+                        type="button"
+                        data-action="guardar">
+                    <i class="fa fa-check"></i>
+                    <span data-role="textoBotonGuardar">Registrar</span>
+                </button>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<script src="~/js/entities/M_Artistas.js?v=1.1"></script>

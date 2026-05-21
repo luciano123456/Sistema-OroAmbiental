@@ -1,0 +1,151 @@
+/* ===== FAB flotante: Glass + Neón ===== */
+.fab-wrap {
+    position: fixed;
+    left: 22px;
+    top: 120px; /* bajo la navbar/logo */
+    z-index: 1080; /* por encima del contenido (menor que modal si querés) */
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    pointer-events: none; /* evita bloquear clics del resto; se habilita dentro */
+}
+
+    .fab-wrap * {
+        pointer-events: auto;
+    }
+
+    /* Anillo brillante detrás */
+    .fab-wrap::before {
+        content: "";
+        position: absolute;
+        left: -14px;
+        top: -14px;
+        width: 78px;
+        height: 78px;
+        border-radius: 50%;
+        background: radial-gradient(closest-side, rgba(85,140,255,.25), transparent 70%);
+        filter: blur(6px);
+        z-index: -1;
+        transition: transform .3s ease, opacity .3s ease;
+        opacity: .9;
+    }
+
+/* Botón principal */
+.fab-main {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 18px;
+    border-radius: 18px;
+    text-decoration: none;
+    color: #e7ecff;
+    background: linear-gradient(160deg, rgba(255,255,255,.08), rgba(255,255,255,.02));
+    border: 1px solid rgba(255,255,255,.12);
+    box-shadow: 0 10px 24px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.08);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    transition: transform .2s ease, box-shadow .3s ease, background .3s ease;
+}
+
+    .fab-main i {
+        font-size: 20px;
+        line-height: 1;
+        width: 22px;
+        text-align: center;
+    }
+
+.fab-label {
+    font-weight: 700;
+    letter-spacing: .3px;
+    font-size: 14px;
+    opacity: .95;
+}
+
+.fab-main:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 14px 30px rgba(26, 70, 255, .25), inset 0 1px 0 rgba(255,255,255,.12);
+    background: linear-gradient(160deg, rgba(255,255,255,.12), rgba(255,255,255,.04));
+}
+
+/* Dock vertical (oculto por defecto en mobile, visible on hover en desktop si hay items) */
+.fab-dock {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height .35s cubic-bezier(.2,.8,.2,1);
+}
+
+.fab-wrap:hover .fab-dock {
+    max-height: 600px;
+}
+/* desktop (hover) */
+
+.fab-item {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    border-radius: 14px;
+    text-decoration: none;
+    color: #dfe6ff;
+    background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.02));
+    border: 1px solid rgba(255,255,255,.1);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    box-shadow: 0 8px 18px rgba(0,0,0,.28);
+    transition: transform .2s ease, background .3s ease, box-shadow .3s ease;
+}
+
+    .fab-item i {
+        width: 20px;
+        text-align: center;
+    }
+
+.fab-item-label {
+    font-size: 13px;
+    font-weight: 600;
+    opacity: .95;
+}
+
+.fab-item:hover {
+    transform: translateY(-1px);
+    background: linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,.04));
+    box-shadow: 0 12px 26px rgba(38,105,255,.22);
+}
+
+/* Estado abierto en mobile (sin hover) */
+.fab-wrap.open .fab-dock {
+    max-height: 600px;
+}
+
+/* Responsive: en pantallas chicas lo llevo abajo-izquierda y lo hago más compacto */
+@media (max-width: 992px) {
+    .fab-wrap {
+        left: 16px;
+        bottom: 18px;
+        top: auto;
+        gap: 8px;
+    }
+
+    .fab-main {
+        padding: 12px 14px;
+        border-radius: 14px;
+    }
+
+    .fab-label {
+        display: none !important;
+    }
+
+    .fab-wrap::before {
+        width: 68px;
+        height: 68px;
+        left: -10px;
+        top: -10px;
+    }
+}
+
+/* Evitar superponerse a modales si no querés:
+   .modal.show ~ .fab-wrap { z-index: 1020; }  */

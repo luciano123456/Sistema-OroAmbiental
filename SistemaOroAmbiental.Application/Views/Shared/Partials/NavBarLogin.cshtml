@@ -1,0 +1,675 @@
+﻿<link href="~/css/navbarlogin.css" rel="stylesheet" />
+<link href="~/css/CurrencyWidget.css" rel="stylesheet" />
+
+<nav class="navbar navbar-expand-lg navbar-light" style="background-color: rgba(112, 112, 112, 0.1);">
+    <div class="container-fluid">
+        <a class="navbar-brand">SistemaOroAmbiental</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+
+                <li class="nav-item dropdown"
+                    id="seccionPersonal"
+                    data-modulo="Personal"
+                    data-permiso="Ver"
+                    hidden>
+
+                    <a class="nav-link dropdown-toggle"
+                       href="#"
+                       id="personalDropdownLink"
+                       role="button"
+                       data-bs-toggle="dropdown"
+                       aria-expanded="false"
+                       aria-haspopup="true">
+
+                        Personal
+
+                    </a>
+
+                    <ul class="dropdown-menu" aria-labelledby="personalDropdownLink">
+
+                        <li data-modulo="Personal" data-permiso="Ver">
+                            <a class="dropdown-item"
+                               href="@Url.Action("Index", "Personal")">
+                                Personal
+                            </a>
+                        </li>
+
+                        <li data-modulo="Personal CC" data-permiso="Ver">
+                            <a class="dropdown-item"
+                               href="@Url.Action("Index", "PersonalCuentaCorriente")">
+                                Cuenta Corriente
+                            </a>
+                        </li>
+
+                        <li data-modulo="Personal Sueldos" data-permiso="Ver">
+                            <a class="dropdown-item"
+                               href="@Url.Action("Index", "PersonalSueldos")">
+                                Pago de sueldos
+                            </a>
+                        </li>
+
+                    </ul>
+
+                </li>
+
+
+                <li class="nav-item dropdown"
+                    id="seccionArtistas"
+                    data-modulo="Artistas"
+                    data-permiso="Ver"
+                    hidden>
+
+                    <a class="nav-link dropdown-toggle"
+                       href="#"
+                       id="artistasDropdownLink"
+                       role="button"
+                       data-bs-toggle="dropdown"
+                       aria-expanded="false"
+                       aria-haspopup="true">
+
+                        Artistas
+
+                    </a>
+
+                    <ul class="dropdown-menu" aria-labelledby="artistasDropdownLink">
+
+                        <li data-modulo="Artistas" data-permiso="Ver">
+                            <a class="dropdown-item"
+                               href="@Url.Action("Index", "Artistas")">
+                                Artistas
+                            </a>
+                        </li>
+
+                        <li data-modulo="Artistas CC" data-permiso="Ver">
+                            <a class="dropdown-item"
+                               href="@Url.Action("Index", "ArtistasCuentaCorriente")">
+                                Cuenta Corriente
+                            </a>
+                        </li>
+
+                    </ul>
+
+                </li>
+
+                <li class="nav-item dropdown"
+                    id="seccionClientes"
+                    data-modulo="Clientes"
+                    data-permiso="Ver" hidden>
+
+                    <a class="nav-link dropdown-toggle"
+                       href="#"
+                       id="clientesDropdownLink"
+                       role="button"
+                       data-bs-toggle="dropdown"
+                       aria-expanded="false">
+
+                        Clientes
+
+                    </a>
+
+                    <ul class="dropdown-menu" aria-labelledby="clientesDropdownLink">
+
+                        <li data-modulo="Clientes" data-permiso="Ver">
+                            <a class="dropdown-item"
+                               href="@Url.Action("Index", "Clientes")">
+                                Clientes
+                            </a>
+                        </li>
+
+                        <li data-modulo="Clientes CC" data-permiso="Ver">
+                            <a class="dropdown-item"
+                               href="@Url.Action("Index", "ClientesCuentaCorriente")">
+                                Cuenta Corriente
+                            </a>
+                        </li>
+
+                    </ul>
+
+                </li>
+
+                <li class="nav-item"
+                    id="seccionProductoras"
+                    data-modulo="Productoras"
+                    data-permiso="Ver" hidden>
+                    <a class="nav-link" href="@Url.Action("Index", "Productoras")">
+                        Productoras
+                    </a>
+                </li>
+
+
+                <li class="nav-item"
+                    id="seccionVentas"
+                    data-modulo="Ventas"
+                    data-permiso="Ver"
+                    hidden>
+                    <a class="nav-link" href="@Url.Action("Index", "Ventas")">
+                        Ventas
+                    </a>
+                </li>
+
+                <li class="nav-item"
+                    id="seccionCajas"
+                    data-modulo="Cajas"
+                    data-permiso="Ver"
+                    hidden>
+                    <a class="nav-link" href="@Url.Action("Index", "Caja")">
+                        Cajas
+                    </a>
+                </li>
+
+                <li class="nav-item"
+                    id="seccionMonedas"
+                    data-modulo="Monedas"
+                    data-permiso="Ver"
+                    hidden>
+                    <a class="nav-link" href="@Url.Action("Index", "PaisesMoneda")">
+                        Monedas
+                    </a>
+                </li>
+
+                <li class="nav-item"
+                    id="seccionTareas"
+                    data-modulo="Tareas"
+                    data-permiso="Ver"
+                    hidden>
+                    <a class="nav-link" href="@Url.Action("Index", "Tareas")">
+                        Tareas
+                    </a>
+                </li>
+
+                <li class="nav-item"
+                    id="seccionGastos"
+                    data-modulo="Gastos"
+                    data-permiso="Ver"
+                    hidden>
+                    <a class="nav-link" href="@Url.Action("Index", "Gastos")">
+                        Gastos
+                    </a>
+                </li>
+
+
+                <!-- CONFIGURACIONES -->
+                <li class="nav-item dropdown"
+                    id="seccionConfiguraciones"
+                    data-modulo="Configuraciones"
+                    data-permiso="Ver"
+                    hidden>
+
+                    <a class="nav-link dropdown-toggle"
+                       href="#"
+                       id="configDropdownLink"
+                       role="button"
+                       data-bs-toggle="dropdown">
+                        Configuraciones
+                    </a>
+
+                    <ul class="dropdown-menu" aria-labelledby="configDropdownLink">
+
+                        <!-- USUARIOS -->
+                        <li id="seccionUsuarios"
+                            data-modulo="Usuarios"
+                            data-permiso="Ver">
+                            <a class="dropdown-item"
+                               href="@Url.Action("Index", "Usuarios")">
+                                Usuarios
+                            </a>
+                        </li>
+
+                        <!-- UBICACIONES -->
+                        <li id="seccionUbicaciones"
+                            data-modulo="Ubicaciones"
+                            data-permiso="Ver">
+                            <a class="dropdown-item"
+                               href="@Url.Action("Index", "Ubicaciones")">
+                                Ubicaciones
+                            </a>
+                        </li>
+
+                        <!-- OTRAS -->
+                        <li id="seccionOtras"
+                            data-modulo="Otras"
+                            data-permiso="Ver">
+                            <a class="dropdown-item"
+                               href="#"
+                               onclick="abrirConfiguraciones()">
+                                Otras
+                            </a>
+                        </li>
+
+                    </ul>
+                </li>
+
+            </ul>
+
+            <!-- Usuario Dropdown -->
+            <ul class="navbar-nav ms-auto">
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
+                        <i class="fa-lg me-2" id="userName"></i>
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li>
+                            <a class="dropdown-item" href="#" onclick="cerrarSesion()">
+                                Cerrar Sesión
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+            </ul>
+
+        </div>
+    </div>
+</nav>
+
+
+
+<!-- ===============================
+     MODAL: PANEL DE CONFIGURACIONES
+================================ -->
+<div class="modal fade rp-modal" id="ModalEdicionConfiguraciones" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content rp-modal-content">
+
+            <!-- HEADER -->
+            <div class="modal-header rp-modal-header">
+                <div>
+                    <div class="rp-modal-title">
+                        <i class="fa fa-sliders"></i>
+                        Configuraciones
+                    </div>
+                    <div class="rp-modal-subtitle">
+                        Ajustes generales del sistema
+                    </div>
+                </div>
+
+                <button type="button"
+                        class="btn-close rp-btn-close"
+                        data-bs-dismiss="modal">
+                </button>
+            </div>
+
+            <!-- BODY -->
+            <div class="modal-body">
+                <div class="rp-config-grid">
+
+                    <button class="rp-config-card"
+                            onclick="abrirConfiguracion('Roles', 'Roles')">
+                        <div class="rp-config-icon blue">
+                            <i class="fa fa-cog"></i>
+                        </div>
+                        <div>
+                            <div class="rp-config-title">Roles</div>
+                            <div class="rp-config-sub">
+                                Permisos de usuarios
+                            </div>
+                        </div>
+                    </button>
+
+
+                    <button class="rp-config-card"
+                            onclick="abrirConfiguracion('Paises', 'Paises')">
+                        <div class="rp-config-icon blue">
+                            <i class="fa fa-cog"></i>
+                        </div>
+                        <div>
+                            <div class="rp-config-title">Paises</div>
+                            <div class="rp-config-sub">
+                                Configuracion de paises
+                            </div>
+                        </div>
+                    </button>
+
+                    <button class="rp-config-card"
+                            onclick="abrirConfiguracion('Paises Tipos Documentos', 'PaisesTiposDocumentos', 'Paises', 'Paises', 'Pais')">
+                        <div class="rp-config-icon blue">
+                            <i class="fa fa-cog"></i>
+                        </div>
+                        <div>
+                            <div class="rp-config-title">Tipos Documentos</div>
+                            <div class="rp-config-sub">
+                                Por Pais
+                            </div>
+                        </div>
+                    </button>
+
+                    <button class="rp-config-card"
+                            onclick="abrirConfiguracion('Paises Condiciones IVA', 'PaisesCondicionesIva', 'Paises', 'Paises', 'Pais')">
+                        <div class="rp-config-icon blue">
+                            <i class="fa fa-cog"></i>
+                        </div>
+                        <div>
+                            <div class="rp-config-title">Condiciones IVA</div>
+                            <div class="rp-config-sub">
+                                Por Pais
+                            </div>
+                        </div>
+                    </button>
+
+                    <button class="rp-config-card"
+                            onclick="abrirConfiguracion('Provincias', 'PaisesProvincia', 'Paises', 'Paises', 'Pais')">
+                        <div class="rp-config-icon blue">
+                            <i class="fa fa-cog"></i>
+                        </div>
+                        <div>
+                            <div class="rp-config-title">Provincias</div>
+                            <div class="rp-config-sub">
+                                Por Pais
+                            </div>
+                        </div>
+                    </button>
+
+                    <button class="rp-config-card"
+                            onclick="abrirConfiguracion('Tareas', 'TareasEstados')">
+                        <div class="rp-config-icon blue">
+                            <i class="fa fa-cog"></i>
+                        </div>
+                        <div>
+                            <div class="rp-config-title">Tareas Estados</div>
+                            <div class="rp-config-sub">
+                                Configuracion de tareas
+                            </div>
+                        </div>
+                    </button>
+
+                    <button class="rp-config-card"
+                            onclick="abrirConfiguracion('Gastos Categorias', 'GastosCategorias')">
+                        <div class="rp-config-icon blue">
+                            <i class="fa fa-cog"></i>
+                        </div>
+                        <div>
+                            <div class="rp-config-title">Gastos Categorias</div>
+                            <div class="rp-config-sub">
+                                Configuracion de gastos categorias
+                            </div>
+                        </div>
+                    </button>
+
+                    <button class="rp-config-card"
+                            onclick="abrirConfiguracion('Cuentas', 'MonedasCuenta', 'PaisesMoneda', 'PaisesMoneda', 'Moneda')">
+                        <div class="rp-config-icon blue">
+                            <i class="fa fa-cog"></i>
+                        </div>
+                        <div>
+                            <div class="rp-config-title">Cuentas</div>
+                            <div class="rp-config-sub">
+                                Por Monedas
+                            </div>
+                        </div>
+                    </button>
+
+                    <button class="rp-config-card"
+                            onclick="abrirConfiguracion('Personal Rol', 'PersonalRol')">
+                        <div class="rp-config-icon blue">
+                            <i class="fa fa-cog"></i>
+                        </div>
+                        <div>
+                            <div class="rp-config-title">Personal Roles</div>
+                            <div class="rp-config-sub">
+                                Configuracion de roles de personal
+                            </div>
+                        </div>
+                    </button>
+
+                    <button class="rp-config-card"
+                            onclick="abrirConfiguracion('Estados', 'VentasEstados')">
+                        <div class="rp-config-icon blue">
+                            <i class="fa fa-cog"></i>
+                        </div>
+                        <div>
+                            <div class="rp-config-title">Ventas Estados</div>
+                            <div class="rp-config-sub">
+                                Configuracion de estados
+                            </div>
+                        </div>
+                    </button>
+
+                    <button class="rp-config-card"
+                            onclick="abrirConfiguracion('Contratos', 'TiposContratos')">
+                        <div class="rp-config-icon blue">
+                            <i class="fa fa-cog"></i>
+                        </div>
+                        <div>
+                            <div class="rp-config-title">Tipos de Contratos</div>
+                            <div class="rp-config-sub">
+                                Configuracion de contratos
+                            </div>
+                        </div>
+                    </button>
+
+
+                    <button class="rp-config-card"
+                            onclick="abrirConfiguracion('Comisiones', 'TiposComisiones')">
+                        <div class="rp-config-icon blue">
+                            <i class="fa fa-cog"></i>
+                        </div>
+                        <div>
+                            <div class="rp-config-title">Tipos de Comisiones</div>
+                            <div class="rp-config-sub">
+                                Configuracion de comisiones
+                            </div>
+                        </div>
+                    </button>
+
+
+                    <button class="rp-config-card"
+                            onclick="abrirConfiguracion('Opciones Binarias', 'OpcionesBinarias')">
+                        <div class="rp-config-icon blue">
+                            <i class="fa fa-cog"></i>
+                        </div>
+                        <div>
+                            <div class="rp-config-title">Opciones Binarias</div>
+                            <div class="rp-config-sub">
+                                Opciones Binarias
+                            </div>
+                        </div>
+                    </button>
+
+                    <button class="rp-config-card"
+                            onclick="abrirContratosPlantillas()">
+                        <div class="rp-config-icon blue">
+                            <i class="fa fa-file-text-o"></i>
+                        </div>
+                        <div>
+                            <div class="rp-config-title">Contratos</div>
+                            <div class="rp-config-sub">
+                                Plantillas (.docx) por tipo de contrato
+                            </div>
+                        </div>
+                    </button>
+
+
+                </div>
+            </div>
+
+            <!-- FOOTER -->
+            <div class="modal-footer rp-modal-footer">
+                <button class="rp-btn rp-btn-soft" data-bs-dismiss="modal">
+                    <i class="fa fa-times"></i>
+                    Cerrar
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+
+<div class="modal fade rp-modal" id="modalContratosPlantillas" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content rp-modal-content">
+
+            <div class="modal-header rp-modal-header">
+                <div>
+                    <div class="rp-modal-title">
+                        <i class="fa fa-file-text-o"></i>
+                        Plantillas de contratos
+                    </div>
+                    <div class="rp-modal-subtitle">
+                        Subí, reemplazá o descargá plantillas por tipo de contrato
+                    </div>
+                </div>
+
+                <button type="button"
+                        class="btn-close rp-btn-close"
+                        data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+
+                <div class="rp-list-container" id="contratosPlantillas-list">
+                    <!-- JS -->
+                </div>
+
+                <div class="rp-empty-label" id="lblContratosPlantillasVacio" hidden>
+                    No hay tipos de contrato cargados.
+                </div>
+
+            </div>
+
+            <div class="modal-footer rp-modal-footer">
+                <button class="rp-btn rp-btn-soft" data-bs-dismiss="modal">
+                    <i class="fa fa-times"></i>
+                    Cerrar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ===============================
+     MODAL: LISTA DE CONFIGURACION
+================================ -->
+<div class="modal fade rp-modal" id="modalConfiguracion" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-md">
+        <div class="modal-content rp-modal-content">
+
+            <!-- HEADER -->
+            <div class="modal-header rp-modal-header">
+                <div>
+                    <div class="rp-modal-title" id="modalConfiguracionLabel">
+                        <i class="fa fa-cogs"></i>
+                        Configuración
+                    </div>
+                    <div class="rp-modal-subtitle">
+                        Editá los valores disponibles
+                    </div>
+                </div>
+
+                <button type="button"
+                        class="btn-close rp-btn-close"
+                        data-bs-dismiss="modal">
+                </button>
+            </div>
+
+            <!-- BODY -->
+            <div class="modal-body">
+
+                <!-- MENSAJE LISTA VACIA -->
+                <label id="lblListaVacia"
+                       class="rp-empty-label"
+                       hidden>
+                </label>
+
+                <!-- BUSCADOR -->
+                <div class="rp-search-box" id="contenedorBuscadorConfiguracion">
+                    <i class="fa fa-search rp-search-icon"></i>
+                    <input type="text"
+                           id="txtBuscarConfiguracion"
+                           class="rp-input rp-search-input"
+                           placeholder="Buscar configuración...">
+                </div>
+
+                <!-- LISTA -->
+                <div class="rp-list-container" id="configuracion-list">
+                    <!-- Se llena dinámicamente -->
+                </div>
+
+                <!-- PANEL EDICION -->
+                <div id="contenedorNombreConfiguracion"
+                     class="rp-edit-panel"
+                     hidden>
+
+                    <label id="lblNombreConfiguracion"
+                           class="rp-label"
+                           for="txtNombreConfiguracion">
+                        Nombre
+                    </label>
+
+                    <input type="text"
+                           class="rp-input"
+                           id="txtNombreConfiguracion">
+
+                    <input type="hidden"
+                           id="txtIdConfiguracion">
+
+                    <!-- COMBO OPCIONAL -->
+                    <div id="divConfiguracionCombo" style="margin-top:12px;" hidden>
+                        <label id="lblConfiguracionCombo"
+                               class="rp-label">
+                        </label>
+
+                        <select id="cmbConfiguracion"
+                                class="rp-input">
+                        </select>
+                    </div>
+
+                    <!-- BOTONES -->
+                    <div class="rp-edit-actions">
+                        <button id="btnRegistrarModificarConfiguracion"
+                                class="rp-btn rp-btn-primary"
+                                onclick="guardarCambiosConfiguracion()">
+                            <i class="fa fa-check"></i>
+                            Guardar
+                        </button>
+
+                        <button class="rp-btn rp-btn-soft"
+                                onclick="cancelarModificarConfiguracion()">
+                            <i class="fa fa-times"></i>
+                            Cancelar
+                        </button>
+                    </div>
+
+                </div>
+
+                <!-- BOTON AÑADIR -->
+                <div class="rp-add-container">
+                    <button id="agregarConfiguracion"
+                            class="rp-btn rp-btn-primary"
+                            onclick="agregarConfiguracion()">
+                        <i class="fa fa-plus"></i>
+                        Añadir nuevo
+                    </button>
+                </div>
+
+            </div>
+
+            <!-- FOOTER -->
+            <div class="modal-footer rp-modal-footer">
+                <button class="rp-btn rp-btn-soft"
+                        data-bs-dismiss="modal"
+                        onclick="volverConfiguraciones()">
+                    <i class="fa fa-arrow-left"></i>
+                    Volver
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+
+<div id="currencyWidget" class="currency-widget"></div>
+
+
+<partial name="~/Views/Utils/Modals.cshtml" />
+
+<script src="~/js/CurrencyWidget.js?v=1.0"></script>
+<script src="~/js/Permisos.js"></script>
+
+
+
+<script src="~/js/NavBarLogin.js?v=1.5" asp-append-version="true"></script>

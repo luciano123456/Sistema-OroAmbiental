@@ -1,0 +1,520 @@
+.menuUsuario {
+    position: relative;
+    left: 10px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+
+.nav-user {
+    opacity: 0.7 !important;
+    background: #2E4053;
+    text-align: center;
+    font-weight: bold;
+    color: rgb(107, 120, 205, 1) !important;
+    font-size: 1.7vw;
+    border-radius: 20px;
+    width: auto !important;
+    height: calc(1.7vh + 1.7vw);
+    padding-top: 5px;
+
+}
+
+    .nav-user:hover {
+        opacity: 1 !important;
+    }
+
+
+.btnConfiguraciones {
+    display: flex;
+    align-items: center;
+    justify-content: center; /* Centra el contenido horizontalmente */
+    font-size: 30px;
+    color: white;
+    width: 100%;
+    outline: none;
+    border: none;
+    background-color: gray;
+    border-radius: 10px;
+    padding: 10px; /* Agrega algo de padding para un mejor aspecto */
+    cursor: pointer;
+    margin-bottom: 10px; /* Espacio entre los botones */
+}
+
+.list-item {
+    color: red;
+    background-color: gray;
+    margin-bottom: 5px;
+    text-align: center;
+    width: 95%;
+    height: 30px;
+    position: relative;
+    left: 2%;
+    border-radius: 3px;
+}
+
+    .list-item:hover {
+        background-color: dimgray;
+    }
+
+.btnModificarConfiguracion {
+    border: none;
+    background-color: blue;
+    color: white;
+    width: 35%;
+    margin-left: 2px;
+    height: 50px;
+    font-size: 30px;
+    text-align: center;
+    border-radius: 12px;
+    padding: 0px 5px 5px 5px;
+}
+
+
+
+    .btnModificarConfiguracion:hover {
+        background-color: darkblue;
+    }
+
+
+.btnCancelarConfiguracion {
+    border: none;
+    background-color: brown;
+    color: white;
+    width: 35%;
+    margin-left: 2px;
+    height: 50px;
+    font-size: 30px;
+    text-align: center;
+    border-radius: 12px;
+    padding: 0px 5px 5px 5px;
+}
+
+
+    .btnCancelarConfiguracion:hover {
+        background-color: darkred;
+    }
+
+.btnModificarConfiguracion-container {
+    display: flex;
+    justify-content: center; /* Centra el botón horizontalmente */
+    align-items: center; /* Centra el botón verticalmente (si es necesario) */
+    width: 100%; /* Asegúrate de que el contenedor tome el ancho completo del modal */
+    margin-bottom: 10px;
+}
+
+.btnAgregarConfiguracion-container {
+    display: flex;
+    justify-content: right; /* Centra el botón horizontalmente */
+    align-items: center; /* Centra el botón verticalmente (si es necesario) */
+    width: 100%; /* Asegúrate de que el contenedor tome el ancho completo del modal */
+    margin-bottom: 10px;
+    margin-top: 30px;
+}
+
+.btnAgregarConfiguracion {
+    border: none;
+    background-color: green;
+    color: white;
+    width: 30%;
+    margin-left: 2px;
+    height: 50px;
+    font-size: 30px;
+    text-align: center;
+    border-radius: 12px;
+    margin-right: 30px;
+}
+
+
+.edit-icon {
+    font-size: 20px;
+    color: white;
+    position: absolute;
+    bottom: 5px;
+    left: 10px;
+    cursor: pointer;
+}
+
+
+.eliminar-icon {
+    font-size: 20px;
+    color: white;
+    position: absolute;
+    bottom: 5px;
+    right: 20px;
+    cursor: pointer;
+}
+
+
+.list-container {
+    margin-top: 10px;
+    max-height: 300px;
+    overflow-y: auto; /* Habilita el desplazamiento vertical */
+}
+
+.btnConfiguraciones:hover {
+    background-color: dimgray;
+}
+
+.btnConfiguraciones img {
+    margin-right: 10px; /* Espacio entre la imagen y el texto */
+    width: 60px;
+    height: 60px;
+}
+
+.btnConfiguraciones span {
+    flex-grow: 1; /* Permite que el texto ocupe el espacio restante */
+    text-align: center; /* Centra el texto */
+}
+
+@media (max-width: 900px) {
+    .nav-user {
+        font-size: 2vw !important;
+    }
+}
+@media (max-width: 700px) {
+    .nav-user {
+        font-size: 3vw !important;
+    }
+
+}
+
+@media (max-width: 400px) {
+    .nav-user {
+        font-size: 4vw !important;
+    }
+}
+
+/* =============================
+   MODALES CONFIGURACION
+============================= */
+
+.rp-modal-content {
+    background: linear-gradient(180deg, #0f172a, #020617);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 18px;
+    color: white;
+}
+
+.rp-modal-header {
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+
+.rp-modal-title {
+    font-size: 18px;
+    font-weight: 700;
+}
+
+.rp-modal-subtitle {
+    font-size: 13px;
+    color: rgba(255,255,255,0.65);
+}
+
+/* =============================
+   GRID CONFIGURACIONES
+============================= */
+
+.rp-config-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 20px;
+}
+
+.rp-config-card {
+    background: linear-gradient(145deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03));
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 18px;
+    padding: 18px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    cursor: pointer;
+    transition: all .25s ease;
+}
+
+    .rp-config-card:hover {
+        transform: translateY(-5px);
+        background: rgba(255,255,255,0.12);
+        box-shadow: 0 18px 45px rgba(0,0,0,.5);
+    }
+
+.rp-config-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    background: linear-gradient(135deg, #fde047, #facc15);
+    color: #111;
+}
+
+    .rp-config-icon.blue {
+        background: linear-gradient(135deg, #60a5fa, #3b82f6);
+        color: white;
+    }
+
+    .rp-config-icon.orange {
+        background: linear-gradient(135deg, #fb923c, #f97316);
+        color: white;
+    }
+
+    .rp-config-icon.purple {
+        background: linear-gradient(135deg, #c084fc, #a855f7);
+        color: white;
+    }
+
+.rp-config-title {
+    font-weight: 700;
+    font-size: 16px;
+}
+
+.rp-config-sub {
+    font-size: 12px;
+    color: rgba(255,255,255,0.7);
+}
+
+/* =============================
+   LISTA DE ITEMS
+============================= */
+
+.rp-list-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 300px;
+    overflow-y: auto;
+    margin-bottom: 16px;
+}
+
+.rp-list-item {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+    padding: 12px 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+    .rp-list-item:hover {
+        background: rgba(255,255,255,0.12);
+    }
+
+.rp-item-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.rp-item-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    background: rgba(250,204,21,.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.rp-item-text {
+    font-weight: 600;
+}
+
+/* acciones */
+.rp-list-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.rp-icon-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    border: none;
+    background: rgba(255,255,255,0.08);
+    color: white;
+    cursor: pointer;
+}
+
+    .rp-icon-btn:hover {
+        background: rgba(255,255,255,0.18);
+    }
+
+    .rp-icon-btn.danger {
+        background: rgba(239,68,68,.2);
+        color: #f87171;
+    }
+
+/* =============================
+   FORMULARIO
+============================= */
+
+.rp-edit-panel {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 14px;
+    padding: 16px;
+}
+
+.rp-label {
+    font-size: 13px;
+    margin-bottom: 6px;
+    display: block;
+}
+
+.rp-input {
+    width: 100%;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 10px;
+    padding: 8px 10px;
+    color: white;
+}
+
+.rp-edit-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 12px;
+}
+
+.rp-add-container {
+    display: flex;
+    justify-content: flex-end;
+}
+
+/* =============================
+   BOTONES
+============================= */
+
+.rp-btn {
+    border-radius: 10px;
+    padding: 8px 16px;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+}
+
+.rp-btn-primary {
+    background: linear-gradient(135deg, #facc15, #fde047);
+    color: #111;
+}
+
+.rp-btn-soft {
+    background: rgba(255,255,255,0.08);
+    color: white;
+}
+
+
+/* =================================
+   TITULOS DE CONFIGURACIONES BLANCOS
+================================= */
+
+.rp-config-card {
+    color: #ffffff;
+}
+
+    .rp-config-card .rp-config-title {
+        color: #ffffff !important;
+        font-size: 18px;
+        font-weight: 700;
+        letter-spacing: .3px;
+    }
+
+    .rp-config-card .rp-config-sub {
+        color: rgba(255,255,255,0.75);
+        font-size: 13px;
+    }
+
+
+
+.rp-modal-title {
+    color: #ffffff !important;
+}
+
+.rp-modal-subtitle {
+    color: rgba(255,255,255,0.75);
+}
+
+
+
+
+/* Si usás clase personalizada */
+.rp-input select,
+.rp-input option {
+    color: #000 !important;
+}
+
+
+.rp-contract-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 12px;
+    border: 1px solid rgba(255,255,255,.08);
+    border-radius: 14px;
+    margin-bottom: 10px;
+    background: rgba(20,20,20,.25);
+}
+
+.rp-contract-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 260px;
+}
+
+.rp-contract-badge {
+    font-size: 12px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    border: 1px solid rgba(255,255,255,.12);
+    background: rgba(0,0,0,.25);
+}
+
+    .rp-contract-badge.ok {
+        border-color: rgba(30,207,147,.35);
+        color: #aef3dd;
+    }
+
+    .rp-contract-badge.no {
+        border-color: rgba(255,90,106,.35);
+        color: #ffd0d6;
+    }
+
+.rp-contract-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.rp-file-input {
+    max-width: 280px;
+}
+
+.rp-btn-mini {
+    padding: 8px 10px;
+    border-radius: 12px;
+}
+
+.rp-search-box {
+    position: relative;
+    margin-bottom: 14px;
+}
+
+.rp-search-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    opacity: .65;
+    pointer-events: none;
+}
+
+.rp-search-input {
+    padding-left: 38px !important;
+}

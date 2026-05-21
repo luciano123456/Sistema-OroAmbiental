@@ -1,0 +1,577 @@
+﻿.ventas-index {
+    color: #eaf1ff;
+}
+
+/* GRID */
+.vi-grid {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    gap: 14px;
+}
+
+@media(max-width:1100px) {
+    .vi-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* CARDS */
+
+.vi-card {
+    background: rgba(22,26,48,.78);
+    border-radius: 18px;
+    border: 1px solid rgba(255,255,255,.08);
+    box-shadow: 0 10px 28px rgba(0,0,0,.35);
+    min-height: 75vh;
+    overflow: hidden;
+}
+
+.vi-card-head {
+    padding: 12px;
+    border-bottom: 1px solid rgba(255,255,255,.06);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+    .vi-card-head .t {
+        font-weight: 900;
+        display: flex;
+        gap: 10px;
+        align-items: center;
+    }
+
+.vi-card-body {
+    padding: 12px;
+}
+
+/* LISTAS */
+
+.vi-list {
+    max-height: 65vh;
+    overflow: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.vi-item {
+    padding: 10px;
+    border-radius: 12px;
+    cursor: pointer;
+    border: 1px solid rgba(255,255,255,.1);
+    background: rgba(255,255,255,.03);
+}
+
+    .vi-item:hover {
+        background: rgba(255,255,255,.06);
+    }
+
+    .vi-item.active {
+        background: linear-gradient(135deg,#5b8cff44,#5b8cff11);
+    }
+
+/* VENTAS / SUELDOS */
+
+.vi-salesList {
+    max-height: 60vh;
+    overflow: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.vi-sale {
+    border-radius: 14px;
+    padding: 12px;
+    border: 1px solid rgba(255,255,255,.1);
+    cursor: pointer;
+    background: rgba(255,255,255,.03);
+}
+
+    .vi-sale:hover {
+        background: rgba(255,255,255,.06);
+    }
+
+/* KPI */
+
+.vi-kpis {
+    display: grid;
+    grid-template-columns: repeat(4,1fr);
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.vi-kpiCard {
+    padding: 10px;
+    border-radius: 14px;
+    background: rgba(255,255,255,.04);
+}
+
+    .vi-kpiCard .lbl {
+        font-size: .75rem;
+        opacity: .7;
+    }
+
+    .vi-kpiCard .val {
+        font-weight: 900;
+        font-size: 1.1rem;
+    }
+
+/* SEARCH */
+
+.vi-search {
+    position: relative;
+}
+
+    .vi-search i {
+        position: absolute;
+        left: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+    }
+
+    .vi-search input {
+        padding-left: 32px;
+        background: rgba(0, 0, 0, .2);
+        border: 1px solid rgba(255, 255, 255, .12);
+        color: white;
+        transition: all .25s ease;
+    }
+
+        .vi-search input::placeholder {
+            color: rgba(255,255,255,.45);
+        }
+
+        .vi-search input:focus {
+            background: rgba(0,0,0,.35);
+            border-color: #5b8cff;
+            box-shadow: 0 0 0 1px rgba(91,140,255,.35), 0 6px 20px rgba(91,140,255,.25);
+            outline: none;
+        }
+
+    .vi-search:focus-within i {
+        color: #5b8cff;
+        transform: translateY(-50%) scale(1.1);
+    }
+
+/* PILLS */
+
+.vi-pill {
+    padding: 6px 12px;
+    border-radius: 999px;
+    border: 1px solid rgba(255,255,255,.12);
+}
+
+/* ESTADO BADGE */
+
+.vi-estado {
+    padding: 4px 12px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: .3px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.vi-estado-finalizada {
+    background: linear-gradient(135deg,#1ecf93,#12a873);
+    color: white;
+    box-shadow: 0 0 10px rgba(30,207,147,.45);
+}
+
+.vi-estado-pendiente {
+    background: linear-gradient(135deg,#ffb200,#ff8c00);
+    color: #1a1a1a;
+    box-shadow: 0 0 10px rgba(255,178,0,.45);
+}
+
+.vi-estado-cancelada {
+    background: linear-gradient(135deg,#ff5a6a,#ff2e43);
+    color: white;
+    box-shadow: 0 0 10px rgba(255,90,106,.45);
+}
+
+.vi-estado-default {
+    background: linear-gradient(135deg,#6b7280,#4b5563);
+    color: white;
+    box-shadow: 0 0 10px rgba(107,114,128,.35);
+}
+
+/* PERSONAL LIST */
+
+#personalList {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding-right: 4px;
+}
+
+.vi-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    cursor: pointer;
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(255,255,255,0.05);
+    transition: all .18s ease;
+}
+
+    .vi-item:hover {
+        background: rgba(91,140,255,.08);
+        border-color: rgba(91,140,255,.25);
+        transform: translateX(3px);
+    }
+
+    .vi-item.active {
+        background: linear-gradient(135deg, rgba(91,140,255,.25), rgba(91,140,255,.05));
+        border-color: #5b8cff;
+        box-shadow: 0 0 14px rgba(91,140,255,.35);
+    }
+
+/* avatar */
+
+.vi-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: linear-gradient(135deg,#5b8cff,#8ea7ff);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 700;
+    color: white;
+    flex-shrink: 0;
+}
+
+/* nombre */
+
+.vi-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: #e7ecff;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* empty */
+
+.vi-empty {
+    height: 300px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    opacity: .85;
+}
+
+.vi-empty-icon {
+    width: 70px;
+    height: 70px;
+    border-radius: 18px;
+    background: linear-gradient(135deg,#5b8cff,#7fa4ff);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    color: white;
+    margin-bottom: 14px;
+    box-shadow: 0 10px 25px rgba(91,140,255,.35);
+}
+
+.vi-empty-title {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.vi-empty-sub {
+    font-size: 13px;
+    opacity: .65;
+    margin-bottom: 16px;
+}
+
+/* SWITCH */
+
+.vi-switch-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 8px;
+}
+
+.vi-switch {
+    position: relative;
+    display: inline-block;
+    width: 42px;
+    height: 22px;
+}
+
+    .vi-switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+
+    .vi-switch .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: #3a3a3a;
+        border-radius: 30px;
+        transition: .25s;
+    }
+
+        .vi-switch .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 3px;
+            bottom: 3px;
+            background: white;
+            border-radius: 50%;
+            transition: .25s;
+        }
+
+    .vi-switch input:checked + .slider {
+        background: linear-gradient(90deg,#00c853,#69f0ae);
+    }
+
+        .vi-switch input:checked + .slider:before {
+            transform: translateX(20px);
+        }
+
+.vi-switch-label {
+    font-size: 13px;
+    color: #b8c0d1;
+}
+
+/* select2 */
+.select2-container {
+    width: 100% !important;
+}
+
+.select2-dropdown {
+    width: auto !important;
+    min-width: 220px;
+    z-index: 99999 !important;
+}
+
+.select2-container--open {
+    z-index: 99999 !important;
+}
+
+.select2-container .select2-selection--single {
+    height: 42px;
+    display: flex;
+    align-items: center;
+}
+
+.select2-container--default .select2-selection--single .select2-selection__rendered {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* filtros */
+.rp-filtros-wrap {
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.rp-filtros-head {
+    cursor: pointer;
+}
+
+.rp-filtros-body {
+    padding: 20px;
+}
+
+.rp-filtros-head[aria-expanded="true"] .chev {
+    transform: rotate(180deg);
+}
+
+/* cuenta corriente */
+.vi-cli {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+}
+
+.vi-cc {
+    display: flex;
+    gap: 14px;
+    margin-top: 4px;
+    font-size: 12px;
+    opacity: .9;
+}
+
+.vi-cc-row {
+    display: flex;
+    gap: 4px;
+}
+
+.vi-cc-label {
+    opacity: .6;
+}
+
+.vi-cc-val {
+    font-weight: 700;
+}
+
+    .vi-cc-val.saldo {
+        font-weight: 800;
+    }
+
+    .vi-cc-val.deuda {
+        color: #fb7185;
+    }
+
+    .vi-cc-val.ok {
+        color: #4ade80;
+    }
+
+.vi-saldo.deuda {
+    color: #ff5d5d;
+    font-weight: 800;
+}
+
+.vi-saldo.ok {
+    color: #38d27a;
+    font-weight: 800;
+}
+
+/* SALES CARD PRO */
+
+.vi-sale {
+    background: linear-gradient(180deg,#1b2140,#11152b);
+    border: 1px solid rgba(255,255,255,.06);
+    border-radius: 14px;
+    padding: 14px;
+    margin-bottom: 10px;
+    transition: all .18s ease;
+    cursor: pointer;
+}
+
+    .vi-sale:hover {
+        transform: translateY(-2px);
+        border-color: rgba(255,255,255,.14);
+        box-shadow: 0 10px 25px rgba(0,0,0,.45);
+    }
+
+/* TOP */
+
+.vi-sale-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.vi-sale-title {
+    font-weight: 600;
+    font-size: 14px;
+    color: #e7ecff;
+}
+
+/* MIDDLE */
+
+.vi-sale-middle {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 6px;
+}
+
+.vi-sale-fecha {
+    font-size: 12px;
+    color: #9aa8c5;
+}
+
+.vi-importes {
+    display: flex;
+    gap: 14px;
+    align-items: center;
+}
+
+.vi-total {
+    color: #e7ecff;
+}
+
+.vi-saldo {
+    font-weight: 600;
+}
+
+    .vi-saldo.deuda {
+        color: #ff5d5d;
+    }
+
+    .vi-saldo.favor {
+        color: #3ddc84;
+    }
+
+    .vi-saldo.neutral {
+        color: #9aa8c5;
+    }
+
+/* PROGRESS BAR */
+
+.vi-progress {
+    margin-top: 10px;
+    height: 6px;
+    background: #0b0f1d;
+    border-radius: 6px;
+    overflow: hidden;
+    position: relative;
+}
+
+.vi-progress-bar {
+    height: 100%;
+    transition: all .4s ease;
+}
+
+.vi-progress-label {
+    position: absolute;
+    right: 6px;
+    top: -18px;
+    font-size: 11px;
+    color: #9aa8c5;
+}
+
+/* META PROGRESS */
+
+.vi-progress-meta {
+    margin-top: 4px;
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: #9aa8c5;
+}
+
+/* PROGRESS COLORS */
+
+.vi-progress-bar.p0 {
+    background: linear-gradient(90deg,#ff5d5d,#ff2d55);
+}
+
+.vi-progress-bar.p40 {
+    background: linear-gradient(90deg,#ffb347,#ff8c00);
+}
+
+.vi-progress-bar.p80 {
+    background: linear-gradient(90deg,#4facfe,#00c6ff);
+}
+
+.vi-progress-bar.p100 {
+    background: linear-gradient(90deg,#3ddc84,#00c853);
+}

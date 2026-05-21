@@ -1,0 +1,202 @@
+﻿/* =========================================
+   CURRENCY WIDGET — PRO CLEAN FINAL
+========================================= */
+
+:root {
+    --cw-scale: 1;
+    --cw-bg: rgba(15, 23, 42, 0.88);
+    --cw-bg-hover: rgba(15, 23, 42, 0.96);
+    --cw-text-main: #e2e8f0;
+    --cw-text-soft: #94a3b8;
+    --cw-accent: #22c55e;
+    --cw-danger: #ef4444;
+    --cw-border: rgba(255,255,255,.06);
+    --cw-radius: 14px;
+    --cw-shadow: 0 6px 18px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.04);
+    --cw-shadow-hover: 0 12px 28px rgba(0,0,0,.35);
+    --cw-blur: blur(10px);
+}
+
+/* ==============================
+   CONTAINER
+============================== */
+
+.currency-widget {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 9998;
+}
+
+    .currency-widget > * {
+        pointer-events: auto;
+    }
+
+/* ==============================
+   PILL
+============================== */
+
+.currency-pill {
+    position: fixed;
+    z-index: 9999;
+    transform: scale(var(--cw-scale));
+    transform-origin: top left;
+    min-width: 170px;
+    max-width: 260px;
+    cursor: grab;
+    transition: .15s ease;
+}
+
+    .currency-pill.dragging {
+        cursor: grabbing;
+        transform: scale(calc(var(--cw-scale) * 1.03));
+    }
+
+/* ==============================
+   INNER (GRID PERFECTO)
+============================== */
+
+.currency-pill-inner {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 8px 10px 10px;
+    border-radius: var(--cw-radius);
+    background: var(--cw-bg);
+    backdrop-filter: var(--cw-blur);
+    -webkit-backdrop-filter: var(--cw-blur);
+    border: 1px solid var(--cw-border);
+    box-shadow: var(--cw-shadow);
+    transition: .2s ease;
+}
+
+.currency-pill:hover .currency-pill-inner {
+    background: var(--cw-bg-hover);
+    box-shadow: var(--cw-shadow-hover);
+}
+
+/* ==============================
+   BADGE
+============================== */
+
+.currency-badge {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: linear-gradient(145deg, #facc15, #f59e0b);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 12px;
+    color: #111;
+    flex-shrink: 0;
+}
+
+/* ==============================
+   CONTENT
+============================== */
+
+.currency-content {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 2px;
+}
+
+.currency-name {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--cw-text-main);
+}
+
+.currency-value {
+    font-size: 15px;
+    font-weight: 800;
+    color: var(--cw-accent);
+}
+
+.currency-updated {
+    font-size: 9px;
+    color: var(--cw-text-soft);
+}
+
+/* ==============================
+   ACTIONS (🔥 PERFECTO)
+============================== */
+
+.currency-pill-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding-left: 6px;
+    border-left: 1px solid rgba(255,255,255,.05);
+}
+
+    /* BOTONES */
+
+    .currency-pill-actions button {
+        width: 20px;
+        height: 20px;
+        border-radius: 6px;
+        border: none;
+        background: rgba(255,255,255,.06);
+        color: #cbd5e1;
+        font-size: 11px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: .15s ease;
+    }
+
+        .currency-pill-actions button:hover {
+            background: rgba(255,255,255,.2);
+            color: #fff;
+            transform: scale(1.08);
+        }
+
+/* ==============================
+   SELECCIÓN
+============================== */
+
+.currency-pill.selected .currency-pill-inner {
+    border: 1px solid rgba(34,197,94,.6);
+    box-shadow: 0 0 0 2px rgba(34,197,94,.2), 0 8px 24px rgba(0,0,0,.4);
+}
+
+/* ==============================
+   FIX FOCUS
+============================== */
+
+.currency-pill:focus,
+.currency-pill:focus-visible {
+    outline: none !important;
+}
+
+/* ==============================
+   VALUE EFFECTS
+============================== */
+
+.currency-value.value-up {
+    color: #22e27a;
+}
+
+.currency-value.value-down {
+    color: var(--cw-danger);
+}
+
+/* ==============================
+   MOBILE
+============================== */
+
+@media (max-width: 768px) {
+    .currency-pill {
+        max-width: 220px;
+    }
+
+    .currency-value {
+        font-size: 13px;
+    }
+}

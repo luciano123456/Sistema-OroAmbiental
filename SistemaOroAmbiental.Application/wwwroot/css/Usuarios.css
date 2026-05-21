@@ -1,0 +1,1149 @@
+.modal-edicion {
+    max-width: 60%; /* o lo que necesites */
+}
+
+
+@media (max-width: 1300px) {
+    .modal-edicion {
+        max-width: 80%; /* o lo que necesites */
+    }
+}
+
+@media (max-width: 900px) {
+    .modal-edicion {
+        max-width: 98%; /* o lo que necesites */
+    }
+}
+
+
+/* ==============================
+   PERSONAL SELECTOR CARDS
+============================== */
+
+.rp-personal-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill,minmax(260px,1fr));
+    gap: 16px;
+}
+
+/* CARD BASE */
+.rp-personal-card {
+    background: linear-gradient( 145deg, rgba(20,35,60,.95), rgba(12,22,40,.95) );
+    border-radius: 14px;
+    padding: 16px;
+    cursor: pointer;
+    border: 1px solid rgba(255,255,255,.08);
+    transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease, background .18s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+    /* glow suave */
+    .rp-personal-card::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient( 120deg, transparent, rgba(80,160,255,.08), transparent );
+        opacity: 0;
+        transition: .2s;
+    }
+
+    /* HOVER */
+    .rp-personal-card:hover {
+        transform: translateY(-4px);
+        border-color: #3aa0ff;
+        box-shadow: 0 8px 22px rgba(0,0,0,.45);
+    }
+
+        .rp-personal-card:hover::before {
+            opacity: 1;
+        }
+
+    /* SELECCIONADA */
+    .rp-personal-card.selected {
+        border: 2px solid #28d17c;
+        background: linear-gradient( 145deg, rgba(22,60,45,.95), rgba(12,35,28,.95) );
+        box-shadow: 0 0 0 1px rgba(40,209,124,.25), 0 10px 26px rgba(40,209,124,.25);
+    }
+
+/* NOMBRE */
+.rp-personal-name {
+    font-weight: 600;
+    font-size: 16px;
+    color: #ffffff;
+    margin-bottom: 8px;
+}
+
+/* INFO */
+.rp-personal-info {
+    font-size: 13px;
+    color: #c9d4e3;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 4px;
+}
+
+    /* iconitos */
+    .rp-personal-info i {
+        color: #7fb3ff;
+        width: 16px;
+    }
+
+#modalSelectorPersonal .modal-body {
+    background: radial-gradient(circle at top, #15213a, #0b1426);
+}
+
+/* =========================================================
+   BASE
+========================================================= */
+
+:root {
+    --rp-bg-0: #081021;
+    --rp-bg-1: #0b1328;
+    --rp-bg-2: #111b36;
+    --rp-bg-3: #182441;
+    --rp-line: rgba(255,255,255,.08);
+    --rp-line-soft: rgba(255,255,255,.05);
+    --rp-text: #e9eefc;
+    --rp-text-soft: #a5b1cc;
+    --rp-text-muted: #7f8dad;
+    --rp-green: #22c55e;
+    --rp-green-soft: rgba(34,197,94,.18);
+    --rp-blue: #3b82f6;
+    --rp-yellow: #f59e0b;
+    --rp-red: #ef4444;
+    --rp-cyan: #06b6d4;
+    --rp-gray: #94a3b8;
+    --rp-shadow: 0 20px 60px rgba(0,0,0,.35);
+    --rp-radius-xl: 22px;
+    --rp-radius-lg: 18px;
+    --rp-radius-md: 14px;
+    --rp-radius-sm: 12px;
+}
+
+body {
+    color: var(--rp-text);
+}
+
+.modal-usuarios {
+    max-width: 1240px;
+}
+
+.rp-modal-shell {
+    background: radial-gradient(circle at top right, rgba(59,130,246,.13), transparent 26%), linear-gradient(180deg, #0d1630 0%, #091123 100%);
+    border: 1px solid var(--rp-line);
+    box-shadow: var(--rp-shadow);
+    border-radius: 24px;
+    overflow: hidden;
+}
+
+.rp-modal-header {
+    border-bottom: 1px solid var(--rp-line-soft);
+    padding: 18px 22px;
+}
+
+.rp-modal-title-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.rp-modal-subtitle {
+    color: #c1c9df;
+    opacity: .8;
+}
+
+.rp-modal-body {
+    padding: 20px;
+    background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.01));
+}
+
+.rp-modal-footer {
+    border-top: 1px solid var(--rp-line-soft);
+    background: rgba(255,255,255,.02);
+    padding: 16px 20px;
+}
+
+/* =========================================================
+   HEADER SCREEN
+========================================================= */
+
+.card-glass {
+    background: rgba(17, 24, 39, 0.72);
+    backdrop-filter: blur(10px);
+    border-radius: 18px;
+    border: 1px solid rgba(255,255,255,0.06);
+}
+
+.colorEncabezado {
+    background: linear-gradient(135deg, #182444, #0d1630 52%, #091123);
+    color: #fff;
+}
+
+/* =========================================================
+   ERROR PANEL
+========================================================= */
+
+.rp-error-panel {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: linear-gradient(135deg, rgba(127,29,29,.95), rgba(95,20,20,.95));
+    border: 1px solid rgba(255,255,255,.08);
+    padding: 14px 16px;
+    border-radius: 14px;
+}
+
+.rp-error-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    background: rgba(255,255,255,.08);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+}
+
+.rp-error-content {
+    flex: 1;
+}
+
+.rp-error-title {
+    font-weight: 700;
+    margin-bottom: 2px;
+}
+
+.rp-error-message {
+    color: #f6d8d8;
+    font-size: 14px;
+}
+
+.rp-error-close {
+    border: 0;
+    background: transparent;
+    color: #fff;
+    font-size: 18px;
+    opacity: .9;
+}
+
+/* =========================================================
+   TABS
+========================================================= */
+
+.rp-tabs-shell {
+    margin-bottom: 18px;
+}
+
+.rp-tabs-modern {
+    display: inline-flex;
+    gap: 8px;
+    background: rgba(255,255,255,.03);
+    padding: 8px;
+    border-radius: 16px;
+    border: 1px solid var(--rp-line-soft);
+}
+
+    .rp-tabs-modern .nav-link {
+        border: 0;
+        background: transparent;
+        color: var(--rp-text-soft);
+        font-weight: 700;
+        border-radius: 12px;
+        padding: 12px 18px;
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+        .rp-tabs-modern .nav-link.active {
+            color: #fff;
+            background: linear-gradient(135deg, rgba(34,197,94,.16), rgba(59,130,246,.16));
+            border: 1px solid rgba(255,255,255,.08);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,.04);
+        }
+
+/* =========================================================
+   FORM
+========================================================= */
+
+.rp-form-layout {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 18px;
+}
+
+.rp-panel-card {
+    background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.015));
+    border: 1px solid var(--rp-line-soft);
+    border-radius: 20px;
+    padding: 18px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.02);
+}
+
+.rp-panel-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 8px;
+}
+
+    .rp-panel-card-header h6 {
+        font-size: 18px;
+        color: #fff;
+    }
+
+    .rp-panel-card-header small {
+        color: var(--rp-text-soft);
+    }
+
+#modalEdicion .form-label {
+    color: #dce6ff;
+    font-weight: 600;
+    margin-bottom: 6px;
+}
+
+#modalEdicion .form-control,
+#modalEdicion select.form-control {
+    min-height: 46px;
+    border-radius: 12px;
+    background: rgba(8,16,33,.72);
+    border: 1px solid rgba(255,255,255,.08);
+    color: #fff;
+}
+
+    #modalEdicion .form-control::placeholder {
+        color: #7f8dad;
+    }
+
+    #modalEdicion .form-control:focus,
+    #modalEdicion select.form-control:focus {
+        background: rgba(8,16,33,.92);
+        border-color: rgba(59,130,246,.6);
+        box-shadow: 0 0 0 .2rem rgba(59,130,246,.18);
+        color: #fff;
+    }
+
+#modalEdicion .invalid-feedback {
+    color: #ffb4b4;
+}
+
+/* =========================================================
+   PERMISOS PAGE
+========================================================= */
+
+.rp-perm-page {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.rp-section-disabled {
+    opacity: .55;
+    pointer-events: none;
+}
+
+/* =========================================================
+   HERO
+========================================================= */
+
+.rp-perm-hero {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 18px;
+    padding: 18px 20px;
+    border-radius: 20px;
+    border: 1px solid var(--rp-line-soft);
+    background: radial-gradient(circle at left top, rgba(34,197,94,.09), transparent 26%), linear-gradient(180deg, rgba(5,12,28,.96), rgba(10,18,38,.96));
+}
+
+.rp-perm-hero-left {
+    display: flex;
+    gap: 14px;
+    align-items: center;
+    min-width: 0;
+}
+
+.rp-perm-hero-avatar {
+    width: 54px;
+    height: 54px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, rgba(255,255,255,.08), rgba(255,255,255,.03));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    color: #fff;
+    flex: 0 0 auto;
+}
+
+.rp-perm-hero-text {
+    min-width: 0;
+}
+
+.rp-perm-hero-label {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: var(--rp-text-muted);
+    margin-bottom: 2px;
+}
+
+.rp-perm-hero-name {
+    font-size: 22px;
+    line-height: 1.15;
+    font-weight: 800;
+    color: #fff;
+    word-break: break-word;
+    margin-bottom: 6px;
+}
+
+.rp-perm-hero-hint {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: #d3dced;
+    font-size: 14px;
+}
+
+    .rp-perm-hero-hint.success {
+        color: #c7f5d7;
+    }
+
+.rp-perm-hero-right {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.rp-kpi-card-mini {
+    min-width: 96px;
+    padding: 12px 14px;
+    border-radius: 16px;
+    background: rgba(255,255,255,.04);
+    border: 1px solid rgba(255,255,255,.06);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+    .rp-kpi-card-mini span {
+        font-size: 12px;
+        color: var(--rp-text-soft);
+    }
+
+    .rp-kpi-card-mini strong {
+        font-size: 24px;
+        line-height: 1.1;
+        color: #fff;
+    }
+
+/* =========================================================
+   TOOLBAR
+========================================================= */
+
+.rp-perm-toolbar {
+    display: flex;
+    justify-content: flex-end;
+    gap: 14px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.rp-perm-toolbar-left,
+.rp-perm-toolbar-right {
+    display: flex;
+    gap: 6px;
+    padding: 6px;
+    border-radius: 12px;
+    background: #0f172a; /* oscuro elegante */
+    border: 1px solid rgba(255,255,255,0.08);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.02);
+
+}
+
+    /* botones tipo pill */
+    .rp-perm-toolbar-left .btn,
+    .rp-perm-toolbar-right .btn {
+        border-radius: 10px;
+        font-size: 13px;
+        padding: 6px 14px;
+        background: transparent;
+        border: none;
+        color: #cbd5e1;
+        transition: all 0.2s ease;
+    }
+
+        /* hover */
+        .rp-perm-toolbar-left .btn:hover,
+        .rp-perm-toolbar-right .btn:hover {
+            background: rgba(255,255,255,0.06);
+            color: #fff;
+        }
+
+        /* activo */
+        .rp-perm-toolbar-left .btn.active,
+        .rp-perm-toolbar-right .btn.active {
+            background: #2563eb;
+            color: #fff;
+            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.4);
+        }
+
+.rp-toggle-group {
+    display: inline-flex;
+    background: #0f172a;
+    border-radius: 12px;
+    padding: 4px;
+    border: 1px solid rgba(255,255,255,0.08);
+}
+
+.rp-toggle-btn {
+    padding: 6px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    color: #cbd5e1;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+    .rp-toggle-btn.active {
+        background: #2563eb;
+        color: #fff;
+    }
+/* =========================================================
+   PERMISOS LAYOUT
+========================================================= */
+
+.rp-perm-layout {
+    display: grid;
+    grid-template-columns: 300px minmax(0, 1fr);
+    gap: 18px;
+    min-height: 520px;
+}
+
+/* =========================================================
+   SIDEBAR MODULOS
+========================================================= */
+
+.rp-mod-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 16px;
+    border-radius: 20px;
+    background: linear-gradient(180deg, rgba(5,11,25,.98), rgba(7,14,31,.98));
+    border: 1px solid var(--rp-line-soft);
+    min-height: 0;
+    max-height: 780px;
+}
+
+.rp-mod-sidebar-header h6 {
+    margin: 0;
+    font-size: 17px;
+    font-weight: 800;
+    color: #fff;
+}
+
+.rp-mod-sidebar-header small {
+    color: var(--rp-text-soft);
+    display: block;
+}
+
+.rp-mod-search {
+    position: relative;
+}
+
+    .rp-mod-search i {
+        position: absolute;
+        left: 14px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--rp-text-muted);
+        pointer-events: none;
+    }
+
+    .rp-mod-search .form-control {
+        min-height: 44px;
+        padding-left: 40px;
+        border-radius: 12px;
+        background: rgba(255,255,255,.035);
+        border: 1px solid rgba(255,255,255,.07);
+        color: #fff;
+    }
+
+        .rp-mod-search .form-control:focus {
+            background: rgba(255,255,255,.05);
+            border-color: rgba(59,130,246,.55);
+            box-shadow: 0 0 0 .18rem rgba(59,130,246,.14);
+        }
+
+.rp-mod-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    overflow: auto;
+    padding-right: 4px;
+    min-height: 0;
+}
+
+    .rp-mod-list::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    .rp-mod-list::-webkit-scrollbar-thumb {
+        background: rgba(255,255,255,.08);
+        border-radius: 20px;
+    }
+
+.rp-mod-item {
+    width: 100%;
+    border: 1px solid transparent;
+    background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.012));
+    border-radius: 14px;
+    padding: 12px 12px;
+    color: var(--rp-text);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    text-align: left;
+    transition: all .18s ease;
+}
+
+    .rp-mod-item:hover {
+        background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+        border-color: rgba(255,255,255,.06);
+        transform: translateY(-1px);
+    }
+
+    .rp-mod-item.active {
+        background: linear-gradient(135deg, rgba(34,197,94,.92), rgba(22,163,74,.92));
+        color: #081021;
+        box-shadow: 0 14px 28px rgba(34,197,94,.24);
+    }
+
+.rp-mod-item-main {
+    min-width: 0;
+    flex: 1;
+}
+
+.rp-mod-item-title {
+    font-size: 15px;
+    line-height: 1.2;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 2px;
+}
+
+.rp-mod-item-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.rp-mod-item-code {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    opacity: .72;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.rp-mod-item.active .rp-mod-item-code {
+    opacity: .78;
+}
+
+.rp-mod-item-count {
+    flex: 0 0 auto;
+    min-width: 42px;
+    height: 30px;
+    padding: 0 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 800;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255,255,255,.08);
+    color: #fff;
+}
+
+.rp-mod-item.active .rp-mod-item-count {
+    background: rgba(8,16,33,.18);
+    color: #081021;
+}
+
+/* =========================================================
+   DETAIL PANEL
+========================================================= */
+
+.rp-perm-detail {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    padding: 18px;
+    border-radius: 20px;
+    background: radial-gradient(circle at top right, rgba(59,130,246,.08), transparent 25%), linear-gradient(180deg, rgba(5,11,25,.98), rgba(7,14,31,.98));
+    border: 1px solid var(--rp-line-soft);
+    min-width: 0;
+}
+
+.rp-perm-detail-top {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    padding-bottom: 6px;
+    border-bottom: 1px solid rgba(255,255,255,.04);
+}
+
+.rp-perm-detail-titlebox {
+    max-width: 760px;
+}
+
+.rp-chip-soft {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: rgba(255,255,255,.05);
+    color: var(--rp-text-soft);
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    margin-bottom: 10px;
+}
+
+.rp-perm-detail-titlebox h3 {
+    margin: 0 0 6px 0;
+    font-size: 30px;
+    line-height: 1.08;
+    font-weight: 800;
+    color: #fff;
+}
+
+.rp-perm-detail-titlebox p {
+    margin: 0;
+    color: var(--rp-text-soft);
+    font-size: 15px;
+    max-width: 760px;
+}
+
+.rp-perm-detail-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+/* =========================================================
+   CARDS PERMISOS
+========================================================= */
+
+.rp-perm-cards-wrap {
+    min-width: 0;
+}
+
+.rp-perm-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+    gap: 16px;
+}
+
+.rp-perm-card {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 18px;
+    min-height: 180px;
+    padding: 18px;
+    border-radius: 18px;
+    border: 1px solid rgba(255,255,255,.06);
+    background: linear-gradient(180deg, rgba(255,255,255,.025), rgba(255,255,255,.012));
+    transition: all .18s ease;
+}
+
+    .rp-perm-card:hover {
+        transform: translateY(-2px);
+        border-color: rgba(255,255,255,.1);
+    }
+
+    .rp-perm-card.active {
+        border-color: rgba(34,197,94,.45);
+        background: radial-gradient(circle at top right, rgba(34,197,94,.10), transparent 24%), linear-gradient(180deg, rgba(255,255,255,.035), rgba(255,255,255,.018));
+        box-shadow: 0 12px 30px rgba(34,197,94,.08);
+    }
+
+.rp-perm-card-top {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+}
+
+.rp-perm-card-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 18px;
+    flex: 0 0 auto;
+}
+
+.rp-badge-blue {
+    background: linear-gradient(135deg, #2563eb, #3b82f6);
+}
+
+.rp-badge-green {
+    background: linear-gradient(135deg, #16a34a, #22c55e);
+}
+
+.rp-badge-yellow {
+    background: linear-gradient(135deg, #d97706, #f59e0b);
+}
+
+.rp-badge-red {
+    background: linear-gradient(135deg, #dc2626, #ef4444);
+}
+
+.rp-badge-cyan {
+    background: linear-gradient(135deg, #0891b2, #06b6d4);
+}
+
+.rp-badge-emerald {
+    background: linear-gradient(135deg, #059669, #10b981);
+}
+
+.rp-badge-gray {
+    background: linear-gradient(135deg, #64748b, #94a3b8);
+}
+
+.rp-perm-card-titlewrap {
+    min-width: 0;
+}
+
+.rp-perm-card-title {
+    font-size: 19px;
+    font-weight: 800;
+    color: #fff;
+    margin-bottom: 6px;
+}
+
+.rp-perm-card-desc {
+    color: var(--rp-text-soft);
+    font-size: 14px;
+    line-height: 1.45;
+}
+
+.rp-perm-card-bottom {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-top: auto;
+    padding-top: 10px;
+    border-top: 1px dashed rgba(255,255,255,.06);
+}
+
+.rp-switch-label {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--rp-text-soft);
+}
+
+/* =========================================================
+   SWITCH
+========================================================= */
+
+.rp-switch {
+    position: relative;
+    display: inline-block;
+    width: 58px;
+    height: 32px;
+    flex: 0 0 auto;
+}
+
+    .rp-switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+
+.rp-switch-slider {
+    position: absolute;
+    cursor: pointer;
+    inset: 0;
+    background: linear-gradient(135deg, #334155, #475569);
+    transition: .2s;
+    border-radius: 999px;
+    box-shadow: inset 0 2px 6px rgba(0,0,0,.25);
+}
+
+    .rp-switch-slider:before {
+        position: absolute;
+        content: "";
+        height: 24px;
+        width: 24px;
+        left: 4px;
+        top: 4px;
+        background: #fff;
+        transition: .2s;
+        border-radius: 50%;
+        box-shadow: 0 6px 18px rgba(0,0,0,.2);
+    }
+
+.rp-switch input:checked + .rp-switch-slider {
+    background: linear-gradient(135deg, #16a34a, #22c55e);
+}
+
+    .rp-switch input:checked + .rp-switch-slider:before {
+        transform: translateX(26px);
+    }
+
+/* =========================================================
+   EMPTY STATES
+========================================================= */
+
+.rp-perm-empty-state {
+    min-height: 160px;
+    border-radius: 18px;
+    border: 1px dashed rgba(255,255,255,.08);
+    background: rgba(255,255,255,.02);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    color: var(--rp-text-muted);
+    padding: 24px;
+}
+
+/* =========================================================
+   BADGES / DT / OTHERS
+========================================================= */
+
+.rp-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 5px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.rp-badge-success {
+    background: rgba(34,197,94,.15);
+    color: #86efac;
+}
+
+.rp-badge-danger {
+    background: rgba(239,68,68,.15);
+    color: #fca5a5;
+}
+
+.rp-badge-soft {
+    background: rgba(148,163,184,.14);
+    color: #cbd5e1;
+}
+
+.rp-filter-input,
+.rp-filter-select {
+    width: 100%;
+    min-height: 34px;
+    border-radius: 10px;
+    border: 1px solid rgba(255,255,255,.08);
+    background: #0d1630;
+    color: #fff;
+    padding: 6px 10px;
+}
+
+.rp-dd-item {
+    list-style: none;
+}
+
+.rp-dd-label {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    cursor: pointer;
+}
+
+.rp-dt-btn {
+    border-radius: 10px !important;
+}
+
+/* =========================================================
+   SELECTOR PERSONAL
+========================================================= */
+
+.rp-modal-dark {
+    background: linear-gradient(180deg, #0d1630, #091123);
+    color: #fff;
+    border: 1px solid rgba(255,255,255,.08);
+    border-radius: 22px;
+}
+
+.rp-personal-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 14px;
+}
+
+.rp-personal-card {
+    border: 1px solid rgba(255,255,255,.07);
+    border-radius: 16px;
+    background: rgba(255,255,255,.025);
+    padding: 16px;
+    cursor: pointer;
+    transition: all .18s ease;
+}
+
+    .rp-personal-card:hover {
+        border-color: rgba(59,130,246,.35);
+        transform: translateY(-1px);
+    }
+
+    .rp-personal-card.selected {
+        border-color: rgba(34,197,94,.45);
+        background: rgba(34,197,94,.08);
+    }
+
+.rp-personal-name {
+    font-size: 17px;
+    font-weight: 800;
+    margin-bottom: 10px;
+    color: #fff;
+}
+
+.rp-personal-info {
+    color: var(--rp-text-soft);
+    font-size: 14px;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 6px;
+}
+
+/* =========================================================
+   RESPONSIVE
+========================================================= */
+
+@media (max-width: 1200px) {
+    .rp-perm-layout {
+        grid-template-columns: 270px minmax(0, 1fr);
+    }
+
+    .rp-perm-detail-titlebox h3 {
+        font-size: 26px;
+    }
+}
+
+@media (max-width: 992px) {
+    .modal-usuarios {
+        max-width: 98vw;
+        margin: 1rem auto;
+    }
+
+    .rp-perm-layout {
+        grid-template-columns: 1fr;
+        min-height: auto;
+    }
+
+    .rp-mod-sidebar {
+        max-height: 320px;
+    }
+
+    .rp-perm-hero {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .rp-perm-hero-right {
+        justify-content: flex-start;
+    }
+
+    .rp-panel-card-header,
+    .rp-perm-detail-top {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
+
+@media (max-width: 768px) {
+    .rp-modal-body {
+        padding: 14px;
+    }
+
+    .rp-tabs-modern {
+        width: 100%;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+    }
+
+        .rp-tabs-modern .nav-link {
+            width: 100%;
+            justify-content: center;
+        }
+
+    .rp-perm-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .rp-perm-toolbar-left,
+    .rp-perm-toolbar-right {
+        width: 100%;
+    }
+
+        .rp-perm-toolbar-left .btn,
+        .rp-perm-toolbar-right .btn {
+            flex: 1 1 auto;
+        }
+
+    .rp-perm-detail-titlebox h3 {
+        font-size: 22px;
+    }
+
+    .rp-perm-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .rp-kpi-card-mini {
+        align-items: flex-start;
+    }
+}
+
+/* GRUPOS PERMISOS */
+
+.rp-mod-group {
+    margin-bottom: 14px;
+}
+
+.rp-mod-group-title {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: #6b7280;
+    margin-bottom: 6px;
+    padding-left: 6px;
+}
+
+#txtBuscarModuloPermiso {
+    height: 44px;
+    padding: 10px 12px 10px 40px !important;
+    line-height: normal;
+    font-size: 14px;
+}

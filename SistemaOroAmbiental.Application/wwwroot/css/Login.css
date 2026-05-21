@@ -1,0 +1,257 @@
+/* ============================
+   LOGIN UI PRO
+============================ */
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: radial-gradient(circle at top,#2c3e50,#1a2530);
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* CONTENEDOR PRINCIPAL */
+
+.login-container {
+    width: 95%;
+    max-width: 1400px;
+    height: 640px;
+    display: flex;
+    border-radius: 18px;
+    overflow: hidden;
+    background: #ffffff;
+    /* shadow pro */
+
+    box-shadow: 0 40px 80px rgba(0,0,0,0.45), 0 10px 25px rgba(0,0,0,0.2);
+}
+
+/* LADO IZQUIERDO */
+
+.left-side {
+    flex: 1;
+    background: linear-gradient(135deg,#0f2027,#203a43,#2c5364);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 50px;
+}
+
+    .left-side img {
+        width: 75%;
+        max-width: 420px;
+        filter: drop-shadow(0 15px 30px rgba(0,0,0,0.5));
+    }
+
+/* LADO DERECHO */
+
+.right-side {
+    width: 420px;
+    background: white;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 60px 55px;
+}
+
+/* TITULO */
+
+.login-title {
+    font-size: 30px;
+    font-weight: 700;
+    color: #1e3c72;
+    margin-bottom: 35px;
+    text-align: center;
+}
+
+/* INPUT GROUP */
+
+.input-group {
+    margin-bottom: 20px;
+}
+
+/* ICONOS */
+
+.input-group-text {
+    background: #f7f9fb;
+    border: 1px solid #d9dee4;
+    border-right: none;
+    border-radius: 10px 0 0 10px;
+    padding: 12px 14px;
+}
+
+/* INPUT */
+
+.form-control {
+    border: 1px solid #d9dee4;
+    border-left: none;
+    height: 48px;
+    border-radius: 0 10px 10px 0;
+    font-size: 15px;
+}
+
+    /* HOVER INPUT */
+
+    .form-control:focus {
+        box-shadow: none;
+        border-color: #3b6cb7;
+    }
+
+/* OJO PASSWORD */
+
+.password-toggle {
+    cursor: pointer;
+    background: #f7f9fb;
+    border: 1px solid #d9dee4;
+    border-left: none;
+    border-radius: 0 10px 10px 0;
+}
+
+/* RECORDAR */
+
+.remember-box {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 22px;
+    font-size: 14px;
+}
+
+/* BOTON */
+
+.btn-login {
+    background: #1e3c72;
+    border: none;
+    height: 48px;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 15px;
+    transition: all .2s ease;
+    color: white;
+}
+
+    /* BOTON HOVER */
+
+    .btn-login:hover {
+        color: #EDE1A8;
+        transform: translateY(-1px);
+        box-shadow: 0 8px 18px rgba(0,0,0,0.25);
+    }
+
+/* ERROR */
+
+.alert-login {
+    margin-bottom: 18px;
+}
+
+/* ============================
+   RESPONSIVE
+============================ */
+
+@media(max-width:950px) {
+
+    .login-container {
+        flex-direction: column;
+        height: auto;
+    }
+
+    .left-side {
+        height: 220px;
+    }
+
+        .left-side img {
+            width: 200px;
+        }
+
+    .right-side {
+        width: 100%;
+        padding: 35px;
+    }
+
+    .login-title {
+        font-size: 26px;
+    }
+}
+
+
+/* ================================
+   SWITCH RECORDAR
+================================ */
+
+.remember-box {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 22px;
+    font-size: 14px;
+}
+
+/* SWITCH */
+
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 46px;
+    height: 24px;
+}
+
+    /* ocultar checkbox */
+
+    .switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+
+/* slider */
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #d1d5db;
+    transition: .3s;
+    border-radius: 30px;
+}
+
+    /* bolita */
+
+    .slider:before {
+        position: absolute;
+        content: "";
+        height: 18px;
+        width: 18px;
+        left: 3px;
+        bottom: 3px;
+        background: white;
+        transition: .3s;
+        border-radius: 50%;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    }
+
+/* activo */
+
+.switch input:checked + .slider {
+    background-color: #1e3c72;
+}
+
+    /* mover bolita */
+
+    .switch input:checked + .slider:before {
+        transform: translateX(22px);
+    }
+
+/* texto */
+
+.remember-label {
+    color: #374151;
+}
+

@@ -1,0 +1,25 @@
+
+.is-invalid {
+    border-color: #dc3545 !important;
+    box-shadow: 0 0 0 .18rem rgba(220, 53, 69, .18) !important;
+}
+
+.is-valid {
+    border-color: #198754 !important;
+}
+
+
+
+.modal input.form-control.is-invalid,
+.modal textarea.form-control.is-invalid,
+.modal select.form-select.is-invalid {
+    border-color: #dc3545 !important;
+    box-shadow: 0 0 0 .18rem rgba(220, 53, 69, .18) !important;
+}
+
+.modal input.form-control.is-valid,
+.modal textarea.form-control.is-valid,
+.modal select.form-select.is-valid {
+    border-color: #198754 !important;
+    box-shadow: none !important;
+}
