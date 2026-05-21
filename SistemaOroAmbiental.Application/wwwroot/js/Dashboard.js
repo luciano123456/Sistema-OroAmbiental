@@ -50,25 +50,15 @@ function renderDashboard() {
         return;
     }
 
-    // 🔴 2. USER SIN PERMISOS (NULL / UNDEFINED)
-    if (!user.Permisos) {
-        renderSinPermisos(cont);
-        return;
-    }
+    const modulosDefecto = [
+        { Modulo: "Usuarios", CodigoModulo: "Usuarios" },
+        { Modulo: "Clientes", CodigoModulo: "Clientes" }
+    ];
 
-    const modulos = user.Permisos.filter(m =>
-        (m.Permisos || []).some(p =>
-            p.Codigo?.toLowerCase() === "ver" && p.Activo
-        )
-    );
+    const modulos = (user.Permisos && user.Permisos.length > 0)
+        ? user.Permisos
+        : modulosDefecto;
 
-    // 🔴 3. SIN ACCESO A NADA
-    if (modulos.length === 0) {
-        renderSinPermisos(cont);
-        return;
-    }
-
-    // 🟢 NORMAL
     modulos.forEach(m => {
 
         const nombre = m.Modulo || m.CodigoModulo || "Modulo";

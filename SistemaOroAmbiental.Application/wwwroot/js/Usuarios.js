@@ -24,9 +24,6 @@ const columnConfig = [
 $(document).ready(() => {
     listaUsuarios();
 
-    Permisos.init();
-    Permisos.aplicarUI("Usuarios");
-
     document.querySelectorAll("#modalEdicion input, #modalEdicion select, #modalEdicion textarea").forEach(el => {
         el.setAttribute("autocomplete", "off");
         el.addEventListener("input", () => validarCampoIndividual(el));

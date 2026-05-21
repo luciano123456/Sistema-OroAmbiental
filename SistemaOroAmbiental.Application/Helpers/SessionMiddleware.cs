@@ -27,7 +27,7 @@ namespace SistemaOroAmbiental.Application.Middleware
             // Si el usuario está logueado y está intentando acceder a la página de Login, redirige al Home
             else if (!string.IsNullOrEmpty(userId) && context.Request.Path.StartsWithSegments("/Login"))
             {
-                context.Response.Redirect("/Clientes/Index");
+                context.Response.Redirect("/Usuarios/Index");
                 return;
             }
 
