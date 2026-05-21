@@ -1,5 +1,5 @@
 @{
-    ViewData["Title"] = "Clientes";
+    ViewData["Title"] = "Productos";
 }
 
 @section Estilos {
@@ -14,7 +14,6 @@
     <link href="~/css/Productora.css?v=1.0" rel="stylesheet" />
     <link href="~/css/disenopantallas.css?v=1.0" rel="stylesheet" />
     <link href="~/css/M_Generico.css" rel="stylesheet" />
-    <link href="~/css/Clientes.css?v=1.0" rel="stylesheet" />
 }
 
 <div class="container-fluid mt-5">
@@ -26,21 +25,21 @@
 
                 <div class="d-flex align-items-center gap-3">
                     <span class="cc-badge">
-                        <i class="fa fa-users"></i>
+                        <i class="fa fa-cube"></i>
                     </span>
 
                     <div>
-                        <h2 class="m-0 fw-800">Clientes</h2>
-                        <small class="text-muted-cc">Gestión de clientes</small>
+                        <h2 class="m-0 fw-800">Productos</h2>
+                        <small class="text-muted-cc">Gestión de productos</small>
                     </div>
                 </div>
 
                 <div class="ms-auto d-flex gap-4 flex-wrap align-items-center">
 
                     <div class="cc-stat">
-                        <div class="label">Clientes</div>
+                        <div class="label">Productos</div>
                         <div class="value">
-                            <strong id="kpiCantClientes">0</strong>
+                            <strong id="kpiCantProductos">0</strong>
                         </div>
                     </div>
 
@@ -60,7 +59,7 @@
 
                     <button class="btn btn-success d-flex align-items-center px-3 py-2 btnnuevo"
                             type="button"
-                            onclick="nuevoCliente()">
+                            onclick="nuevoProducto()">
                         <i class="fa fa-plus-square me-2"></i> Nuevo
                     </button>
 
@@ -72,19 +71,16 @@
 
             <div class="dt-dark-wrap">
                 <table class="dt-dark display nowrap compact"
-                       id="grd_Clientes"
+                       id="grd_Productos"
                        style="width:100%">
                     <thead>
                         <tr>
                             <th></th>
                             <th>Nombre</th>
-                            <th>CUIT</th>
-                            <th>Sucursal</th>
-                            <th>Provincia</th>
-                            <th>Profesión</th>
-                            <th>Condición IVA</th>
-                            <th>Teléfono</th>
-                            <th>Email</th>
+                            <th>Categoría</th>
+                            <th>Unidad de medida</th>
+                            <th>Costo unitario</th>
+                            <th>Stock mínimo</th>
                         </tr>
                     </thead>
                     <tbody></tbody>
@@ -97,11 +93,11 @@
 
 </div>
 
-@await Html.PartialAsync("~/Views/Entities/M_Clientes.cshtml")
+@await Html.PartialAsync("~/Views/Entities/M_Productos.cshtml")
 
 @section Scripts {
 
-    <script src="~/js/Entities/M_Clientes.js?v=1.3"></script>
+    <script src="~/js/Entities/M_Productos.js?v=1.3"></script>
 
     <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
@@ -112,5 +108,5 @@
     <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
-    <script src="~/js/Clientes.js?v=1.0"></script>
+    <script src="~/js/Productos.js?v=1.0"></script>
 }

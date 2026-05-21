@@ -1,0 +1,140 @@
+@* Modal reutilizable de Proveedores (Oro Ambiental) *@
+
+<div class="modal fade proveedor-modal-root"
+     data-proveedor-modal="proveedor"
+     tabindex="-1"
+     data-bs-backdrop="static"
+     data-bs-keyboard="false">
+
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+
+        <div class="modal-content">
+
+            <div class="modal-header colorEncabezado">
+
+                <h5 class="modal-title fw-bold" id="modalEdicionLabel">
+                    Nuevo Proveedor
+                </h5>
+
+                <button type="button"
+                        class="btn-close"
+                        data-bs-dismiss="modal"></button>
+
+            </div>
+
+            <div class="modal-body">
+
+                <div id="errorCampos"
+                     class="rp-error-panel d-none mb-2">
+
+                    <div class="rp-error-icon">
+                        <i class="fa fa-exclamation-triangle"></i>
+                    </div>
+
+                    <div class="rp-error-content">
+                        <div class="rp-error-title">
+                            No se pudo guardar
+                        </div>
+                        <div class="rp-error-message"></div>
+                    </div>
+
+                    <button type="button"
+                            class="rp-error-close"
+                            onclick="cerrarErrorCampos()">
+                        <i class="fa fa-times"></i>
+                    </button>
+                </div>
+
+                <form class="row g-3">
+
+                    <input type="text" id="txtId" hidden />
+
+                    <div class="col-md-4">
+                        <label class="form-label">Nombre</label>
+                        <input id="txtNombre" class="form-control" required />
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">CUIT</label>
+                        <input id="txtCuit" class="form-control" required maxlength="11" />
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">Condición IVA</label>
+                        <div class="rp-select-plus">
+                            <select id="cmbCondicionIva" class="form-control"></select>
+                            <button type="button"
+                                    class="rp-btn-plus"
+                                    title="Agregar condición IVA"
+                                    data-config-nombre="Condiciones IVA"
+                                    data-config-controller="CondicionesIva">
+                                <i class="fa fa-plus"></i>
+                            </button>
+                        </div>
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">Teléfono</label>
+                        <input id="txtTelefono" class="form-control" />
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">Email</label>
+                        <input id="txtEmail" class="form-control" type="email" />
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">Banco</label>
+                        <div class="rp-select-plus">
+                            <select id="cmbBanco" class="form-control"></select>
+                            <button type="button"
+                                    class="rp-btn-plus"
+                                    title="Agregar banco"
+                                    data-config-nombre="Bancos"
+                                    data-config-controller="Bancos">
+                                <i class="fa fa-plus"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">Alias bancario</label>
+                        <input id="txtAliasBancario" class="form-control" maxlength="50" />
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">CBU</label>
+                        <input id="txtCbuBancario" class="form-control" maxlength="50" />
+                    </div>
+
+                </form>
+
+                <div class="rp-auditoria d-none mt-3" id="infoAuditoria">
+                    <div id="infoRegistro"></div>
+                    <div id="infoModificacion"></div>
+                </div>
+
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fa fa-arrow-left"></i>
+                    Volver
+                </button>
+
+                <button id="btnGuardar"
+                        class="btn btn-primary"
+                        onclick="guardarProveedor()">
+                    <i class="fa fa-check"></i>
+                    Registrar
+                </button>
+            </div>
+
+        </div>
+
+    </div>
+
+</div>

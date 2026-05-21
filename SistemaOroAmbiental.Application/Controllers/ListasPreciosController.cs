@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SistemaOroAmbiental.Application.Models.ViewModels;
-using SistemaOroAmbiental.DAL.DataContext;
+using SistemaOroAmbiental.BLL.Service;
 using SistemaOroAmbiental.Models;
 
 namespace SistemaOroAmbiental.Application.Controllers
@@ -10,23 +10,23 @@ namespace SistemaOroAmbiental.Application.Controllers
     [Authorize]
     public class ListasPreciosController : Controller
     {
-        private readonly SistemaOroAmbientalContext _db;
+        private readonly IListasPreciosService _service;
 
-        public ListasPreciosController(SistemaOroAmbientalContext db)
+        public ListasPreciosController(IListasPreciosService service)
         {
-            _db = db;
+            _service = service;
         }
 
         [AllowAnonymous]
         [HttpGet]
         public async Task<IActionResult> Lista()
         {
-            var lista = await _db.ListasPrecios.AsNoTracking()
+            var items = (await _service.ObtenerTodos())
                 .OrderBy(x => x.Nombre)
                 .Select(x => new VMGenericModel { Id = x.Id, Nombre = x.Nombre })
-                .ToListAsync();
+                .ToList();
 
-            return Ok(lista);
+            return Ok(items);
         }
 
         [HttpPost]
@@ -36,15 +36,17 @@ namespace SistemaOroAmbiental.Application.Controllers
 
             var entity = new ListasPrecio
             {
-                Nombre = model.Nombre ?? "",
+                Nombre = (model.Nombre ?? "").Trim(),
                 IdUsuarioRegistra = idUsuario,
                 FechaUsuarioRegistra = DateTime.Now
             };
 
-            _db.ListasPrecios.Add(entity);
-            await _db.SaveChangesAsync();
+            if (string.IsNullOrWhiteSpace(entity.Nombre))
+                return Ok(new { valor = false, mensaje = "El nombre es obligatorio." });
 
-            return Ok(new { valor = true, id = entity.Id });
+            var ok = await _service.Insertar(entity);
+
+            return Ok(new { valor = ok, id = entity.Id, mensaje = ok ? "Registrado correctamente" : "No se pudo guardar" });
         }
 
         [HttpPut]
@@ -52,34 +54,48 @@ namespace SistemaOroAmbiental.Application.Controllers
         {
             int idUsuario = int.Parse(User.FindFirst("Id")!.Value);
 
-            var entity = await _db.ListasPrecios.FirstOrDefaultAsync(x => x.Id == model.Id);
+            var entity = await _service.Obtener(model.Id);
             if (entity == null)
-                return NotFound();
+                return NotFound(new { valor = false });
 
-            entity.Nombre = model.Nombre ?? "";
+            entity.Nombre = (model.Nombre ?? "").Trim();
             entity.IdUsuarioModifica = idUsuario;
             entity.FechaUsuarioModifica = DateTime.Now;
 
-            await _db.SaveChangesAsync();
-            return Ok(new { valor = true });
+            if (string.IsNullOrWhiteSpace(entity.Nombre))
+                return Ok(new { valor = false, mensaje = "El nombre es obligatorio." });
+
+            var ok = await _service.Actualizar(entity);
+
+            return Ok(new { valor = ok, mensaje = ok ? "Modificado correctamente" : "No se pudo guardar" });
         }
 
         [HttpDelete]
         public async Task<IActionResult> Eliminar(int id)
         {
-            var entity = await _db.ListasPrecios.FirstOrDefaultAsync(x => x.Id == id);
-            if (entity == null)
-                return Ok(new { valor = false });
-
-            _db.ListasPrecios.Remove(entity);
-            await _db.SaveChangesAsync();
-            return Ok(new { valor = true });
+            try
+            {
+                var ok = await _service.Eliminar(id);
+                return Ok(new { valor = ok, mensaje = ok ? "Eliminado correctamente" : "No se encontró el registro" });
+            }
+            catch (DbUpdateException)
+            {
+                return Ok(new
+                {
+                    valor = false,
+                    mensaje = "No se puede eliminar porque tiene productos o clientes asociados."
+                });
+            }
+            catch
+            {
+                return Ok(new { valor = false, mensaje = "Error al eliminar" });
+            }
         }
 
         [HttpGet]
         public async Task<IActionResult> EditarInfo(int id)
         {
-            var entity = await _db.ListasPrecios.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id);
+            var entity = await _service.Obtener(id);
             if (entity == null)
                 return NotFound();
 

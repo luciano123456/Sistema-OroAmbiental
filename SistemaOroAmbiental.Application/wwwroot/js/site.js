@@ -759,6 +759,14 @@ function aplicarFormatoMiles() {
 
 }
 
+document.addEventListener("input", function (e) {
+    const input = e.target;
+    if (!input?.classList?.contains("Inputmiles")) return;
+    if (typeof formatearMilesInput === "function") {
+        formatearMilesInput(input);
+    }
+});
+
 function vnTimeHHmm(value) {
 
     if (!value) return "00:00";

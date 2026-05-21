@@ -8,11 +8,11 @@ using SistemaOroAmbiental.Models;
 namespace SistemaOroAmbiental.Application.Controllers
 {
     [Authorize]
-    public class ProductosController : Controller
+    public class ProveedoresController : Controller
     {
-        private readonly IProductosService _service;
+        private readonly IProveedoresService _service;
 
-        public ProductosController(IProductosService service)
+        public ProveedoresController(IProveedoresService service)
         {
             _service = service;
         }
@@ -26,18 +26,21 @@ namespace SistemaOroAmbiental.Application.Controllers
         [HttpGet]
         public async Task<IActionResult> Lista()
         {
-            var productos = (await _service.ObtenerTodos()).ToList();
+            var proveedores = (await _service.ObtenerTodos()).ToList();
 
-            var lista = productos.Select(p => new VMProducto
+            var lista = proveedores.Select(p => new VMProveedor
             {
                 Id = p.Id,
                 Nombre = p.Nombre,
-                IdCategoria = p.IdCategoria,
-                IdMedida = p.IdMedida,
-                CostoUnitario = p.CostoUnitario,
-                StockMinimo = p.StockMinimo,
-                Categoria = p.IdCategoriaNavigation?.Nombre ?? "",
-                Medida = p.IdMedidaNavigation?.Nombre ?? "",
+                Telefono = p.Telefono,
+                Email = p.Email,
+                IdCondicionIva = p.IdCondicionIva,
+                Cuit = p.Cuit,
+                IdBanco = p.IdBanco,
+                AliasBancario = p.AliasBancario,
+                CbuBancario = p.CbuBancario,
+                CondicionIva = p.IdCondicionIvaNavigation?.Nombre ?? "",
+                Banco = p.IdBancoNavigation?.Nombre ?? "",
                 IdUsuarioRegistra = p.IdUsuarioRegistra,
                 FechaUsuarioRegistra = p.FechaUsuarioRegistra,
                 UsuarioRegistra = p.IdUsuarioRegistraNavigation?.Usuario,
@@ -50,26 +53,29 @@ namespace SistemaOroAmbiental.Application.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> Insertar([FromBody] VMProducto model)
+        public async Task<IActionResult> Insertar([FromBody] VMProveedor model)
         {
             int idUsuario = int.Parse(User.FindFirst("Id")!.Value);
 
-            var producto = new Producto
+            var proveedor = new Proveedore
             {
                 Nombre = model.Nombre,
-                IdCategoria = model.IdCategoria,
-                IdMedida = model.IdMedida,
-                CostoUnitario = model.CostoUnitario,
-                StockMinimo = model.StockMinimo,
+                Telefono = model.Telefono,
+                Email = model.Email,
+                IdCondicionIva = model.IdCondicionIva,
+                Cuit = model.Cuit,
+                IdBanco = model.IdBanco,
+                AliasBancario = model.AliasBancario,
+                CbuBancario = model.CbuBancario,
                 IdUsuarioRegistra = idUsuario,
                 FechaUsuarioRegistra = DateTime.Now
             };
 
-            ServiceResult result = await _service.Insertar(producto);
+            ServiceResult result = await _service.Insertar(proveedor);
 
             return Ok(new
             {
-                id = producto.Id,
+                id = proveedor.Id,
                 valor = result.Ok,
                 mensaje = result.Mensaje,
                 tipo = result.Tipo,
@@ -78,23 +84,26 @@ namespace SistemaOroAmbiental.Application.Controllers
         }
 
         [HttpPut]
-        public async Task<IActionResult> Actualizar([FromBody] VMProducto model)
+        public async Task<IActionResult> Actualizar([FromBody] VMProveedor model)
         {
             int idUsuario = int.Parse(User.FindFirst("Id")!.Value);
 
-            var producto = new Producto
+            var proveedor = new Proveedore
             {
                 Id = model.Id,
                 Nombre = model.Nombre,
-                IdCategoria = model.IdCategoria,
-                IdMedida = model.IdMedida,
-                CostoUnitario = model.CostoUnitario,
-                StockMinimo = model.StockMinimo,
+                Telefono = model.Telefono,
+                Email = model.Email,
+                IdCondicionIva = model.IdCondicionIva,
+                Cuit = model.Cuit,
+                IdBanco = model.IdBanco,
+                AliasBancario = model.AliasBancario,
+                CbuBancario = model.CbuBancario,
                 IdUsuarioModifica = idUsuario,
                 FechaUsuarioModifica = DateTime.Now
             };
 
-            ServiceResult result = await _service.Actualizar(producto);
+            ServiceResult result = await _service.Actualizar(proveedor);
 
             return Ok(new
             {
@@ -131,10 +140,13 @@ namespace SistemaOroAmbiental.Application.Controllers
             {
                 p.Id,
                 p.Nombre,
-                p.IdCategoria,
-                p.IdMedida,
-                p.CostoUnitario,
-                p.StockMinimo,
+                p.Telefono,
+                p.Email,
+                p.IdCondicionIva,
+                p.Cuit,
+                p.IdBanco,
+                p.AliasBancario,
+                p.CbuBancario,
                 p.FechaUsuarioRegistra,
                 UsuarioRegistra = p.IdUsuarioRegistraNavigation?.Usuario,
                 p.FechaUsuarioModifica,

@@ -345,24 +345,23 @@ async function eliminarConfiguracion(id) {
             const dataJson = await response.json();
 
             if (dataJson.valor) {
-                llenarConfiguraciones()
+                await llenarConfiguraciones();
 
-                if (dataJson.valor) {
-                    await llenarConfiguraciones();
+                exitoModal(dataJson.mensaje || (nombreConfiguracion + " eliminada correctamente"));
 
-                    exitoModal(nombreConfiguracion + " eliminada correctamente");
-
-                    document.dispatchEvent(new CustomEvent("configuracionActualizada", {
-                        detail: {
-                            tipo: controllerConfiguracion,
-                            nuevoId: null,
-                            accion: "eliminar"
-                        }
-                    }));
-                }
+                document.dispatchEvent(new CustomEvent("configuracionActualizada", {
+                    detail: {
+                        tipo: controllerConfiguracion,
+                        nuevoId: null,
+                        accion: "eliminar"
+                    }
+                }));
+            } else {
+                errorModal(dataJson?.mensaje || "No se pudo eliminar");
             }
         } catch (error) {
             console.error("Ha ocurrido un error:", error);
+            errorModal("Ha ocurrido un error al eliminar");
         }
     }
 }
@@ -408,7 +407,7 @@ function guardarCambiosConfiguracion() {
         const idCombo = $("#cmbConfiguracion").val();
         const nuevoModelo = {
             "Id": idConfiguracion !== "" ? idConfiguracion : 0,
-            "IdCombo": comboNombre !== "" ? idCombo : 0,
+            "IdCombo": comboNombre != null ? idCombo : 0,
             "Nombre": $("#txtNombreConfiguracion").val(),
         };
 
@@ -429,11 +428,16 @@ function guardarCambiosConfiguracion() {
             })
             .then(async dataJson => {
 
+                if (dataJson?.valor === false) {
+                    errorModal(dataJson?.mensaje || "No se pudo guardar");
+                    return;
+                }
+
                 const esNuevo = idConfiguracion === "";
 
-                const mensaje = esNuevo
+                const mensaje = dataJson?.mensaje || (esNuevo
                     ? nombreConfiguracion + " registrado/a correctamente"
-                    : nombreConfiguracion + " modificado/a correctamente";
+                    : nombreConfiguracion + " modificado/a correctamente");
 
                 cancelarModificarConfiguracion();
 

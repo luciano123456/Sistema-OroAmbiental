@@ -1,30 +1,30 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using SistemaOroAmbiental.BLL.Common;
 using SistemaOroAmbiental.DAL.Repository;
 using SistemaOroAmbiental.Models;
 
 namespace SistemaOroAmbiental.BLL.Service
 {
-    public class ProductosService : IProductosService
+    public class ProveedoresService : IProveedoresService
     {
-        private readonly IProductosRepository _repo;
+        private readonly IProveedoresRepository _repo;
 
-        public ProductosService(IProductosRepository repo)
+        public ProveedoresService(IProveedoresRepository repo)
         {
             _repo = repo;
         }
 
-        public async Task<ServiceResult> Insertar(Producto model)
+        public async Task<ServiceResult> Insertar(Proveedore model)
         {
             if (!ValidarModelo(model, out var error))
                 return ServiceResult.Error(error, "validacion");
 
-            var dup = await _repo.BuscarDuplicado(null, model.Nombre);
+            var dup = await _repo.BuscarDuplicado(null, model.Nombre, model.Cuit);
 
             if (dup != null)
             {
                 return ServiceResult.Error(
-                    $"Ya existe un producto: '{dup.Nombre}'.",
+                    $"Ya existe un proveedor: '{dup.Nombre}'.",
                     "duplicado",
                     dup.Id);
             }
@@ -32,21 +32,21 @@ namespace SistemaOroAmbiental.BLL.Service
             var ok = await _repo.Insertar(model);
 
             return ok
-                ? ServiceResult.Success("Producto registrado correctamente")
+                ? ServiceResult.Success("Proveedor registrado correctamente")
                 : ServiceResult.Error("No se pudo guardar");
         }
 
-        public async Task<ServiceResult> Actualizar(Producto model)
+        public async Task<ServiceResult> Actualizar(Proveedore model)
         {
             if (!ValidarModelo(model, out var error))
                 return ServiceResult.Error(error, "validacion");
 
-            var dup = await _repo.BuscarDuplicado(model.Id, model.Nombre);
+            var dup = await _repo.BuscarDuplicado(model.Id, model.Nombre, model.Cuit);
 
             if (dup != null)
             {
                 return ServiceResult.Error(
-                    $"Ya existe un producto: '{dup.Nombre}'.",
+                    $"Ya existe un proveedor: '{dup.Nombre}'.",
                     "duplicado",
                     dup.Id);
             }
@@ -54,7 +54,7 @@ namespace SistemaOroAmbiental.BLL.Service
             var ok = await _repo.Actualizar(model);
 
             return ok
-                ? ServiceResult.Success("Producto modificado correctamente")
+                ? ServiceResult.Success("Proveedor modificado correctamente")
                 : ServiceResult.Error("No se pudo guardar");
         }
 
@@ -67,7 +67,7 @@ namespace SistemaOroAmbiental.BLL.Service
                 if (!ok)
                     return ServiceResult.Error("No se encontró el registro.");
 
-                return ServiceResult.Success("Producto eliminado correctamente");
+                return ServiceResult.Success("Proveedor eliminado correctamente");
             }
             catch (DbUpdateException)
             {
@@ -82,35 +82,19 @@ namespace SistemaOroAmbiental.BLL.Service
             }
         }
 
-        public Task<Producto?> Obtener(int id)
+        public Task<Proveedore?> Obtener(int id)
             => _repo.Obtener(id);
 
-        public Task<IQueryable<Producto>> ObtenerTodos()
+        public Task<IQueryable<Proveedore>> ObtenerTodos()
             => _repo.ObtenerTodos();
 
-        private static bool ValidarModelo(Producto model, out string error)
+        private static bool ValidarModelo(Proveedore model, out string error)
         {
-            if (string.IsNullOrWhiteSpace(model.Nombre))
+            if (string.IsNullOrWhiteSpace(model.Nombre) ||
+                string.IsNullOrWhiteSpace(model.Cuit) ||
+                model.IdCondicionIva <= 0)
             {
                 error = "Debe completar los campos obligatorios.";
-                return false;
-            }
-
-            if (model.IdCategoria <= 0 || model.IdMedida <= 0)
-            {
-                error = "Debe completar los campos obligatorios.";
-                return false;
-            }
-
-            if (model.CostoUnitario < 0)
-            {
-                error = "El costo unitario no puede ser negativo.";
-                return false;
-            }
-
-            if (model.StockMinimo < 0)
-            {
-                error = "El stock mínimo no puede ser negativo.";
                 return false;
             }
 

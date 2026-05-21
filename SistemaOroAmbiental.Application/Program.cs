@@ -40,6 +40,9 @@ builder.Services.AddScoped<IRolesService, RolesService>();
 builder.Services.AddScoped<IClientesRepository, ClientesRepository>();
 builder.Services.AddScoped<IClientesService, ClientesService>();
 
+builder.Services.AddScoped<IClientesContactosRepository, ClientesContactosRepository>();
+builder.Services.AddScoped<IClientesContactosService, ClientesContactosService>();
+
 builder.Services.AddScoped<IClientesProfesionesRepository, ClientesProfesionesRepository>();
 builder.Services.AddScoped<IClientesProfesionesService, ClientesProfesionesService>();
 
@@ -96,6 +99,9 @@ builder.Services.AddScoped<IProductosPreciosService, ProductosPreciosService>();
 
 builder.Services.AddScoped<IProductosRepository, ProductosRepository>();
 builder.Services.AddScoped<IProductosService, ProductosService>();
+
+builder.Services.AddScoped<IProveedoresRepository, ProveedoresRepository>();
+builder.Services.AddScoped<IProveedoresService, ProveedoresService>();
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>

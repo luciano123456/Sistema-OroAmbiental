@@ -1,4 +1,5 @@
-﻿using SistemaOroAmbiental.DAL.Repository;
+﻿using SistemaOroAmbiental.BLL.Common;
+using SistemaOroAmbiental.DAL.Repository;
 using SistemaOroAmbiental.Models;
 
 namespace SistemaOroAmbiental.BLL.Service
@@ -12,11 +13,48 @@ namespace SistemaOroAmbiental.BLL.Service
             _repo = repo;
         }
 
-        public Task<bool> Actualizar(ProductosPrecio model) => _repo.Actualizar(model);
-        public Task<bool> Eliminar(int id) => _repo.Eliminar(id);
-        public Task<bool> Insertar(ProductosPrecio model) => _repo.Insertar(model);
-        public Task<ProductosPrecio?> Obtener(int id) => _repo.Obtener(id);
-        public Task<IQueryable<ProductosPrecio>> ObtenerTodos() => _repo.ObtenerTodos();
-        public Task<int> ObtenerPrimeraListaPrecioId() => _repo.ObtenerPrimeraListaPrecioId();
+        public async Task<IReadOnlyList<ProductoPrecioListaDto>> ObtenerMatrizPorProducto(int idProducto)
+        {
+            var listas = await _repo.ObtenerListasPrecios();
+            var precios = idProducto > 0
+                ? await _repo.ObtenerPorProducto(idProducto)
+                : new List<ProductosPrecio>();
+
+            var mapa = precios.ToDictionary(x => x.IdListaPrecio);
+
+            return listas.Select(lista =>
+            {
+                mapa.TryGetValue(lista.Id, out var precio);
+                return new ProductoPrecioListaDto
+                {
+                    Id = precio?.Id ?? 0,
+                    IdListaPrecio = lista.Id,
+                    ListaPrecio = lista.Nombre,
+                    PrecioVenta = precio?.PrecioVenta ?? 0,
+                    PorcRentabilidad = precio?.PorcRentabilidad ?? 0
+                };
+            }).ToList();
+        }
+
+        public async Task<ServiceResult> GuardarPorProducto(int idProducto, IEnumerable<ProductoPrecioListaDto> precios, int idUsuario)
+        {
+            if (idProducto <= 0)
+                return ServiceResult.Error("Debe guardar el producto antes de asignar precios.", "validacion");
+
+            var entidades = (precios ?? Enumerable.Empty<ProductoPrecioListaDto>())
+                .Select(p => new ProductosPrecio
+                {
+                    IdListaPrecio = p.IdListaPrecio,
+                    PrecioVenta = p.PrecioVenta,
+                    PorcRentabilidad = p.PorcRentabilidad
+                })
+                .ToList();
+
+            var ok = await _repo.GuardarPorProducto(idProducto, entidades, idUsuario);
+
+            return ok
+                ? ServiceResult.Success("Precios guardados correctamente")
+                : ServiceResult.Error("No se pudieron guardar los precios");
+        }
     }
 }

@@ -1,12 +1,12 @@
 (function (window) {
     "use strict";
 
-    class ClienteModal {
+    class ProductoModal {
 
         constructor(root, options = {}) {
 
             if (!root) {
-                throw new Error("ClienteModal requiere un root.");
+                throw new Error("ProductoModal requiere un root.");
             }
 
             this.root = root;
@@ -14,18 +14,14 @@
             this.options = Object.assign({
                 token: window.token || "",
                 endpoints: {
-                    editar: "/Clientes/EditarInfo?id={id}",
-                    insertar: "/Clientes/Insertar",
-                    actualizar: "/Clientes/Actualizar",
-                    eliminar: "/Clientes/Eliminar?id={id}",
-                    sucursales: "/Sucursales/Lista",
-                    provincias: "/Provincias/Lista",
-                    condicionesIva: "/CondicionesIva/Lista",
-                    profesiones: "/ClientesProfesiones/Lista",
-                    contactosLista: "/ClientesContactos/ListaPorCliente?idCliente={idCliente}",
-                    contactosInsertar: "/ClientesContactos/Insertar",
-                    contactosActualizar: "/ClientesContactos/Actualizar",
-                    contactosEliminar: "/ClientesContactos/Eliminar?id={id}"
+                    editar: "/Productos/EditarInfo?id={id}",
+                    insertar: "/Productos/Insertar",
+                    actualizar: "/Productos/Actualizar",
+                    eliminar: "/Productos/Eliminar?id={id}",
+                    categorias: "/ProductosCategorias/Lista",
+                    medidas: "/UnidadesMedida/Lista",
+                    preciosLista: "/ProductosPrecios/ListaPorProducto?idProducto={id}",
+                    preciosGuardar: "/ProductosPrecios/GuardarPorProducto"
                 },
                 onSaved: null,
                 onDeleted: null,
@@ -34,32 +30,27 @@
                 onGuardarModelo: null
             }, options || {});
 
-            this.modalEl = this.root.matches("[data-cliente-modal]")
+            this.modalEl = this.root.matches("[data-producto-modal]")
                 ? this.root
-                : this.root.querySelector("[data-cliente-modal]");
+                : this.root.querySelector("[data-producto-modal]");
 
             if (!this.modalEl) {
-                throw new Error("No se encontr? [data-cliente-modal].");
+                throw new Error("No se encontr� [data-producto-modal].");
             }
 
             this.bsModal = new bootstrap.Modal(this.modalEl);
             this._ultimoModo = "nuevo";
             this._modeloActual = null;
-            this._contactosCache = [];
-            this._contactoSeleccionadoId = 0;
 
-            this._camposObligatorios = ["txtNombre", "txtCuit", "cmbSucursal"];
+            this._camposObligatorios = ["txtNombre", "cmbCategoria", "cmbMedida", "txtCostoUnitario"];
             this._comboPorController = {
-                Sucursales: { selectId: "cmbSucursal", url: this.options.endpoints.sucursales },
-                Provincias: { selectId: "cmbProvincia", url: this.options.endpoints.provincias },
-                ClientesProfesiones: { selectId: "cmbProfesion", url: this.options.endpoints.profesiones },
-                CondicionesIva: { selectId: "cmbCondicionIva", url: this.options.endpoints.condicionesIva }
+                ProductosCategorias: { selectId: "cmbCategoria", url: this.options.endpoints.categorias },
+                UnidadesMedida: { selectId: "cmbMedida", url: this.options.endpoints.medidas }
             };
 
-            window.clienteModal = this;
+            window.productoModal = this;
             this._bindEvents();
             this._bindModalEvents();
-            this._bindContactosEvents();
             this._bindAtajosConfiguracion();
             this._bindConfiguracionActualizada();
         }
@@ -109,6 +100,21 @@
 
         _getIntOrNull(id) {
             return this._toInt(this._getFieldValue(id));
+        }
+
+        _getDecimal(id) {
+            const v = this._getFieldValue(id);
+            if (v === null || v === undefined || v === "") return 0;
+            if (typeof parseNumero === "function") return parseNumero(v);
+            const n = parseFloat(String(v).replace(/\./g, "").replace(",", "."));
+            return Number.isNaN(n) ? 0 : n;
+        }
+
+        _formatearCostoUnitario(valor) {
+            if (valor === null || valor === undefined || valor === "") return "";
+            if (typeof formatearNumero === "function") return formatearNumero(valor);
+            if (typeof formatearMiles === "function") return formatearMiles(valor);
+            return String(valor);
         }
 
         _refreshSelect2Field(id) {
@@ -165,7 +171,7 @@
                 allowClear: true,
                 placeholder: "Seleccionar"
             };
-            ["cmbSucursal", "cmbProvincia", "cmbProfesion", "cmbCondicionIva"].forEach(id => {
+            ["cmbCategoria", "cmbMedida"].forEach(id => {
                 this.ensureSelect2(window.jQuery(this._id(id)), opts);
             });
         }
@@ -196,314 +202,12 @@
                 }
             });
 
-            this.bloquearControlesContactos(disabled || !this.getId());
-        }
-
-        _activarTabDatos() {
-            const tabBtn = this._id("tabBtnDatosCliente");
-            if (tabBtn && window.bootstrap?.Tab) {
-                window.bootstrap.Tab.getOrCreateInstance(tabBtn).show();
-            }
-        }
-
-        prepararContactosNuevo() {
-            this._contactosCache = [];
-            this._contactoSeleccionadoId = 0;
-            this.limpiarFormContacto();
-            this.renderListaContactos();
-            this.actualizarBadgeClienteContactos();
-            this.habilitarSeccionContactos(false);
-            this._activarTabDatos();
-        }
-
-        habilitarSeccionContactos(habilitar) {
-            const section = this._id("sectionContactosCliente");
-            const hint = this._id("contactoHint");
-            if (!section || !hint) return;
-
-            if (habilitar) {
-                section.classList.remove("rp-section-disabled");
-                hint.classList.add("success");
-                hint.innerHTML = `<i class="fa fa-check-circle"></i> Ya pod\u00E9s administrar los contactos del cliente.`;
-            } else {
-                section.classList.add("rp-section-disabled");
-                hint.classList.remove("success");
-                hint.innerHTML = `<i class="fa fa-info-circle"></i> Guard\u00E1 el cliente para administrar contactos.`;
-            }
-
-            this.bloquearControlesContactos(this.isSoloLectura() || !habilitar);
-        }
-
-        bloquearControlesContactos(bloquear) {
-            const ids = [
-                "txtContactoNombre", "txtContactoPuesto", "txtContactoTelefono",
-                "txtContactoTelefonoAlt", "txtContactoEmail"
-            ];
-            ids.forEach(id => {
-                const el = this._id(id);
-                if (el) el.disabled = !!bloquear;
-            });
-
-            const btnGuardar = this._id("btnGuardarContacto");
-            const btnNuevo = this._id("btnNuevoContacto");
-            if (btnGuardar) btnGuardar.disabled = !!bloquear;
-            if (btnNuevo) btnNuevo.disabled = !!bloquear;
-
-            const lista = this._id("listaContactosCliente");
-            if (lista) {
-                lista.querySelectorAll(".btn-eliminar-contacto").forEach(btn => {
-                    btn.disabled = !!bloquear;
+            const grid = this._id("gridPreciosLista");
+            if (grid) {
+                grid.querySelectorAll("input").forEach(inp => {
+                    inp.disabled = disabled;
+                    inp.readOnly = disabled;
                 });
-            }
-        }
-
-        actualizarBadgeClienteContactos() {
-            const nombre = (this._getFieldValue("txtNombre") || "").trim();
-            const badge = this._id("contactoClienteNombre");
-            if (badge) badge.textContent = nombre || "Nuevo";
-        }
-
-        limpiarFormContacto() {
-            this._contactoSeleccionadoId = 0;
-            this._setFieldValue("txtContactoId", "");
-            this._setFieldValue("txtContactoNombre", "");
-            this._setFieldValue("txtContactoPuesto", "");
-            this._setFieldValue("txtContactoTelefono", "");
-            this._setFieldValue("txtContactoTelefonoAlt", "");
-            this._setFieldValue("txtContactoEmail", "");
-            const titulo = this._id("contactoFormTitulo");
-            if (titulo) titulo.textContent = "Nuevo contacto";
-            this._id("listaContactosCliente")?.querySelectorAll(".rp-contact-item")
-                .forEach(el => el.classList.remove("active"));
-        }
-
-        renderListaContactos() {
-            const cont = this._id("listaContactosCliente");
-            const cant = this._id("contactoCantidad");
-            if (!cont) return;
-
-            const items = this._contactosCache || [];
-            if (cant) cant.textContent = String(items.length);
-
-            if (!items.length) {
-                const idCliente = this.getId();
-                cont.innerHTML = `<div class="rp-contact-empty">${
-                    idCliente > 0
-                        ? "No hay contactos cargados. Agreg\u00E1 uno desde el formulario."
-                        : "Guard\u00E1 el cliente para ver contactos."
-                }</div>`;
-                return;
-            }
-
-            cont.innerHTML = items.map(c => {
-                const meta = [
-                    c.Telefono,
-                    c.Email
-                ].filter(Boolean).join(" \u00B7 ");
-                const active = c.Id === this._contactoSeleccionadoId ? " active" : "";
-                return `
-                    <div class="rp-contact-item${active}" data-id="${c.Id}">
-                        <div class="flex-grow-1">
-                            <div class="rp-contact-item-main">
-                                <strong>${this._escapeHtml(c.Nombre || "")}</strong>
-                                ${c.Puesto ? `<small>${this._escapeHtml(c.Puesto)}</small>` : ""}
-                            </div>
-                            ${meta ? `<div class="rp-contact-item-meta">${this._escapeHtml(meta)}</div>` : ""}
-                        </div>
-                        <div class="rp-contact-item-actions">
-                            <button type="button"
-                                    class="btn btn-sm btn-outline-danger btn-eliminar-contacto"
-                                    data-id="${c.Id}"
-                                    title="Eliminar">
-                                <i class="fa fa-trash"></i>
-                            </button>
-                        </div>
-                    </div>`;
-            }).join("");
-        }
-
-        _escapeHtml(text) {
-            return String(text ?? "")
-                .replace(/&/g, "&amp;")
-                .replace(/</g, "&lt;")
-                .replace(/>/g, "&gt;")
-                .replace(/"/g, "&quot;");
-        }
-
-        seleccionarContacto(id) {
-            const item = (this._contactosCache || []).find(x => x.Id === id);
-            if (!item) return;
-
-            this._contactoSeleccionadoId = id;
-            this._setFieldValue("txtContactoId", item.Id);
-            this._setFieldValue("txtContactoNombre", item.Nombre || "");
-            this._setFieldValue("txtContactoPuesto", item.Puesto || "");
-            this._setFieldValue("txtContactoTelefono", item.Telefono || "");
-            this._setFieldValue("txtContactoTelefonoAlt", item.TelefonoAlt || "");
-            this._setFieldValue("txtContactoEmail", item.Email || "");
-
-            const titulo = this._id("contactoFormTitulo");
-            if (titulo) titulo.textContent = "Editar contacto";
-
-            this.renderListaContactos();
-        }
-
-        nuevoContacto() {
-            if (!this.getId()) return;
-            this.limpiarFormContacto();
-        }
-
-        validarFormContacto() {
-            const nombre = (this._getFieldValue("txtContactoNombre") || "").trim();
-            if (!nombre) {
-                if (typeof errorModal === "function") {
-                    errorModal("El nombre del contacto es obligatorio.");
-                }
-                return false;
-            }
-            return true;
-        }
-
-        async cargarContactos(idCliente) {
-            if (!idCliente || idCliente <= 0) {
-                this.prepararContactosNuevo();
-                return;
-            }
-
-            try {
-                const url = this._replaceUrl(this.options.endpoints.contactosLista, { idCliente });
-                const data = await this._fetchJson(url, {
-                    method: "GET",
-                    headers: this._headers(false)
-                });
-                this._contactosCache = Array.isArray(data) ? data : [];
-                this.limpiarFormContacto();
-                this.renderListaContactos();
-                this.habilitarSeccionContactos(true);
-            } catch (e) {
-                console.error(e);
-                this._contactosCache = [];
-                this.renderListaContactos();
-            }
-        }
-
-        async guardarContacto() {
-            if (this.isSoloLectura()) return;
-            const idCliente = this.getId();
-            if (!idCliente) {
-                if (typeof errorModal === "function") {
-                    errorModal("Guard\u00E1 el cliente antes de agregar contactos.");
-                }
-                return;
-            }
-            if (!this.validarFormContacto()) return;
-
-            const idContacto = this._toInt(this._getFieldValue("txtContactoId")) || 0;
-            const modelo = {
-                Id: idContacto,
-                IdCliente: idCliente,
-                Nombre: (this._getFieldValue("txtContactoNombre") || "").trim(),
-                Puesto: this._getFieldValue("txtContactoPuesto") || null,
-                Telefono: this._getFieldValue("txtContactoTelefono") || null,
-                TelefonoAlt: this._getFieldValue("txtContactoTelefonoAlt") || null,
-                Email: this._getFieldValue("txtContactoEmail") || null
-            };
-
-            const esNuevo = !modelo.Id;
-            const url = esNuevo
-                ? this.options.endpoints.contactosInsertar
-                : this.options.endpoints.contactosActualizar;
-            const method = esNuevo ? "POST" : "PUT";
-
-            try {
-                const data = await this._fetchJson(url, {
-                    method,
-                    headers: this._headers(true),
-                    body: JSON.stringify(modelo)
-                });
-
-                if (!data?.valor) {
-                    if (typeof errorModal === "function") {
-                        errorModal(data?.mensaje || "No se pudo guardar el contacto.");
-                    }
-                    return;
-                }
-
-                if (typeof exitoModal === "function") {
-                    exitoModal(data.mensaje || "Contacto guardado correctamente");
-                }
-
-                await this.cargarContactos(idCliente);
-                if (esNuevo && data.id) {
-                    this.seleccionarContacto(data.id);
-                }
-            } catch (e) {
-                console.error(e);
-                if (typeof errorModal === "function") {
-                    errorModal("Ha ocurrido un error al guardar el contacto.");
-                }
-            }
-        }
-
-        async eliminarContacto(id) {
-            if (this.isSoloLectura()) return;
-
-            const confirmado = typeof confirmarModal === "function"
-                ? await confirmarModal("\u00BFDesea eliminar este contacto?")
-                : window.confirm("\u00BFDesea eliminar este contacto?");
-
-            if (!confirmado) return;
-
-            try {
-                const url = this._replaceUrl(this.options.endpoints.contactosEliminar, { id });
-                const data = await this._fetchJson(url, {
-                    method: "DELETE",
-                    headers: this._headers(false)
-                });
-
-                if (!data?.valor) {
-                    if (typeof errorModal === "function") {
-                        errorModal(data?.mensaje || "No se pudo eliminar el contacto.");
-                    }
-                    return;
-                }
-
-                if (typeof exitoModal === "function") {
-                    exitoModal(data.mensaje || "Contacto eliminado correctamente");
-                }
-
-                await this.cargarContactos(this.getId());
-            } catch (e) {
-                console.error(e);
-                if (typeof errorModal === "function") {
-                    errorModal("Ha ocurrido un error al eliminar el contacto.");
-                }
-            }
-        }
-
-        _bindContactosEvents() {
-            const lista = this._id("listaContactosCliente");
-            if (lista) {
-                lista.addEventListener("click", (e) => {
-                    const btnDel = e.target.closest(".btn-eliminar-contacto");
-                    if (btnDel) {
-                        e.stopPropagation();
-                        const id = parseInt(btnDel.getAttribute("data-id"), 10);
-                        if (id) this.eliminarContacto(id);
-                        return;
-                    }
-
-                    const item = e.target.closest(".rp-contact-item");
-                    if (item) {
-                        const id = parseInt(item.getAttribute("data-id"), 10);
-                        if (id) this.seleccionarContacto(id);
-                    }
-                });
-            }
-
-            const txtNombre = this._id("txtNombre");
-            if (txtNombre) {
-                txtNombre.addEventListener("input", () => this.actualizarBadgeClienteContactos());
             }
         }
 
@@ -518,11 +222,11 @@
 
                 this.limpiarModal();
                 this.setModalSoloLectura(false);
-                this.prepararContactosNuevo();
 
                 await this.cargarCombos();
+                await this.cargarPreciosPorLista(0);
 
-                this._id("modalEdicionLabel").textContent = "Nuevo Cliente";
+                this._id("modalEdicionLabel").textContent = "Nuevo Producto";
                 this._id("btnGuardar").innerHTML = `<i class="fa fa-check"></i> Registrar`;
 
                 this.bsModal.show();
@@ -584,31 +288,18 @@
 
             this._setFieldValue("txtId", modelo.Id || "");
             this._setFieldValue("txtNombre", modelo.Nombre || "");
-            this._setFieldValue("txtCuit", modelo.Cuit || "");
-            this._setFieldValue("txtTelefono", modelo.Telefono || "");
-            this._setFieldValue("txtTelefonoAlt", modelo.TelefonoAlt || "");
-            this._setFieldValue("txtEmail", modelo.Email || "");
-            this._setFieldValue("txtDomicilio", modelo.Domicilio || "");
-            this._setFieldValue("txtLocalidad", modelo.Localidad || "");
-            this._setFieldValue("txtCodPostal", modelo.CodPostal || "");
+            this._setFieldValue("txtCostoUnitario", this._formatearCostoUnitario(modelo.CostoUnitario));
+            this._setFieldValue("txtStockMinimo", modelo.StockMinimo ?? 0);
 
-            if (modelo.IdSucursal) this._setFieldValue("cmbSucursal", modelo.IdSucursal, true);
-            if (modelo.IdProvincia) this._setFieldValue("cmbProvincia", modelo.IdProvincia, true);
-            if (modelo.IdProfesion) this._setFieldValue("cmbProfesion", modelo.IdProfesion, true);
-            if (modelo.IdCondicionIva) this._setFieldValue("cmbCondicionIva", modelo.IdCondicionIva, true);
+            if (modelo.IdCategoria) this._setFieldValue("cmbCategoria", modelo.IdCategoria, true);
+            if (modelo.IdMedida) this._setFieldValue("cmbMedida", modelo.IdMedida, true);
+
+            await this.cargarPreciosPorLista(modelo.Id || 0);
 
             this._setAuditoria(modelo);
 
-            this._id("modalEdicionLabel").textContent = soloLectura ? "Ver Cliente" : "Editar Cliente";
+            this._id("modalEdicionLabel").textContent = soloLectura ? "Ver Producto" : "Editar Producto";
             this._id("btnGuardar").innerHTML = `<i class="fa fa-check"></i> Guardar`;
-
-            this.actualizarBadgeClienteContactos();
-            if (modelo?.Id > 0) {
-                await this.cargarContactos(modelo.Id);
-                this.setModalSoloLectura(soloLectura);
-            } else {
-                this.prepararContactosNuevo();
-            }
 
             this.bsModal.show();
             this.setModalSoloLectura(soloLectura);
@@ -633,19 +324,123 @@
         }
 
         async cargarCombos() {
-            this.resetSelect("cmbSucursal", "Seleccionar");
-            this.resetSelect("cmbProvincia", "Seleccionar");
-            this.resetSelect("cmbProfesion", "Seleccionar");
-            this.resetSelect("cmbCondicionIva", "Seleccionar");
+            this.resetSelect("cmbCategoria", "Seleccionar");
+            this.resetSelect("cmbMedida", "Seleccionar");
 
             await Promise.all([
-                this._llenarCombo("cmbSucursal", this.options.endpoints.sucursales),
-                this._llenarCombo("cmbProvincia", this.options.endpoints.provincias),
-                this._llenarCombo("cmbProfesion", this.options.endpoints.profesiones),
-                this._llenarCombo("cmbCondicionIva", this.options.endpoints.condicionesIva)
+                this._llenarCombo("cmbCategoria", this.options.endpoints.categorias),
+                this._llenarCombo("cmbMedida", this.options.endpoints.medidas)
             ]);
 
             this.inicializarSelect2Modal();
+        }
+
+        _escapeHtml(text) {
+            const div = document.createElement("div");
+            div.textContent = text ?? "";
+            return div.innerHTML;
+        }
+
+        async cargarPreciosPorLista(idProducto) {
+            const grid = this._id("gridPreciosLista");
+            const lblSinListas = this._id("lblPreciosSinListas");
+            if (!grid) return;
+
+            grid.innerHTML = "";
+
+            const url = this._replaceUrl(this.options.endpoints.preciosLista, { id: idProducto || 0 });
+            const data = await this._fetchJson(url, { headers: this._headers(false) });
+
+            if (!data || data.length === 0) {
+                lblSinListas?.classList.remove("d-none");
+                return;
+            }
+
+            lblSinListas?.classList.add("d-none");
+
+            (data || []).forEach(row => {
+                const card = document.createElement("div");
+                card.className = "rp-precio-card";
+                card.dataset.idLista = row.IdListaPrecio;
+                card.dataset.idPrecio = row.Id || 0;
+
+                const precioFmt = row.PrecioVenta > 0
+                    ? (typeof formatearNumero === "function" ? formatearNumero(row.PrecioVenta) : row.PrecioVenta)
+                    : "";
+
+                const rentFmt = row.PorcRentabilidad > 0
+                    ? (typeof formatearNumero === "function" ? formatearNumero(row.PorcRentabilidad) : row.PorcRentabilidad)
+                    : "";
+
+                const nombreLista = this._escapeHtml(row.ListaPrecio || "");
+
+                card.innerHTML = `
+                    <div class="rp-precio-card-head">
+                        <span class="rp-precio-card-badge"><i class="fa fa-tag"></i></span>
+                        <span class="rp-precio-card-name">${nombreLista}</span>
+                    </div>
+                    <div class="rp-precio-card-body">
+                        <div class="rp-precio-card-field">
+                            <label>Precio venta</label>
+                            <input type="text" inputmode="decimal" autocomplete="off"
+                                   class="form-control Inputmiles precio-lista-precio"
+                                   data-lista="${row.IdListaPrecio}" value="${precioFmt}" placeholder="0,00" />
+                        </div>
+                        <div class="rp-precio-card-field">
+                            <label>% Rentabilidad</label>
+                            <input type="text" inputmode="decimal" autocomplete="off"
+                                   class="form-control Inputmiles precio-lista-rent"
+                                   data-lista="${row.IdListaPrecio}" value="${rentFmt}" placeholder="0,00" />
+                        </div>
+                    </div>`;
+                grid.appendChild(card);
+            });
+        }
+
+        _obtenerPreciosDesdeForm() {
+            const grid = this._id("gridPreciosLista");
+            if (!grid) return [];
+
+            return Array.from(grid.querySelectorAll(".rp-precio-card")).map(card => {
+                const inpPrecio = card.querySelector(".precio-lista-precio");
+                const inpRent = card.querySelector(".precio-lista-rent");
+                const parse = typeof parseNumero === "function"
+                    ? parseNumero
+                    : (v) => parseFloat(String(v || "").replace(/\./g, "").replace(",", ".")) || 0;
+
+                return {
+                    Id: parseInt(card.dataset.idPrecio || "0", 10) || 0,
+                    IdListaPrecio: parseInt(card.dataset.idLista || "0", 10),
+                    ListaPrecio: card.querySelector(".rp-precio-card-name")?.textContent?.trim() || "",
+                    PrecioVenta: parse(inpPrecio?.value || ""),
+                    PorcRentabilidad: parse(inpRent?.value || "")
+                };
+            });
+        }
+
+        async _guardarPreciosPorLista(idProducto) {
+            const precios = this._obtenerPreciosDesdeForm();
+            const tieneAlguno = precios.some(p => p.PrecioVenta > 0 || p.PorcRentabilidad > 0);
+            if (!tieneAlguno) return true;
+
+            try {
+                const data = await this._fetchJson(this.options.endpoints.preciosGuardar, {
+                    method: "POST",
+                    headers: this._headers(true),
+                    body: JSON.stringify({ IdProducto: idProducto, Precios: precios })
+                });
+
+                if (!data?.valor) {
+                    this.mostrarErrorCampos(data?.mensaje || "No se pudieron guardar los precios.", null, data?.tipo || "error");
+                    return false;
+                }
+
+                return true;
+            } catch (err) {
+                console.error(err);
+                this.mostrarErrorCampos("Error al guardar precios por lista.", null, "error");
+                return false;
+            }
         }
 
         async guardar() {
@@ -656,18 +451,11 @@
 
             const modelo = {
                 Id: id !== "" ? parseInt(id, 10) : 0,
-                IdSucursal: this._getIntOrNull("cmbSucursal"),
                 Nombre: this._getFieldValue("txtNombre"),
-                Cuit: this._getFieldValue("txtCuit"),
-                Telefono: this._getFieldValue("txtTelefono"),
-                TelefonoAlt: this._getFieldValue("txtTelefonoAlt"),
-                Email: this._getFieldValue("txtEmail"),
-                Domicilio: this._getFieldValue("txtDomicilio"),
-                Localidad: this._getFieldValue("txtLocalidad"),
-                CodPostal: this._getFieldValue("txtCodPostal"),
-                IdProvincia: this._getIntOrNull("cmbProvincia"),
-                IdProfesion: this._getIntOrNull("cmbProfesion"),
-                IdCondicionIva: this._getIntOrNull("cmbCondicionIva")
+                IdCategoria: this._getIntOrNull("cmbCategoria"),
+                IdMedida: this._getIntOrNull("cmbMedida"),
+                CostoUnitario: this._getDecimal("txtCostoUnitario"),
+                StockMinimo: this._getIntOrNull("txtStockMinimo") ?? 0
             };
 
             if (typeof this.options.onGuardarModelo === "function") {
@@ -695,29 +483,13 @@
                     return false;
                 }
 
+                const idProducto = data?.id || modelo.Id;
+                const preciosOk = await this._guardarPreciosPorLista(idProducto);
+                if (!preciosOk) return false;
+
                 this.cerrarErrorCampos();
-                exitoModal(data.mensaje || (esNuevo ? "Cliente registrado correctamente" : "Cliente modificado correctamente"));
-
-                if (esNuevo && data.id) {
-                    this._setFieldValue("txtId", data.id);
-                    this._id("modalEdicionLabel").textContent = "Editar Cliente";
-                    this._id("btnGuardar").innerHTML = `<i class="fa fa-check"></i> Guardar`;
-                    this._ultimoModo = "editar";
-                    this.actualizarBadgeClienteContactos();
-                    await this.cargarContactos(data.id);
-
-                    const tabBtn = this._id("tabBtnContactosCliente");
-                    if (tabBtn && window.bootstrap?.Tab) {
-                        window.bootstrap.Tab.getOrCreateInstance(tabBtn).show();
-                    }
-
-                    if (typeof this.options.onSaved === "function") {
-                        await this.options.onSaved(data, { ...modelo, Id: data.id }, this);
-                    }
-                    return true;
-                }
-
                 this.cerrar();
+                exitoModal(data.mensaje || (esNuevo ? "Producto registrado correctamente" : "Producto modificado correctamente"));
 
                 if (typeof this.options.onSaved === "function") {
                     await this.options.onSaved(data, modelo, this);
@@ -733,8 +505,8 @@
 
         async eliminar(id) {
             const confirmado = typeof confirmarModal === "function"
-                ? await confirmarModal("?Desea eliminar este cliente?")
-                : window.confirm("?Desea eliminar este cliente?");
+                ? await confirmarModal("¿Desea eliminar este producto?")
+                : window.confirm("¿Desea eliminar este producto?");
 
             if (!confirmado) return false;
 
@@ -750,7 +522,7 @@
                     return false;
                 }
 
-                exitoModal(data.mensaje || "Cliente eliminado correctamente");
+                exitoModal(data.mensaje || "Producto eliminado correctamente");
 
                 if (typeof this.options.onDeleted === "function") {
                     await this.options.onDeleted(data, id, this);
@@ -782,13 +554,27 @@
             this._id("infoAuditoria")?.classList.add("d-none");
             if (this._id("infoRegistro")) this._id("infoRegistro").innerHTML = "";
             if (this._id("infoModificacion")) this._id("infoModificacion").innerHTML = "";
+            const gridPrecios = this._id("gridPreciosLista");
+            if (gridPrecios) gridPrecios.innerHTML = "";
+            this._id("lblPreciosSinListas")?.classList.add("d-none");
             this._refreshAllSelect2();
-            this.prepararContactosNuevo();
         }
 
         _valorCampoValido(el) {
-            const valor = (el?.value ?? "").toString().trim();
-            return valor !== "" && valor !== "Seleccionar";
+            if (!el) return false;
+            const valor = (el.value ?? "").toString().trim();
+            if (valor === "" || valor === "Seleccionar") return false;
+            if (el.id === "txtCostoUnitario") {
+                const n = typeof parseNumero === "function"
+                    ? parseNumero(valor)
+                    : parseFloat(valor.replace(/\./g, "").replace(",", "."));
+                return !Number.isNaN(n) && n >= 0;
+            }
+            if (el.id === "txtStockMinimo") {
+                const n = parseInt(valor, 10);
+                return !Number.isNaN(n) && n >= 0;
+            }
+            return true;
         }
 
         validarCampoIndividual(el) {
@@ -811,8 +597,9 @@
         validarCampos() {
             const campos = [
                 { id: "txtNombre", nombre: "Nombre" },
-                { id: "txtCuit", nombre: "CUIT" },
-                { id: "cmbSucursal", nombre: "Sucursal" }
+                { id: "cmbCategoria", nombre: "Categoría" },
+                { id: "cmbMedida", nombre: "Unidad de medida" },
+                { id: "txtCostoUnitario", nombre: "Costo unitario" }
             ];
 
             const errores = [];
@@ -870,6 +657,12 @@
         }
 
         async _onConfiguracionActualizada(detail) {
+            if (detail?.tipo === "ListasPrecios") {
+                const idProducto = this.getId();
+                await this.cargarPreciosPorLista(idProducto);
+                return;
+            }
+
             const cfg = this._comboPorController[detail?.tipo];
             if (!cfg) return;
 
@@ -892,7 +685,7 @@
                     const controller = btn.getAttribute("data-config-controller") || "";
 
                     if (typeof abrirConfiguracion !== "function") {
-                        errorModal("No se pudo abrir la configuraci?n.");
+                        errorModal("No se pudo abrir la configuración.");
                         return;
                     }
 
@@ -900,7 +693,7 @@
                         await abrirConfiguracion(nombre, controller, null, null, null, true);
                     } catch (err) {
                         console.error(err);
-                        errorModal("No se pudo abrir la configuraci?n.");
+                        errorModal("No se pudo abrir la configuración.");
                     }
                 });
             });
@@ -913,7 +706,7 @@
                 try {
                     await this._onConfiguracionActualizada(e.detail || {});
                 } catch (err) {
-                    console.error("Error recargando combo tras configuraci?n", err);
+                    console.error("Error recargando combo tras configuración", err);
                 }
             };
 
@@ -934,8 +727,8 @@
             let botonReferencia = "";
             if (idReferencia) {
                 botonReferencia = `
-                    <button class="rp-btn-ref" onclick="verFicha(${idReferencia})">
-                        <i class="fa fa-eye me-1"></i> Abrir ficha existente ???
+                    <button class="rp-btn-ref" onclick="verProducto(${idReferencia})">
+                        <i class="fa fa-eye me-1"></i> Abrir ficha existente �??
                     </button>`;
             }
 
@@ -1023,6 +816,9 @@
 
             this.modalEl.addEventListener("input", (e) => {
                 const target = e.target;
+                if (target?.classList?.contains("Inputmiles") && typeof formatearMilesInput === "function") {
+                    formatearMilesInput(target);
+                }
                 if (target?.matches("input, select, textarea")) {
                     this.validarCampoIndividual(target);
                 }
@@ -1049,8 +845,8 @@
 
                 if (window.jQuery) {
                     const $modal = window.jQuery(this.modalEl);
-                    $modal.off("select2:select.mclientes select2:clear.mclientes");
-                    $modal.on("select2:select.mclientes select2:clear.mclientes", "select", (e) => {
+                    $modal.off("select2:select.mproductos select2:clear.mproductos");
+                    $modal.on("select2:select.mproductos select2:clear.mproductos", "select", (e) => {
                         if (e.target) this.validarCampoIndividual(e.target);
                     });
                 }
@@ -1058,22 +854,14 @@
         }
     }
 
-    window.guardarCliente = function () {
-        return window.clienteModal?.guardar?.();
-    };
-
-    window.guardarContactoCliente = function () {
-        return window.clienteModal?.guardarContacto?.();
-    };
-
-    window.nuevoContactoCliente = function () {
-        return window.clienteModal?.nuevoContacto?.();
+    window.guardarProducto = function () {
+        return window.productoModal?.guardar?.();
     };
 
     window.cerrarErrorCampos = function () {
-        return window.clienteModal?.cerrarErrorCampos?.();
+        return window.productoModal?.cerrarErrorCampos?.();
     };
 
-    window.ClienteModal = ClienteModal;
+    window.ProductoModal = ProductoModal;
 
 })(window);
