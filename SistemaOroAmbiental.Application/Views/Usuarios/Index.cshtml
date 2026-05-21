@@ -11,6 +11,7 @@
 
     <link href="~/css/usuarios.css?v=5.1" rel="stylesheet" />
     <link href="~/css/disenopantallas.css?v=1.0" rel="stylesheet" />
+    <link href="~/css/M_Generico.css" rel="stylesheet" />
 }
 
 <div class="container-fluid mt-5">
@@ -209,13 +210,25 @@
 
                                     <div class="col-md-4">
                                         <label class="form-label">Rol</label>
-                                        <select id="Roles" class="form-control"></select>
+                                        <div class="rp-select-plus">
+                                            <select id="Roles" class="form-control"></select>
+                                            <button type="button" class="rp-btn-plus" title="Agregar rol"
+                                                    data-config-nombre="Roles" data-config-controller="Roles">
+                                                <i class="fa fa-plus"></i>
+                                            </button>
+                                        </div>
                                         <div class="invalid-feedback">Campo obligatorio</div>
                                     </div>
 
                                     <div class="col-md-4">
                                         <label class="form-label">Estado</label>
-                                        <select id="Estados" class="form-control"></select>
+                                        <div class="rp-select-plus">
+                                            <select id="Estados" class="form-control"></select>
+                                            <button type="button" class="rp-btn-plus" title="Agregar estado"
+                                                    data-config-nombre="Estados Usuarios" data-config-controller="EstadosUsuarios">
+                                                <i class="fa fa-plus"></i>
+                                            </button>
+                                        </div>
                                         <div class="invalid-feedback">Campo obligatorio</div>
                                     </div>
 
@@ -356,15 +369,11 @@
             </div>
 
             <div class="modal-footer rp-modal-footer">
-                <button class="btn btn-secondary"
-                        data-bs-dismiss="modal">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                     <i class="fa fa-arrow-left"></i>
                     Volver
                 </button>
-
-                <button id="btnGuardar"
-                        class="btn btn-primary"
-                        onclick="guardarCambios()">
+                <button type="button" id="btnGuardar" class="btn btn-primary" onclick="guardarCambios()">
                     <i class="fa fa-check"></i>
                     Guardar
                 </button>

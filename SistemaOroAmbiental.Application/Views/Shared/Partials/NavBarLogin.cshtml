@@ -29,6 +29,12 @@
                     </a>
                 </li>
 
+                <li class="nav-item" id="seccionCajas">
+                    <a class="nav-link" href="@Url.Action("Index", "Cajas")">
+                        Cajas
+                    </a>
+                </li>
+
                 <li class="nav-item" id="seccionUsuarios">
                     <a class="nav-link" href="@Url.Action("Index", "Usuarios")">
                         Usuarios
@@ -389,7 +395,7 @@
 
             <!-- FOOTER -->
             <div class="modal-footer rp-modal-footer">
-                <button class="rp-btn rp-btn-soft"
+                <button type="button" class="rp-btn rp-btn-soft"
                         data-bs-dismiss="modal"
                         onclick="volverConfiguraciones()">
                     <i class="fa fa-arrow-left"></i>

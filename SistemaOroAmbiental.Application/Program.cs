@@ -103,6 +103,9 @@ builder.Services.AddScoped<IProductosService, ProductosService>();
 builder.Services.AddScoped<IProveedoresRepository, ProveedoresRepository>();
 builder.Services.AddScoped<IProveedoresService, ProveedoresService>();
 
+builder.Services.AddScoped<ICajasRepository, CajasRepository>();
+builder.Services.AddScoped<ICajasService, CajasService>();
+
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {

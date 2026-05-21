@@ -24,6 +24,18 @@ const columnConfig = [
 $(document).ready(() => {
     listaUsuarios();
 
+    document.addEventListener("configuracionActualizada", async (e) => {
+        const d = e.detail || {};
+        if (d.tipo === "Roles") {
+            await listaRoles();
+            if (d.nuevoId) $("#Roles").val(d.nuevoId).trigger("change");
+        }
+        if (d.tipo === "EstadosUsuarios") {
+            await listaEstados();
+            if (d.nuevoId) $("#Estados").val(d.nuevoId).trigger("change");
+        }
+    });
+
     document.querySelectorAll("#modalEdicion input, #modalEdicion select, #modalEdicion textarea").forEach(el => {
         el.setAttribute("autocomplete", "off");
         el.addEventListener("input", () => validarCampoIndividual(el));

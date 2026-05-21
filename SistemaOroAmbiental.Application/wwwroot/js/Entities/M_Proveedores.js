@@ -49,7 +49,6 @@
             window.proveedorModal = this;
             this._bindEvents();
             this._bindModalEvents();
-            this._bindAtajosConfiguracion();
             this._bindConfiguracionActualizada();
         }
 
@@ -517,30 +516,6 @@
                 const el = this._id(cfg.selectId);
                 if (el) this.validarCampoIndividual(el);
             }
-        }
-
-        _bindAtajosConfiguracion() {
-            this.modalEl.querySelectorAll(".rp-btn-plus[data-config-controller]").forEach(btn => {
-                btn.addEventListener("click", async (e) => {
-                    e.preventDefault();
-                    if (this.isSoloLectura()) return;
-
-                    const nombre = btn.getAttribute("data-config-nombre") || "";
-                    const controller = btn.getAttribute("data-config-controller") || "";
-
-                    if (typeof abrirConfiguracion !== "function") {
-                        errorModal("No se pudo abrir la configuración.");
-                        return;
-                    }
-
-                    try {
-                        await abrirConfiguracion(nombre, controller, null, null, null, true);
-                    } catch (err) {
-                        console.error(err);
-                        errorModal("No se pudo abrir la configuración.");
-                    }
-                });
-            });
         }
 
         _bindConfiguracionActualizada() {

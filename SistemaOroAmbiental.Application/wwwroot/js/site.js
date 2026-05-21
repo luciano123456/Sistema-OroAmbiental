@@ -801,6 +801,47 @@ function tienePermiso() {
     return true;
 }
 
+/* =========================================================
+   ATAJOS + (alta rápida de catálogos desde modales)
+   data-config-nombre, data-config-controller
+   Opcional: data-config-combo-nombre, data-config-combo-controller, data-config-combo-label
+========================================================= */
+
+document.addEventListener("click", async (e) => {
+    const btn = e.target.closest(".rp-btn-plus[data-config-controller]");
+    if (!btn || btn.disabled) return;
+
+    e.preventDefault();
+
+    const modalPadre = btn.closest(".modal");
+    if (modalPadre?.getAttribute("data-sololectura") === "1") return;
+
+    if (typeof abrirConfiguracion !== "function") {
+        errorModal("No se pudo abrir la configuración.");
+        return;
+    }
+
+    const nombre = btn.getAttribute("data-config-nombre") || "";
+    const controller = btn.getAttribute("data-config-controller") || "";
+    const comboNombre = btn.getAttribute("data-config-combo-nombre") || null;
+    const comboController = btn.getAttribute("data-config-combo-controller") || null;
+    const lblCombo = btn.getAttribute("data-config-combo-label") || null;
+
+    try {
+        await abrirConfiguracion(
+            nombre,
+            controller,
+            comboNombre,
+            comboController,
+            lblCombo,
+            true
+        );
+    } catch (err) {
+        console.error(err);
+        errorModal("No se pudo abrir la configuración.");
+    }
+});
+
 function getBotonesExportacion(grid,modulo) {
 
     const botones = [];
