@@ -1,4 +1,4 @@
-﻿<link href="~/css/navbarlogin.css" rel="stylesheet" />
+<link href="~/css/navbarlogin.css" rel="stylesheet" />
 <link href="~/css/CurrencyWidget.css" rel="stylesheet" />
 
 <nav class="navbar navbar-expand-lg navbar-light" style="background-color: rgba(112, 112, 112, 0.1);">
@@ -11,10 +11,22 @@
         <div class="collapse navbar-collapse" id="navbarSupportedContent">
             <ul class="navbar-nav me-auto mb-2 mb-lg-0">
 
-                <li class="nav-item" id="seccionClientes">
-                    <a class="nav-link" href="@Url.Action("Index", "Clientes")">
+                <li class="nav-item dropdown" id="seccionClientes">
+                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
                         Clientes
                     </a>
+                    <ul class="dropdown-menu">
+                        <li>
+                            <a class="dropdown-item" href="@Url.Action("Index", "Clientes")">
+                                <i class="fa fa-users me-2"></i> Clientes
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" href="@Url.Action("Index", "ClientesCuentaCorriente")">
+                                <i class="fa fa-money me-2"></i> Cuenta corriente
+                            </a>
+                        </li>
+                    </ul>
                 </li>
 
                 <li class="nav-item" id="seccionProductos">
@@ -23,15 +35,44 @@
                     </a>
                 </li>
 
-                <li class="nav-item" id="seccionProveedores">
-                    <a class="nav-link" href="@Url.Action("Index", "Proveedores")">
+                <li class="nav-item" id="seccionInventario">
+                    <a class="nav-link" href="@Url.Action("Index", "Inventario")">
+                        Inventario
+                    </a>
+                </li>
+
+                <li class="nav-item dropdown" id="seccionProveedores">
+                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
                         Proveedores
                     </a>
+                    <ul class="dropdown-menu">
+                        <li>
+                            <a class="dropdown-item" href="@Url.Action("Index", "Proveedores")">
+                                <i class="fa fa-truck me-2"></i> Proveedores
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" href="@Url.Action("Index", "ProveedoresCuentaCorriente")">
+                                <i class="fa fa-money me-2"></i> Cuenta corriente
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" href="@Url.Action("Index", "Compras")">
+                                <i class="fa fa-shopping-cart me-2"></i> Compras
+                            </a>
+                        </li>
+                    </ul>
                 </li>
 
                 <li class="nav-item" id="seccionCajas">
                     <a class="nav-link" href="@Url.Action("Index", "Cajas")">
                         Cajas
+                    </a>
+                </li>
+
+                <li class="nav-item" id="seccionGastos">
+                    <a class="nav-link" href="@Url.Action("Index", "Gastos")">
+                        Gastos
                     </a>
                 </li>
 
@@ -381,7 +422,7 @@
 
                 </div>
 
-                <!-- BOTON AÑADIR -->
+                <!-- BOTON A�'ADIR -->
                 <div class="rp-add-container">
                     <button id="agregarConfiguracion"
                             class="rp-btn rp-btn-primary"

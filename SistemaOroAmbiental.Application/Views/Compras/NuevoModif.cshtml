@@ -1,0 +1,282 @@
+@{
+    Layout = "_LayoutModulo";
+    ViewData["Title"] = "Compras - Nuevo / Modificar";
+    var id = (int)(ViewBag.Id ?? 0);
+    var idProveedor = (int)(ViewBag.IdProveedor ?? 0);
+}
+
+@section Estilos {
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link href="~/css/disenopantallas.css?v=1.6" rel="stylesheet" />
+    <link href="~/css/M_Generico.css" rel="stylesheet" />
+    <link href="~/css/VentasNuevoModif.css?v=1.1" rel="stylesheet" />
+    <link href="~/css/Compras.css?v=2.4" rel="stylesheet" />
+}
+
+<div class="ventanew compras-nuevo">
+
+    <div class="vn-actions-pro">
+        <div class="vn-actions-header">
+            <a href="@Url.Action("Index", "Compras")" class="vn-btn-soft text-decoration-none" title="Volver al listado">
+                <i class="fa fa-arrow-left"></i>
+            </a>
+            <div class="icon">
+                <i class="fa fa-shopping-cart"></i>
+            </div>
+            <div class="title" id="tituloPaginaCompra">Nueva compra</div>
+        </div>
+
+        <div class="vn-actions-right">
+            <button class="vn-btn-main-pro" id="btnGuardarCompra" type="button">
+                <i class="fa fa-check"></i>
+                <span id="lblGuardarCompra">Registrar compra</span>
+            </button>
+            <button id="btnEliminarCompra" class="vn-btn-soft-danger" type="button" hidden>
+                <i class="fa fa-trash"></i> Eliminar
+            </button>
+        </div>
+    </div>
+
+    <div class="vn-grid">
+
+        <div class="vn-card">
+            <div class="vn-card-head vn-head-tabs">
+                <ul class="vn-head-nav">
+                    <li>
+                        <button class="vn-head-btn active" data-sec="datos" type="button">
+                            <i class="fa fa-info-circle"></i>
+                            Datos de la compra
+                        </button>
+                    </li>
+                    <li>
+                        <button class="vn-head-btn" data-sec="productos" type="button">
+                            <i class="fa fa-cubes"></i>
+                            Productos <span id="cntProductos">(0)</span>
+                        </button>
+                    </li>
+                    <li>
+                        <button class="vn-head-btn" data-sec="pagos" type="button" id="tabBtnPagos">
+                            <i class="fa fa-money"></i>
+                            Pagos <span id="cntPagos">(0)</span>
+                        </button>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="p-3">
+
+                <div id="errorCamposCompra" class="rp-error-panel d-none mb-3">
+                    <div class="rp-error-icon"><i class="fa fa-exclamation-triangle"></i></div>
+                    <div class="rp-error-content">
+                        <div class="rp-error-title">No se pudo guardar</div>
+                        <div class="rp-error-message"></div>
+                    </div>
+                    <button type="button" class="rp-error-close" onclick="cerrarErrorCompra()">
+                        <i class="fa fa-times"></i>
+                    </button>
+                </div>
+
+                <div id="alertCompraPagos" class="vn-alert-warning mb-3" hidden>
+                    <i class="fa fa-info-circle"></i>
+                    Esta compra tiene pagos. Podés editarlos en la pestaña Pagos; los cambios se aplican al guardar (caja y cuenta corriente).
+                </div>
+
+                <input type="hidden" id="Compra_Id" value="@id" />
+
+                <!-- DATOS -->
+                <div class="vn-section active" id="sec-datos">
+
+                    <div class="vn-subtitle">
+                        <div class="i"><i class="fa fa-truck"></i></div>
+                        <div class="txt">
+                            <div class="t1">Datos generales</div>
+                            <div class="t2">Proveedor, sucursal de ingreso de stock y fecha</div>
+                        </div>
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label vn-label">Proveedor</label>
+                            <div class="vn-select-plus">
+                                <select id="cProveedor" class="form-select vn-input"></select>
+                                <button type="button" id="btnCrearProveedor" class="vn-btn-plus" title="Nuevo proveedor">
+                                    <i class="fa fa-plus"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label vn-label">Fecha</label>
+                            <input type="date" id="cFecha" class="form-control vn-input" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label vn-label">Sucursal (stock)</label>
+                            <select id="cSucursal" class="form-select vn-input"></select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label vn-label">Nota interna</label>
+                            <textarea id="cNota" class="form-control vn-input" rows="3" placeholder="Observaciones internas..."></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PRODUCTOS -->
+                <div class="vn-section" id="sec-productos">
+
+                    <div class="vn-subtitle">
+                        <div class="i"><i class="fa fa-cubes"></i></div>
+                        <div class="txt">
+                            <div class="t1">Productos</div>
+                            <div class="t2">Cantidades y costos �?" al guardar impacta inventario y cuenta corriente</div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2 flex-wrap align-items-center mb-3">
+                        <button class="btn btn-outline-light vn-btn" id="btnAgregarLinea" type="button">
+                            <i class="fa fa-plus"></i> Agregar producto
+                        </button>
+                        <button class="btn btn-success" id="btnCrearProducto" type="button">
+                            <i class="fa fa-cube"></i> Crear producto
+                        </button>
+                    </div>
+
+                    <div class="vn-gridtable">
+                        <table class="table vn-table" id="tblLineasCompra">
+                            <thead>
+                                <tr>
+                                    <th style="min-width:220px">Producto</th>
+                                    <th>Cant.</th>
+                                    <th>Costo unit.</th>
+                                    <th>% Desc</th>
+                                    <th>% IVA</th>
+                                    <th class="text-end">Subtotal</th>
+                                    <th style="width:48px"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbodyLineasCompra"></tbody>
+                        </table>
+                    </div>
+
+                    <div id="lblSinLineas" class="vn-empty" hidden>
+                        <i class="fa fa-inbox"></i>
+                        Sin productos cargados
+                        <small class="d-block">Usá «Agregar producto» para comenzar</small>
+                    </div>
+                </div>
+
+                <!-- PAGOS A PROVEEDOR -->
+                <div class="vn-section" id="sec-pagos">
+
+                    <div class="vn-subtitle">
+                        <div class="i"><i class="fa fa-money"></i></div>
+                        <div class="txt">
+                            <div class="t1">Pagos al proveedor</div>
+                            <div class="t2">Egresos de caja vinculados a esta compra �?" impactan cuenta corriente</div>
+                        </div>
+                    </div>
+
+                    <div id="lblPagosHint" class="cm-pagos-hint mb-3">
+                        <i class="fa fa-info-circle"></i>
+                        <span id="lblPagosHintText">Agregá filas de pago como en productos. Nada se registra hasta guardar la compra.</span>
+                    </div>
+
+                    <div id="panelPagosCompra">
+                        <div class="cm-pagos-kpis">
+                            <div class="cm-pagos-kpi">
+                                <div class="lbl">Total compra</div>
+                                <div class="val" id="pagoTotCompra">$ 0,00</div>
+                            </div>
+                            <div class="cm-pagos-kpi">
+                                <div class="lbl">Total pagado</div>
+                                <div class="val cm-pagos-kpi--ok" id="pagoTotPagado">$ 0,00</div>
+                            </div>
+                            <div class="cm-pagos-kpi cm-pagos-kpi--pend">
+                                <div class="lbl">Saldo pendiente</div>
+                                <div class="val" id="pagoSaldoPend">$ 0,00</div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex gap-2 flex-wrap mb-3">
+                            <button type="button" class="btn btn-outline-light vn-btn" id="btnAgregarPagoCompra">
+                                <i class="fa fa-plus"></i> Agregar pago
+                            </button>
+                        </div>
+
+                        <div class="vn-gridtable">
+                            <table class="table vn-table" id="tblPagosCompra">
+                                <thead>
+                                    <tr>
+                                        <th>Fecha</th>
+                                        <th>Sucursal</th>
+                                        <th>Cuenta</th>
+                                        <th>Concepto</th>
+                                        <th class="text-end">Importe</th>
+                                        <th style="width:48px"></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbodyPagosCompra"></tbody>
+                            </table>
+                        </div>
+
+                        <div id="lblSinPagos" class="vn-empty mt-2" hidden>
+                            <i class="fa fa-credit-card"></i>
+                            Sin pagos registrados para esta compra
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- PANEL RESUMEN -->
+        <div class="vn-card">
+            <div class="vn-card-head">
+                <div class="t">
+                    <i class="fa fa-line-chart"></i>
+                    Resumen de compra
+                </div>
+            </div>
+
+            <div class="p-3 vn-summary">
+                <div class="vn-stat">
+                    <div class="lbl">Subtotal</div>
+                    <div class="val" id="totSubtotal">$ 0,00</div>
+                </div>
+                <div class="vn-stat">
+                    <div class="lbl">Descuentos</div>
+                    <div class="val" id="totDescuentos">$ 0,00</div>
+                </div>
+                <div class="vn-stat">
+                    <div class="lbl">IVA</div>
+                    <div class="val" id="totIva">$ 0,00</div>
+                </div>
+                <div class="vn-stat vn-stat-total">
+                    <div class="lbl">Total compra</div>
+                    <div class="val" id="totImporte">$ 0,00</div>
+                </div>
+                <div class="vn-stat">
+                    <div class="lbl">Pagado proveedor</div>
+                    <div class="val cm-resumen-pagado" id="totPagadoResumen">$ 0,00</div>
+                </div>
+                <div class="vn-stat">
+                    <div class="lbl">Saldo pendiente</div>
+                    <div class="val cm-resumen-saldo" id="totSaldoResumen">$ 0,00</div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<partial name="~/Views/Entities/M_Proveedores.cshtml" />
+<partial name="~/Views/Entities/M_Productos.cshtml" />
+
+@section Scripts {
+    <script>
+        window.CM_INIT = { id: @id, idProveedor: @idProveedor };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script src="~/js/Entities/M_Proveedores.js?v=1.4"></script>
+    <script src="~/js/Entities/M_Productos.js?v=1.5"></script>
+    <script src="~/js/ComprasNuevoModif.js?v=3.4"></script>
+}

@@ -1,4 +1,4 @@
-﻿html {
+html {
     font-size: 14px;
 }
 
@@ -154,6 +154,15 @@ table.dataTable.display tbody tr:nth-child(even) td {
 /* Cambia el color de fondo de todas las celdas, incluida la primera columna, en filas impares */
 table.dataTable.display tbody tr:nth-child(odd) td {
     background-color: #2a303a !important;
+}
+
+/* Fila seleccionada en grillas dt-dark (pisa zebra de arriba) */
+table.dataTable.display.dt-dark tbody tr.dt-row-selected:nth-child(odd) > td,
+table.dataTable.display.dt-dark tbody tr.dt-row-selected:nth-child(even) > td,
+table.dataTable.dt-dark.display tbody tr.dt-row-selected > td,
+table.dt-dark.display tbody tr.dt-row-selected > td {
+    background-color: #2a4570 !important;
+    color: #e8f0ff !important;
 }
 
 table.dataTable {
@@ -584,6 +593,31 @@ input:disabled {
     border: none !important
 }
 
+/* Sucursal única asignada: combo bloqueado */
+select.sucursal-unica-lock,
+select.sucursal-unica-lock:disabled {
+    opacity: 0.72;
+    cursor: not-allowed !important;
+    background-color: rgba(255, 255, 255, 0.06) !important;
+    color: #b8c5dc !important;
+    border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+.select2-container.sucursal-unica-lock .select2-selection--single {
+    opacity: 0.72;
+    cursor: not-allowed !important;
+    background-color: rgba(255, 255, 255, 0.06) !important;
+    border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+.select2-container.sucursal-unica-lock .select2-selection__rendered {
+    color: #b8c5dc !important;
+}
+
+.select2-container.sucursal-unica-lock .select2-selection__arrow {
+    opacity: 0.35;
+}
+
 
 .card-body,
 .card-header {
@@ -989,4 +1023,13 @@ thead tr.filters th {
 /* HOVER */
 .rp-mod-item:hover {
     background: rgba(255,255,255,0.05);
+}
+
+/* =========================
+   GRILLAS DataTables (global)
+   Selección sutil — ver también DisenoPantallas.css
+========================= */
+
+table.dt-dark tbody tr {
+    cursor: pointer;
 }

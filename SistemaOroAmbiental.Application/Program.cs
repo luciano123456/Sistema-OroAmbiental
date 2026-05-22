@@ -10,6 +10,8 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
+Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+
 builder.Services.AddControllersWithViews()
     .AddJsonOptions(o =>
     {
@@ -27,6 +29,9 @@ builder.Services.AddScoped(typeof(IConfiguracionNombreService<>), typeof(Configu
 
 builder.Services.AddScoped<IUsuariosRepository<User>, UsuariosRepository>();
 builder.Services.AddScoped<IUsuariosService, UsuariosService>();
+
+builder.Services.AddScoped<IUsuariosSucursalesRepository, UsuariosSucursalesRepository>();
+builder.Services.AddScoped<IUsuariosSucursalesService, UsuariosSucursalesService>();
 
 builder.Services.AddScoped<ILoginRepository<User>, LoginRepository>();
 builder.Services.AddScoped<ILoginService, LoginService>();
@@ -106,6 +111,21 @@ builder.Services.AddScoped<IProveedoresService, ProveedoresService>();
 builder.Services.AddScoped<ICajasRepository, CajasRepository>();
 builder.Services.AddScoped<ICajasService, CajasService>();
 
+builder.Services.AddScoped<IClientesCuentaCorrienteRepository, ClientesCuentaCorrienteRepository>();
+builder.Services.AddScoped<IClientesCuentaCorrienteService, ClientesCuentaCorrienteService>();
+
+builder.Services.AddScoped<IProveedoresCuentaCorrienteRepository, ProveedoresCuentaCorrienteRepository>();
+builder.Services.AddScoped<IProveedoresCuentaCorrienteService, ProveedoresCuentaCorrienteService>();
+
+builder.Services.AddScoped<IInventarioRepository, InventarioRepository>();
+builder.Services.AddScoped<IInventarioService, InventarioService>();
+
+builder.Services.AddScoped<IComprasRepository, ComprasRepository>();
+builder.Services.AddScoped<IComprasService, ComprasService>();
+
+builder.Services.AddScoped<IGastosRepository, GastosRepository>();
+builder.Services.AddScoped<IGastosService, GastosService>();
+
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
@@ -140,6 +160,18 @@ if (!app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
+
+app.Use(async (context, next) =>
+{
+    await next();
+    var ct = context.Response.ContentType;
+    if (!string.IsNullOrEmpty(ct)
+        && ct.StartsWith("text/html", StringComparison.OrdinalIgnoreCase)
+        && !ct.Contains("charset", StringComparison.OrdinalIgnoreCase))
+    {
+        context.Response.ContentType = ct + "; charset=utf-8";
+    }
+});
 
 app.UseRouting();
 

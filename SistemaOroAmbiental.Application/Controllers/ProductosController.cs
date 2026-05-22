@@ -27,26 +27,50 @@ namespace SistemaOroAmbiental.Application.Controllers
         public async Task<IActionResult> Lista()
         {
             var productos = (await _service.ObtenerTodos()).ToList();
+            var stocks = await _service.ObtenerStockTotalesPorProducto();
 
-            var lista = productos.Select(p => new VMProducto
+            var lista = productos.Select(p =>
             {
-                Id = p.Id,
-                Nombre = p.Nombre,
-                IdCategoria = p.IdCategoria,
-                IdMedida = p.IdMedida,
-                CostoUnitario = p.CostoUnitario,
-                StockMinimo = p.StockMinimo,
-                Categoria = p.IdCategoriaNavigation?.Nombre ?? "",
-                Medida = p.IdMedidaNavigation?.Nombre ?? "",
-                IdUsuarioRegistra = p.IdUsuarioRegistra,
-                FechaUsuarioRegistra = p.FechaUsuarioRegistra,
-                UsuarioRegistra = p.IdUsuarioRegistraNavigation?.Usuario,
-                IdUsuarioModifica = p.IdUsuarioModifica,
-                FechaUsuarioModifica = p.FechaUsuarioModifica,
-                UsuarioModifica = p.IdUsuarioModificaNavigation?.Usuario
+                var stockTotal = stocks.TryGetValue(p.Id, out var s) ? s : 0m;
+                var (codigo, texto) = CalcularEstadoStock(stockTotal, p.StockMinimo);
+
+                return new VMProducto
+                {
+                    Id = p.Id,
+                    Nombre = p.Nombre,
+                    IdCategoria = p.IdCategoria,
+                    IdMedida = p.IdMedida,
+                    CostoUnitario = p.CostoUnitario,
+                    StockMinimo = p.StockMinimo,
+                    StockTotal = stockTotal,
+                    StockEstadoCodigo = codigo,
+                    StockEstadoTexto = texto,
+                    Categoria = p.IdCategoriaNavigation?.Nombre ?? "",
+                    Medida = p.IdMedidaNavigation?.Nombre ?? "",
+                    IdUsuarioRegistra = p.IdUsuarioRegistra,
+                    FechaUsuarioRegistra = p.FechaUsuarioRegistra,
+                    UsuarioRegistra = p.IdUsuarioRegistraNavigation?.Usuario,
+                    IdUsuarioModifica = p.IdUsuarioModifica,
+                    FechaUsuarioModifica = p.FechaUsuarioModifica,
+                    UsuarioModifica = p.IdUsuarioModificaNavigation?.Usuario
+                };
             }).ToList();
 
             return Ok(lista);
+        }
+
+        private static (string codigo, string texto) CalcularEstadoStock(decimal stockTotal, int stockMinimo)
+        {
+            if (stockTotal <= 0)
+                return ("sin_stock", "Sin stock");
+
+            if (stockMinimo > 0 && stockTotal < stockMinimo)
+                return ("bajo", "Bajo mínimo");
+
+            if (stockMinimo > 0)
+                return ("ok", "Stock OK");
+
+            return ("normal", "Disponible");
         }
 
         [HttpPost]
@@ -117,6 +141,52 @@ namespace SistemaOroAmbiental.Application.Controllers
                 tipo = result.Tipo,
                 idReferencia = result.IdReferencia
             });
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> HistorialCosto(int id)
+        {
+            var (producto, historial) = await _service.ObtenerHistorialCosto(id);
+
+            if (producto == null)
+                return NotFound();
+
+            var items = historial.Select(h => new VMProductoCostoHistorialItem
+            {
+                Id = h.Id,
+                Fecha = h.Fecha,
+                CostoAnterior = h.CostoAnterior,
+                CostoNuevo = h.CostoNuevo,
+                Variacion = h.Variacion,
+                PorcentajeVariacion = h.PorcentajeVariacion,
+                Origen = h.Origen,
+                OrigenTexto = TextoOrigenHistorial(h.Origen, h.IdCompra),
+                Tendencia = h.Variacion > 0 ? "subio" : h.Variacion < 0 ? "bajo" : "igual",
+                IdCompra = h.IdCompra,
+                Usuario = h.Usuario,
+                Proveedor = h.Proveedor,
+                Detalle = h.Proveedor
+            }).ToList();
+
+            return Ok(new VMProductoCostoHistorialResponse
+            {
+                IdProducto = producto.Id,
+                NombreProducto = producto.Nombre,
+                CostoActual = producto.CostoUnitario,
+                Items = items
+            });
+        }
+
+        private static string TextoOrigenHistorial(string origen, int? idCompra)
+        {
+            return origen switch
+            {
+                "ALTA" => "Alta del producto",
+                "MANUAL" => "Edición manual",
+                "COMPRA" => idCompra.HasValue ? $"Compra #{idCompra}" : "Compra",
+                "REVERSION_COMPRA" => idCompra.HasValue ? $"Anulación compra #{idCompra}" : "Reversión por compra",
+                _ => origen
+            };
         }
 
         [HttpGet]

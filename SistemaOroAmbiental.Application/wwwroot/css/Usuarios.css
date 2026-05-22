@@ -968,6 +968,49 @@ body {
     padding: 6px 10px;
 }
 
+/* Sucursales asignadas (tab usuarios) */
+.rp-suc-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 10px;
+    margin-top: 8px;
+}
+
+.rp-suc-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.03);
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+}
+
+.rp-suc-card:hover {
+    border-color: rgba(124, 194, 255, 0.35);
+    background: rgba(124, 194, 255, 0.06);
+}
+
+.rp-suc-card.is-checked {
+    border-color: rgba(30, 207, 147, 0.4);
+    background: rgba(30, 207, 147, 0.1);
+}
+
+.rp-suc-card input {
+    width: 18px;
+    height: 18px;
+    accent-color: #1ecf93;
+    flex-shrink: 0;
+}
+
+.rp-suc-card .rp-suc-name {
+    font-weight: 700;
+    color: #e8eef8;
+    line-height: 1.25;
+}
+
 .rp-dd-item {
     list-style: none;
 }

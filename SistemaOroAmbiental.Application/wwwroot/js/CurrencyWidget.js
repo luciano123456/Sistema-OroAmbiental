@@ -1,4 +1,4 @@
-﻿/* =========================================================
+/* =========================================================
    CURRENCY WIDGET GLOBAL PRO — COMPLETO Y ESTABLE
    - token es GLOBAL (NO se declara acá)
    - Pins por usuario (localStorage)

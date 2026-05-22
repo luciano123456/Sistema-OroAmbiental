@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using SistemaOroAmbiental.Models;
@@ -87,6 +87,8 @@ public partial class SistemaOroAmbientalContext : DbContext
     public virtual DbSet<ProductosCategoria> ProductosCategorias { get; set; }
 
     public virtual DbSet<ProductosPrecio> ProductosPrecios { get; set; }
+
+    public virtual DbSet<ProductosCostoHistorial> ProductosCostoHistorials { get; set; }
 
     public virtual DbSet<Proveedore> Proveedores { get; set; }
 
@@ -661,6 +663,7 @@ public partial class SistemaOroAmbientalContext : DbContext
             entity.Property(e => e.CostoUnitCdesc).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.CostoUnitFinal).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.CostoUnitario).HasColumnType("decimal(18, 2)");
+            entity.Property(e => e.CostoUnitarioAnterior).HasColumnType("decimal(18, 4)");
             entity.Property(e => e.DescTotal).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.DescUnitario).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.FechaUsuarioModifica).HasColumnType("datetime");
@@ -936,6 +939,31 @@ public partial class SistemaOroAmbientalContext : DbContext
                 .HasForeignKey(d => d.IdUsuarioRegistra)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_ListasPreciosUsuariosIdUsuarioRegistra");
+        });
+
+        modelBuilder.Entity<ProductosCostoHistorial>(entity =>
+        {
+            entity.ToTable("ProductosCostoHistorial");
+
+            entity.Property(e => e.CostoAnterior).HasColumnType("decimal(18, 4)");
+            entity.Property(e => e.CostoNuevo).HasColumnType("decimal(18, 4)");
+            entity.Property(e => e.Fecha).HasColumnType("datetime");
+            entity.Property(e => e.Origen)
+                .HasMaxLength(30)
+                .IsUnicode(false);
+
+            entity.HasOne(d => d.IdCompraNavigation).WithMany()
+                .HasForeignKey(d => d.IdCompra)
+                .HasConstraintName("FK_ProductosCostoHistorial_Compra");
+
+            entity.HasOne(d => d.IdProductoNavigation).WithMany()
+                .HasForeignKey(d => d.IdProducto)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ProductosCostoHistorial_Producto");
+
+            entity.HasOne(d => d.IdUsuarioNavigation).WithMany()
+                .HasForeignKey(d => d.IdUsuario)
+                .HasConstraintName("FK_ProductosCostoHistorial_Usuario");
         });
 
         modelBuilder.Entity<Producto>(entity =>

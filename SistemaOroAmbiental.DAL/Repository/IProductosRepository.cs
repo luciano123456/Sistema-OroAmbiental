@@ -1,4 +1,4 @@
-﻿using SistemaOroAmbiental.Models;
+using SistemaOroAmbiental.Models;
 
 namespace SistemaOroAmbiental.DAL.Repository
 {
@@ -14,6 +14,10 @@ namespace SistemaOroAmbiental.DAL.Repository
 
         Task<IQueryable<Producto>> ObtenerTodos();
 
+        Task<Dictionary<int, decimal>> ObtenerStockTotalesPorProducto();
+
         Task<Producto?> BuscarDuplicado(int? idExcluir, string? nombre);
+
+        Task<List<ProductoHistorialCostoFila>> ObtenerHistorialCosto(int idProducto);
     }
 }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace SistemaOroAmbiental.Models;
@@ -16,6 +16,9 @@ public partial class ComprasProducto
     public decimal Cantidad { get; set; }
 
     public decimal CostoUnitario { get; set; }
+
+    /// <summary>Costo del producto antes de aplicar esta línea de compra (para revertir al eliminar/editar).</summary>
+    public decimal CostoUnitarioAnterior { get; set; }
 
     public decimal PorcDescuento { get; set; }
 

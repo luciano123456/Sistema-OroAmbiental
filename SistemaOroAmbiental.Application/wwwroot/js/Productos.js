@@ -6,28 +6,29 @@ const columnConfig = [
     { index: 2, filterType: 'select', fetchDataFunc: listaCategoriasFilter },
     { index: 3, filterType: 'select', fetchDataFunc: listaMedidasFilter },
     { index: 4, filterType: 'text' },
-    { index: 5, filterType: 'text' }
+    { index: 5, filterType: 'text' },
+    { index: 6, filterType: 'text' },
+    { index: 7, filterType: 'select', fetchDataFunc: listaEstadosStockFilter, localOptions: true }
 ];
+
+const ESTADOS_STOCK_ICONOS = {
+    sin_stock: "fa-times-circle",
+    bajo: "fa-exclamation-triangle",
+    ok: "fa-check-circle",
+    normal: "fa-cube"
+};
 
 $(document).ready(() => {
 
-    const modalEl = document.querySelector("[data-producto-modal]");
-    if (!modalEl) {
-        console.error("No se encontró [data-producto-modal]. Verifique que el partial M_Productos esté en la vista.");
-        return;
-    }
+    productoModal = typeof initProductoModal === "function"
+        ? initProductoModal({
+            token: token,
+            onSaved: async () => { await listaProductos(); },
+            onDeleted: async () => { await listaProductos(); }
+        })
+        : null;
 
-    productoModal = new ProductoModal(modalEl, {
-        token: token,
-        onSaved: async () => { await listaProductos(); },
-        onDeleted: async () => { await listaProductos(); }
-    });
-
-    window.verProducto = (id) => productoModal.abrirVer(id);
-    window.editarProducto = (id) => productoModal.abrirEditar(id);
-    window.eliminarProducto = (id) => productoModal.eliminar(id);
-    window.verFicha = (id) => productoModal.abrirVer(id);
-    window.nuevoProducto = () => productoModal.abrirNuevo();
+    if (!productoModal) return;
 
     $(document)
         .off("click.select2fix.productos")
@@ -38,6 +39,15 @@ $(document).ready(() => {
                 $select.select2("open");
             }
         });
+
+    $('#grd_Productos').on('click', '.prod-btn-historial-grid', function (e) {
+        e.stopPropagation();
+        const id = parseInt($(this).data('id'), 10);
+        const nombre = $(this).data('nombre') || '';
+        if (id > 0 && typeof verHistorialCostoProducto === 'function') {
+            verHistorialCostoProducto(id, nombre);
+        }
+    });
 
     listaProductos();
 });
@@ -125,9 +135,37 @@ async function configurarDataTable(data) {
                 { data: 'Medida' },
                 {
                     data: 'CostoUnitario',
-                    render: (data) => formatearMoneda(data)
+                    orderable: true,
+                    render: (data, type, row) => {
+                        const monto = formatearMoneda(data);
+                        const id = row?.Id ?? 0;
+                        if (!id) return monto;
+                        const nombreAttr = String(row?.Nombre || "")
+                            .replace(/&/g, "&amp;")
+                            .replace(/"/g, "&quot;")
+                            .replace(/</g, "&lt;");
+                        return `<span class="prod-costo-cell">
+                            <span>${monto}</span>
+                            <button type="button"
+                                    class="btn prod-btn-historial-grid"
+                                    data-id="${id}"
+                                    data-nombre="${nombreAttr}"
+                                    title="Ver historial de costo">
+                                <i class="fa fa-eye"></i>
+                            </button>
+                        </span>`;
+                    }
+                },
+                {
+                    data: 'StockTotal',
+                    render: (data, type, row) => renderStockCantidad(data, row)
                 },
                 { data: 'StockMinimo' },
+                {
+                    data: 'StockEstadoTexto',
+                    orderable: true,
+                    render: (data, type, row) => renderEstadoStockBadge(row)
+                },
             ],
             dom: 'Bfrtip',
             buttons: getBotonesExportacion(gridProductos, "Productos"),
@@ -150,7 +188,9 @@ async function configurarDataTable(data) {
 
                         const datos = await config.fetchDataFunc();
                         (datos || []).forEach(item => {
-                            $select.append(`<option value="${item.Id}">${item.Nombre}</option>`);
+                            const val = item.Id != null ? item.Id : item.Nombre;
+                            const txt = item.Nombre;
+                            $select.append(`<option value="${val}">${txt}</option>`);
                         });
 
                         inicializarSelect2Filtro($select);
@@ -203,6 +243,38 @@ async function listaMedidasFilter() {
         headers: { 'Authorization': 'Bearer ' + token }
     });
     return await response.json();
+}
+
+async function listaEstadosStockFilter() {
+    return [
+        { Nombre: "Sin stock" },
+        { Nombre: "Bajo mínimo" },
+        { Nombre: "Stock OK" },
+        { Nombre: "Disponible" }
+    ];
+}
+
+function renderStockCantidad(valor, row) {
+    const n = parseFloat(valor);
+    const texto = typeof formatearNumero === "function"
+        ? formatearNumero(Number.isNaN(n) ? 0 : n)
+        : (Number.isNaN(n) ? "0" : String(n));
+
+    const codigo = (row?.StockEstadoCodigo || "").toLowerCase();
+    let cls = "";
+    if (codigo === "sin_stock") cls = "prod-stock-cantidad--sin";
+    else if (codigo === "bajo") cls = "prod-stock-cantidad--bajo";
+
+    return cls ? `<span class="${cls}">${texto}</span>` : texto;
+}
+
+function renderEstadoStockBadge(row) {
+    const codigo = (row?.StockEstadoCodigo || "sin_stock").toLowerCase();
+    const texto = row?.StockEstadoTexto || "Sin stock";
+    const icono = ESTADOS_STOCK_ICONOS[codigo] || "fa-circle";
+    return `<span class="prod-stock-estado prod-stock-estado--${codigo}" title="${texto}">
+        <i class="fa ${icono}"></i>${texto}
+    </span>`;
 }
 
 function configurarOpcionesColumnas() {

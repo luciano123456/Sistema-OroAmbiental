@@ -15,6 +15,7 @@
                 token: window.token || "",
                 endpoints: {
                     editar: "/Productos/EditarInfo?id={id}",
+                    historialCosto: "/Productos/HistorialCosto?id={id}",
                     insertar: "/Productos/Insertar",
                     actualizar: "/Productos/Actualizar",
                     eliminar: "/Productos/Eliminar?id={id}",
@@ -39,10 +40,26 @@
             }
 
             this.bsModal = new bootstrap.Modal(this.modalEl);
+            const histEl = document.getElementById("modalHistorialCosto");
+            this.bsModalHistorial = histEl ? new bootstrap.Modal(histEl) : null;
             this._ultimoModo = "nuevo";
             this._modeloActual = null;
 
             this._camposObligatorios = ["txtNombre", "cmbCategoria", "cmbMedida", "txtCostoUnitario"];
+            this._validacion = new ValidacionModalAbm({
+                modalEl: this.modalEl,
+                getPanel: () => this._id("errorCampos"),
+                campos: [
+                    { id: "txtNombre", nombre: "Nombre" },
+                    { id: "cmbCategoria", nombre: "Categoría" },
+                    { id: "cmbMedida", nombre: "Unidad de medida" },
+                    { id: "txtCostoUnitario", nombre: "Costo unitario" }
+                ],
+                esCampoValido: (el) => this._valorCampoValido(el),
+                isSoloLectura: () => this.isSoloLectura(),
+                mostrarError: (msg) => this.mostrarErrorCampos(msg, null, "validacion"),
+                cerrarPanel: () => this.cerrarErrorCampos()
+            });
             this._comboPorController = {
                 ProductosCategorias: { selectId: "cmbCategoria", url: this.options.endpoints.categorias },
                 UnidadesMedida: { selectId: "cmbMedida", url: this.options.endpoints.medidas }
@@ -80,8 +97,15 @@
 
         _toInt(value) {
             if (value === null || value === undefined || value === "") return null;
-            const n = parseInt(value, 10);
-            return Number.isNaN(n) ? null : n;
+            let n;
+            if (typeof leerInputNumerico === "function") {
+                n = leerInputNumerico(value);
+            } else if (typeof parseNumero === "function") {
+                n = parseNumero(value);
+            } else {
+                n = parseInt(String(value).replace(/\./g, ""), 10);
+            }
+            return Number.isNaN(n) ? null : Math.trunc(n);
         }
 
         _getFieldValue(id) {
@@ -107,6 +131,198 @@
             if (typeof parseNumero === "function") return parseNumero(v);
             const n = parseFloat(String(v).replace(/\./g, "").replace(",", "."));
             return Number.isNaN(n) ? 0 : n;
+        }
+
+        _fmtMoneda(valor) {
+            const n = Number(valor ?? 0);
+            if (typeof formatearMonedaARS === "function") return formatearMonedaARS(n);
+            if (typeof formatearMiles === "function") return "$ " + formatearMiles(n);
+            return "$ " + n.toFixed(2);
+        }
+
+        _obtenerPorcentajeVariacion(item, costoAnterior, costoNuevo, tendencia) {
+            const desdeApi = item.PorcentajeVariacion ?? item.porcentajeVariacion;
+            if (desdeApi !== null && desdeApi !== undefined && desdeApi !== "") {
+                const n = Number(desdeApi);
+                if (!Number.isNaN(n)) return n;
+            }
+
+            const ant = Number(costoAnterior ?? 0);
+            const nuevo = Number(costoNuevo ?? 0);
+            if (ant > 0 && tendencia !== "igual") {
+                return Math.round(((nuevo - ant) / ant) * 10000) / 100;
+            }
+
+            return null;
+        }
+
+        _fmtPorcentajeVariacion(pct) {
+            if (pct === null || pct === undefined || pct === "") return "";
+            const n = Number(pct);
+            if (Number.isNaN(n) || Math.abs(n) < 0.005) return "";
+            const abs = Math.abs(n).toLocaleString("es-AR", { minimumFractionDigits: 1, maximumFractionDigits: 2 });
+            const sign = n > 0 ? "+" : "-";
+            return `${sign}${abs}%`;
+        }
+
+        _escapeHtml(texto) {
+            if (texto == null) return "";
+            return String(texto)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;");
+        }
+
+        _actualizarBtnHistorialCosto() {
+            const btn = this._id("btnHistorialCosto");
+            if (!btn) return;
+            const id = this.getId();
+            btn.disabled = !(id > 0);
+        }
+
+        async abrirHistorialCostoPorId(id, nombreProducto) {
+            if (!id || !this.bsModalHistorial) return;
+
+            const titulo = document.getElementById("histCostoTitulo");
+            const sub = document.getElementById("histCostoSub");
+            if (titulo) titulo.textContent = "Historial de costo";
+            if (sub) sub.textContent = nombreProducto || "";
+
+            const loading = document.getElementById("histCostoLoading");
+            const empty = document.getElementById("histCostoEmpty");
+            const actual = document.getElementById("histCostoActual");
+            const timeline = document.getElementById("histCostoTimeline");
+
+            loading?.classList.remove("d-none");
+            empty?.classList.add("d-none");
+            actual?.classList.add("d-none");
+            timeline?.classList.add("d-none");
+            if (timeline) timeline.innerHTML = "";
+            if (actual) actual.innerHTML = "";
+
+            this.bsModalHistorial.show();
+
+            try {
+                const url = this._replaceUrl(this.options.endpoints.historialCosto, { id });
+                const data = await this._fetchJson(url, { headers: this._headers(false) });
+                this._renderHistorialCosto(data);
+            } catch (e) {
+                console.error(e);
+                errorModal("No se pudo cargar el historial de costo.");
+                this.bsModalHistorial.hide();
+            } finally {
+                loading?.classList.add("d-none");
+            }
+        }
+
+        async abrirHistorialCosto() {
+            const id = this.getId();
+            if (!id) return;
+            await this.abrirHistorialCostoPorId(id, this._getFieldValue("txtNombre") || "");
+        }
+
+        _renderHistorialCosto(data) {
+            const empty = document.getElementById("histCostoEmpty");
+            const actual = document.getElementById("histCostoActual");
+            const timeline = document.getElementById("histCostoTimeline");
+            const sub = document.getElementById("histCostoSub");
+
+            const nombre = data.NombreProducto || data.nombreProducto || "";
+            const costoActual = data.CostoActual ?? data.costoActual ?? 0;
+            const items = data.Items || data.items || [];
+
+            if (sub && nombre) sub.textContent = nombre;
+
+            if (actual) {
+                actual.innerHTML = `
+                    <div>
+                        <div class="lbl">Costo actual</div>
+                    </div>
+                    <div class="val">${this._fmtMoneda(costoActual)}</div>`;
+                actual.classList.remove("d-none");
+            }
+
+            if (!items.length) {
+                empty?.classList.remove("d-none");
+                timeline?.classList.add("d-none");
+                return;
+            }
+
+            empty?.classList.add("d-none");
+
+            const html = items.map(it => {
+                const tend = (it.Tendencia || it.tendencia || "igual").toLowerCase();
+                const ant = it.CostoAnterior ?? it.costoAnterior ?? 0;
+                const nuevo = it.CostoNuevo ?? it.costoNuevo ?? 0;
+                const variacion = Number(it.Variacion ?? it.variacion ?? (nuevo - ant));
+                const pctNum = this._obtenerPorcentajeVariacion(it, ant, nuevo, tend);
+                const pctTxt = this._fmtPorcentajeVariacion(pctNum);
+                const badgeIcon = tend === "subio" ? "fa-arrow-up" : tend === "bajo" ? "fa-arrow-down" : "fa-minus";
+                let montoTxt = "Sin cambio";
+                if (tend === "subio") {
+                    montoTxt = `+${this._fmtMoneda(Math.abs(variacion))}`;
+                } else if (tend === "bajo") {
+                    montoTxt = `-${this._fmtMoneda(Math.abs(variacion))}`;
+                }
+
+                const variacionHtml = pctTxt && tend !== "igual"
+                    ? `<div class="prod-hist-var-row">
+                            <span class="prod-hist-var-label">Variación</span>
+                            <span class="prod-hist-pct-large prod-hist-pct-large--${tend}">${pctTxt}</span>
+                            <span class="prod-hist-monto-diff">${montoTxt}</span>
+                       </div>`
+                    : (tend !== "igual"
+                        ? `<div class="prod-hist-var-row">
+                            <span class="prod-hist-var-label">Variación</span>
+                            <span class="prod-hist-monto-diff">${montoTxt}</span>
+                           </div>`
+                        : "");
+
+                const origen = it.OrigenTexto || it.origenTexto || it.Origen || it.origen || "";
+                const proveedor = it.Proveedor || it.proveedor || it.Detalle || it.detalle || "";
+                const usuario = it.Usuario || it.usuario || "";
+                const fecha = this.formatearFecha(it.Fecha || it.fecha);
+                const idCompra = it.IdCompra ?? it.idCompra;
+                const origenCod = (it.Origen || it.origen || "").toUpperCase();
+                const linkCompra = (origenCod === "COMPRA" || origenCod === "REVERSION_COMPRA") && idCompra
+                    ? `<a href="/Compras/NuevoModif?id=${idCompra}" class="prod-hist-link-compra" target="_blank" rel="noopener">Ver compra</a>`
+                    : "";
+
+                const proveedorHtml = proveedor
+                    ? `<div class="prod-hist-proveedor"><i class="fa fa-truck"></i> Proveedor: <strong>${this._escapeHtml(proveedor)}</strong></div>`
+                    : "";
+
+                const usuarioHtml = !proveedor && usuario
+                    ? `<div class="prod-hist-detalle"><i class="fa fa-user"></i> ${this._escapeHtml(usuario)}</div>`
+                    : "";
+
+                return `
+                    <article class="prod-hist-item prod-hist-item--${tend}">
+                        <div class="prod-hist-item-head">
+                            <div>
+                                <div class="prod-hist-origen">${this._escapeHtml(origen)}${linkCompra}</div>
+                                ${proveedorHtml}
+                                ${usuarioHtml}
+                            </div>
+                            <span class="prod-hist-badge prod-hist-badge--${tend}">
+                                <i class="fa ${badgeIcon}"></i> ${pctTxt || montoTxt}
+                            </span>
+                        </div>
+                        <div class="prod-hist-fecha">${this._escapeHtml(fecha)}</div>
+                        ${variacionHtml}
+                        <div class="prod-hist-precios mt-2">
+                            <span class="prod-hist-precio-ant">${this._fmtMoneda(ant)}</span>
+                            <span class="prod-hist-arrow"><i class="fa fa-long-arrow-right"></i></span>
+                            <span class="prod-hist-precio-nuevo">${this._fmtMoneda(nuevo)}</span>
+                        </div>
+                    </article>`;
+            }).join("");
+
+            if (timeline) {
+                timeline.innerHTML = html;
+                timeline.classList.remove("d-none");
+            }
         }
 
         _formatearCostoUnitario(valor) {
@@ -288,7 +504,9 @@
             this._setFieldValue("txtId", modelo.Id || "");
             this._setFieldValue("txtNombre", modelo.Nombre || "");
             this._setFieldValue("txtCostoUnitario", this._formatearCostoUnitario(modelo.CostoUnitario));
-            this._setFieldValue("txtStockMinimo", modelo.StockMinimo ?? 0);
+            const stockMin = modelo.StockMinimo ?? 0;
+            this._setFieldValue("txtStockMinimo",
+                typeof formatearMiles === "function" ? formatearMiles(String(stockMin)) : stockMin);
 
             if (modelo.IdCategoria) this._setFieldValue("cmbCategoria", modelo.IdCategoria, true);
             if (modelo.IdMedida) this._setFieldValue("cmbMedida", modelo.IdMedida, true);
@@ -296,6 +514,7 @@
             await this.cargarPreciosPorLista(modelo.Id || 0);
 
             this._setAuditoria(modelo);
+            this._actualizarBtnHistorialCosto();
 
             this._id("modalEdicionLabel").textContent = soloLectura ? "Ver Producto" : "Editar Producto";
             this._id("btnGuardar").innerHTML = `<i class="fa fa-check"></i> Guardar`;
@@ -516,12 +735,19 @@
                     headers: this._headers(false)
                 });
 
-                if (!data.valor) {
-                    this.mostrarErrorCampos(data.mensaje || "No se pudo eliminar.", data.idReferencia ?? null, data.tipo || "error");
+                if (!data?.valor) {
+                    const msg = data?.mensaje || "No se pudo eliminar.";
+                    if (typeof errorModal === "function") {
+                        errorModal(msg);
+                    } else {
+                        this.mostrarErrorCampos(msg, data?.idReferencia ?? null, data?.tipo || "error");
+                    }
                     return false;
                 }
 
-                exitoModal(data.mensaje || "Producto eliminado correctamente");
+                if (typeof exitoModal === "function") {
+                    exitoModal(data.mensaje || "Producto eliminado correctamente");
+                }
 
                 if (typeof this.options.onDeleted === "function") {
                     await this.options.onDeleted(data, id, this);
@@ -541,15 +767,8 @@
                 if (el.id === "txtId") { el.value = ""; return; }
                 if (el.tagName === "SELECT") el.selectedIndex = 0;
                 else el.value = "";
-                el.classList.remove("is-invalid", "is-valid");
-
-                if (el.tagName === "SELECT" && window.jQuery?.(el).data("select2")) {
-                    const { $selection, $container } = this.getSelect2Selection(el);
-                    $selection.removeClass("is-invalid is-valid");
-                    $container.removeClass("is-invalid is-valid");
-                }
             });
-            this.cerrarErrorCampos();
+            this._validacion?.reset();
             this._id("infoAuditoria")?.classList.add("d-none");
             if (this._id("infoRegistro")) this._id("infoRegistro").innerHTML = "";
             if (this._id("infoModificacion")) this._id("infoModificacion").innerHTML = "";
@@ -557,6 +776,7 @@
             if (gridPrecios) gridPrecios.innerHTML = "";
             this._id("lblPreciosSinListas")?.classList.add("d-none");
             this._refreshAllSelect2();
+            this._actualizarBtnHistorialCosto();
         }
 
         _valorCampoValido(el) {
@@ -577,64 +797,11 @@
         }
 
         validarCampoIndividual(el) {
-            if (this.isSoloLectura()) return true;
-            if (!el || !this._camposObligatorios.includes(el.id)) return true;
-
-            const esValido = this._valorCampoValido(el);
-            this.setEstadoCampo(el, esValido);
-            this.verificarErroresGenerales();
-            return esValido;
-        }
-
-        verificarErroresGenerales() {
-            const panel = this._id("errorCampos");
-            if (!panel) return;
-            const hayInvalidos = this.modalEl.querySelectorAll(".is-invalid").length > 0;
-            if (!hayInvalidos) this.cerrarErrorCampos();
+            return this._validacion?.onBlur(el) ?? true;
         }
 
         validarCampos() {
-            const campos = [
-                { id: "txtNombre", nombre: "Nombre" },
-                { id: "cmbCategoria", nombre: "Categoría" },
-                { id: "cmbMedida", nombre: "Unidad de medida" },
-                { id: "txtCostoUnitario", nombre: "Costo unitario" }
-            ];
-
-            const errores = [];
-
-            campos.forEach(c => {
-                const el = this._id(c.id);
-                if (!el) return;
-                const esValido = this._valorCampoValido(el);
-                this.setEstadoCampo(el, esValido);
-                if (!esValido) errores.push(c.nombre);
-            });
-
-            if (errores.length > 0) {
-                this.mostrarErrorCampos(
-                    `Debes completar los campos requeridos:<br><strong>${errores.join(", ")}</strong>`,
-                    null,
-                    "validacion"
-                );
-                return false;
-            }
-
-            this.cerrarErrorCampos();
-            return true;
-        }
-
-        setEstadoCampo(el, esValido) {
-            if (!el) return;
-
-            el.classList.remove("is-invalid", "is-valid");
-            el.classList.add(esValido ? "is-valid" : "is-invalid");
-
-            if (el.tagName === "SELECT" && window.jQuery?.(el).data("select2")) {
-                const { $selection, $container } = this.getSelect2Selection(el);
-                $selection.removeClass("is-invalid is-valid").addClass(esValido ? "is-valid" : "is-invalid");
-                $container.removeClass("is-invalid is-valid").addClass(esValido ? "is-valid" : "is-invalid");
-            }
+            return this._validacion?.validarTodos() ?? true;
         }
 
         async _recargarCombo(selectId, url) {
@@ -670,7 +837,7 @@
             if (detail.nuevoId) {
                 this._setFieldValue(cfg.selectId, detail.nuevoId, true);
                 const el = this._id(cfg.selectId);
-                if (el) this.validarCampoIndividual(el);
+                if (el) this._validacion?.onSelect2Change(el);
             }
         }
 
@@ -689,6 +856,7 @@
         }
 
         mostrarErrorCampos(mensaje, idReferencia = null, tipo = "validacion") {
+            if (tipo === "validacion") this._validacion?.cancelarPanelExito?.();
             const container = this._id("errorCampos");
             if (!container) return;
 
@@ -789,42 +957,20 @@
                 cerrarErrorBtn.addEventListener("click", () => this.cerrarErrorCampos());
             }
 
-            this.modalEl.addEventListener("input", (e) => {
-                const target = e.target;
-                if (target?.classList?.contains("Inputmiles") && typeof formatearMilesInput === "function") {
-                    formatearMilesInput(target);
-                }
-                if (target?.matches("input, select, textarea")) {
-                    this.validarCampoIndividual(target);
-                }
-            });
+            const btnHist = this._id("btnHistorialCosto");
+            if (btnHist) {
+                btnHist.addEventListener("click", (e) => {
+                    e.preventDefault();
+                    this.abrirHistorialCosto();
+                });
+            }
 
-            this.modalEl.addEventListener("change", (e) => {
-                const target = e.target;
-                if (target?.matches("input, select, textarea")) {
-                    this.validarCampoIndividual(target);
-                }
-            });
-
-            this.modalEl.addEventListener("blur", (e) => {
-                const target = e.target;
-                if (target?.matches("input, select, textarea")) {
-                    this.validarCampoIndividual(target);
-                }
-            }, true);
+            this._validacion?.attachEvents({ select2Namespace: "mproductos" });
         }
 
         _bindModalEvents() {
             this.modalEl.addEventListener("shown.bs.modal", () => {
                 this.inicializarSelect2Modal();
-
-                if (window.jQuery) {
-                    const $modal = window.jQuery(this.modalEl);
-                    $modal.off("select2:select.mproductos select2:clear.mproductos");
-                    $modal.on("select2:select.mproductos select2:clear.mproductos", "select", (e) => {
-                        if (e.target) this.validarCampoIndividual(e.target);
-                    });
-                }
             });
         }
     }
@@ -837,6 +983,39 @@
         return window.productoModal?.cerrarErrorCampos?.();
     };
 
+    /**
+     * Inicializa (o reconfigura) el modal M_Productos de la página.
+     * Incluir el partial M_Productos.cshtml y llamar desde el módulo host con onSaved, etc.
+     */
+    function initProductoModal(options = {}) {
+        const root = document.querySelector("[data-producto-modal]")
+            || document.querySelector(".producto-modal-root");
+
+        if (!root) {
+            console.warn("initProductoModal: incluya el partial M_Productos en la vista.");
+            return null;
+        }
+
+        const merged = Object.assign({ token: window.token || "" }, options || {});
+
+        if (!window.productoModal || window.productoModal.modalEl !== root) {
+            window.productoModal = new ProductoModal(root, merged);
+        } else {
+            Object.assign(window.productoModal.options, merged);
+        }
+
+        window.nuevoProducto = () => window.productoModal?.abrirNuevo?.();
+        window.verProducto = (id) => window.productoModal?.abrirVer?.(id);
+        window.editarProducto = (id) => window.productoModal?.abrirEditar?.(id);
+        window.eliminarProducto = (id) => window.productoModal?.eliminar?.(id);
+        window.verFicha = (id) => window.productoModal?.abrirVer?.(id);
+        window.verHistorialCostoProducto = (id, nombre) =>
+            window.productoModal?.abrirHistorialCostoPorId?.(id, nombre);
+
+        return window.productoModal;
+    }
+
+    window.initProductoModal = initProductoModal;
     window.ProductoModal = ProductoModal;
 
 })(window);

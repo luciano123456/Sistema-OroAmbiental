@@ -1,4 +1,4 @@
-﻿let gridClientes;
+let gridClientes;
 let clienteModal;
 
 const columnConfig = [
@@ -140,33 +140,36 @@ async function configurarDataTable(data) {
 
                     if (config.filterType === 'select') {
                         const $select = $(`
-                            <select class="rp-filter-select" style="width:100%">
-                                <option value="">Todos</option>
-                            </select>
+                            <select class="rp-filter-select" style="width:100%"></select>
                         `).appendTo(cell);
 
-                        const datos = await config.fetchDataFunc();
-                        (datos || []).forEach(item => {
-                            $select.append(`<option value="${item.Id}">${item.Nombre}</option>`);
-                        });
+                        if (config.index === 3 && typeof prepararFiltroSucursalDataTable === "function") {
+                            await prepararFiltroSucursalDataTable($select, api, config.index, inicializarSelect2Filtro);
+                        } else {
+                            const datos = await config.fetchDataFunc();
+                            $select.append(`<option value="">Todos</option>`);
+                            (datos || []).forEach(item => {
+                                $select.append(`<option value="${item.Id}">${item.Nombre}</option>`);
+                            });
 
-                        inicializarSelect2Filtro($select);
+                            inicializarSelect2Filtro($select);
 
-                        $select.on('select2:clear', function () {
-                            api.column(config.index).search('').draw(false);
-                        });
-
-                        $select.on('change', function () {
-                            const value = $(this).val();
-                            if (!value) {
+                            $select.on('select2:clear', function () {
                                 api.column(config.index).search('').draw(false);
-                                return;
-                            }
-                            const text = $(this).find('option:selected').text();
-                            api.column(config.index)
-                                .search('^' + escapeRegex(text) + '$', true, false)
-                                .draw(false);
-                        });
+                            });
+
+                            $select.on('change', function () {
+                                const value = $(this).val();
+                                if (!value) {
+                                    api.column(config.index).search('').draw(false);
+                                    return;
+                                }
+                                const text = $(this).find('option:selected').text();
+                                api.column(config.index)
+                                    .search('^' + escapeRegex(text) + '$', true, false)
+                                    .draw(false);
+                            });
+                        }
                     } else {
                         $('<input class="rp-filter-input" type="text" placeholder="Buscar...">')
                             .appendTo(cell)
@@ -189,10 +192,7 @@ async function configurarDataTable(data) {
 }
 
 async function listaSucursalesFilter() {
-    const response = await fetch(`/Sucursales/Lista`, {
-        headers: { 'Authorization': 'Bearer ' + token }
-    });
-    return await response.json();
+    return await fetchSucursalesPermitidas("/Sucursales/Lista");
 }
 
 async function listaProvinciasFilter() {

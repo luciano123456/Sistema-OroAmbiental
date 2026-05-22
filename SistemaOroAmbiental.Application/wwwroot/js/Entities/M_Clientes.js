@@ -49,6 +49,19 @@
             this._contactoSeleccionadoId = 0;
 
             this._camposObligatorios = ["txtNombre", "txtCuit", "cmbSucursal"];
+            this._validacion = new ValidacionModalAbm({
+                modalEl: this.modalEl,
+                getPanel: () => this._id("errorCampos"),
+                campos: [
+                    { id: "txtNombre", nombre: "Nombre" },
+                    { id: "txtCuit", nombre: "CUIT" },
+                    { id: "cmbSucursal", nombre: "Sucursal" }
+                ],
+                esCampoValido: (el) => this._valorCampoValido(el),
+                isSoloLectura: () => this.isSoloLectura(),
+                mostrarError: (msg) => this.mostrarErrorCampos(msg, null, "validacion"),
+                cerrarPanel: () => this.cerrarErrorCampos()
+            });
             this._comboPorController = {
                 Sucursales: { selectId: "cmbSucursal", url: this.options.endpoints.sucursales },
                 Provincias: { selectId: "cmbProvincia", url: this.options.endpoints.provincias },
@@ -521,6 +534,13 @@
 
                 await this.cargarCombos();
 
+                if (!(typeof usuarioTieneUnicaSucursal === "function" && usuarioTieneUnicaSucursal())) {
+                    const defSuc = typeof getIdSucursalDefaultUsuario === "function"
+                        ? getIdSucursalDefaultUsuario()
+                        : null;
+                    if (defSuc) this._setFieldValue("cmbSucursal", defSuc, true);
+                }
+
                 this._id("modalEdicionLabel").textContent = "Nuevo Cliente";
                 this._id("btnGuardar").innerHTML = `<i class="fa fa-check"></i> Registrar`;
 
@@ -632,19 +652,39 @@
         }
 
         async cargarCombos() {
-            this.resetSelect("cmbSucursal", "Seleccionar");
+            const phSuc = (typeof usuarioTieneUnicaSucursal === "function" && usuarioTieneUnicaSucursal())
+                ? ""
+                : "Seleccionar";
+
+            this.resetSelect("cmbSucursal", phSuc);
             this.resetSelect("cmbProvincia", "Seleccionar");
             this.resetSelect("cmbProfesion", "Seleccionar");
             this.resetSelect("cmbCondicionIva", "Seleccionar");
 
+            const dataSuc = await this._fetchJson(this.options.endpoints.sucursales, { headers: this._headers(false) });
+            const $suc = window.jQuery(this._id("cmbSucursal"));
+            if (typeof llenarSelectSucursales === "function") {
+                llenarSelectSucursales($suc, dataSuc, {
+                    primeraOpcion: typeof primeraOpcionSucursal === "function"
+                        ? primeraOpcionSucursal({ value: "", text: "Seleccionar" })
+                        : { value: "", text: "Seleccionar" },
+                    seleccionarPorDefecto: true
+                });
+            } else {
+                (dataSuc || []).forEach(x => this._id("cmbSucursal").append(new Option(x.Nombre, x.Id)));
+            }
+
             await Promise.all([
-                this._llenarCombo("cmbSucursal", this.options.endpoints.sucursales),
                 this._llenarCombo("cmbProvincia", this.options.endpoints.provincias),
                 this._llenarCombo("cmbProfesion", this.options.endpoints.profesiones),
                 this._llenarCombo("cmbCondicionIva", this.options.endpoints.condicionesIva)
             ]);
 
             this.inicializarSelect2Modal();
+
+            if (typeof aplicarBloqueoSucursalUnica === "function") {
+                aplicarBloqueoSucursalUnica($suc, { triggerChange: false });
+            }
         }
 
         async guardar() {
@@ -697,29 +737,13 @@
                 this.cerrarErrorCampos();
                 exitoModal(data.mensaje || (esNuevo ? "Cliente registrado correctamente" : "Cliente modificado correctamente"));
 
-                if (esNuevo && data.id) {
-                    this._setFieldValue("txtId", data.id);
-                    this._id("modalEdicionLabel").textContent = "Editar Cliente";
-                    this._id("btnGuardar").innerHTML = `<i class="fa fa-check"></i> Guardar`;
-                    this._ultimoModo = "editar";
-                    this.actualizarBadgeClienteContactos();
-                    await this.cargarContactos(data.id);
-
-                    const tabBtn = this._id("tabBtnContactosCliente");
-                    if (tabBtn && window.bootstrap?.Tab) {
-                        window.bootstrap.Tab.getOrCreateInstance(tabBtn).show();
-                    }
-
-                    if (typeof this.options.onSaved === "function") {
-                        await this.options.onSaved(data, { ...modelo, Id: data.id }, this);
-                    }
-                    return true;
-                }
-
                 this.cerrar();
 
                 if (typeof this.options.onSaved === "function") {
-                    await this.options.onSaved(data, modelo, this);
+                    const modeloGuardado = esNuevo && data.id
+                        ? { ...modelo, Id: data.id }
+                        : modelo;
+                    await this.options.onSaved(data, modeloGuardado, this);
                 }
 
                 return true;
@@ -732,8 +756,8 @@
 
         async eliminar(id) {
             const confirmado = typeof confirmarModal === "function"
-                ? await confirmarModal("?Desea eliminar este cliente?")
-                : window.confirm("?Desea eliminar este cliente?");
+                ? await confirmarModal("\u00BFDesea eliminar este cliente?")
+                : window.confirm("\u00BFDesea eliminar este cliente?");
 
             if (!confirmado) return false;
 
@@ -769,15 +793,8 @@
                 if (el.id === "txtId") { el.value = ""; return; }
                 if (el.tagName === "SELECT") el.selectedIndex = 0;
                 else el.value = "";
-                el.classList.remove("is-invalid", "is-valid");
-
-                if (el.tagName === "SELECT" && window.jQuery?.(el).data("select2")) {
-                    const { $selection, $container } = this.getSelect2Selection(el);
-                    $selection.removeClass("is-invalid is-valid");
-                    $container.removeClass("is-invalid is-valid");
-                }
             });
-            this.cerrarErrorCampos();
+            this._validacion?.reset();
             this._id("infoAuditoria")?.classList.add("d-none");
             if (this._id("infoRegistro")) this._id("infoRegistro").innerHTML = "";
             if (this._id("infoModificacion")) this._id("infoModificacion").innerHTML = "";
@@ -791,63 +808,11 @@
         }
 
         validarCampoIndividual(el) {
-            if (this.isSoloLectura()) return true;
-            if (!el || !this._camposObligatorios.includes(el.id)) return true;
-
-            const esValido = this._valorCampoValido(el);
-            this.setEstadoCampo(el, esValido);
-            this.verificarErroresGenerales();
-            return esValido;
-        }
-
-        verificarErroresGenerales() {
-            const panel = this._id("errorCampos");
-            if (!panel) return;
-            const hayInvalidos = this.modalEl.querySelectorAll(".is-invalid").length > 0;
-            if (!hayInvalidos) this.cerrarErrorCampos();
+            return this._validacion?.onBlur(el) ?? true;
         }
 
         validarCampos() {
-            const campos = [
-                { id: "txtNombre", nombre: "Nombre" },
-                { id: "txtCuit", nombre: "CUIT" },
-                { id: "cmbSucursal", nombre: "Sucursal" }
-            ];
-
-            const errores = [];
-
-            campos.forEach(c => {
-                const el = this._id(c.id);
-                if (!el) return;
-                const esValido = this._valorCampoValido(el);
-                this.setEstadoCampo(el, esValido);
-                if (!esValido) errores.push(c.nombre);
-            });
-
-            if (errores.length > 0) {
-                this.mostrarErrorCampos(
-                    `Debes completar los campos requeridos:<br><strong>${errores.join(", ")}</strong>`,
-                    null,
-                    "validacion"
-                );
-                return false;
-            }
-
-            this.cerrarErrorCampos();
-            return true;
-        }
-
-        setEstadoCampo(el, esValido) {
-            if (!el) return;
-
-            el.classList.remove("is-invalid", "is-valid");
-            el.classList.add(esValido ? "is-valid" : "is-invalid");
-
-            if (el.tagName === "SELECT" && window.jQuery?.(el).data("select2")) {
-                const { $selection, $container } = this.getSelect2Selection(el);
-                $selection.removeClass("is-invalid is-valid").addClass(esValido ? "is-valid" : "is-invalid");
-                $container.removeClass("is-invalid is-valid").addClass(esValido ? "is-valid" : "is-invalid");
-            }
+            return this._validacion?.validarTodos() ?? true;
         }
 
         async _recargarCombo(selectId, url) {
@@ -877,7 +842,7 @@
             if (detail.nuevoId) {
                 this._setFieldValue(cfg.selectId, detail.nuevoId, true);
                 const el = this._id(cfg.selectId);
-                if (el) this.validarCampoIndividual(el);
+                if (el) this._validacion?.onSelect2Change(el);
             }
         }
 
@@ -896,6 +861,7 @@
         }
 
         mostrarErrorCampos(mensaje, idReferencia = null, tipo = "validacion") {
+            if (tipo === "validacion") this._validacion?.cancelarPanelExito?.();
             const container = this._id("errorCampos");
             if (!container) return;
 
@@ -996,39 +962,12 @@
                 cerrarErrorBtn.addEventListener("click", () => this.cerrarErrorCampos());
             }
 
-            this.modalEl.addEventListener("input", (e) => {
-                const target = e.target;
-                if (target?.matches("input, select, textarea")) {
-                    this.validarCampoIndividual(target);
-                }
-            });
-
-            this.modalEl.addEventListener("change", (e) => {
-                const target = e.target;
-                if (target?.matches("input, select, textarea")) {
-                    this.validarCampoIndividual(target);
-                }
-            });
-
-            this.modalEl.addEventListener("blur", (e) => {
-                const target = e.target;
-                if (target?.matches("input, select, textarea")) {
-                    this.validarCampoIndividual(target);
-                }
-            }, true);
+            this._validacion?.attachEvents({ select2Namespace: "mclientes" });
         }
 
         _bindModalEvents() {
             this.modalEl.addEventListener("shown.bs.modal", () => {
                 this.inicializarSelect2Modal();
-
-                if (window.jQuery) {
-                    const $modal = window.jQuery(this.modalEl);
-                    $modal.off("select2:select.mclientes select2:clear.mclientes");
-                    $modal.on("select2:select.mclientes select2:clear.mclientes", "select", (e) => {
-                        if (e.target) this.validarCampoIndividual(e.target);
-                    });
-                }
             });
         }
     }

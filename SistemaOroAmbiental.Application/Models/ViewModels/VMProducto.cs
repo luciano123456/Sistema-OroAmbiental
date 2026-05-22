@@ -14,6 +14,14 @@ namespace SistemaOroAmbiental.Application.Models.ViewModels
 
         public int StockMinimo { get; set; }
 
+        /// <summary>Stock sumado en todas las sucursales (tabla Inventario).</summary>
+        public decimal StockTotal { get; set; }
+
+        /// <summary>sin_stock | bajo | ok | normal</summary>
+        public string StockEstadoCodigo { get; set; } = "sin_stock";
+
+        public string StockEstadoTexto { get; set; } = "Sin stock";
+
         public string? Categoria { get; set; }
 
         public string? Medida { get; set; }

@@ -1,4 +1,4 @@
-﻿using SistemaOroAmbiental.BLL.Common;
+using SistemaOroAmbiental.BLL.Common;
 using SistemaOroAmbiental.Models;
 
 namespace SistemaOroAmbiental.BLL.Service
@@ -14,5 +14,9 @@ namespace SistemaOroAmbiental.BLL.Service
         Task<Producto?> Obtener(int id);
 
         Task<IQueryable<Producto>> ObtenerTodos();
+
+        Task<Dictionary<int, decimal>> ObtenerStockTotalesPorProducto();
+
+        Task<(Producto? producto, List<ProductoHistorialCostoFila> historial)> ObtenerHistorialCosto(int idProducto);
     }
 }

@@ -88,14 +88,24 @@
                     </div>
 
                     <div class="col-md-4">
-                        <label class="form-label">Costo unitario</label>
+                        <label class="form-label prod-costo-label">
+                            <span>Costo unitario</span>
+                            <button type="button"
+                                    id="btnHistorialCosto"
+                                    class="btn btn-sm prod-btn-historial-costo"
+                                    title="Ver historial de costo unitario"
+                                    disabled>
+                                <i class="fa fa-eye"></i>
+                                <span class="prod-btn-historial-text">Historial</span>
+                            </button>
+                        </label>
                         <input id="txtCostoUnitario" type="text" inputmode="decimal" autocomplete="off" class="form-control Inputmiles" required />
                         <div class="invalid-feedback">Campo obligatorio</div>
                     </div>
 
                     <div class="col-md-4">
                         <label class="form-label">Stock mínimo</label>
-                        <input id="txtStockMinimo" type="number" min="0" step="1" class="form-control" value="0" />
+                        <input id="txtStockMinimo" type="text" min="0" class="form-control Inputmiles" inputmode="numeric" autocomplete="off" value="0" />
                         <div class="invalid-feedback">Valor inválido</div>
                     </div>
 
@@ -112,7 +122,7 @@
 
                         <div id="lblPreciosSinListas" class="rp-precios-empty d-none">
                             <i class="fa fa-info-circle"></i>
-                            <span>No hay listas de precio. Creá una en <strong>Extras → Listas de Precio</strong>.</span>
+                            <span>No hay listas de precio. Creá una en <strong>Extras �?' Listas de Precio</strong>.</span>
                         </div>
 
                         <div id="gridPreciosLista" class="rp-precios-grid"></div>
@@ -142,4 +152,35 @@
 
     </div>
 
+</div>
+
+@* Historial de costo unitario *@
+<div class="modal fade" id="modalHistorialCosto" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header colorEncabezado">
+                <div>
+                    <h5 class="modal-title fw-bold mb-0" id="histCostoTitulo">Historial de costo</h5>
+                    <small class="text-muted-cc d-block" id="histCostoSub"></small>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="histCostoLoading" class="prod-hist-loading">
+                    <i class="fa fa-spinner fa-spin"></i> Cargando historial�?�
+                </div>
+                <div id="histCostoEmpty" class="prod-hist-empty d-none">
+                    <i class="fa fa-info-circle"></i>
+                    <span>No hay movimientos de costo registrados para este producto.</span>
+                </div>
+                <div id="histCostoActual" class="prod-hist-actual d-none"></div>
+                <div id="histCostoTimeline" class="prod-hist-timeline d-none"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fa fa-times"></i> Cerrar
+                </button>
+            </div>
+        </div>
+    </div>
 </div>

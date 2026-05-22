@@ -1,10 +1,13 @@
-﻿/* =========================================================
+/* =========================================================
    CAJA.JS — Tesorería Cajas (Sistema Oro Ambiental)
 ========================================================= */
 
 let gridCaja;
 let cuentasCaja = [];
 let sucursalesCaja = [];
+let validacionCajaIngreso = null;
+let validacionCajaEgreso = null;
+let validacionCajaTransferencia = null;
 
 const CJ = {
     movimientos: [],
@@ -99,42 +102,14 @@ $(document).ready(async () => {
     inicializarFechasPorDefecto();
 
     await Promise.all([cargarSucursales(), cargarCuentas()]);
-    inicializarSelect2Caja();
 
     await cargarMovimientosYResumen();
 
-    document.querySelectorAll("#modalIngreso input, #modalIngreso select").forEach(el => {
+    document.querySelectorAll("#modalIngreso input, #modalIngreso select, #modalEgreso input, #modalEgreso select, #modalTransferencia input, #modalTransferencia select").forEach(el => {
         el.setAttribute("autocomplete", "off");
-        el.addEventListener("input", () => validarCampoIngresoIndividual(el));
-        el.addEventListener("change", () => validarCampoIngresoIndividual(el));
-        el.addEventListener("blur", () => validarCampoIngresoIndividual(el));
     });
 
-    document.querySelectorAll("#modalEgreso input, #modalEgreso select").forEach(el => {
-        el.setAttribute("autocomplete", "off");
-        el.addEventListener("input", () => validarCampoEgresoIndividual(el));
-        el.addEventListener("change", () => validarCampoEgresoIndividual(el));
-        el.addEventListener("blur", () => validarCampoEgresoIndividual(el));
-    });
-
-    document.querySelectorAll("#modalTransferencia input, #modalTransferencia select").forEach(el => {
-        el.setAttribute("autocomplete", "off");
-        el.addEventListener("input", () => validarCampoTransferenciaIndividual(el));
-        el.addEventListener("change", () => validarCampoTransferenciaIndividual(el));
-        el.addEventListener("blur", () => validarCampoTransferenciaIndividual(el));
-    });
-
-    $("#modalIngreso").on("select2:select select2:clear change", "select", function () {
-        validarCampoIngresoIndividual(this);
-    });
-
-    $("#modalEgreso").on("select2:select select2:clear change", "select", function () {
-        validarCampoEgresoIndividual(this);
-    });
-
-    $("#modalTransferencia").on("select2:select select2:clear change", "select", function () {
-        validarCampoTransferenciaIndividual(this);
-    });
+    initValidacionesCaja();
 
     document.addEventListener("configuracionActualizada", async (e) => {
         const d = e.detail || {};
@@ -183,6 +158,30 @@ $(document).ready(async () => {
     });
 });
 
+/** Sucursal → cuenta por modal (cuando la sucursal ya viene preseleccionada) */
+const CAJA_CUENTAS_POR_MODAL = {
+    "#modalIngreso": [{ suc: "#iSucursal", cta: "#iCuenta" }],
+    "#modalEgreso": [{ suc: "#eSucursal", cta: "#eCuenta" }],
+    "#modalTransferencia": [
+        { suc: "#tSucursalOrigen", cta: "#tCuentaOrigen" },
+        { suc: "#tSucursalDestino", cta: "#tCuentaDestino" }
+    ]
+};
+
+function sincronizarCuentasDesdeSucursal(selectorSucursal, modalSelector) {
+    const pares = CAJA_CUENTAS_POR_MODAL[modalSelector];
+    if (!pares) return;
+
+    const idSuc = $(selectorSucursal).val();
+    if (!idSuc) return;
+
+    pares.forEach(p => {
+        if (p.suc === selectorSucursal) {
+            cargarCuentasModal(p.cta, idSuc, modalSelector);
+        }
+    });
+}
+
 /* =========================
    SELECT2
 ========================= */
@@ -201,10 +200,13 @@ function ensureSelect2($el, options) {
 }
 
 function inicializarSelect2Caja() {
+    const unica = typeof usuarioTieneUnicaSucursal === "function" && usuarioTieneUnicaSucursal(sucursalesCaja);
+
     ensureSelect2($("#fSucursal"), {
         dropdownParent: $("#panelFiltrosCaja"),
-        placeholder: "Todas",
-        minimumResultsForSearch: 0
+        placeholder: unica ? "" : "Todas",
+        minimumResultsForSearch: 0,
+        allowClear: !unica
     });
 
     ensureSelect2($("#fCuenta"), {
@@ -229,6 +231,17 @@ function inicializarSelect2Caja() {
     ensureSelect2($("#tCuentaOrigen"), { dropdownParent: $("#modalTransferencia"), placeholder: "Seleccionar" });
     ensureSelect2($("#tSucursalDestino"), { dropdownParent: $("#modalTransferencia"), placeholder: "Seleccionar" });
     ensureSelect2($("#tCuentaDestino"), { dropdownParent: $("#modalTransferencia"), placeholder: "Seleccionar" });
+
+    const bloqueoOpts = { sucursales: sucursalesCaja, triggerChange: false };
+    aplicarBloqueoSucursalUnica($("#fSucursal"), bloqueoOpts);
+    aplicarBloqueoSucursalUnica($("#iSucursal"), bloqueoOpts);
+    aplicarBloqueoSucursalUnica($("#eSucursal"), bloqueoOpts);
+    aplicarBloqueoSucursalUnica($("#tSucursalOrigen"), bloqueoOpts);
+    aplicarBloqueoSucursalUnica($("#tSucursalDestino"), bloqueoOpts);
+
+    if (unica) {
+        cargarFiltroCuentas($("#fSucursal").val());
+    }
 }
 
 function inicializarSelect2Filtro($select) {
@@ -296,20 +309,22 @@ function inicializarFechasPorDefecto() {
 
 async function cargarSucursales() {
     try {
-        const response = await fetch(API.sucursales, { headers: authHeaders() });
-        if (!response.ok) throw new Error();
-        sucursalesCaja = await response.json();
+        sucursalesCaja = await fetchSucursalesPermitidas(API.sucursales);
     } catch (e) {
         console.error(e);
         sucursalesCaja = [];
     }
 
-    const $fSucursal = $("#fSucursal");
-    $fSucursal.empty().append(`<option value="">Todas</option>`);
+    const idUnica = typeof getIdSucursalDefaultUsuario === "function"
+        ? getIdSucursalDefaultUsuario(sucursalesCaja)
+        : null;
 
-    (sucursalesCaja || []).forEach(x => {
-        $fSucursal.append(`<option value="${x.Id}">${x.Nombre}</option>`);
+    llenarSelectSucursales($("#fSucursal"), sucursalesCaja, {
+        primeraOpcion: primeraOpcionSucursal({ value: "", text: "Todas" }, sucursalesCaja),
+        seleccionarPorDefecto: true
     });
+
+    if (idUnica) $("#fSucursal").val(String(idUnica));
 }
 
 async function cargarCuentas() {
@@ -336,10 +351,6 @@ function cargarCombosCuentas() {
     cargarSucursalesModal("#eSucursal", "#modalEgreso", null);
     cargarSucursalesModal("#tSucursalOrigen", "#modalTransferencia", null);
     cargarSucursalesModal("#tSucursalDestino", "#modalTransferencia", null);
-    cargarCuentasModal("#iCuenta", null, "#modalIngreso");
-    cargarCuentasModal("#eCuenta", null, "#modalEgreso");
-    cargarCuentasModal("#tCuentaOrigen", null, "#modalTransferencia");
-    cargarCuentasModal("#tCuentaDestino", null, "#modalTransferencia");
     inicializarSelect2Caja();
 }
 
@@ -347,25 +358,41 @@ function cargarSucursalesModal(selectorSucursal, modalSelector, idSucursalSel) {
     const $suc = $(selectorSucursal);
     const valorActual = idSucursalSel != null ? idSucursalSel : $suc.val();
 
-    $suc.empty().append(`<option value="">Seleccionar</option>`);
+    const idUnica = typeof getIdSucursalDefaultUsuario === "function"
+        ? getIdSucursalDefaultUsuario(sucursalesCaja)
+        : null;
 
-    (sucursalesCaja || []).forEach(x => {
-        $suc.append(`<option value="${x.Id}">${x.Nombre}</option>`);
+    llenarSelectSucursales($suc, sucursalesCaja, {
+        primeraOpcion: primeraOpcionSucursal({ value: "", text: "Seleccionar" }, sucursalesCaja),
+        seleccionarPorDefecto: true
     });
 
     if (valorActual && $suc.find(`option[value="${valorActual}"]`).length) {
         $suc.val(String(valorActual));
+    } else if (idUnica) {
+        $suc.val(String(idUnica));
     }
 
+    if ($suc.data("select2")) $suc.select2("destroy");
+
+    const unica = typeof usuarioTieneUnicaSucursal === "function" && usuarioTieneUnicaSucursal(sucursalesCaja);
     ensureSelect2($suc, {
         dropdownParent: $(modalSelector),
-        placeholder: "Seleccionar"
+        placeholder: unica ? " " : "Seleccionar",
+        allowClear: !unica
     });
+
+    aplicarBloqueoSucursalUnica($suc, { sucursales: sucursalesCaja, triggerChange: false });
+    sincronizarCuentasDesdeSucursal(selectorSucursal, modalSelector);
 }
 
 function cargarFiltroCuentas(idSucursal) {
     const $fCuenta = $("#fCuenta");
     const valorActual = $fCuenta.val();
+
+    if ($fCuenta.data("select2")) {
+        $fCuenta.select2("destroy");
+    }
 
     $fCuenta.empty().append(`<option value="">Todas</option>`);
 
@@ -377,7 +404,11 @@ function cargarFiltroCuentas(idSucursal) {
         $fCuenta.val(valorActual);
     }
 
-    inicializarSelect2Caja();
+    ensureSelect2($fCuenta, {
+        dropdownParent: $("#panelFiltrosCaja"),
+        placeholder: "Todas",
+        minimumResultsForSearch: 0
+    });
 }
 
 function cargarCuentasModal(selectorCuenta, idSucursal, modalSelector) {
@@ -439,6 +470,7 @@ async function limpiarFiltrosCaja() {
     $("#fTipo").val("").trigger("change");
     $("#fTexto").val("");
     CJ.filtrosActivos = false;
+    limpiarFiltrosColumnasGrilla();
     actualizarEstadoFiltrosCaja();
     await cargarMovimientosYResumen();
 }
@@ -572,14 +604,75 @@ function renderAccionesCaja(id, row) {
    DATATABLE
 ========================= */
 
+function $theadFiltrosCaja(api) {
+    const dtApi = api || gridCaja;
+    if (dtApi && typeof dtApi.table === "function") {
+        return $(dtApi.table().header());
+    }
+    return $('#grd_Caja thead');
+}
+
+function $celdaFiltroColumnaCaja(index, api) {
+    return $theadFiltrosCaja(api).find('tr.filters th').eq(index);
+}
+
+function asegurarFilaFiltrosCaja(api) {
+    const $thead = $theadFiltrosCaja(api);
+    if ($thead.find('tr.filters').length) return;
+
+    const cols = api.columns().count();
+    const $row = $('<tr class="filters"></tr>');
+    for (let i = 0; i < cols; i++) {
+        $row.append('<th></th>');
+    }
+    $thead.append($row);
+}
+
+/**
+ * Limpia búsquedas de columnas y controles de la fila de filtros.
+ * Con sucursal única, mantiene el filtro de sucursal aplicado por prepararFiltroSucursalDataTable.
+ */
+function limpiarFiltrosColumnasGrilla(api, opts = {}) {
+    const dt = api || gridCaja;
+    if (!dt) return;
+
+    const unica = opts.preserveSucursalUnica !== false
+        && typeof usuarioTieneUnicaSucursal === "function"
+        && usuarioTieneUnicaSucursal();
+    const sucursalSearch = unica ? dt.column(4).search() : "";
+
+    dt.columns().every(function () {
+        this.search("");
+    });
+
+    for (const config of columnConfig) {
+        if (config.index === 4 && unica) continue;
+
+        const cell = $celdaFiltroColumnaCaja(config.index);
+        const $select = cell.find("select");
+        const $input = cell.find("input");
+
+        if ($select.length) {
+            $select.val(null);
+            if ($select.data("select2")) {
+                $select.trigger("change.select2");
+            }
+        }
+        if ($input.length) {
+            $input.val("");
+        }
+    }
+
+    if (unica && sucursalSearch) {
+        dt.column(4).search(sucursalSearch);
+    }
+
+    dt.draw(false);
+}
+
 async function configurarDataTable(data) {
 
     if (!gridCaja) {
-
-        const $thead = $('#grd_Caja thead');
-        if ($thead.find('tr.filters').length === 0) {
-            $thead.find('tr').first().clone(true).addClass('filters').appendTo($thead);
-        }
 
         gridCaja = $('#grd_Caja').DataTable({
             data: data,
@@ -659,18 +752,19 @@ async function configurarDataTable(data) {
             initComplete: async function () {
                 const api = this.api();
 
+                asegurarFilaFiltrosCaja(api);
+
                 for (const config of columnConfig) {
-                    const cell = $('.filters th').eq(config.index);
+                    const cell = $celdaFiltroColumnaCaja(config.index, api);
                     if (!cell.length) continue;
 
                     cell.empty();
 
                     if (config.filterType === 'select' || config.filterType === 'select_local') {
 
+                        const esFiltroSucursal = config.index === 4 && config.filterType === 'select';
                         const $select = $(`
-                            <select class="rp-filter-select" style="width:100%">
-                                <option value="">Todos</option>
-                            </select>
+                            <select class="rp-filter-select" style="width:100%" autocomplete="off"></select>
                         `).appendTo(cell);
 
                         if (config.index === 4) {
@@ -681,7 +775,23 @@ async function configurarDataTable(data) {
                             $select.addClass("rp-filter-select-cuenta");
                         }
 
-                        if (config.filterType === 'select') {
+                        if (esFiltroSucursal && typeof prepararFiltroSucursalDataTable === "function") {
+                            await prepararFiltroSucursalDataTable($select, api, config.index, inicializarSelect2Filtro);
+
+                            if (typeof usuarioTieneUnicaSucursal === "function" && usuarioTieneUnicaSucursal()) {
+                                const value = $select.val();
+                                const $cuentaSelect = $celdaFiltroColumnaCaja(5, api).find('select.rp-filter-select-cuenta');
+                                if ($cuentaSelect.length) {
+                                    const cuentas = await listaCuentasFilter(value || null);
+                                    $cuentaSelect.empty().append(`<option value="">Todos</option>`);
+                                    (cuentas || []).forEach(item => {
+                                        $cuentaSelect.append(`<option value="${item.Id}">${etiquetaCuenta(item)}</option>`);
+                                    });
+                                    inicializarSelect2Filtro($cuentaSelect);
+                                }
+                            }
+                        } else if (config.filterType === 'select') {
+                            $select.append(`<option value="">Todos</option>`);
                             const datos = await config.fetchDataFunc();
                             (datos || []).forEach(item => {
                                 const texto = item.NombreCombo
@@ -690,6 +800,7 @@ async function configurarDataTable(data) {
                                 $select.append(`<option value="${item.Id}">${texto}</option>`);
                             });
                         } else {
+                            $select.append(`<option value=""></option>`);
                             const uniques = new Set();
                             api.column(config.index).data().each(v => {
                                 const txt = (v ?? "").toString().trim();
@@ -698,9 +809,19 @@ async function configurarDataTable(data) {
                             [...uniques].sort().forEach(txt => {
                                 $select.append(`<option value="${txt}">${txt}</option>`);
                             });
+                            $select.val(null);
                         }
 
-                        inicializarSelect2Filtro($select);
+                        if (!(esFiltroSucursal && typeof prepararFiltroSucursalDataTable === "function")) {
+                            inicializarSelect2Filtro($select);
+                            if (config.filterType === "select_local") {
+                                $select.val(null).trigger("change.select2");
+                            }
+                        }
+
+                        if (esFiltroSucursal && typeof usuarioTieneUnicaSucursal === "function" && usuarioTieneUnicaSucursal()) {
+                            continue;
+                        }
 
                         $select.on('select2:clear', function () {
                             api.column(config.index).search('').draw(false);
@@ -710,7 +831,7 @@ async function configurarDataTable(data) {
                             const value = $(this).val();
 
                             if (config.index === 4) {
-                                const $cuentaSelect = $('.filters th').eq(5).find('select.rp-filter-select-cuenta');
+                                const $cuentaSelect = $celdaFiltroColumnaCaja(5, api).find('select.rp-filter-select-cuenta');
 
                                 if ($cuentaSelect.length) {
                                     const cuentas = await listaCuentasFilter(value || null);
@@ -743,7 +864,8 @@ async function configurarDataTable(data) {
                             <input type="number"
                                    step="0.01"
                                    class="rp-filter-input"
-                                   placeholder="Buscar...">
+                                   placeholder="Buscar..."
+                                   autocomplete="off">
                         `)
                             .appendTo(cell)
                             .on('keyup change', function () {
@@ -756,7 +878,7 @@ async function configurarDataTable(data) {
                             });
 
                     } else {
-                        $('<input class="rp-filter-input" type="text" placeholder="Buscar...">')
+                        $('<input class="rp-filter-input" type="text" placeholder="Buscar..." autocomplete="off">')
                             .appendTo(cell)
                             .on('keyup change', function () {
                                 api.column(config.index).search(this.value).draw(false);
@@ -764,7 +886,7 @@ async function configurarDataTable(data) {
                     }
                 }
 
-                $('.filters th').eq(0).html('');
+                $celdaFiltroColumnaCaja(0, api).html('');
                 configurarOpcionesColumnasCaja();
                 actualizarKpis();
             }
@@ -781,13 +903,7 @@ async function configurarDataTable(data) {
 ========================= */
 
 async function listaSucursalesFilter() {
-    try {
-        const response = await fetch(API.sucursales, { headers: authHeaders() });
-        if (!response.ok) throw new Error();
-        return await response.json();
-    } catch {
-        return sucursalesCaja || [];
-    }
+    return await fetchSucursalesPermitidas(API.sucursales);
 }
 
 async function listaCuentasFilter(idSucursal = null) {
@@ -1014,6 +1130,88 @@ async function eliminarMovimiento(id) {
     }
 }
 
+function valorCampoValidoCaja(el) {
+    if (!el) return false;
+
+    let valor;
+    if (el.tagName === "SELECT") {
+        valor = $(el).val();
+    } else {
+        valor = (el.value ?? "").toString().trim();
+    }
+
+    let esValido = valor !== null && valor !== "";
+
+    if (el.id === "iImporte" || el.id === "eImporte" || el.id === "tImporte") {
+        esValido = valor !== "" && parseNumero(valor) > 0;
+    }
+
+    return esValido;
+}
+
+function initValidacionesCaja() {
+    if (typeof ValidacionModalAbm !== "function") return;
+
+    const modalIngreso = document.getElementById("modalIngreso");
+    if (modalIngreso) {
+        validacionCajaIngreso = new ValidacionModalAbm({
+            modalEl: modalIngreso,
+            getPanel: () => document.getElementById("errorCamposIngreso"),
+            campos: [
+                { id: "iFecha", nombre: "Fecha" },
+                { id: "iSucursal", nombre: "Sucursal" },
+                { id: "iCuenta", nombre: "Cuenta" },
+                { id: "iImporte", nombre: "Importe" },
+                { id: "iConcepto", nombre: "Concepto" }
+            ],
+            esCampoValido: valorCampoValidoCaja,
+            mostrarError: mostrarErrorCamposIngreso,
+            cerrarPanel: cerrarErrorCamposIngreso
+        });
+        validacionCajaIngreso.attachEvents({ select2Namespace: "caja-ingreso" });
+    }
+
+    const modalEgreso = document.getElementById("modalEgreso");
+    if (modalEgreso) {
+        validacionCajaEgreso = new ValidacionModalAbm({
+            modalEl: modalEgreso,
+            getPanel: () => document.getElementById("errorCamposEgreso"),
+            campos: [
+                { id: "eFecha", nombre: "Fecha" },
+                { id: "eSucursal", nombre: "Sucursal" },
+                { id: "eCuenta", nombre: "Cuenta" },
+                { id: "eImporte", nombre: "Importe" },
+                { id: "eConcepto", nombre: "Concepto" }
+            ],
+            esCampoValido: valorCampoValidoCaja,
+            mostrarError: mostrarErrorCamposEgreso,
+            cerrarPanel: cerrarErrorCamposEgreso
+        });
+        validacionCajaEgreso.attachEvents({ select2Namespace: "caja-egreso" });
+    }
+
+    const modalTransferencia = document.getElementById("modalTransferencia");
+    if (modalTransferencia) {
+        validacionCajaTransferencia = new ValidacionModalAbm({
+            modalEl: modalTransferencia,
+            getPanel: () => document.getElementById("errorCamposTransferencia"),
+            campos: [
+                { id: "tFecha", nombre: "Fecha" },
+                { id: "tSucursalOrigen", nombre: "Sucursal origen" },
+                { id: "tCuentaOrigen", nombre: "Cuenta origen" },
+                { id: "tSucursalDestino", nombre: "Sucursal destino" },
+                { id: "tCuentaDestino", nombre: "Cuenta destino" },
+                { id: "tImporte", nombre: "Importe" },
+                { id: "tNota", nombre: "Nota / concepto" }
+            ],
+            esCampoValido: valorCampoValidoCaja,
+            mostrarError: mostrarErrorCamposTransferencia,
+            cerrarPanel: cerrarErrorCamposTransferencia
+        });
+        validacionCajaTransferencia.attachEvents({ select2Namespace: "caja-transferencia" });
+    }
+}
+
 /* =========================
    MODAL INGRESO
 ========================= */
@@ -1043,64 +1241,16 @@ function limpiarModalIngreso() {
     });
 
     cargarSucursalesModal("#iSucursal", "#modalIngreso", null);
-    cargarCuentasModal("#iCuenta", null, "#modalIngreso");
-    cerrarErrorCamposIngreso();
+    validacionCajaIngreso?.reset();
 }
 
 function validarCampoIngresoIndividual(el) {
-    if (!el) return;
-    if (el.target) el = el.target;
-
-    const obligatorios = ["iFecha", "iSucursal", "iCuenta", "iImporte", "iConcepto"];
-    if (!el.id || !obligatorios.includes(el.id)) return;
-
-    let valor;
-    if (el.tagName === "SELECT") {
-        valor = $(el).val();
-    } else {
-        valor = (el.value ?? "").toString().trim();
-    }
-
-    let esValido = valor !== null && valor !== "";
-
-    if (el.id === "iImporte") {
-        esValido = valor !== "" && parseNumero(valor) > 0;
-    }
-
-    setEstadoCampo(el, esValido);
-    verificarErroresIngresoGeneral();
+    if (el?.target) el = el.target;
+    return validacionCajaIngreso?.onBlur(el);
 }
 
 function validarIngreso() {
-    const fecha = $("#iFecha").val();
-    const sucursal = $("#iSucursal").val();
-    const cuenta = $("#iCuenta").val();
-    const concepto = ($("#iConcepto").val() || "").trim();
-    const importe = parseNumero($("#iImporte").val());
-
-    const errores = [];
-
-    setEstadoCampo(document.getElementById("iFecha"), !!fecha);
-    setEstadoCampo(document.getElementById("iSucursal"), !!sucursal);
-    setEstadoCampo(document.getElementById("iCuenta"), !!cuenta);
-    setEstadoCampo(document.getElementById("iConcepto"), concepto !== "");
-    setEstadoCampo(document.getElementById("iImporte"), importe > 0);
-
-    if (!fecha) errores.push("Fecha");
-    if (!sucursal) errores.push("Sucursal");
-    if (!cuenta) errores.push("Cuenta");
-    if (!concepto) errores.push("Concepto");
-    if (importe <= 0) errores.push("Importe");
-
-    if (errores.length > 0) {
-        mostrarErrorCamposIngreso(
-            `Debes completar los campos requeridos:<br><strong>${errores.join(", ")}</strong>`
-        );
-        return false;
-    }
-
-    cerrarErrorCamposIngreso();
-    return true;
+    return validacionCajaIngreso?.validarTodos() ?? false;
 }
 
 async function guardarIngreso() {
@@ -1148,19 +1298,21 @@ async function guardarIngreso() {
 }
 
 function mostrarErrorCamposIngreso(mensaje) {
+    validacionCajaIngreso?.cancelarPanelExito?.();
     const panel = $("#errorCamposIngreso");
-    panel.removeClass("d-none");
+    panel.removeClass("d-none rp-panel-exito");
+    panel.find(".rp-error-title").text("Campos requeridos");
+    panel.find(".rp-error-icon i").attr("class", "fa fa-exclamation-circle");
     panel.find(".rp-error-message").html(mensaje || "");
 }
 
 function cerrarErrorCamposIngreso() {
-    $("#errorCamposIngreso").addClass("d-none");
-    $("#errorCamposIngreso .rp-error-message").html("");
-}
-
-function verificarErroresIngresoGeneral() {
-    const hayInvalidos = document.querySelectorAll("#modalIngreso .is-invalid").length > 0;
-    if (!hayInvalidos) cerrarErrorCamposIngreso();
+    const panel = document.getElementById("errorCamposIngreso");
+    if (!panel) return;
+    validacionCajaIngreso?.restaurarPanelEstructura?.();
+    panel.classList.add("d-none");
+    const msg = panel.querySelector(".rp-error-message");
+    if (msg) msg.innerHTML = "";
 }
 
 /* =========================
@@ -1192,64 +1344,16 @@ function limpiarModalEgreso() {
     });
 
     cargarSucursalesModal("#eSucursal", "#modalEgreso", null);
-    cargarCuentasModal("#eCuenta", null, "#modalEgreso");
-    cerrarErrorCamposEgreso();
+    validacionCajaEgreso?.reset();
 }
 
 function validarCampoEgresoIndividual(el) {
-    if (!el) return;
-    if (el.target) el = el.target;
-
-    const obligatorios = ["eFecha", "eSucursal", "eCuenta", "eImporte", "eConcepto"];
-    if (!el.id || !obligatorios.includes(el.id)) return;
-
-    let valor;
-    if (el.tagName === "SELECT") {
-        valor = $(el).val();
-    } else {
-        valor = (el.value ?? "").toString().trim();
-    }
-
-    let esValido = valor !== null && valor !== "";
-
-    if (el.id === "eImporte") {
-        esValido = valor !== "" && parseNumero(valor) > 0;
-    }
-
-    setEstadoCampo(el, esValido);
-    verificarErroresEgresoGeneral();
+    if (el?.target) el = el.target;
+    return validacionCajaEgreso?.onBlur(el);
 }
 
 function validarEgreso() {
-    const fecha = $("#eFecha").val();
-    const sucursal = $("#eSucursal").val();
-    const cuenta = $("#eCuenta").val();
-    const concepto = ($("#eConcepto").val() || "").trim();
-    const importe = parseNumero($("#eImporte").val());
-
-    const errores = [];
-
-    setEstadoCampo(document.getElementById("eFecha"), !!fecha);
-    setEstadoCampo(document.getElementById("eSucursal"), !!sucursal);
-    setEstadoCampo(document.getElementById("eCuenta"), !!cuenta);
-    setEstadoCampo(document.getElementById("eConcepto"), concepto !== "");
-    setEstadoCampo(document.getElementById("eImporte"), importe > 0);
-
-    if (!fecha) errores.push("Fecha");
-    if (!sucursal) errores.push("Sucursal");
-    if (!cuenta) errores.push("Cuenta");
-    if (!concepto) errores.push("Concepto");
-    if (importe <= 0) errores.push("Importe");
-
-    if (errores.length > 0) {
-        mostrarErrorCamposEgreso(
-            `Debes completar los campos requeridos:<br><strong>${errores.join(", ")}</strong>`
-        );
-        return false;
-    }
-
-    cerrarErrorCamposEgreso();
-    return true;
+    return validacionCajaEgreso?.validarTodos() ?? false;
 }
 
 async function guardarEgreso() {
@@ -1297,19 +1401,21 @@ async function guardarEgreso() {
 }
 
 function mostrarErrorCamposEgreso(mensaje) {
+    validacionCajaEgreso?.cancelarPanelExito?.();
     const panel = $("#errorCamposEgreso");
-    panel.removeClass("d-none");
+    panel.removeClass("d-none rp-panel-exito");
+    panel.find(".rp-error-title").text("Campos requeridos");
+    panel.find(".rp-error-icon i").attr("class", "fa fa-exclamation-circle");
     panel.find(".rp-error-message").html(mensaje || "");
 }
 
 function cerrarErrorCamposEgreso() {
-    $("#errorCamposEgreso").addClass("d-none");
-    $("#errorCamposEgreso .rp-error-message").html("");
-}
-
-function verificarErroresEgresoGeneral() {
-    const hayInvalidos = document.querySelectorAll("#modalEgreso .is-invalid").length > 0;
-    if (!hayInvalidos) cerrarErrorCamposEgreso();
+    const panel = document.getElementById("errorCamposEgreso");
+    if (!panel) return;
+    validacionCajaEgreso?.restaurarPanelEstructura?.();
+    panel.classList.add("d-none");
+    const msg = panel.querySelector(".rp-error-message");
+    if (msg) msg.innerHTML = "";
 }
 
 /* =========================
@@ -1342,82 +1448,28 @@ function limpiarModalTransferencia() {
 
     cargarSucursalesModal("#tSucursalOrigen", "#modalTransferencia", null);
     cargarSucursalesModal("#tSucursalDestino", "#modalTransferencia", null);
-    cargarCuentasModal("#tCuentaOrigen", null, "#modalTransferencia");
-    cargarCuentasModal("#tCuentaDestino", null, "#modalTransferencia");
-    cerrarErrorCamposTransferencia();
+    validacionCajaTransferencia?.reset();
 }
 
 function validarCampoTransferenciaIndividual(el) {
-    if (!el) return;
-    if (el.target) el = el.target;
-
-    const obligatorios = [
-        "tFecha",
-        "tSucursalOrigen",
-        "tCuentaOrigen",
-        "tSucursalDestino",
-        "tCuentaDestino",
-        "tImporte",
-        "tNota"
-    ];
-    if (!el.id || !obligatorios.includes(el.id)) return;
-
-    let valor;
-    if (el.tagName === "SELECT") {
-        valor = $(el).val();
-    } else {
-        valor = (el.value ?? "").toString().trim();
-    }
-
-    let esValido = valor !== null && valor !== "";
-
-    if (el.id === "tImporte") {
-        esValido = valor !== "" && parseNumero(valor) > 0;
-    }
-
-    setEstadoCampo(el, esValido);
-    verificarErroresTransferenciaGeneral();
+    if (el?.target) el = el.target;
+    return validacionCajaTransferencia?.onBlur(el);
 }
 
 function validarTransferencia() {
-    const fecha = $("#tFecha").val();
-    const nota = ($("#tNota").val() || "").trim();
-    const idSucursalOrigen = $("#tSucursalOrigen").val();
+    if (!validacionCajaTransferencia?.validarTodos()) return false;
+
     const idCuentaOrigen = $("#tCuentaOrigen").val();
-    const idSucursalDestino = $("#tSucursalDestino").val();
     const idCuentaDestino = $("#tCuentaDestino").val();
-    const importe = parseNumero($("#tImporte").val());
-
-    const errores = [];
-
-    setEstadoCampo(document.getElementById("tFecha"), !!fecha);
-    setEstadoCampo(document.getElementById("tNota"), nota !== "");
-    setEstadoCampo(document.getElementById("tSucursalOrigen"), !!idSucursalOrigen);
-    setEstadoCampo(document.getElementById("tCuentaOrigen"), !!idCuentaOrigen);
-    setEstadoCampo(document.getElementById("tSucursalDestino"), !!idSucursalDestino);
-    setEstadoCampo(document.getElementById("tCuentaDestino"), !!idCuentaDestino);
-    setEstadoCampo(document.getElementById("tImporte"), importe > 0);
-
-    if (!fecha) errores.push("Fecha");
-    if (!nota) errores.push("Nota / concepto");
-    if (!idSucursalOrigen) errores.push("Sucursal origen");
-    if (!idCuentaOrigen) errores.push("Cuenta origen");
-    if (!idSucursalDestino) errores.push("Sucursal destino");
-    if (!idCuentaDestino) errores.push("Cuenta destino");
-    if (importe <= 0) errores.push("Importe");
 
     if (idCuentaOrigen && idCuentaDestino && String(idCuentaOrigen) === String(idCuentaDestino)) {
-        errores.push("Origen y destino no pueden ser la misma cuenta");
-    }
-
-    if (errores.length > 0) {
+        validacionCajaTransferencia?.cancelarPanelExito?.();
         mostrarErrorCamposTransferencia(
-            `Revisá los siguientes campos/reglas:<br><strong>${errores.join(", ")}</strong>`
+            `Revisá los siguientes campos/reglas:<br><strong>Origen y destino no pueden ser la misma cuenta</strong>`
         );
         return false;
     }
 
-    cerrarErrorCamposTransferencia();
     return true;
 }
 
@@ -1467,19 +1519,21 @@ async function guardarTransferencia() {
 }
 
 function mostrarErrorCamposTransferencia(mensaje) {
+    validacionCajaTransferencia?.cancelarPanelExito?.();
     const panel = $("#errorCamposTransferencia");
-    panel.removeClass("d-none");
+    panel.removeClass("d-none rp-panel-exito");
+    panel.find(".rp-error-title").text("Campos requeridos");
+    panel.find(".rp-error-icon i").attr("class", "fa fa-exclamation-circle");
     panel.find(".rp-error-message").html(mensaje || "");
 }
 
 function cerrarErrorCamposTransferencia() {
-    $("#errorCamposTransferencia").addClass("d-none");
-    $("#errorCamposTransferencia .rp-error-message").html("");
-}
-
-function verificarErroresTransferenciaGeneral() {
-    const hayInvalidos = document.querySelectorAll("#modalTransferencia .is-invalid").length > 0;
-    if (!hayInvalidos) cerrarErrorCamposTransferencia();
+    const panel = document.getElementById("errorCamposTransferencia");
+    if (!panel) return;
+    validacionCajaTransferencia?.restaurarPanelEstructura?.();
+    panel.classList.add("d-none");
+    const msg = panel.querySelector(".rp-error-message");
+    if (msg) msg.innerHTML = "";
 }
 
 /* =========================

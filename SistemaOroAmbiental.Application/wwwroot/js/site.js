@@ -1,5 +1,26 @@
 ﻿const token = localStorage.getItem('JwtToken');
 
+const TEXTOS_MODAL = {
+    confirmacionTitulo: "Confirmaci\u00F3n",
+    confirmacionBtn: "S\u00ED, continuar",
+    exitoTitulo: "\u00C9xito"
+};
+
+function aplicarTextosModalesEstaticos() {
+    const tituloConfirmar = document.getElementById("modalConfirmarLabel");
+    const btnConfirmar = document.getElementById("btnModalConfirmarAceptar");
+    const tituloExito = document.getElementById("exitoModalLabel");
+    if (tituloConfirmar) tituloConfirmar.textContent = TEXTOS_MODAL.confirmacionTitulo;
+    if (btnConfirmar) btnConfirmar.textContent = TEXTOS_MODAL.confirmacionBtn;
+    if (tituloExito) tituloExito.textContent = TEXTOS_MODAL.exitoTitulo;
+}
+
+if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", aplicarTextosModalesEstaticos);
+} else {
+    aplicarTextosModalesEstaticos();
+}
+
 async function MakeAjax(options) {
     return $.ajax({
         type: options.type,
@@ -86,6 +107,12 @@ function confirmarModal(mensaje) {
         // Re-obtener referencias luego de clonar
         const nuevoModalEl = document.getElementById('modalConfirmar');
         const nuevoBtnAceptar = document.getElementById('btnModalConfirmarAceptar');
+        const nuevoTitulo = document.getElementById('modalConfirmarLabel');
+        const nuevoMensaje = document.getElementById('modalConfirmarMensaje');
+
+        if (nuevoTitulo) nuevoTitulo.textContent = TEXTOS_MODAL.confirmacionTitulo;
+        if (nuevoBtnAceptar) nuevoBtnAceptar.textContent = TEXTOS_MODAL.confirmacionBtn;
+        if (nuevoMensaje) nuevoMensaje.textContent = mensaje;
 
         const nuevoModal = new bootstrap.Modal(nuevoModalEl, {
             backdrop: 'static',
@@ -243,6 +270,11 @@ function parseNumero(valor) {
     const num = parseFloat(limpio);
 
     return isNaN(num) ? 0 : num;
+}
+
+/** Lee un input con formato miles es-AR (alias de parseNumero, usado en CC / compras). */
+function leerInputNumerico(valor) {
+    return parseNumero(valor);
 }
 
 function redondear2(n) {
@@ -727,15 +759,26 @@ function setEstadoCampo(el, esValido) {
         $container.toggleClass("is-valid", esValido);
     }
 
-    // 3) mensaje "Campo obligatorio" (tu caso)
-    // Busca feedback cerca del control (adaptable a tu HTML)
-    const $wrap = $el.closest(".mb-3, .form-group, .col, .col-md-6, .rp-field, .rp-form-group");
-    const $msg = $wrap.find(".invalid-feedback, .rp-invalid-msg, .campo-obligatorio, small.text-danger").first();
+    // 3) mensaje "Campo obligatorio" (col-md-* , rp-select-plus + select2, etc.)
+    let $wrap = $el.closest(".mb-3, .form-group, [class*='col-'], .col, .rp-field, .rp-form-group");
+    if (!$wrap.length && esSelect) {
+        $wrap = $el.closest(".rp-select-plus").parent();
+    }
+
+    let $msg = $wrap.find(".invalid-feedback, .rp-invalid-msg, .campo-obligatorio, small.text-danger").first();
+
+    if (!$msg.length && esSelect) {
+        const $plus = $el.closest(".rp-select-plus");
+        $msg = $plus.next(".invalid-feedback, .rp-invalid-msg, .campo-obligatorio, small.text-danger").first();
+    }
 
     if ($msg.length) {
-        // Si es bootstrap invalid-feedback: lo controlamos con display
-        // Si es tu <small class="text-danger">Campo obligatorio</small>, también.
         $msg.toggleClass("d-none", esValido);
+        if (!esValido) {
+            $msg.css("display", "block");
+        } else {
+            $msg.css("display", "");
+        }
     }
 }
 
@@ -868,3 +911,498 @@ function getBotonesExportacion(grid,modulo) {
 
     return botones;
 }
+
+/* =========================
+   SUCURSALES DEL USUARIO LOGUEADO
+========================= */
+
+function obtenerUserSession() {
+    try {
+        return JSON.parse(localStorage.getItem("userSession") || "{}");
+    } catch {
+        return {};
+    }
+}
+
+function getSucursalesUsuarioSession() {
+    const u = obtenerUserSession();
+    return Array.isArray(u.Sucursales) ? u.Sucursales : [];
+}
+
+function getIdSucursalDefaultUsuario(sucursalesList) {
+    const u = obtenerUserSession();
+    if (u.IdSucursalDefault) return Number(u.IdSucursalDefault);
+    const list = sucursalesList || getSucursalesUsuarioSession();
+    if (list.length === 1) return Number(list[0].Id);
+    return null;
+}
+
+function usuarioTieneUnicaSucursal(sucursalesList) {
+    const list = sucursalesList || getSucursalesUsuarioSession();
+    return list.length === 1;
+}
+
+/** Si el usuario tiene 1 sola sucursal, no muestra "Todas" / "Seleccionar". */
+function primeraOpcionSucursal(opcionPorDefecto, sucursalesList) {
+    if (usuarioTieneUnicaSucursal(sucursalesList)) return null;
+    return opcionPorDefecto || null;
+}
+
+function desbloquearSelectSucursal($select) {
+    if (!$select || !$select.length) return;
+    $select.prop("disabled", false).removeAttr("aria-readonly").removeClass("sucursal-unica-lock");
+    const $wrap = $select.next(".select2-container");
+    if ($wrap.length) {
+        $wrap.removeClass("sucursal-unica-lock").css("pointer-events", "");
+    }
+}
+
+async function fetchSucursalesPermitidas(url) {
+    const apiUrl = url || "/Sucursales/Lista";
+    const headers = typeof authHeaders === "function"
+        ? authHeaders()
+        : { Authorization: "Bearer " + (typeof token !== "undefined" ? token : (window.token || localStorage.getItem("JwtToken") || "")) };
+
+    try {
+        const response = await fetch(apiUrl, { headers });
+        if (!response.ok) return [];
+        return await response.json();
+    } catch (e) {
+        console.error(e);
+        return [];
+    }
+}
+
+function llenarSelectSucursales($select, sucursales, options) {
+    if (!$select || !$select.length) return;
+
+    options = options || {};
+    if (options.placeholderTodos && !usuarioTieneUnicaSucursal(sucursales)) {
+        options.primeraOpcion = { value: "", text: "Todas" };
+    }
+
+    const unica = usuarioTieneUnicaSucursal();
+    const lista = unica ? getSucursalesUsuarioSession() : (sucursales || []);
+    const valorActual = $select.val();
+
+    $select.empty();
+
+    const primera = unica ? null : options.primeraOpcion;
+    if (primera) {
+        $select.append(
+            `<option value="${primera.value ?? ""}">${primera.text || ""}</option>`
+        );
+    }
+
+    lista.forEach(x => {
+        $select.append(`<option value="${x.Id}">${x.Nombre}</option>`);
+    });
+
+    let val = valorActual;
+    if ((!val || val === "") && options.seleccionarPorDefecto !== false) {
+        const def = getIdSucursalDefaultUsuario(lista);
+        if (def && $select.find(`option[value="${def}"]`).length) {
+            val = String(def);
+        }
+    }
+
+    if (val && $select.find(`option[value="${val}"]`).length) {
+        $select.val(val);
+    }
+}
+
+/**
+ * Bloquea el combo cuando hay una sola sucursal asignada.
+ * Devuelve el Id de sucursal forzado o null.
+ */
+function aplicarBloqueoSucursalUnica($select, options) {
+    if (!$select || !$select.length) return null;
+
+    options = options || {};
+    const listCheck = options.sucursales || getSucursalesUsuarioSession();
+
+    if (!usuarioTieneUnicaSucursal(listCheck)) {
+        desbloquearSelectSucursal($select);
+        return null;
+    }
+
+    const id = getIdSucursalDefaultUsuario(listCheck);
+    if (!id) return null;
+
+    $select.val(String(id));
+    $select.prop("disabled", true).attr("aria-readonly", "true").addClass("sucursal-unica-lock");
+
+    const $wrap = $select.next(".select2-container");
+    if ($wrap.length) {
+        $wrap.addClass("sucursal-unica-lock");
+        $wrap.css("pointer-events", "none");
+    }
+
+    if ($select.data("select2")) {
+        $select.trigger("change.select2");
+    }
+
+    if (options.triggerChange !== false) {
+        $select.trigger("change");
+    }
+
+    return id;
+}
+
+function escapeRegexSucursal(text) {
+    return (text || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function aplicarSucursalPorDefectoEnSelectores(selectores) {
+    const def = getIdSucursalDefaultUsuario();
+    if (!def) return;
+
+    (selectores || []).forEach(sel => {
+        const $s = $(sel);
+        if (!$s.length) return;
+        if (!$s.val() && $s.find(`option[value="${def}"]`).length) {
+            $s.val(String(def)).trigger("change");
+        }
+        aplicarBloqueoSucursalUnica($s, { triggerChange: false });
+    });
+}
+
+/**
+ * Filtro de grilla DataTables para columna Sucursal.
+ */
+async function prepararFiltroSucursalDataTable($select, api, columnIndex, initSelect2Fn) {
+    const datos = await fetchSucursalesPermitidas("/Sucursales/Lista");
+    const unica = usuarioTieneUnicaSucursal();
+
+    $select.empty();
+    if (!unica) {
+        $select.append(`<option value="">Todos</option>`);
+    }
+
+    (datos || []).forEach(item => {
+        $select.append(`<option value="${item.Id}">${item.Nombre}</option>`);
+    });
+
+    if (typeof initSelect2Fn === "function") {
+        initSelect2Fn($select);
+    }
+
+    const id = aplicarBloqueoSucursalUnica($select, { triggerChange: false, sucursales: datos });
+
+    if (id != null && api != null && columnIndex != null) {
+        const text = $select.find("option:selected").text();
+        api.column(columnIndex)
+            .search("^" + escapeRegexSucursal(text) + "$", true, false)
+            .draw(false);
+        return datos;
+    }
+
+    if (!unica) {
+        $select.on("select2:clear", function () {
+            api.column(columnIndex).search("").draw(false);
+        });
+
+        $select.on("change", function () {
+            const value = $(this).val();
+            if (!value) {
+                api.column(columnIndex).search("").draw(false);
+                return;
+            }
+            const text = $(this).find("option:selected").text();
+            api.column(columnIndex)
+                .search("^" + escapeRegexSucursal(text) + "$", true, false)
+                .draw(false);
+        });
+    }
+
+    return datos;
+}
+
+/* =====================================
+   GRILLAS DT — selección, pointer, doble clic
+   Aplica a todas las tablas .dt-dark
+===================================== */
+
+(function () {
+
+    window.DT_FILA_SELECCION = window.DT_FILA_SELECCION || {};
+    window.DT_FILA_SELECCION_TIMER = window.DT_FILA_SELECCION_TIMER || {};
+    let dtSeleccionandoFila = false;
+
+    const DT_DBLCLICK = {
+        grd_Compras: (id) => {
+            if (typeof window.editarCompra === "function") {
+                window.editarCompra(id);
+            } else {
+                window.location.href = `/Compras/NuevoModif?id=${id}`;
+            }
+        },
+        grd_Clientes: (id) => window.editarCliente?.(id),
+        grd_Productos: (id) => window.editarProducto?.(id),
+        grd_Proveedores: (id) => window.editarProveedor?.(id),
+        grd_Usuarios: (id) => window.editarUsuario?.(id),
+        grd_Caja: (id) => {
+            if (typeof editarMovimiento === "function") {
+                editarMovimiento(id);
+            }
+        }
+    };
+
+    function esClicEnControlInteractivo(e) {
+        return $(e.target).closest(
+            "button, a, input, select, textarea, label, .cm-prod-trigger, .select2-container, .rp-row-actions, .dt-no-row-select"
+        ).length > 0;
+    }
+
+    function esFilaGrillaValida($tr) {
+        if (!$tr?.length || !$tr.parent().is("tbody")) return false;
+        if ($tr.hasClass("dataTables_empty") || $tr.hasClass("child")) return false;
+        return true;
+    }
+
+    function claveTablaGrilla($table) {
+        return $table.attr("id") || `dt_${$table.closest(".dataTables_wrapper").index()}`;
+    }
+
+    function guardarIdSeleccionGrilla($table, id, rowIdx) {
+        const key = claveTablaGrilla($table);
+        if (id > 0) {
+            window.DT_FILA_SELECCION[key] = { id: Number(id), rowIdx: rowIdx ?? null };
+        } else {
+            delete window.DT_FILA_SELECCION[key];
+        }
+    }
+
+    function leerSeleccionGrilla($table) {
+        const key = claveTablaGrilla($table);
+        const v = window.DT_FILA_SELECCION[key];
+        if (!v) return null;
+        if (typeof v === "number") return { id: v, rowIdx: null };
+        return v;
+    }
+
+    function leerIdSeleccionGrilla($table) {
+        const s = leerSeleccionGrilla($table);
+        return s?.id > 0 ? Number(s.id) : null;
+    }
+
+    function obtenerIdFilaGrilla($tr) {
+        const $table = $tr.closest("table.dataTable");
+        if ($table.length && $.fn.dataTable) {
+            try {
+                const api = $table.DataTable();
+                const data = api.row($tr).data();
+                if (data) {
+                    const id = data.Id ?? data.id ?? data.ID ?? 0;
+                    if (Number(id) > 0) return Number(id);
+                }
+            } catch { /* sin DataTable */ }
+        }
+
+        const fromActions = $tr.find(".rp-row-actions[data-id]").first().data("id")
+            ?? $tr.find("[data-id]").first().data("id");
+        return Number(fromActions) || 0;
+    }
+
+    function idFilaDesdeTr($table, $tr) {
+        const id = obtenerIdFilaGrilla($tr);
+        if (id > 0) return id;
+        const fromDom = Number($tr.find(".rp-row-actions[data-id]").first().data("id") ?? 0);
+        return fromDom > 0 ? fromDom : 0;
+    }
+
+    function marcarTrSeleccionada($tr, activo) {
+        if (!$tr?.length) return;
+        if (activo) {
+            $tr.addClass("dt-row-selected").attr("data-dt-selected", "1");
+        } else {
+            $tr.removeClass("dt-row-selected").removeAttr("data-dt-selected");
+        }
+    }
+
+    function limpiarSeleccionVisualGrilla($table) {
+        if (!$table.length) return;
+        $table.find("tbody tr.dt-row-selected")
+            .removeClass("dt-row-selected")
+            .removeAttr("data-dt-selected");
+    }
+
+    function aplicarSeleccionVisualGrilla($table, sel) {
+        if (!$table.length) return;
+
+        const selId = sel?.id ?? (typeof sel === "number" ? sel : null);
+        const selIdx = sel?.rowIdx ?? null;
+
+        limpiarSeleccionVisualGrilla($table);
+        if (!selId) return;
+
+        let marcada = false;
+
+        if ($.fn.dataTable) {
+            try {
+                const api = $table.DataTable();
+                if (selIdx !== null && selIdx >= 0) {
+                    const row = api.row(selIdx);
+                    const node = row.length ? row.node() : null;
+                    if (node) {
+                        marcarTrSeleccionada($(node), true);
+                        marcada = true;
+                    }
+                }
+                if (!marcada) {
+                    api.rows({ page: "current" }).every(function () {
+                        const data = this.data();
+                        const rid = Number(data?.Id ?? data?.id ?? data?.ID ?? 0);
+                        if (rid === selId) {
+                            marcarTrSeleccionada($(this.node()), true);
+                            marcada = true;
+                        }
+                    });
+                }
+            } catch { /* sin DataTable */ }
+        }
+
+        if (!marcada) {
+            $table.find("tbody tr").each(function () {
+                const $tr = $(this);
+                if ($tr.hasClass("dataTables_empty") || $tr.hasClass("child")) return;
+                if (idFilaDesdeTr($table, $tr) === selId) {
+                    marcarTrSeleccionada($tr, true);
+                }
+            });
+        }
+    }
+
+    function programarRestaurarSeleccionGrilla($table) {
+        const key = claveTablaGrilla($table);
+        clearTimeout(window.DT_FILA_SELECCION_TIMER[key]);
+        window.DT_FILA_SELECCION_TIMER[key] = setTimeout(() => {
+            if (dtSeleccionandoFila) return;
+            const sel = leerSeleccionGrilla($table);
+            aplicarSeleccionVisualGrilla($table, sel);
+        }, 10);
+    }
+
+    function seleccionarFilaGrilla($tr) {
+        const $table = $tr.closest("table.dt-dark");
+        if (!$table.length) return;
+
+        const id = obtenerIdFilaGrilla($tr) || idFilaDesdeTr($table, $tr);
+        if (id <= 0) return;
+
+        let rowIdx = null;
+        try {
+            rowIdx = $table.DataTable().row($tr).index();
+        } catch { /* sin api */ }
+
+        const actual = leerIdSeleccionGrilla($table);
+
+        dtSeleccionandoFila = true;
+
+        if (actual === id) {
+            guardarIdSeleccionGrilla($table, 0, null);
+            limpiarSeleccionVisualGrilla($table);
+        } else {
+            guardarIdSeleccionGrilla($table, id, rowIdx);
+            marcarTrSeleccionada($tr, true);
+            aplicarSeleccionVisualGrilla($table, { id, rowIdx });
+        }
+
+        setTimeout(() => { dtSeleccionandoFila = false; }, 80);
+    }
+
+    function restaurarSeleccionGrilla($table) {
+        if (dtSeleccionandoFila) return;
+        programarRestaurarSeleccionGrilla($table);
+    }
+
+    function enlazarDrawSeleccionGrilla($table) {
+        if (!$table?.length) return;
+        $table.off("draw.dt.internalRowSelect");
+        $table.on("draw.dt.internalRowSelect", function () {
+            programarRestaurarSeleccionGrilla($(this));
+        });
+    }
+
+    function patchDataTableDrawCallbackSeleccion() {
+        if (!$.fn.dataTable || $.fn.dataTable.defaults._dtRowSelectPatched) return;
+
+        const prev = $.fn.dataTable.defaults.drawCallback;
+        $.fn.dataTable.defaults.drawCallback = function (settings) {
+            if (typeof prev === "function") {
+                prev.call(this, settings);
+            }
+            const $table = $(settings.nTable);
+            if ($table.hasClass("dt-dark")) {
+                programarRestaurarSeleccionGrilla($table);
+            }
+        };
+        $.fn.dataTable.defaults._dtRowSelectPatched = true;
+    }
+
+    function ejecutarDobleClickFila($tr) {
+        const id = obtenerIdFilaGrilla($tr);
+        if (id <= 0) return;
+
+        const $table = $tr.closest("table.dt-dark");
+        const tableId = $table.attr("id") || "";
+
+        const urlTpl = $table.data("dtDblclickUrl");
+        if (urlTpl) {
+            window.location.href = String(urlTpl).replace("{id}", id);
+            return;
+        }
+
+        const handler = DT_DBLCLICK[tableId];
+        if (typeof handler === "function") {
+            handler(id);
+        }
+    }
+
+    function initGrillaInteraccionGlobal() {
+        patchDataTableDrawCallbackSeleccion();
+
+        $("table.dt-dark").each(function () {
+            enlazarDrawSeleccionGrilla($(this));
+        });
+
+        $(document)
+            .off("init.dt.dtRowSelect")
+            .on("init.dt.dtRowSelect", "table.dt-dark", function () {
+                const $t = $(this);
+                enlazarDrawSeleccionGrilla($t);
+                restaurarSeleccionGrilla($t);
+            });
+
+        $(document)
+            .off("click.dtRowSelect")
+            .on("click.dtRowSelect", "table.dt-dark tbody tr", function (e) {
+                if (esClicEnControlInteractivo(e)) return;
+
+                const $tr = $(this);
+                if (!esFilaGrillaValida($tr)) return;
+
+                seleccionarFilaGrilla($tr);
+            });
+
+        $(document)
+            .off("dblclick.dtRowNav")
+            .on("dblclick.dtRowNav", "table.dt-dark tbody tr", function (e) {
+                if (esClicEnControlInteractivo(e)) return;
+
+                const $tr = $(this);
+                if (!esFilaGrillaValida($tr)) return;
+
+                ejecutarDobleClickFila($tr);
+            });
+    }
+
+    window.registrarGrillaDobleClick = function (tableId, fn) {
+        if (tableId && typeof fn === "function") {
+            DT_DBLCLICK[tableId] = fn;
+        }
+    };
+
+    $(document).ready(initGrillaInteraccionGlobal);
+
+})();

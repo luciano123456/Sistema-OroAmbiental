@@ -1,4 +1,4 @@
-﻿let gridUsuarios;
+let gridUsuarios;
 let personalSelectorData = [];
 let personalSeleccionado = null;
 
@@ -6,6 +6,10 @@ let permisosUsuarioCache = [];
 let permisosUsuarioOriginal = [];
 let usuarioPermisosModo = "nuevo"; // nuevo | editar | ver
 let moduloPermisoSeleccionadoId = 0;
+
+let sucursalesTodasCache = [];
+let sucursalesUsuarioIds = [];
+let validacionUsuarioModal = null;
 
 const PERMISOS_COLUMNAS = ["VER", "CREAR", "EDITAR", "ELIMINAR", "EXPORTAR"];
 
@@ -23,6 +27,7 @@ const columnConfig = [
 
 $(document).ready(() => {
     listaUsuarios();
+    cargarTodasSucursalesParaAsignar();
 
     document.addEventListener("configuracionActualizada", async (e) => {
         const d = e.detail || {};
@@ -38,10 +43,9 @@ $(document).ready(() => {
 
     document.querySelectorAll("#modalEdicion input, #modalEdicion select, #modalEdicion textarea").forEach(el => {
         el.setAttribute("autocomplete", "off");
-        el.addEventListener("input", () => validarCampoIndividual(el));
-        el.addEventListener("change", () => validarCampoIndividual(el));
-        el.addEventListener("blur", () => validarCampoIndividual(el));
     });
+
+    initValidacionUsuarioModal();
 
     $("#Roles").on("change", function () {
         actualizarBadgeUsuarioPermisos();
@@ -49,6 +53,7 @@ $(document).ready(() => {
 
     $("#txtUsuario, #txtNombre, #txtApellido").on("input", function () {
         actualizarBadgeUsuarioPermisos();
+        actualizarBadgeUsuarioSucursales();
     });
 
     $("#buscarPersonalSelector").on("keyup", function () {
@@ -172,12 +177,14 @@ async function guardarCambios() {
             });
         }
 
+        await guardarSucursalesUsuario(idFinal);
+
         // 🔥 4. FIN
         $('#modalEdicion').modal('hide');
 
         exitoModal(idUsuario === ""
-            ? "Usuario creado con permisos correctamente"
-            : "Usuario actualizado con permisos correctamente");
+            ? "Usuario guardado correctamente"
+            : "Usuario actualizado correctamente");
 
         await listaUsuarios();
 
@@ -202,6 +209,7 @@ function nuevoUsuario() {
     document.getElementById("divContrasenaNueva").setAttribute("hidden", "hidden");
 
     prepararPermisosEnModalNuevo();
+    prepararSucursalesEnModalNuevo();
 }
 
 async function mostrarModal(modelo) {
@@ -233,9 +241,10 @@ async function mostrarModal(modelo) {
     actualizarBadgeUsuarioPermisos();
     habilitarSeccionPermisos(true);
     await cargarPermisosUsuario(modelo.Id);
+    await cargarSucursalesUsuario(modelo.Id);
 }
 
-const editarUsuario = id => {
+window.editarUsuario = function editarUsuario(id) {
     $('.rp-actions-dropdown').hide();
 
     fetch("/Usuarios/EditarInfo?id=" + id, {
@@ -588,8 +597,7 @@ function limpiarModal() {
         el.removeAttribute("readonly");
     });
 
-    const errorMsg = document.getElementById("errorCampos");
-    if (errorMsg) errorMsg.classList.add("d-none");
+    validacionUsuarioModal?.reset();
 
     personalSeleccionado = null;
     personalSelectorData = [];
@@ -601,97 +609,68 @@ function limpiarModal() {
     renderPermisosPlaceholder("Guardá el usuario para administrar permisos.");
     habilitarSeccionPermisos(false);
     actualizarResumenPermisos();
+
+    sucursalesUsuarioIds = [];
+    renderSucursalesUsuarioPlaceholder("Guardá el usuario para asignar sucursales.");
+    habilitarSeccionSucursales(false);
+    actualizarResumenSucursalesUsuario();
+}
+
+function getCamposObligatoriosUsuario() {
+    const campos = [
+        { id: "txtNombre", nombre: "Nombre" },
+        { id: "txtUsuario", nombre: "Usuario" },
+        { id: "txtApellido", nombre: "Apellido" },
+        { id: "txtDni", nombre: "DNI" },
+        { id: "Roles", nombre: "Rol" },
+        { id: "Estados", nombre: "Estado" }
+    ];
+
+    if (($("#txtId").val() || "") === "") {
+        campos.push({ id: "txtContrasena", nombre: "Contraseña" });
+    }
+
+    return campos;
+}
+
+function valorCampoValidoUsuario(el) {
+    const valor = (el?.value ?? "").toString().trim();
+    return valor !== "" && valor !== "Seleccionar";
+}
+
+function initValidacionUsuarioModal() {
+    const modal = document.getElementById("modalEdicion");
+    if (!modal || typeof ValidacionModalAbm !== "function") return;
+
+    validacionUsuarioModal = new ValidacionModalAbm({
+        modalEl: modal,
+        getPanel: () => document.getElementById("errorCampos"),
+        getCampos: getCamposObligatoriosUsuario,
+        esCampoValido: valorCampoValidoUsuario,
+        mostrarError: (msg) => {
+            if (typeof mostrarErrorCampos === "function") {
+                mostrarErrorCampos(msg, null, "validacion");
+            }
+        },
+        cerrarPanel: cerrarErrorCampos
+    });
+
+    validacionUsuarioModal.attachEvents({ select2Namespace: "usuarios-abm" });
 }
 
 function validarCampoIndividual(el) {
-    const obligatorios = [
-        "txtNombre",
-        "txtUsuario",
-        "txtApellido",
-        "txtDni",
-        "txtContrasena",
-        "Roles",
-        "Estados"
-    ];
-
-    if (!obligatorios.includes(el.id)) return;
-
-    const valor = el.value ? el.value.trim() : "";
-    const feedback = el.nextElementSibling;
-
-    if (feedback && feedback.classList.contains("invalid-feedback")) {
-        feedback.textContent = "Campo obligatorio";
-    }
-
-    if (valor === "" || valor === "Seleccionar" || valor === null) {
-        el.classList.remove("is-valid");
-        el.classList.add("is-invalid");
-    } else {
-        el.classList.remove("is-invalid");
-        el.classList.add("is-valid");
-    }
-
-    verificarErroresGenerales();
-}
-
-function verificarErroresGenerales() {
-    const errorMsg = document.getElementById("errorCampos");
-    const hayInvalidos = document.querySelectorAll("#modalEdicion .is-invalid").length > 0;
-    if (!errorMsg) return;
-
-    if (!hayInvalidos) {
-        errorMsg.classList.add("d-none");
-    }
+    return validacionUsuarioModal?.onBlur(el);
 }
 
 function validarCampos() {
-    const idUsuario = $("#txtId").val();
-
-    const campos = [
-        "#txtNombre",
-        "#txtUsuario",
-        "#txtApellido",
-        "#txtDni",
-        "#Roles",
-        "#Estados"
-    ];
-
-    if (idUsuario === "") {
-        campos.push("#txtContrasena");
-    }
-
-    let valido = true;
-
-    campos.forEach(selector => {
-        const campo = document.querySelector(selector);
-        if (!campo) return;
-
-        const valor = campo.value ? campo.value.trim() : "";
-        const feedback = campo.nextElementSibling;
-
-        if (!valor || valor === "Seleccionar") {
-            campo.classList.add("is-invalid");
-            campo.classList.remove("is-valid");
-
-            if (feedback && feedback.classList.contains("invalid-feedback")) {
-                feedback.textContent = "Campo obligatorio";
-            }
-
-            valido = false;
-        } else {
-            campo.classList.remove("is-invalid");
-            campo.classList.add("is-valid");
-        }
-    });
-
-    const panel = document.getElementById("errorCampos");
-    if (panel) panel.classList.toggle("d-none", valido);
-
-    return valido;
+    return validacionUsuarioModal?.validarTodos() ?? false;
 }
 
 function cerrarErrorCampos() {
-    $("#errorCampos").addClass("d-none");
+    const panel = document.getElementById("errorCampos");
+    if (!panel) return;
+    panel.classList.add("d-none");
+    panel.innerHTML = "";
 }
 
 function actualizarKpis(data) {
@@ -829,6 +808,161 @@ function aplicarPersonalSeleccionado() {
 }
 
 /* =========================
+   SUCURSALES
+========================= */
+
+async function cargarTodasSucursalesParaAsignar() {
+    try {
+        const response = await fetch("/Sucursales/ListaTodas", {
+            headers: {
+                Authorization: "Bearer " + token,
+                "Content-Type": "application/json"
+            }
+        });
+        sucursalesTodasCache = response.ok ? await response.json() : [];
+    } catch {
+        sucursalesTodasCache = [];
+    }
+}
+
+function prepararSucursalesEnModalNuevo() {
+    sucursalesUsuarioIds = [];
+    renderSucursalesUsuarioPlaceholder("Guardá el usuario para asignar sucursales.");
+    habilitarSeccionSucursales(false);
+    actualizarBadgeUsuarioSucursales();
+    actualizarResumenSucursalesUsuario();
+}
+
+function habilitarSeccionSucursales(habilitar) {
+    const section = document.getElementById("sectionSucursalesUsuario");
+    const hint = document.getElementById("sucursalHint");
+    if (!section || !hint) return;
+
+    if (habilitar) {
+        section.classList.remove("rp-section-disabled");
+        hint.classList.add("success");
+        hint.innerHTML = `<i class="fa fa-check-circle"></i> Marcá las sucursales a las que puede acceder.`;
+    } else {
+        section.classList.add("rp-section-disabled");
+        hint.classList.remove("success");
+        hint.innerHTML = `<i class="fa fa-info-circle"></i> Guardá el usuario para asignar sucursales.`;
+    }
+
+    $("#listaSucursalesUsuario").find("input[type=checkbox]").prop("disabled", !habilitar || usuarioPermisosModo === "ver");
+}
+
+function actualizarBadgeUsuarioSucursales() {
+    const usuario = ($("#txtUsuario").val() || "").trim();
+    const nombre = ($("#txtNombre").val() || "").trim();
+    const apellido = ($("#txtApellido").val() || "").trim();
+
+    let texto = "Nuevo";
+    if (usuario || nombre || apellido) {
+        texto = [usuario, nombre, apellido].filter(Boolean).join(" · ");
+    }
+
+    $("#sucUsuarioNombre").text(texto);
+}
+
+function renderSucursalesUsuarioPlaceholder(texto) {
+    $("#listaSucursalesUsuario").html(`<div class="rp-perm-empty-state">${texto}</div>`);
+}
+
+function renderSucursalesUsuarioUI() {
+    const $lista = $("#listaSucursalesUsuario");
+    $lista.empty();
+
+    if (!sucursalesTodasCache.length) {
+        renderSucursalesUsuarioPlaceholder("No hay sucursales cargadas en el sistema.");
+        return;
+    }
+
+    sucursalesTodasCache.forEach(s => {
+        const id = Number(s.Id);
+        const checked = sucursalesUsuarioIds.includes(id);
+        $lista.append(`
+            <label class="rp-suc-card ${checked ? "is-checked" : ""}" data-id="${id}">
+                <input type="checkbox" value="${id}" ${checked ? "checked" : ""} />
+                <span class="rp-suc-name">${s.Nombre}</span>
+            </label>
+        `);
+    });
+
+    $lista.off("change.suc").on("change.suc", "input[type=checkbox]", function () {
+        const id = Number($(this).val());
+        const checked = $(this).is(":checked");
+        $(this).closest(".rp-suc-card").toggleClass("is-checked", checked);
+
+        if (checked) {
+            if (!sucursalesUsuarioIds.includes(id)) sucursalesUsuarioIds.push(id);
+        } else {
+            sucursalesUsuarioIds = sucursalesUsuarioIds.filter(x => x !== id);
+        }
+        actualizarResumenSucursalesUsuario();
+    });
+
+    actualizarResumenSucursalesUsuario();
+}
+
+function actualizarResumenSucursalesUsuario() {
+    $("#sucCantAsignadas").text(sucursalesUsuarioIds.length);
+}
+
+function marcarTodasSucursalesUsuario(valor) {
+    if (usuarioPermisosModo === "ver") return;
+    sucursalesUsuarioIds = valor
+        ? (sucursalesTodasCache || []).map(s => Number(s.Id)).filter(x => x > 0)
+        : [];
+    renderSucursalesUsuarioUI();
+    habilitarSeccionSucursales(true);
+}
+
+async function cargarSucursalesUsuario(idUsuario) {
+    await cargarTodasSucursalesParaAsignar();
+
+    if (!idUsuario || Number(idUsuario) <= 0) {
+        prepararSucursalesEnModalNuevo();
+        return;
+    }
+
+    try {
+        const response = await fetch(`/Usuarios/SucursalesAsignadas?idUsuario=${idUsuario}`, {
+            headers: {
+                Authorization: "Bearer " + token,
+                "Content-Type": "application/json"
+            }
+        });
+
+        if (!response.ok) throw new Error();
+
+        const data = await response.json();
+        sucursalesUsuarioIds = (data.IdsSucursales || []).map(x => Number(x)).filter(x => x > 0);
+    } catch {
+        sucursalesUsuarioIds = [];
+    }
+
+    renderSucursalesUsuarioUI();
+    habilitarSeccionSucursales(true);
+    actualizarBadgeUsuarioSucursales();
+}
+
+async function guardarSucursalesUsuario(idUsuario) {
+    const ids = (sucursalesUsuarioIds || []).map(x => Number(x)).filter(x => x > 0);
+
+    await fetch("/Usuarios/SucursalesActualizar", {
+        method: "POST",
+        headers: {
+            Authorization: "Bearer " + token,
+            "Content-Type": "application/json;charset=utf-8"
+        },
+        body: JSON.stringify({
+            IdUsuario: idUsuario,
+            IdsSucursales: ids
+        })
+    });
+}
+
+/* =========================
    PERMISOS
 ========================= */
 
@@ -883,6 +1017,7 @@ function actualizarBadgeUsuarioPermisos() {
     }
 
     $("#permUsuarioNombre").text(texto);
+    $("#sucUsuarioNombre").text(texto);
 }
 
 function normalizarIdUsuarioGuardado(valor) {

@@ -12,23 +12,15 @@ const columnConfig = [
 
 $(document).ready(() => {
 
-    const modalEl = document.querySelector("[data-proveedor-modal]");
-    if (!modalEl) {
-        console.error("No se encontró [data-proveedor-modal]. Verifique que el partial M_Proveedores esté en la vista.");
-        return;
-    }
+    proveedorModal = typeof initProveedorModal === "function"
+        ? initProveedorModal({
+            token: token,
+            onSaved: async () => { await listaProveedores(); },
+            onDeleted: async () => { await listaProveedores(); }
+        })
+        : null;
 
-    proveedorModal = new ProveedorModal(modalEl, {
-        token: token,
-        onSaved: async () => { await listaProveedores(); },
-        onDeleted: async () => { await listaProveedores(); }
-    });
-
-    window.verProveedor = (id) => proveedorModal.abrirVer(id);
-    window.editarProveedor = (id) => proveedorModal.abrirEditar(id);
-    window.eliminarProveedor = (id) => proveedorModal.eliminar(id);
-    window.verFicha = (id) => proveedorModal.abrirVer(id);
-    window.nuevoProveedor = () => proveedorModal.abrirNuevo();
+    if (!proveedorModal) return;
 
     $(document)
         .off("click.select2fix.proveedores")

@@ -102,6 +102,19 @@ select.is-valid + .select2 .select2-selection {
     pointer-events: none;
 }
 
+/* Validación: mensaje visible en inputs y select2 (rp-select-plus) */
+.modal .invalid-feedback:not(.d-none),
+.modal .rp-invalid-msg:not(.d-none) {
+    display: block;
+    color: #ffb4b4;
+    font-size: 0.875em;
+    margin-top: 0.25rem;
+}
+
+.rp-select-plus + .invalid-feedback:not(.d-none) {
+    display: block;
+}
+
 /* Precios por lista (modal producto) */
 .rp-precios-section {
     padding: 1rem 1.1rem 1.15rem;

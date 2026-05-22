@@ -64,6 +64,12 @@
     align-items: center;
 }
 
+/* Filtros de columna solo en el thead real (scrollX); ocultar clone de FixedHeader */
+table.fixedHeader-floating thead tr.filters,
+table.fixedHeader-locked thead tr.filters {
+    display: none !important;
+}
+
 .cc-balance-chip {
     display: inline-flex;
     gap: 8px;

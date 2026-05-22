@@ -1,0 +1,177 @@
+/* Gastos — mismo lenguaje visual que Caja / Ventas */
+.gastos-index {
+    color: #eaf1ff;
+}
+
+.gastos-index .cc-card {
+    background: rgba(22, 26, 48, .78);
+    border-radius: 18px;
+    border: 1px solid rgba(255, 255, 255, .08);
+    box-shadow: 0 10px 28px rgba(0, 0, 0, .35);
+    overflow: hidden;
+}
+
+.gastos-index .cc-card-body {
+    padding: 16px;
+}
+
+.gastos-index .cc-header {
+    background: linear-gradient(135deg, #152238, #1d2e4a);
+    border: 1px solid rgba(255, 255, 255, .08);
+}
+
+.gastos-index .cc-badge {
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+    display: grid;
+    place-items: center;
+    background: rgba(255, 255, 255, .08);
+    font-size: 22px;
+}
+
+.gastos-index .text-muted-cc {
+    color: #9aa8c5 !important;
+}
+
+.gastos-index .cc-kpis {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.gastos-index .cc-kpi {
+    background: rgba(255, 255, 255, .04);
+    border: 1px solid rgba(255, 255, 255, .06);
+    border-radius: 14px;
+    padding: 14px;
+}
+
+.gastos-index .cc-kpi .lbl {
+    color: #9aa8c5;
+    font-size: 12px;
+    margin-bottom: 4px;
+}
+
+.gastos-index .cc-kpi .val {
+    font-size: 22px;
+    font-weight: 800;
+}
+
+.gastos-index .cc-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+table.fixedHeader-floating thead tr.filters,
+table.fixedHeader-locked thead tr.filters {
+    display: none !important;
+}
+
+.gasto-modal-root .gastos-total-input {
+    background: rgba(59, 130, 246, 0.12) !important;
+    border-color: rgba(96, 165, 250, 0.35) !important;
+    color: #e8f0ff !important;
+}
+
+/* Panel de error: usar caja de DisenoPantallas, no el layout de Caja */
+.gasto-modal-root #errorCampos.rp-error-panel {
+    display: block;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: inherit;
+}
+
+.gasto-modal-root #errorCampos.rp-error-panel:empty,
+.gasto-modal-root #errorCampos.rp-error-panel.d-none {
+    display: none !important;
+}
+
+/* Análisis de gastos — compacto en desktop */
+.gastos-index #dashWrap .cc-card-body {
+    padding: 12px 14px;
+}
+
+.gastos-index #accordionDashboards .accordion-button {
+    padding: 10px 14px;
+    font-size: 0.95rem;
+}
+
+.gastos-index .gastos-dash-body {
+    padding: 10px 12px !important;
+}
+
+.gastos-index .gastos-dash-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    align-items: start;
+}
+
+.gastos-index .gastos-dash-card {
+    padding: 10px 12px;
+    border-radius: 12px;
+}
+
+.gastos-index .gastos-dash-title {
+    margin-bottom: 6px;
+}
+
+.gastos-index .gastos-dash-title .t {
+    font-size: 0.85rem;
+    gap: 6px;
+}
+
+.gastos-index .gastos-dash-chart-wrap {
+    position: relative;
+    height: 130px;
+    max-height: 130px;
+    width: 100%;
+}
+
+.gastos-index .gastos-dash-chart-wrap canvas {
+    display: block;
+    width: 100% !important;
+    height: 100% !important;
+    max-height: 130px !important;
+    padding: 4px !important;
+    border-radius: 10px;
+}
+
+.gastos-index #accordionDashboards canvas {
+    background: rgba(255, 255, 255, 0.04);
+}
+
+@media (min-width: 1400px) {
+    .gastos-index .gastos-dash-chart-wrap {
+        height: 120px;
+        max-height: 120px;
+    }
+
+    .gastos-index .gastos-dash-chart-wrap canvas {
+        max-height: 120px !important;
+    }
+}
+
+@media (max-width: 1200px) {
+    .gastos-index .gastos-dash-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .gastos-index .gastos-dash-chart-wrap {
+        height: 160px;
+        max-height: 160px;
+    }
+
+    .gastos-index .gastos-dash-chart-wrap canvas {
+        max-height: 160px !important;
+    }
+}
+
+@media (max-width: 992px) {
+    .gastos-index .cc-kpis {
+        grid-template-columns: 1fr;
+    }
+}

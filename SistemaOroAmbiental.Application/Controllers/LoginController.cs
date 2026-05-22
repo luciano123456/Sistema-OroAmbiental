@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using System.Diagnostics;
 using System.IdentityModel.Tokens.Jwt;
@@ -17,13 +17,16 @@ namespace SistemaBronx.Application.Controllers
     {
 
         private readonly ILoginService _loginService;
+        private readonly IUsuariosSucursalesService _usuariosSucursales;
         private readonly IConfiguration _config;
 
         public LoginController(
             ILoginService loginService,
+            IUsuariosSucursalesService usuariosSucursales,
             IConfiguration config)
         {
             _loginService = loginService;
+            _usuariosSucursales = usuariosSucursales;
             _config = config;
         }
 
@@ -59,6 +62,11 @@ namespace SistemaBronx.Application.Controllers
                 if (result == PasswordVerificationResult.Success)
                 {
                     var token = GenerarToken(user);
+                    var sucursales = await _usuariosSucursales.ListaParaUsuario(user.Id);
+                    var sucursalesDto = sucursales
+                        .Select(s => new { s.Id, s.Nombre })
+                        .ToList();
+                    int? idSucursalDefault = sucursales.Count == 1 ? sucursales[0].Id : null;
 
                     return Ok(new
                     {
@@ -73,7 +81,9 @@ namespace SistemaBronx.Application.Controllers
                             user.Apellido,
                             user.Direccion,
                             user.Dni,
-                            user.Telefono
+                            user.Telefono,
+                            Sucursales = sucursalesDto,
+                            IdSucursalDefault = idSucursalDefault
                         }
                     });
                 }

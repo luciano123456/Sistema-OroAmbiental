@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SistemaOroAmbiental.Application.Models.ViewModels;
+using SistemaOroAmbiental.BLL.Service;
 using SistemaOroAmbiental.DAL.DataContext;
 using SistemaOroAmbiental.Models;
 
@@ -11,15 +12,32 @@ namespace SistemaOroAmbiental.Application.Controllers
     public class SucursalesController : Controller
     {
         private readonly SistemaOroAmbientalContext _db;
+        private readonly IUsuariosSucursalesService _usuariosSucursales;
 
-        public SucursalesController(SistemaOroAmbientalContext db)
+        public SucursalesController(
+            SistemaOroAmbientalContext db,
+            IUsuariosSucursalesService usuariosSucursales)
         {
             _db = db;
+            _usuariosSucursales = usuariosSucursales;
         }
 
-        [AllowAnonymous]
+        /// <summary>Sucursales permitidas para el usuario logueado (asignadas en Usuarios_Sucursales).</summary>
         [HttpGet]
         public async Task<IActionResult> Lista()
+        {
+            var idUsuario = ObtenerIdUsuarioActual();
+            if (!idUsuario.HasValue)
+                return Unauthorized();
+
+            var items = await _usuariosSucursales.ListaParaUsuario(idUsuario.Value);
+            var lista = items.Select(x => new VMGenericModel { Id = x.Id, Nombre = x.Nombre }).ToList();
+            return Ok(lista);
+        }
+
+        /// <summary>Todas las sucursales (asignación en módulo Usuarios).</summary>
+        [HttpGet]
+        public async Task<IActionResult> ListaTodas()
         {
             var lista = await _db.Sucursales.AsNoTracking()
                 .OrderBy(x => x.Nombre)
@@ -84,6 +102,12 @@ namespace SistemaOroAmbiental.Application.Controllers
                 return NotFound();
 
             return Ok(new VMGenericModel { Id = entity.Id, Nombre = entity.Nombre });
+        }
+
+        private int? ObtenerIdUsuarioActual()
+        {
+            var claim = User.FindFirst("Id")?.Value;
+            return int.TryParse(claim, out var id) ? id : null;
         }
     }
 }

@@ -41,6 +41,19 @@
             this._modeloActual = null;
 
             this._camposObligatorios = ["txtNombre", "txtCuit", "cmbCondicionIva"];
+            this._validacion = new ValidacionModalAbm({
+                modalEl: this.modalEl,
+                getPanel: () => this._id("errorCampos"),
+                campos: [
+                    { id: "txtNombre", nombre: "Nombre" },
+                    { id: "txtCuit", nombre: "CUIT" },
+                    { id: "cmbCondicionIva", nombre: "Condición IVA" }
+                ],
+                esCampoValido: (el) => this._valorCampoValido(el),
+                isSoloLectura: () => this.isSoloLectura(),
+                mostrarError: (msg) => this.mostrarErrorCampos(msg, null, "validacion"),
+                cerrarPanel: () => this.cerrarErrorCampos()
+            });
             this._comboPorController = {
                 CondicionesIva: { selectId: "cmbCondicionIva", url: this.options.endpoints.condicionesIva },
                 Bancos: { selectId: "cmbBanco", url: this.options.endpoints.bancos }
@@ -407,15 +420,8 @@
                 if (el.id === "txtId") { el.value = ""; return; }
                 if (el.tagName === "SELECT") el.selectedIndex = 0;
                 else el.value = "";
-                el.classList.remove("is-invalid", "is-valid");
-
-                if (el.tagName === "SELECT" && window.jQuery?.(el).data("select2")) {
-                    const { $selection, $container } = this.getSelect2Selection(el);
-                    $selection.removeClass("is-invalid is-valid");
-                    $container.removeClass("is-invalid is-valid");
-                }
             });
-            this.cerrarErrorCampos();
+            this._validacion?.reset();
             this._id("infoAuditoria")?.classList.add("d-none");
             if (this._id("infoRegistro")) this._id("infoRegistro").innerHTML = "";
             if (this._id("infoModificacion")) this._id("infoModificacion").innerHTML = "";
@@ -428,63 +434,11 @@
         }
 
         validarCampoIndividual(el) {
-            if (this.isSoloLectura()) return true;
-            if (!el || !this._camposObligatorios.includes(el.id)) return true;
-
-            const esValido = this._valorCampoValido(el);
-            this.setEstadoCampo(el, esValido);
-            this.verificarErroresGenerales();
-            return esValido;
-        }
-
-        verificarErroresGenerales() {
-            const panel = this._id("errorCampos");
-            if (!panel) return;
-            const hayInvalidos = this.modalEl.querySelectorAll(".is-invalid").length > 0;
-            if (!hayInvalidos) this.cerrarErrorCampos();
+            return this._validacion?.onBlur(el) ?? true;
         }
 
         validarCampos() {
-            const campos = [
-                { id: "txtNombre", nombre: "Nombre" },
-                { id: "txtCuit", nombre: "CUIT" },
-                { id: "cmbCondicionIva", nombre: "Condición IVA" }
-            ];
-
-            const errores = [];
-
-            campos.forEach(c => {
-                const el = this._id(c.id);
-                if (!el) return;
-                const esValido = this._valorCampoValido(el);
-                this.setEstadoCampo(el, esValido);
-                if (!esValido) errores.push(c.nombre);
-            });
-
-            if (errores.length > 0) {
-                this.mostrarErrorCampos(
-                    `Debes completar los campos requeridos:<br><strong>${errores.join(", ")}</strong>`,
-                    null,
-                    "validacion"
-                );
-                return false;
-            }
-
-            this.cerrarErrorCampos();
-            return true;
-        }
-
-        setEstadoCampo(el, esValido) {
-            if (!el) return;
-
-            el.classList.remove("is-invalid", "is-valid");
-            el.classList.add(esValido ? "is-valid" : "is-invalid");
-
-            if (el.tagName === "SELECT" && window.jQuery?.(el).data("select2")) {
-                const { $selection, $container } = this.getSelect2Selection(el);
-                $selection.removeClass("is-invalid is-valid").addClass(esValido ? "is-valid" : "is-invalid");
-                $container.removeClass("is-invalid is-valid").addClass(esValido ? "is-valid" : "is-invalid");
-            }
+            return this._validacion?.validarTodos() ?? true;
         }
 
         async _recargarCombo(selectId, url) {
@@ -514,7 +468,7 @@
             if (detail.nuevoId) {
                 this._setFieldValue(cfg.selectId, detail.nuevoId, true);
                 const el = this._id(cfg.selectId);
-                if (el) this.validarCampoIndividual(el);
+                if (el) this._validacion?.onSelect2Change(el);
             }
         }
 
@@ -533,6 +487,7 @@
         }
 
         mostrarErrorCampos(mensaje, idReferencia = null, tipo = "validacion") {
+            if (tipo === "validacion") this._validacion?.cancelarPanelExito?.();
             const container = this._id("errorCampos");
             if (!container) return;
 
@@ -546,7 +501,7 @@
             let botonReferencia = "";
             if (idReferencia) {
                 botonReferencia = `
-                    <button class="rp-btn-ref" onclick="verFicha(${idReferencia})">
+                    <button class="rp-btn-ref" onclick="verFichaProveedor(${idReferencia})">
                         <i class="fa fa-eye me-1"></i> Abrir ficha existente �??
                     </button>`;
             }
@@ -633,39 +588,12 @@
                 cerrarErrorBtn.addEventListener("click", () => this.cerrarErrorCampos());
             }
 
-            this.modalEl.addEventListener("input", (e) => {
-                const target = e.target;
-                if (target?.matches("input, select, textarea")) {
-                    this.validarCampoIndividual(target);
-                }
-            });
-
-            this.modalEl.addEventListener("change", (e) => {
-                const target = e.target;
-                if (target?.matches("input, select, textarea")) {
-                    this.validarCampoIndividual(target);
-                }
-            });
-
-            this.modalEl.addEventListener("blur", (e) => {
-                const target = e.target;
-                if (target?.matches("input, select, textarea")) {
-                    this.validarCampoIndividual(target);
-                }
-            }, true);
+            this._validacion?.attachEvents({ select2Namespace: "mproveedores" });
         }
 
         _bindModalEvents() {
             this.modalEl.addEventListener("shown.bs.modal", () => {
                 this.inicializarSelect2Modal();
-
-                if (window.jQuery) {
-                    const $modal = window.jQuery(this.modalEl);
-                    $modal.off("select2:select.mproveedores select2:clear.mproveedores");
-                    $modal.on("select2:select.mproveedores select2:clear.mproveedores", "select", (e) => {
-                        if (e.target) this.validarCampoIndividual(e.target);
-                    });
-                }
             });
         }
     }
@@ -678,6 +606,36 @@
         return window.proveedorModal?.cerrarErrorCampos?.();
     };
 
+    /**
+     * Inicializa (o reconfigura) el modal M_Proveedores de la página.
+     */
+    function initProveedorModal(options = {}) {
+        const root = document.querySelector("[data-proveedor-modal]")
+            || document.querySelector(".proveedor-modal-root");
+
+        if (!root) {
+            console.warn("initProveedorModal: incluya el partial M_Proveedores en la vista.");
+            return null;
+        }
+
+        const merged = Object.assign({ token: window.token || "" }, options || {});
+
+        if (!window.proveedorModal || window.proveedorModal.modalEl !== root) {
+            window.proveedorModal = new ProveedorModal(root, merged);
+        } else {
+            Object.assign(window.proveedorModal.options, merged);
+        }
+
+        window.nuevoProveedor = () => window.proveedorModal?.abrirNuevo?.();
+        window.verProveedor = (id) => window.proveedorModal?.abrirVer?.(id);
+        window.editarProveedor = (id) => window.proveedorModal?.abrirEditar?.(id);
+        window.eliminarProveedor = (id) => window.proveedorModal?.eliminar?.(id);
+        window.verFichaProveedor = (id) => window.proveedorModal?.abrirVer?.(id);
+
+        return window.proveedorModal;
+    }
+
+    window.initProveedorModal = initProveedorModal;
     window.ProveedorModal = ProveedorModal;
 
 })(window);

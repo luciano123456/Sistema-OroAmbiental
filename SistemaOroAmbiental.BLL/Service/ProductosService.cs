@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using SistemaOroAmbiental.BLL.Common;
 using SistemaOroAmbiental.DAL.Repository;
 using SistemaOroAmbiental.Models;
@@ -69,6 +69,13 @@ namespace SistemaOroAmbiental.BLL.Service
 
                 return ServiceResult.Success("Producto eliminado correctamente");
             }
+            catch (InvalidOperationException ex) when (ex.Message == "PRODUCTO_EN_USO")
+            {
+                return ServiceResult.Error(
+                    "No se puede eliminar porque posee registros relacionados (compras, entregas o establecimientos).",
+                    "relacion",
+                    id);
+            }
             catch (DbUpdateException)
             {
                 return ServiceResult.Error(
@@ -87,6 +94,19 @@ namespace SistemaOroAmbiental.BLL.Service
 
         public Task<IQueryable<Producto>> ObtenerTodos()
             => _repo.ObtenerTodos();
+
+        public Task<Dictionary<int, decimal>> ObtenerStockTotalesPorProducto()
+            => _repo.ObtenerStockTotalesPorProducto();
+
+        public async Task<(Producto? producto, List<ProductoHistorialCostoFila> historial)> ObtenerHistorialCosto(int idProducto)
+        {
+            var producto = await _repo.Obtener(idProducto);
+            if (producto == null)
+                return (null, new List<ProductoHistorialCostoFila>());
+
+            var historial = await _repo.ObtenerHistorialCosto(idProducto);
+            return (producto, historial);
+        }
 
         private static bool ValidarModelo(Producto model, out string error)
         {
