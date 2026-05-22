@@ -1,0 +1,320 @@
+@* Modal Establecimientos de Clientes *@
+
+<div class="modal fade establecimiento-modal-root"
+     data-establecimiento-modal="establecimiento"
+     tabindex="-1"
+     data-bs-backdrop="static"
+     data-bs-keyboard="false">
+
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+
+            <div class="modal-header colorEncabezado">
+                <h5 class="modal-title fw-bold" id="modalEstablecimientoLabel">Nuevo Establecimiento</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+
+                <div id="errorCamposEst" class="rp-error-panel d-none mb-2">
+                    <div class="rp-error-icon"><i class="fa fa-exclamation-triangle"></i></div>
+                    <div class="rp-error-content">
+                        <div class="rp-error-title">No se pudo guardar</div>
+                        <div class="rp-error-message"></div>
+                    </div>
+                    <button type="button" class="rp-error-close" onclick="cerrarErrorCamposEst()">
+                        <i class="fa fa-times"></i>
+                    </button>
+                </div>
+
+                <div class="rp-tabs-shell">
+                    <ul class="nav rp-tabs-modern">
+                        <li class="nav-item">
+                            <button class="nav-link active" id="tabBtnDatosEst" data-bs-toggle="tab" data-bs-target="#tabDatosEst" type="button">
+                                <i class="fa fa-building"></i><span>Datos</span>
+                            </button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link" id="tabBtnContactosEst" data-bs-toggle="tab" data-bs-target="#tabContactosEst" type="button">
+                                <i class="fa fa-address-book"></i><span>Contactos</span>
+                            </button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link" id="tabBtnProductosEst" data-bs-toggle="tab" data-bs-target="#tabProductosEst" type="button">
+                                <i class="fa fa-cubes"></i><span>Productos</span>
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="tab-content mt-3">
+
+                    <div class="tab-pane fade show active" id="tabDatosEst">
+                        <form class="row g-3">
+                            <input type="text" id="txtIdEst" hidden />
+
+                            <div class="col-md-6">
+                                <label class="form-label">Cliente</label>
+                                <select id="cmbClienteEst" class="form-control" required></select>
+                                <div class="invalid-feedback">Campo obligatorio</div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Nombre establecimiento</label>
+                                <input id="txtNombreEst" class="form-control" required maxlength="100" />
+                                <div class="invalid-feedback">Campo obligatorio</div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">CUIT</label>
+                                <input id="txtCuitEst" class="form-control" maxlength="20" />
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Condición IVA</label>
+                                <div class="rp-select-plus">
+                                    <select id="cmbCondicionIvaEst" class="form-control"></select>
+                                    <button type="button" class="rp-btn-plus" data-config-nombre="Condiciones IVA" data-config-controller="CondicionesIva"><i class="fa fa-plus"></i></button>
+                                </div>
+                            </div>
+
+                            <div class="col-md-12">
+                                <div class="rp-iva-card" id="rpIvaCardEst">
+                                    <div class="rp-iva-card-icon">
+                                        <i class="fa fa-percent"></i>
+                                    </div>
+                                    <div class="rp-iva-card-text">
+                                        <p class="rp-iva-card-title">Impuesto IVA</p>
+                                        <p class="rp-iva-card-desc">Indica si este establecimiento discrimina o aplica IVA en sus operaciones.</p>
+                                    </div>
+                                    <div class="rp-iva-card-toggle">
+                                        <span class="rp-iva-card-status" id="rpIvaCardStatusEst">No aplica</span>
+                                        <label class="rp-switch" title="Aplica IVA">
+                                            <input type="checkbox" id="chkImpuestoIvaEst" />
+                                            <span class="rp-switch-slider"></span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Provincia</label>
+                                <div class="rp-select-plus">
+                                    <select id="cmbProvinciaEst" class="form-control"></select>
+                                    <button type="button" class="rp-btn-plus" data-config-nombre="Provincias" data-config-controller="Provincias"><i class="fa fa-plus"></i></button>
+                                </div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Localidad</label>
+                                <input id="txtLocalidadEst" class="form-control" maxlength="200" />
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Código postal</label>
+                                <input id="txtCodPostalEst" class="form-control" maxlength="10" />
+                            </div>
+
+                            <div class="col-md-8">
+                                <label class="form-label">Domicilio</label>
+                                <input id="txtDomicilioEst" class="form-control" maxlength="200" />
+                            </div>
+
+                            <div class="col-12 rp-recoleccion-block">
+                                <div class="rp-recoleccion-block-title">
+                                    <i class="fa fa-truck"></i> Recolección y precios
+                                </div>
+                                <div class="row g-3">
+                                    <div class="col-md-4">
+                                        <label class="form-label">Día recolección</label>
+                                        <div class="rp-select-plus">
+                                            <select id="cmbDiaEst" class="form-control" required></select>
+                                            <button type="button" class="rp-btn-plus" data-config-nombre="Días" data-config-controller="Dias"><i class="fa fa-plus"></i></button>
+                                        </div>
+                                        <div class="invalid-feedback">Campo obligatorio</div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">Semana recolección</label>
+                                        <div class="rp-select-plus">
+                                            <select id="cmbSemanaEst" class="form-control" required></select>
+                                            <button type="button" class="rp-btn-plus" data-config-nombre="Semanas" data-config-controller="Semanas"><i class="fa fa-plus"></i></button>
+                                        </div>
+                                        <div class="invalid-feedback">Campo obligatorio</div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">Lista de precios</label>
+                                        <div class="rp-select-plus">
+                                            <select id="cmbListaPrecioEst" class="form-control" required></select>
+                                            <button type="button" class="rp-btn-plus" data-config-nombre="Listas de Precio" data-config-controller="ListasPrecios"><i class="fa fa-plus"></i></button>
+                                        </div>
+                                        <div class="invalid-feedback">Campo obligatorio</div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label">Horario desde</label>
+                                        <input id="txtHorarioDesdeEst" type="time" class="form-control" required />
+                                        <div class="invalid-feedback">Campo obligatorio</div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label">Horario hasta</label>
+                                        <input id="txtHorarioHastaEst" type="time" class="form-control" required />
+                                        <div class="invalid-feedback">Campo obligatorio</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+
+                        <div class="rp-auditoria d-none mt-3" id="infoAuditoriaEst">
+                            <div id="infoRegistroEst"></div>
+                            <div id="infoModificacionEst"></div>
+                        </div>
+                    </div>
+
+                    <div class="tab-pane fade" id="tabContactosEst">
+                        <div id="sectionContactosEst" class="rp-sub-page rp-section-disabled">
+                            <div class="rp-sub-hero">
+                                <div>
+                                    <div class="text-muted small">Establecimiento</div>
+                                    <div class="rp-sub-hero-name" id="contactoEstNombre">Nuevo</div>
+                                    <div class="rp-sub-hero-hint" id="contactoEstHint">
+                                        <i class="fa fa-info-circle"></i> Guardá el establecimiento para administrar contactos.
+                                    </div>
+                                </div>
+                                <div class="rp-kpi-card-mini">
+                                    <span>Contactos</span>
+                                    <strong id="contactoEstCantidad">0</strong>
+                                </div>
+                            </div>
+                            <div class="rp-sub-layout">
+                                <div class="rp-sub-panel">
+                                    <div class="rp-sub-panel-head">
+                                        <i class="fa fa-list"></i> Listado
+                                        <small>Seleccioná para editar</small>
+                                    </div>
+                                    <div class="rp-sub-panel-body">
+                                        <div id="listaContactosEst" class="rp-sub-list">
+                                            <div class="rp-sub-empty">
+                                                <i class="fa fa-address-book-o"></i>
+                                                <p>Guardá el establecimiento para ver contactos.</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="rp-sub-panel">
+                                    <div class="rp-sub-panel-head">
+                                        <i class="fa fa-user-plus"></i>
+                                        <span id="contactoEstFormTitulo">Nuevo contacto</span>
+                                    </div>
+                                    <div class="rp-sub-panel-body rp-sub-form">
+                                        <input type="hidden" id="txtContactoEstId" />
+                                        <div class="row g-3">
+                                            <div class="col-12">
+                                                <label class="form-label"><i class="fa fa-user"></i> Nombre</label>
+                                                <input id="txtContactoEstNombre" class="form-control" maxlength="100" placeholder="Nombre y apellido" />
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label class="form-label"><i class="fa fa-briefcase"></i> Puesto</label>
+                                                <input id="txtContactoEstPuesto" class="form-control" maxlength="100" placeholder="Ej. Encargado" />
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label class="form-label"><i class="fa fa-phone"></i> Teléfono</label>
+                                                <input id="txtContactoEstTelefono" class="form-control" maxlength="50" />
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label class="form-label"><i class="fa fa-phone"></i> Teléfono alternativo</label>
+                                                <input id="txtContactoEstTelefonoAlt" class="form-control" maxlength="50" />
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label class="form-label"><i class="fa fa-envelope-o"></i> Email</label>
+                                                <input id="txtContactoEstEmail" class="form-control" type="email" maxlength="100" />
+                                            </div>
+                                        </div>
+                                        <div class="rp-form-actions">
+                                            <button type="button" id="btnGuardarContactoEst" class="btn btn-primary btn-sm" onclick="guardarContactoEstablecimiento()">
+                                                <i class="fa fa-check"></i> Guardar contacto
+                                            </button>
+                                            <button type="button" id="btnNuevoContactoEst" class="btn btn-outline-light btn-sm" onclick="nuevoContactoEstablecimiento()">
+                                                <i class="fa fa-plus"></i> Nuevo
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="tab-pane fade" id="tabProductosEst">
+                        <div id="sectionProductosEst" class="rp-sub-page rp-section-disabled">
+                            <div class="rp-sub-hero">
+                                <div>
+                                    <div class="text-muted small">Establecimiento</div>
+                                    <div class="rp-sub-hero-name" id="productoEstNombre">Nuevo</div>
+                                    <div class="rp-sub-hero-hint" id="productoEstHint">
+                                        <i class="fa fa-info-circle"></i> Guardá el establecimiento para asignar productos.
+                                    </div>
+                                </div>
+                                <div class="rp-kpi-card-mini">
+                                    <span>Productos</span>
+                                    <strong id="productoEstCantidad">0</strong>
+                                </div>
+                            </div>
+                            <div class="rp-sub-layout">
+                                <div class="rp-sub-panel">
+                                    <div class="rp-sub-panel-head">
+                                        <i class="fa fa-cubes"></i> Asignados
+                                        <small>Click para editar</small>
+                                    </div>
+                                    <div class="rp-sub-panel-body">
+                                        <div id="listaProductosEst" class="rp-sub-list">
+                                            <div class="rp-sub-empty">
+                                                <i class="fa fa-cube"></i>
+                                                <p>Guardá el establecimiento para asignar productos.</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="rp-sub-panel">
+                                    <div class="rp-sub-panel-head">
+                                        <i class="fa fa-plus-circle"></i>
+                                        <span id="productoEstFormTitulo">Agregar producto</span>
+                                    </div>
+                                    <div class="rp-sub-panel-body rp-sub-form">
+                                        <input type="hidden" id="txtProductoEstId" />
+                                        <div class="row g-3">
+                                            <div class="col-12">
+                                                <label class="form-label"><i class="fa fa-cube"></i> Producto</label>
+                                                <select id="cmbProductoEst" class="form-control"></select>
+                                            </div>
+                                            <div class="col-12">
+                                                <label class="form-label"><i class="fa fa-sort-numeric-asc"></i> Cantidad</label>
+                                                <input id="txtCantidadEst" class="form-control Inputmiles" placeholder="0" />
+                                            </div>
+                                        </div>
+                                        <div class="rp-form-actions">
+                                            <button type="button" id="btnGuardarProductoEst" class="btn btn-primary btn-sm" onclick="guardarProductoEstablecimiento()">
+                                                <i class="fa fa-check"></i> Guardar producto
+                                            </button>
+                                            <button type="button" id="btnNuevoProductoEst" class="btn btn-outline-light btn-sm" onclick="nuevoProductoEstablecimiento()">
+                                                <i class="fa fa-plus"></i> Nuevo
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fa fa-arrow-left"></i> Volver
+                </button>
+                <button type="button" id="btnGuardarEst" class="btn btn-primary" onclick="guardarEstablecimiento()">
+                    <i class="fa fa-check"></i> Registrar
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>

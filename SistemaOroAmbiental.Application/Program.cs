@@ -48,6 +48,15 @@ builder.Services.AddScoped<IClientesService, ClientesService>();
 builder.Services.AddScoped<IClientesContactosRepository, ClientesContactosRepository>();
 builder.Services.AddScoped<IClientesContactosService, ClientesContactosService>();
 
+builder.Services.AddScoped<IClientesEstablecimientosRepository, ClientesEstablecimientosRepository>();
+builder.Services.AddScoped<IClientesEstablecimientosService, ClientesEstablecimientosService>();
+
+builder.Services.AddScoped<IClientesEstablecimientosContactosRepository, ClientesEstablecimientosContactosRepository>();
+builder.Services.AddScoped<IClientesEstablecimientosContactosService, ClientesEstablecimientosContactosService>();
+
+builder.Services.AddScoped<IClientesEstablecimientosProductosRepository, ClientesEstablecimientosProductosRepository>();
+builder.Services.AddScoped<IClientesEstablecimientosProductosService, ClientesEstablecimientosProductosService>();
+
 builder.Services.AddScoped<IClientesProfesionesRepository, ClientesProfesionesRepository>();
 builder.Services.AddScoped<IClientesProfesionesService, ClientesProfesionesService>();
 

@@ -1,0 +1,426 @@
+/* Establecimientos — modal ABM (contactos, productos, IVA) */
+
+[data-establecimiento-modal] {
+    --est-accent: #63b3ed;
+    --est-accent-soft: rgba(99, 179, 237, .12);
+    --est-success: #4ade80;
+    --est-line: rgba(255, 255, 255, .1);
+    --est-panel: rgba(255, 255, 255, .03);
+}
+
+/* ===== IVA ===== */
+[data-establecimiento-modal] .rp-iva-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 14px 16px;
+    border-radius: 14px;
+    border: 1px solid var(--est-line);
+    background: linear-gradient(135deg, rgba(99, 179, 237, .08), rgba(255, 255, 255, .02));
+    min-height: 72px;
+    transition: border-color .2s, box-shadow .2s, background .2s;
+}
+
+[data-establecimiento-modal] .rp-iva-card.is-active {
+    border-color: rgba(74, 222, 128, .45);
+    background: linear-gradient(135deg, rgba(74, 222, 128, .12), rgba(255, 255, 255, .03));
+    box-shadow: 0 0 0 1px rgba(74, 222, 128, .15);
+}
+
+[data-establecimiento-modal] .rp-iva-card-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(99, 179, 237, .15);
+    color: var(--est-accent);
+    font-size: 1.15rem;
+    flex-shrink: 0;
+}
+
+[data-establecimiento-modal] .rp-iva-card.is-active .rp-iva-card-icon {
+    background: rgba(74, 222, 128, .2);
+    color: var(--est-success);
+}
+
+[data-establecimiento-modal] .rp-iva-card-text {
+    flex: 1;
+    min-width: 0;
+}
+
+[data-establecimiento-modal] .rp-iva-card-title {
+    font-weight: 700;
+    font-size: .95rem;
+    margin: 0;
+}
+
+[data-establecimiento-modal] .rp-iva-card-desc {
+    font-size: .8rem;
+    color: var(--rp-text-muted, #9aa4b2);
+    margin: 2px 0 0;
+}
+
+[data-establecimiento-modal] .rp-iva-card-toggle {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+[data-establecimiento-modal] .rp-iva-card-status {
+    font-size: .75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: var(--rp-text-muted, #9aa4b2);
+}
+
+[data-establecimiento-modal] .rp-iva-card.is-active .rp-iva-card-status {
+    color: var(--est-success);
+}
+
+[data-establecimiento-modal] .rp-switch {
+    position: relative;
+    display: inline-block;
+    width: 52px;
+    height: 28px;
+}
+
+[data-establecimiento-modal] .rp-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+[data-establecimiento-modal] .rp-switch-slider {
+    position: absolute;
+    cursor: pointer;
+    inset: 0;
+    background: linear-gradient(135deg, #334155, #475569);
+    transition: .25s;
+    border-radius: 999px;
+    box-shadow: inset 0 2px 6px rgba(0, 0, 0, .28);
+}
+
+[data-establecimiento-modal] .rp-switch-slider:before {
+    position: absolute;
+    content: "";
+    height: 22px;
+    width: 22px;
+    left: 3px;
+    bottom: 3px;
+    background: #fff;
+    transition: .25s;
+    border-radius: 50%;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, .25);
+}
+
+[data-establecimiento-modal] .rp-switch input:checked + .rp-switch-slider {
+    background: linear-gradient(135deg, #16a34a, #22c55e);
+}
+
+[data-establecimiento-modal] .rp-switch input:checked + .rp-switch-slider:before {
+    transform: translateX(24px);
+}
+
+[data-establecimiento-modal] .rp-switch input:focus-visible + .rp-switch-slider {
+    outline: 2px solid var(--est-accent);
+    outline-offset: 2px;
+}
+
+/* ===== Sub-secciones contactos / productos ===== */
+[data-establecimiento-modal] .rp-section-disabled {
+    opacity: .55;
+    pointer-events: none;
+    filter: grayscale(.15);
+}
+
+[data-establecimiento-modal] .rp-sub-page {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+[data-establecimiento-modal] .rp-contact-hero,
+[data-establecimiento-modal] .rp-sub-hero {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    padding: 16px 18px;
+    border-radius: 16px;
+    border: 1px solid var(--est-line);
+    background: var(--est-panel);
+}
+
+[data-establecimiento-modal] .rp-contact-hero-name,
+[data-establecimiento-modal] .rp-sub-hero-name {
+    font-size: 1.05rem;
+    font-weight: 700;
+}
+
+[data-establecimiento-modal] .rp-contact-hero-hint,
+[data-establecimiento-modal] .rp-sub-hero-hint {
+    font-size: .85rem;
+    color: var(--rp-text-muted, #9aa4b2);
+    margin-top: 4px;
+}
+
+[data-establecimiento-modal] .rp-contact-hero-hint.success,
+[data-establecimiento-modal] .rp-sub-hero-hint.success {
+    color: var(--est-success);
+}
+
+[data-establecimiento-modal] .rp-kpi-card-mini {
+    min-width: 96px;
+    padding: 12px 14px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, .04);
+    border: 1px solid rgba(255, 255, 255, .08);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+[data-establecimiento-modal] .rp-kpi-card-mini span {
+    font-size: 12px;
+    color: var(--rp-text-muted, #9aa4b2);
+}
+
+[data-establecimiento-modal] .rp-kpi-card-mini strong {
+    font-size: 1.5rem;
+    line-height: 1.1;
+    color: #fff;
+}
+
+[data-establecimiento-modal] .rp-sub-layout {
+    display: grid;
+    grid-template-columns: minmax(260px, 1fr) minmax(340px, 1.25fr);
+    gap: 16px;
+}
+
+@media (max-width: 992px) {
+    [data-establecimiento-modal] .rp-sub-layout {
+        grid-template-columns: 1fr;
+    }
+}
+
+[data-establecimiento-modal] .rp-sub-panel {
+    border: 1px solid var(--est-line);
+    border-radius: 16px;
+    background: var(--est-panel);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    min-height: 380px;
+}
+
+[data-establecimiento-modal] .rp-sub-panel-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--est-line);
+    background: rgba(0, 0, 0, .12);
+    font-weight: 700;
+    font-size: .9rem;
+}
+
+[data-establecimiento-modal] .rp-sub-panel-head i {
+    color: var(--est-accent);
+    width: 20px;
+    text-align: center;
+}
+
+[data-establecimiento-modal] .rp-sub-panel-head small {
+    font-weight: 500;
+    color: var(--rp-text-muted, #9aa4b2);
+    margin-left: auto;
+    font-size: .78rem;
+}
+
+[data-establecimiento-modal] .rp-sub-panel-body {
+    padding: 14px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+[data-establecimiento-modal] .rp-sub-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    flex: 1;
+    max-height: 320px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+[data-establecimiento-modal] .rp-sub-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+[data-establecimiento-modal] .rp-sub-list::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, .15);
+    border-radius: 6px;
+}
+
+[data-establecimiento-modal] .rp-sub-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, .08);
+    background: rgba(0, 0, 0, .18);
+    cursor: pointer;
+    transition: border-color .15s, background .15s, transform .1s;
+}
+
+[data-establecimiento-modal] .rp-sub-item:hover {
+    border-color: rgba(99, 179, 237, .35);
+    background: var(--est-accent-soft);
+}
+
+[data-establecimiento-modal] .rp-sub-item.active {
+    border-color: rgba(99, 179, 237, .55);
+    background: rgba(99, 179, 237, .14);
+    box-shadow: 0 0 0 1px rgba(99, 179, 237, .2);
+}
+
+[data-establecimiento-modal] .rp-sub-item-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(99, 179, 237, .15);
+    color: var(--est-accent);
+    flex-shrink: 0;
+    font-size: 1rem;
+}
+
+[data-establecimiento-modal] .rp-sub-item-avatar.product {
+    background: rgba(251, 191, 36, .15);
+    color: #fbbf24;
+}
+
+[data-establecimiento-modal] .rp-sub-item-body {
+    flex: 1;
+    min-width: 0;
+}
+
+[data-establecimiento-modal] .rp-sub-item-title {
+    font-weight: 700;
+    font-size: .92rem;
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+[data-establecimiento-modal] .rp-sub-item-sub {
+    font-size: .78rem;
+    color: var(--rp-text-muted, #9aa4b2);
+    display: block;
+    margin-top: 2px;
+}
+
+[data-establecimiento-modal] .rp-sub-item-meta {
+    font-size: .78rem;
+    color: var(--rp-text-muted, #9aa4b2);
+    margin-top: 4px;
+}
+
+[data-establecimiento-modal] .rp-qty-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: rgba(251, 191, 36, .15);
+    border: 1px solid rgba(251, 191, 36, .3);
+    color: #fcd34d;
+    font-size: .78rem;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+[data-establecimiento-modal] .rp-sub-item-actions {
+    flex-shrink: 0;
+}
+
+[data-establecimiento-modal] .rp-sub-empty {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 32px 16px;
+    color: var(--rp-text-muted, #9aa4b2);
+    gap: 10px;
+}
+
+[data-establecimiento-modal] .rp-sub-empty i {
+    font-size: 2rem;
+    opacity: .45;
+}
+
+[data-establecimiento-modal] .rp-sub-empty p {
+    margin: 0;
+    font-size: .88rem;
+    max-width: 220px;
+}
+
+[data-establecimiento-modal] .rp-sub-form .form-label {
+    font-size: .82rem;
+    font-weight: 600;
+    color: var(--rp-text-muted, #b8c0cc);
+    margin-bottom: 4px;
+}
+
+[data-establecimiento-modal] .rp-sub-form .form-label i {
+    margin-right: 6px;
+    color: var(--est-accent);
+    opacity: .85;
+}
+
+[data-establecimiento-modal] .rp-form-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: auto;
+    padding-top: 14px;
+    border-top: 1px dashed var(--est-line);
+}
+
+[data-establecimiento-modal] .rp-form-actions .btn-primary {
+    box-shadow: 0 4px 14px rgba(59, 130, 246, .25);
+}
+
+[data-establecimiento-modal] .rp-recoleccion-block {
+    margin-top: 8px;
+    padding-top: 14px;
+    border-top: 1px dashed var(--est-line);
+}
+
+[data-establecimiento-modal] .rp-recoleccion-block-title {
+    font-size: .8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: var(--rp-text-muted, #9aa4b2);
+    margin-bottom: 12px;
+}
+
+[data-establecimiento-modal] .rp-recoleccion-block-title i {
+    margin-right: 6px;
+    color: var(--est-accent);
+}
