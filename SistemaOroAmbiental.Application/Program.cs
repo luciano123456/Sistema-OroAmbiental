@@ -132,6 +132,8 @@ builder.Services.AddScoped<IContratosService, ContratosService>();
 builder.Services.AddScoped<IContratosRenovacionesRepository, ContratosRenovacionesRepository>();
 builder.Services.AddScoped<IContratosRenovacionesService, ContratosRenovacionesService>();
 
+builder.Services.AddScoped<IContratosDocumentosRepository, ContratosDocumentosRepository>();
+
 builder.Services.AddScoped<IClientesEntregasRepository, ClientesEntregasRepository>();
 builder.Services.AddScoped<IClientesEntregasService, ClientesEntregasService>();
 

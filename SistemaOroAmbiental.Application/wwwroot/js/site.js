@@ -1,4 +1,5 @@
 ﻿const token = localStorage.getItem('JwtToken');
+window.token = token;
 
 const TEXTOS_MODAL = {
     confirmacionTitulo: "Confirmaci\u00F3n",

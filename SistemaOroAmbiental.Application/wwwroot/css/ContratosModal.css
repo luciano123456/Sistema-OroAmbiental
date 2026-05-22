@@ -407,3 +407,179 @@
     border-top: 1px solid var(--ctr-line);
     padding: 14px 20px;
 }
+
+[data-contrato-modal] .rp-export-tile {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    width: 100%;
+    max-width: 420px;
+    padding: 14px 16px;
+    border-radius: 12px;
+    border: 1px solid var(--ctr-line);
+    background: rgba(0, 0, 0, 0.2);
+    color: #e8edf7;
+    text-align: left;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+}
+
+[data-contrato-modal] .rp-export-tile:hover:not(:disabled) {
+    border-color: rgba(139, 92, 246, 0.5);
+    background: var(--ctr-accent-soft);
+}
+
+[data-contrato-modal] .rp-export-tile:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+[data-contrato-modal] .rp-export-tile i {
+    font-size: 1.4rem;
+    color: var(--ctr-accent);
+    display: block;
+    margin-bottom: 6px;
+}
+
+[data-contrato-modal] .rp-export-tile span {
+    display: block;
+    font-weight: 700;
+}
+
+[data-contrato-modal] .rp-export-tile small {
+    display: block;
+    color: var(--ctr-muted);
+    font-size: 0.75rem;
+    margin-top: 4px;
+}
+
+[data-contrato-modal] .rp-doc-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 280px;
+    overflow-y: auto;
+}
+
+[data-contrato-modal] .rp-doc-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(0, 0, 0, 0.18);
+    transition: border-color 0.6s ease, background 0.6s ease, box-shadow 0.6s ease;
+}
+
+[data-contrato-modal] .rp-doc-item--nuevo {
+    border-color: rgba(74, 222, 128, 0.9);
+    background: linear-gradient(105deg, rgba(34, 197, 94, 0.28) 0%, rgba(34, 197, 94, 0.06) 55%);
+    box-shadow:
+        0 0 0 2px rgba(74, 222, 128, 0.45),
+        0 6px 20px rgba(34, 197, 94, 0.25);
+    animation: rp-doc-nuevo-entrada 0.55s ease-out, rp-doc-nuevo-pulso 1.4s ease-in-out 0.55s 2;
+}
+
+[data-contrato-modal] .rp-doc-item--nuevo .rp-doc-icon {
+    color: #4ade80;
+    animation: rp-doc-icon-pop 0.45s ease-out;
+}
+
+[data-contrato-modal] .rp-doc-item--nuevo strong {
+    color: #ecfdf5;
+}
+
+[data-contrato-modal] .rp-doc-badge-nuevo {
+    display: inline-block;
+    margin-left: 8px;
+    padding: 2px 7px;
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #052e16;
+    background: linear-gradient(180deg, #4ade80, #22c55e);
+    border-radius: 999px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+    animation: rp-doc-badge-in 0.4s ease-out;
+}
+
+@keyframes rp-doc-nuevo-entrada {
+    from {
+        opacity: 0.4;
+        transform: translateX(-8px) scale(0.98);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0) scale(1);
+    }
+}
+
+@keyframes rp-doc-nuevo-pulso {
+    0%, 100% {
+        box-shadow:
+            0 0 0 2px rgba(74, 222, 128, 0.45),
+            0 6px 20px rgba(34, 197, 94, 0.2);
+    }
+    50% {
+        box-shadow:
+            0 0 0 4px rgba(74, 222, 128, 0.3),
+            0 8px 24px rgba(34, 197, 94, 0.35);
+    }
+}
+
+@keyframes rp-doc-icon-pop {
+    0% { transform: scale(0.6); }
+    70% { transform: scale(1.15); }
+    100% { transform: scale(1); }
+}
+
+@keyframes rp-doc-badge-in {
+    from { opacity: 0; transform: scale(0.7); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+[data-contrato-modal] .rp-doc-icon {
+    color: var(--ctr-accent);
+    font-size: 1.2rem;
+}
+
+[data-contrato-modal] .rp-doc-body {
+    flex: 1;
+    min-width: 0;
+}
+
+[data-contrato-modal] .rp-doc-actions {
+    display: flex;
+    gap: 6px;
+}
+
+[data-contrato-modal] .rp-doc-estado {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    margin-bottom: 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(56, 189, 248, 0.35);
+    background: rgba(56, 189, 248, 0.12);
+    color: #e0f2fe;
+    font-size: 0.9rem;
+}
+
+[data-contrato-modal] .rp-doc-estado.is-ok {
+    border-color: rgba(34, 197, 94, 0.4);
+    background: rgba(34, 197, 94, 0.12);
+    color: #bbf7d0;
+}
+
+[data-contrato-modal] .rp-doc-estado.is-error {
+    border-color: rgba(248, 113, 113, 0.45);
+    background: rgba(248, 113, 113, 0.12);
+    color: #fecaca;
+}
+
+[data-contrato-modal] .rp-doc-estado .fa-spinner {
+    color: var(--ctr-accent);
+}

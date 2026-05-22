@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using SistemaOroAmbiental.Application.Helpers;
 using SistemaOroAmbiental.Application.Models.ViewModels;
 using SistemaOroAmbiental.BLL.Common;
 using SistemaOroAmbiental.BLL.Service;
@@ -82,6 +83,16 @@ namespace SistemaOroAmbiental.Application.Controllers
             return Ok(MapLista(c));
         }
 
+        [HttpGet]
+        public async Task<IActionResult> DatosPlantilla(int id)
+        {
+            var c = await _service.Obtener(id);
+            if (c == null)
+                return NotFound();
+
+            return Ok(ContratoPlantillaMapper.Map(c));
+        }
+
         [HttpPost]
         public async Task<IActionResult> Insertar([FromBody] VMContratoGuardar model)
         {
@@ -132,6 +143,8 @@ namespace SistemaOroAmbiental.Application.Controllers
                 IdCliente = c.IdCliente,
                 Cliente = c.IdClienteNavigation?.Nombre ?? "",
                 IdEstablecimiento = c.IdEstablecimiento,
+                IdTipoContrato = c.IdTipoContrato,
+                TipoContrato = c.IdTipoContratoNavigation?.Nombre,
                 Establecimiento = c.IdEstablecimientoNavigation?.Nombre ?? "",
                 IdSucursal = c.IdClienteNavigation?.IdSucursal ?? 0,
                 Sucursal = c.IdClienteNavigation?.IdSucursalNavigation?.Nombre,
@@ -150,6 +163,7 @@ namespace SistemaOroAmbiental.Application.Controllers
                 Id = model.Id,
                 IdCliente = model.IdCliente,
                 IdEstablecimiento = model.IdEstablecimiento,
+                IdTipoContrato = model.IdTipoContrato > 0 ? model.IdTipoContrato : null,
                 FechaContrato = model.FechaContrato.Date,
                 FechaInicio = model.FechaInicio.Date,
                 FechaVencimiento = model.FechaVencimiento.Date
@@ -168,5 +182,6 @@ namespace SistemaOroAmbiental.Application.Controllers
 
             return entity;
         }
+
     }
 }

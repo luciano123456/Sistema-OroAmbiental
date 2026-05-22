@@ -38,6 +38,11 @@
                             </button>
                         </li>
                         <li class="nav-item">
+                            <button class="nav-link" id="tabBtnDocContrato" data-bs-toggle="tab" data-bs-target="#tabDocContrato" type="button">
+                                <i class="fa fa-file-word-o"></i><span>Documentos</span>
+                            </button>
+                        </li>
+                        <li class="nav-item">
                             <button class="nav-link" id="tabBtnRenovContrato" data-bs-toggle="tab" data-bs-target="#tabRenovContrato" type="button">
                                 <i class="fa fa-refresh"></i><span>Renovaciones</span>
                             </button>
@@ -97,11 +102,65 @@
                                     <input type="date" id="txtFechaVencContrato" class="form-control" required />
                                     <div class="invalid-feedback">Campo obligatorio</div>
                                 </div>
+
+                                <div class="col-md-6">
+                                    <label class="form-label" for="cmbTipoContrato">Tipo de contrato (plantilla)</label>
+                                    <div class="rp-select-plus">
+                                        <select id="cmbTipoContrato" class="form-control"></select>
+                                        <button type="button"
+                                                id="btnAgregarTipoContrato"
+                                                class="rp-btn-plus"
+                                                title="Agregar tipo de contrato"
+                                                data-config-nombre="Tipos de contrato"
+                                                data-config-controller="TiposContratos">
+                                            <i class="fa fa-plus"></i>
+                                        </button>
+                                    </div>
+                                    <div class="invalid-feedback">Seleccione un tipo para generar documentos</div>
+                                </div>
                             </form>
 
                             <div class="rp-auditoria d-none mt-3" id="infoAuditoriaContrato">
                                 <div id="infoRegistroContrato"></div>
                                 <div id="infoModificacionContrato"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="tab-pane fade" id="tabDocContrato">
+                        <div id="sectionDocContrato" class="rp-sub-page rp-section-disabled">
+                            <div class="rp-sub-hero">
+                                <div>
+                                    <div class="text-muted small">Plantilla Word con campos entre corchetes</div>
+                                    <div class="rp-sub-hero-hint" id="docContratoHint">
+                                        <i class="fa fa-info-circle"></i>
+                                        Use <strong>solo llaves</strong> en Word: {NOMBRECLIENTE}, {DOMICILIOCLIENTE}, {CUITCLIENTE},
+                                        {PROFESIONCLIENTE}, {IVACLIENTE}, {DIASCLIENTE}, {EMAILCLIENTE}, {DIA}, {MES}, {ANIO}.
+                                        No use [corchetes] ni {|campos|} — el sistema solo reemplaza {CAMPO}.
+                                        Subí la plantilla .docx en Configuraciones → Plantillas Word.
+                                    </div>
+                                </div>
+                            </div>
+                            <div id="docContratoEstado" class="rp-doc-estado d-none" role="status" aria-live="polite">
+                                <i class="fa fa-spinner fa-spin"></i>
+                                <span id="docContratoEstadoTexto">Generando contrato...</span>
+                            </div>
+                            <div class="row g-3 mb-3">
+                                <div class="col-12">
+                                    <button type="button" class="rp-export-tile rp-export-tile--solo" id="btnContratoWord" disabled>
+                                        <i class="fa fa-file-word-o"></i>
+                                        <span>Generar Word</span>
+                                        <small>Genera y adjunta el .docx al contrato</small>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="rp-sub-panel">
+                                <div class="rp-sub-panel-head">
+                                    <i class="fa fa-paperclip"></i> Archivos adjuntos al contrato
+                                </div>
+                                <div class="rp-sub-panel-body">
+                                    <div id="listaDocsContrato" class="rp-doc-list"></div>
+                                </div>
                             </div>
                         </div>
                     </div>

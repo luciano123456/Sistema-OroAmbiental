@@ -39,6 +39,10 @@
             this._renovaciones = [];
             this._renovSeleccionadaId = 0;
 
+            this._comboPorController = {
+                TiposContratos: { selectId: "cmbTipoContrato" }
+            };
+
             this._validacion = new ValidacionModalAbm({
                 modalEl: this.modalEl,
                 getPanel: () => this._id("errorCamposContrato"),
@@ -58,7 +62,9 @@
             window.contratoModal = this;
             this._bindEvents();
             this._bindModalEvents();
+            this._bindDocumentosEvents();
             this._bindRenovacionesEvents();
+            this._bindConfiguracionActualizada();
         }
 
         _q(s) { return this.modalEl.querySelector(s); }
@@ -167,8 +173,63 @@
         }
 
         async cargarCombos() {
-            await this._cargarClientes();
-            await this._cargarEstablecimientos(0);
+            await Promise.all([
+                this._cargarClientes(),
+                this._cargarTiposContrato(),
+                this._cargarEstablecimientos(0)
+            ]);
+        }
+
+        async _cargarTiposContrato(idSeleccionar) {
+            const sel = this._id("cmbTipoContrato");
+            if (!sel) return;
+
+            const prev = idSeleccionar || this._toInt(window.jQuery(sel).val());
+
+            try {
+                const lista = await this._fetchJson("/TiposContratos/Lista", { headers: this._headers(false) });
+                sel.innerHTML = `<option value="">Seleccionar</option>` +
+                    (lista || []).map(t =>
+                        `<option value="${t.Id}">${this._escapeHtml(t.Nombre)}</option>`
+                    ).join("");
+            } catch {
+                sel.innerHTML = `<option value="">Seleccionar</option>`;
+            }
+
+            const id = idSeleccionar || prev;
+            if (id && window.jQuery) {
+                window.jQuery(sel).val(String(id)).trigger("change");
+            } else if (window.jQuery?.(sel).data("select2")) {
+                window.jQuery(sel).trigger("change.select2");
+            }
+        }
+
+        async recargarTiposContrato(idSeleccionar) {
+            await this._cargarTiposContrato(idSeleccionar);
+        }
+
+        async _onConfiguracionActualizada(detail) {
+            const cfg = this._comboPorController[detail?.tipo];
+            if (!cfg) return;
+
+            await this.recargarTiposContrato(detail.nuevoId || null);
+
+            if (detail.nuevoId) {
+                const el = this._id(cfg.selectId);
+                if (el) this._validacion?.onSelect2Change?.(el);
+            }
+        }
+
+        _bindConfiguracionActualizada() {
+            if (this._configListener) return;
+            this._configListener = async (e) => {
+                try {
+                    await this._onConfiguracionActualizada(e.detail || {});
+                } catch (err) {
+                    console.error(err);
+                }
+            };
+            document.addEventListener("configuracionActualizada", this._configListener);
         }
 
         async recargarClientes(idSeleccionar) {
@@ -191,7 +252,7 @@
         inicializarSelect2Modal() {
             if (!window.jQuery) return;
             const $modal = window.jQuery(this.modalEl);
-            ["cmbClienteContrato", "cmbEstablecimientoContrato", "cmbTipoRenovContrato"].forEach(id => {
+            ["cmbClienteContrato", "cmbEstablecimientoContrato", "cmbTipoContrato", "cmbTipoRenovContrato"].forEach(id => {
                 const $el = $modal.find(`#${id}`);
                 if ($el.length) {
                     this.ensureSelect2($el, { dropdownParent: $modal, placeholder: "Seleccionar" });
@@ -237,6 +298,141 @@
             this.modalEl.addEventListener("shown.bs.modal", () => {
                 this.inicializarSelect2Modal();
             });
+        }
+
+        _bindDocumentosEvents() {
+            const btnWord = this._id("btnContratoWord");
+            const lista = this._id("listaDocsContrato");
+
+            if (btnWord) {
+                btnWord.addEventListener("click", () => this._generarDocumento());
+            }
+
+            if (lista) {
+                lista.addEventListener("click", async (e) => {
+                    const btnDl = e.target.closest(".btn-doc-descargar");
+                    const btnDel = e.target.closest(".btn-doc-eliminar");
+                    if (btnDl) {
+                        e.preventDefault();
+                        const id = Number(btnDl.dataset.id);
+                        const nombre = btnDl.getAttribute("data-nombre") || "";
+                        await this._descargarDocumentoAdjunto(id, nombre);
+                    }
+                    if (btnDel) {
+                        const id = Number(btnDel.dataset.id);
+                        await this._eliminarDocumento(id);
+                    }
+                });
+            }
+        }
+
+        _setEstadoDocumentos(modo, texto) {
+            const box = this._id("docContratoEstado");
+            const txt = this._id("docContratoEstadoTexto");
+            if (!box || !txt) return;
+
+            box.classList.remove("d-none", "is-ok", "is-error");
+            const icon = box.querySelector("i");
+
+            if (modo === "loading") {
+                if (icon) icon.className = "fa fa-spinner fa-spin";
+                txt.textContent = texto || "Generando contrato...";
+            } else if (modo === "ok") {
+                box.classList.add("is-ok");
+                if (icon) icon.className = "fa fa-check-circle";
+                txt.textContent = texto || "Contrato generado correctamente.";
+            } else if (modo === "error") {
+                box.classList.add("is-error");
+                if (icon) icon.className = "fa fa-exclamation-circle";
+                txt.textContent = texto || "No se pudo generar el contrato.";
+            } else {
+                box.classList.add("d-none");
+                return;
+            }
+        }
+
+        _bloquearBotonesDocumentos(bloquear) {
+            const btnWord = this._id("btnContratoWord");
+            if (btnWord) btnWord.disabled = !!bloquear;
+        }
+
+        async _descargarDocumentoAdjunto(id, nombre) {
+            if (!window.ContratosDocumentos?.descargarDocumentoContrato) {
+                if (typeof errorModal === "function") errorModal("Módulo de documentos no cargado.");
+                return;
+            }
+            this._setEstadoDocumentos("loading", "Descargando archivo...");
+            try {
+                await window.ContratosDocumentos.descargarDocumentoContrato(id, nombre);
+                this._setEstadoDocumentos("ok", "Descarga iniciada.");
+                setTimeout(() => this._setEstadoDocumentos("hide"), 2500);
+            } catch (e) {
+                console.error(e);
+                this._setEstadoDocumentos("error", e.message || "No se pudo descargar el archivo.");
+            }
+        }
+
+        async _generarDocumento() {
+            if (this.isSoloLectura()) return;
+            const id = this.getId();
+            const idTipo = this._toInt(window.jQuery(this._id("cmbTipoContrato")).val());
+
+            if (!window.ContratosDocumentos?.exportarContratoDocumento) {
+                if (typeof errorModal === "function") errorModal("Módulo de documentos no cargado.");
+                return;
+            }
+
+            const tabDoc = this._id("tabBtnDocContrato");
+            if (tabDoc && window.bootstrap?.Tab) {
+                bootstrap.Tab.getOrCreateInstance(tabDoc).show();
+            }
+
+            this._bloquearBotonesDocumentos(true);
+            this._setEstadoDocumentos("loading", "Generando contrato Word...");
+
+            try {
+                const generado = await window.ContratosDocumentos.exportarContratoDocumento({
+                    idContrato: id,
+                    idTipoContrato: idTipo,
+                    formato: "word",
+                    sinModalExito: true,
+                    onProgress: (txt) => this._setEstadoDocumentos("loading", txt)
+                });
+                const nuevoDocId = Number(generado?.id || 0);
+                await this._cargarDocumentosAdjuntos(nuevoDocId);
+                this._setEstadoDocumentos("ok", "Contrato generado y adjuntado. Podés descargarlo desde la lista.");
+                setTimeout(() => this._setEstadoDocumentos("hide"), 4000);
+            } catch (e) {
+                console.error(e);
+                this._setEstadoDocumentos("error", e.message || "No se pudo generar el documento. Verifique la plantilla .docx.");
+            } finally {
+                this.habilitarSeccionDocumentos(!this.isSoloLectura() && this.getId() > 0);
+            }
+        }
+
+        async _cargarDocumentosAdjuntos(idDestacar) {
+            const $lista = window.jQuery(this._id("listaDocsContrato"));
+            if (!$lista.length || !window.ContratosDocumentos?.cargarListaDocumentosContrato) return;
+            await window.ContratosDocumentos.cargarListaDocumentosContrato(this.getId(), $lista, idDestacar);
+        }
+
+        async _eliminarDocumento(id) {
+            const ok = typeof confirmarModal === "function"
+                ? await confirmarModal("¿Eliminar este documento adjunto?")
+                : window.confirm("¿Eliminar documento?");
+            if (!ok) return;
+
+            const r = await fetch(`/ContratosDocumentos/Eliminar?id=${id}`, {
+                method: "DELETE",
+                headers: this._headers(false)
+            });
+            const res = await r.json();
+            if (res.valor) {
+                if (typeof exitoModal === "function") exitoModal(res.mensaje || "Documento eliminado.");
+                await this._cargarDocumentosAdjuntos();
+            } else if (typeof errorModal === "function") {
+                errorModal(res.mensaje || "No se pudo eliminar.");
+            }
         }
 
         _bindRenovacionesEvents() {
@@ -451,6 +647,7 @@
             window.jQuery(this._id("cmbClienteContrato")).val(String(d.IdCliente)).trigger("change");
             await this._onClienteChange();
             window.jQuery(this._id("cmbEstablecimientoContrato")).val(String(d.IdEstablecimiento)).trigger("change");
+            await this._cargarTiposContrato(d.IdTipoContrato || d.idTipoContrato || null);
 
             this._id("txtFechaContrato").value = this._fechaInput(d.FechaContrato);
             this._id("txtFechaInicioContrato").value = this._fechaInput(d.FechaInicio);
@@ -459,6 +656,8 @@
             this._setAuditoria(d);
             this.actualizarBadgeContrato();
             await this._cargarRenovaciones();
+            await this._cargarDocumentosAdjuntos();
+            this.habilitarSeccionDocumentos(id > 0);
             this._aplicarSoloLectura(soloLectura);
             this.cerrarErrorCampos();
             this.bsModal.show();
@@ -512,6 +711,33 @@
             if (elNombre) elNombre.textContent = nombre;
 
             this.habilitarSeccionRenovaciones(id > 0);
+            this.habilitarSeccionDocumentos(id > 0);
+        }
+
+        habilitarSeccionDocumentos(habilitar) {
+            const section = this._id("sectionDocContrato");
+            const hint = this._id("docContratoHint");
+            const btnW = this._id("btnContratoWord");
+            if (!section) return;
+
+            if (habilitar) {
+                section.classList.remove("rp-section-disabled");
+                if (hint) {
+                    hint.classList.add("success");
+                    hint.innerHTML = `<i class="fa fa-check-circle"></i> Generá el Word y queda adjunto al contrato en el servidor.`;
+                }
+            } else {
+                section.classList.add("rp-section-disabled");
+                if (hint) {
+                    hint.classList.remove("success");
+                    hint.innerHTML = `<i class="fa fa-info-circle"></i> Guardá el contrato para generar y adjuntar documentos.`;
+                }
+            }
+
+            const dis = this.isSoloLectura() || !habilitar;
+            if (btnW) btnW.disabled = dis;
+            const cmbTipo = this._id("cmbTipoContrato");
+            if (cmbTipo) cmbTipo.disabled = dis;
         }
 
         prepararRenovacionesNuevo() {
@@ -520,6 +746,8 @@
             this.limpiarFormRenovacion();
             this.renderListaRenovaciones();
             this.habilitarSeccionRenovaciones(false);
+            this.habilitarSeccionDocumentos(false);
+            this._cargarDocumentosAdjuntos();
         }
 
         habilitarSeccionRenovaciones(habilitar) {
@@ -563,17 +791,20 @@
             const btnGuardar = this._id("btnGuardarContrato");
             if (btnGuardar) btnGuardar.classList.toggle("d-none", dis);
 
-            ["cmbClienteContrato", "cmbEstablecimientoContrato", "txtFechaContrato", "txtFechaInicioContrato", "txtFechaVencContrato"].forEach(id => {
+            ["cmbClienteContrato", "cmbEstablecimientoContrato", "cmbTipoContrato", "txtFechaContrato", "txtFechaInicioContrato", "txtFechaVencContrato"].forEach(id => {
                 const el = this._id(id);
                 if (el) el.disabled = dis;
             });
 
             const btnCli = this._id("btnAgregarClienteContrato");
             const btnEst = this._id("btnAgregarEstablecimientoContrato");
+            const btnTipo = this._id("btnAgregarTipoContrato");
             if (btnCli) btnCli.disabled = dis;
             if (btnEst) btnEst.disabled = dis;
+            if (btnTipo) btnTipo.disabled = dis;
 
             this.bloquearControlesRenovaciones(dis || this.getId() <= 0);
+            this.habilitarSeccionDocumentos(!dis && this.getId() > 0);
         }
 
         _payload() {
@@ -581,6 +812,7 @@
                 Id: this.getId(),
                 IdCliente: this._toInt(window.jQuery(this._id("cmbClienteContrato")).val()),
                 IdEstablecimiento: this._toInt(window.jQuery(this._id("cmbEstablecimientoContrato")).val()),
+                IdTipoContrato: this._toInt(window.jQuery(this._id("cmbTipoContrato")).val()) || null,
                 FechaContrato: this._id("txtFechaContrato").value,
                 FechaInicio: this._id("txtFechaInicioContrato").value,
                 FechaVencimiento: this._id("txtFechaVencContrato").value
@@ -617,12 +849,29 @@
                 }
 
                 this.cerrarErrorCampos();
-                this.bsModal.hide();
+
+                if (esNuevo && res.id) {
+                    this._id("txtIdContrato").value = res.id;
+                    payload.Id = res.id;
+                    this._modeloActual = { ...payload, Id: res.id };
+                    this.habilitarSeccionRenovaciones(true);
+                    this.habilitarSeccionDocumentos(true);
+                    this._id("modalContratoLabel").textContent = `Editar contrato #${res.id}`;
+                    this._id("btnEliminarContrato").hidden = false;
+                    this._setTextoBotonPrincipal(false);
+                }
 
                 if (typeof exitoModal === "function") {
                     exitoModal(res.mensaje || (esNuevo
                         ? "Contrato registrado correctamente"
                         : "Contrato modificado correctamente"));
+                }
+
+                if (!esNuevo) {
+                    this.bsModal.hide();
+                } else {
+                    await this._cargarRenovaciones();
+                    await this._cargarDocumentosAdjuntos();
                 }
 
                 if (typeof this.options.onSaved === "function") {

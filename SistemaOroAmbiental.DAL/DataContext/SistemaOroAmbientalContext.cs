@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using SistemaOroAmbiental.Models;
 
 namespace SistemaOroAmbiental.DAL.DataContext;
@@ -10,6 +11,8 @@ public partial class SistemaOroAmbientalContext : DbContext
     public SistemaOroAmbientalContext()
     {
     }
+
+    private readonly IConfiguration _configuration;
 
     public SistemaOroAmbientalContext(DbContextOptions<SistemaOroAmbientalContext> options)
         : base(options)
@@ -58,7 +61,11 @@ public partial class SistemaOroAmbientalContext : DbContext
 
     public virtual DbSet<Contrato> Contratos { get; set; }
 
+    public virtual DbSet<ContratosDocumento> ContratosDocumentos { get; set; }
+
     public virtual DbSet<ContratosRenovacion> ContratosRenovaciones { get; set; }
+
+    public virtual DbSet<TiposContrato> TiposContratos { get; set; }
 
     public virtual DbSet<Cuenta> Cuentas { get; set; }
 
@@ -122,9 +129,15 @@ public partial class SistemaOroAmbientalContext : DbContext
 
     public virtual DbSet<UsuariosSucursal> UsuariosSucursales { get; set; }
 
+
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-#warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see http://go.microsoft.com/fwlink/?LinkId=723263.
-        => optionsBuilder.UseSqlServer("Server=DESKTOP-3MT5F5F; Database=Sistema_OroAmbiental; Integrated Security=true; Trusted_Connection=True; Encrypt=False");
+    {
+        if (!optionsBuilder.IsConfigured)
+        {
+            var connectionString = _configuration.GetConnectionString("SistemaDB");
+            optionsBuilder.UseSqlServer(connectionString);
+        }
+    }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -708,6 +721,39 @@ public partial class SistemaOroAmbientalContext : DbContext
                 .IsUnicode(false);
         });
 
+        modelBuilder.Entity<ContratosDocumento>(entity =>
+        {
+            entity.ToTable("Contratos_Documentos");
+
+            entity.Property(e => e.Extension)
+                .HasMaxLength(10)
+                .IsUnicode(false);
+            entity.Property(e => e.Formato)
+                .HasMaxLength(20)
+                .IsUnicode(false);
+            entity.Property(e => e.NombreArchivo)
+                .HasMaxLength(260)
+                .IsUnicode(false);
+            entity.Property(e => e.RutaRelativa)
+                .HasMaxLength(500)
+                .IsUnicode(false);
+            entity.Property(e => e.FechaUsuarioRegistra).HasColumnType("datetime");
+
+            entity.HasOne(d => d.IdContratoNavigation).WithMany(p => p.ContratosDocumentos)
+                .HasForeignKey(d => d.IdContrato)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_Contratos_Documentos_Contratos");
+
+            entity.HasOne(d => d.IdTipoContratoNavigation).WithMany(p => p.ContratosDocumentos)
+                .HasForeignKey(d => d.IdTipoContrato)
+                .HasConstraintName("FK_Contratos_Documentos_Tipos_Contratos");
+
+            entity.HasOne(d => d.IdUsuarioRegistraNavigation).WithMany()
+                .HasForeignKey(d => d.IdUsuarioRegistra)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_Contratos_Documentos_Usuarios");
+        });
+
         modelBuilder.Entity<Contrato>(entity =>
         {
             entity.Property(e => e.FechaContrato).HasColumnType("date");
@@ -715,6 +761,10 @@ public partial class SistemaOroAmbientalContext : DbContext
             entity.Property(e => e.FechaUsuarioModifica).HasColumnType("datetime");
             entity.Property(e => e.FechaUsuarioRegistra).HasColumnType("datetime");
             entity.Property(e => e.FechaVencimiento).HasColumnType("date");
+
+            entity.HasOne(d => d.IdTipoContratoNavigation).WithMany(p => p.Contratos)
+                .HasForeignKey(d => d.IdTipoContrato)
+                .HasConstraintName("FK_Contratos_Tipos_Contratos");
 
             entity.HasOne(d => d.IdClienteNavigation).WithMany(p => p.Contratos)
                 .HasForeignKey(d => d.IdCliente)
@@ -734,6 +784,15 @@ public partial class SistemaOroAmbientalContext : DbContext
                 .HasForeignKey(d => d.IdUsuarioRegistra)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_ContratosUsuariosIdUsuarioRegistra");
+        });
+
+        modelBuilder.Entity<TiposContrato>(entity =>
+        {
+            entity.ToTable("Tipos_Contratos");
+
+            entity.Property(e => e.Nombre)
+                .HasMaxLength(100)
+                .IsUnicode(false);
         });
 
         modelBuilder.Entity<ContratosRenovacion>(entity =>

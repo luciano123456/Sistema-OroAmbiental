@@ -615,7 +615,7 @@ async function cargarContratosPlantillasUI() {
     lblVacio?.setAttribute("hidden", "hidden");
 
     // 2) estado de plantillas en servidor
-    const plantillas = await fetch(`/Contratos/Lista`, {
+    const plantillas = await fetch(`/ContratosPlantillas/Lista`, {
         headers: {
             'Authorization': 'Bearer ' + token,
             'Content-Type': 'application/json'
@@ -698,7 +698,7 @@ async function subirPlantillaContrato(idTipoContrato) {
         const fd = new FormData();
         fd.append("file", file);
 
-        const r = await fetch(`/Contratos/Subir?idTipoContrato=${idTipoContrato}`, {
+        const r = await fetch(`/ContratosPlantillas/Subir?idTipoContrato=${idTipoContrato}`, {
             method: "POST",
             headers: { 'Authorization': 'Bearer ' + token },
             body: fd
@@ -720,7 +720,7 @@ async function subirPlantillaContrato(idTipoContrato) {
 
 async function descargarPlantillaContrato(idTipoContrato, nombreTipo) {
     try {
-        const r = await fetch(`/Contratos/Descargar?idTipoContrato=${idTipoContrato}&nombre=${encodeURIComponent(nombreTipo)}`, {
+        const r = await fetch(`/ContratosPlantillas/Descargar?idTipoContrato=${idTipoContrato}&nombre=${encodeURIComponent(nombreTipo)}`, {
             method: "GET",
             headers: { 'Authorization': 'Bearer ' + token }
         });
@@ -751,7 +751,7 @@ async function eliminarPlantillaContrato(idTipoContrato) {
     if (!ok) return;
 
     try {
-        const r = await fetch(`/Contratos/Eliminar?idTipoContrato=${idTipoContrato}`, {
+        const r = await fetch(`/ContratosPlantillas/Eliminar?idTipoContrato=${idTipoContrato}`, {
             method: "DELETE",
             headers: {
                 'Authorization': 'Bearer ' + token,

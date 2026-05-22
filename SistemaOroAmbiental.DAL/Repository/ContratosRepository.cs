@@ -20,6 +20,7 @@ namespace SistemaOroAmbiental.DAL.Repository
                 .Include(x => x.IdClienteNavigation)
                     .ThenInclude(c => c.IdSucursalNavigation)
                 .Include(x => x.IdEstablecimientoNavigation)
+                .Include(x => x.IdTipoContratoNavigation)
                 .AsQueryable();
 
             if (idCliente.HasValue && idCliente > 0)
@@ -52,6 +53,7 @@ namespace SistemaOroAmbiental.DAL.Repository
                 .Include(x => x.IdClienteNavigation)
                     .ThenInclude(c => c.IdSucursalNavigation)
                 .Include(x => x.IdEstablecimientoNavigation)
+                .Include(x => x.IdTipoContratoNavigation)
                 .Include(x => x.IdUsuarioRegistraNavigation)
                 .Include(x => x.IdUsuarioModificaNavigation)
                 .OrderByDescending(x => x.FechaContrato)
@@ -65,6 +67,20 @@ namespace SistemaOroAmbiental.DAL.Repository
                 .Include(x => x.IdClienteNavigation)
                     .ThenInclude(c => c.IdSucursalNavigation)
                 .Include(x => x.IdEstablecimientoNavigation)
+                    .ThenInclude(e => e.IdProvinciaNavigation)
+                .Include(x => x.IdEstablecimientoNavigation)
+                    .ThenInclude(e => e.IdDiaRecoleccionNavigation)
+                .Include(x => x.IdEstablecimientoNavigation)
+                    .ThenInclude(e => e.IdSemanaRecoleccionNavigation)
+                .Include(x => x.IdEstablecimientoNavigation)
+                    .ThenInclude(e => e.IdCondicionIvaNavigation)
+                .Include(x => x.IdClienteNavigation)
+                    .ThenInclude(c => c.IdProvinciaNavigation)
+                .Include(x => x.IdClienteNavigation)
+                    .ThenInclude(c => c.IdCondicionIvaNavigation)
+                .Include(x => x.IdClienteNavigation)
+                    .ThenInclude(c => c.IdProfesionNavigation)
+                .Include(x => x.IdTipoContratoNavigation)
                 .Include(x => x.IdUsuarioRegistraNavigation)
                 .Include(x => x.IdUsuarioModificaNavigation)
                 .FirstOrDefaultAsync(x => x.Id == id);
@@ -108,6 +124,7 @@ namespace SistemaOroAmbiental.DAL.Repository
 
                 entity.IdCliente = model.IdCliente;
                 entity.IdEstablecimiento = model.IdEstablecimiento;
+                entity.IdTipoContrato = model.IdTipoContrato;
                 entity.FechaContrato = model.FechaContrato;
                 entity.FechaInicio = model.FechaInicio;
                 entity.FechaVencimiento = model.FechaVencimiento;
