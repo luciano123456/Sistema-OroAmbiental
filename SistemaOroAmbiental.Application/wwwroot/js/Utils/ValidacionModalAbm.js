@@ -277,6 +277,14 @@
             });
         }
 
+        /** Panel verde solo tras intento de guardar o haber visto el panel rojo de requeridos */
+        _puedeMostrarPanelExito() {
+            if (this._submitIntento) return true;
+            if (this._errorVisible) return true;
+            const panel = this.getPanel();
+            return !!panel && this._panelErrorActivo(panel);
+        }
+
         _verificarPanelEstado() {
             if (this.isSoloLectura()) return;
 
@@ -291,7 +299,7 @@
                 if (this._exitoVisible || this._panelExitoActivo(panel)) {
                     this._ocultarPanelExito();
                 }
-            } else if (todosOk && huboInteraccion) {
+            } else if (todosOk && huboInteraccion && this._puedeMostrarPanelExito()) {
                 if (this._errorVisible || this._panelErrorActivo(panel)) {
                     this._ocultarPanelError();
                 }
@@ -357,6 +365,13 @@
 
             this._exitoVisible = true;
             this._exitoMostradoEnSesion = true;
+
+            this._getCamposLista().forEach(c => {
+                const el = this._getEl(this._idCampo(c));
+                if (el && this.esCampoValido(el)) {
+                    this._aplicarEstado(el, true, true);
+                }
+            });
 
             const msgEl = panel.querySelector(".rp-error-message");
 

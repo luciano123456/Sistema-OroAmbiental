@@ -21,6 +21,103 @@ if (document.readyState === "loading") {
     aplicarTextosModalesEstaticos();
 }
 
+const RP_MODALES_FEEDBACK = new Set(["exitoModal", "errorModal", "AdvertenciaModal", "modalConfirmar"]);
+const RP_MODAL_Z_BASE = 10000056;
+const RP_MODAL_Z_MIN_FEEDBACK = 10000090;
+const RP_MODAL_Z_STEP = 20;
+
+/** Mayor z-index entre modales visibles (p. ej. contratos a 10000056+). */
+function rpZIndexMaximoModalAbierto(excluirId = null) {
+    let max = 10000055;
+    document.querySelectorAll(".modal.show").forEach(m => {
+        if (excluirId && m.id === excluirId) return;
+        const z = parseInt(window.getComputedStyle(m).zIndex, 10);
+        if (!isNaN(z) && z > max) max = z;
+    });
+    return max;
+}
+
+function rpZIndexFeedback(modalEl) {
+    const sobreAbiertos = rpZIndexMaximoModalAbierto(modalEl?.id) + RP_MODAL_Z_STEP;
+    return Math.max(RP_MODAL_Z_MIN_FEEDBACK, sobreAbiertos);
+}
+
+function rpElevarBackdropModal(zIndex) {
+    requestAnimationFrame(() => {
+        const backdrops = document.querySelectorAll(".modal-backdrop");
+        const bd = backdrops[backdrops.length - 1];
+        if (bd) bd.style.setProperty("z-index", String(zIndex - 1), "important");
+    });
+}
+
+/**
+ * Tras cerrar éxito/error/confirmación encima de otro modal, Bootstrap a veces deja
+ * backdrops de más o body.modal-open mal — la pantalla queda oscura sin motivo.
+ */
+function rpSincronizarEstadoModales() {
+    const modales = Array.from(document.querySelectorAll(".modal.show"));
+    let backdrops = Array.from(document.querySelectorAll(".modal-backdrop"));
+
+    while (backdrops.length > modales.length) {
+        backdrops[backdrops.length - 1].remove();
+        backdrops = Array.from(document.querySelectorAll(".modal-backdrop"));
+    }
+
+    if (modales.length > 0) {
+        document.body.classList.add("modal-open");
+        const topModal = modales[modales.length - 1];
+        const z = parseInt(window.getComputedStyle(topModal).zIndex, 10);
+        if (!isNaN(z)) {
+            rpElevarBackdropModal(z);
+        }
+        return;
+    }
+
+    document.body.classList.remove("modal-open");
+    document.body.style.removeProperty("overflow");
+    document.body.style.removeProperty("padding-right");
+    document.querySelectorAll(".modal-backdrop").forEach(b => b.remove());
+}
+
+const _rpModalAutoCloseTimers = {};
+
+function rpElevarModalFeedback(modalEl) {
+    if (!modalEl) return;
+    const z = rpZIndexFeedback(modalEl);
+    modalEl.style.setProperty("z-index", String(z), "important");
+    rpElevarBackdropModal(z);
+}
+
+/** Apila modales de edición; los de feedback quedan siempre encima. */
+if (!window._rpModalStackInit) {
+    window._rpModalStackInit = true;
+
+    document.addEventListener("show.bs.modal", (event) => {
+        const el = event.target;
+        if (!(el instanceof HTMLElement) || !el.classList.contains("modal")) return;
+
+        if (RP_MODALES_FEEDBACK.has(el.id)) {
+            rpElevarModalFeedback(el);
+            return;
+        }
+
+        const modalesAbiertos = document.querySelectorAll(".modal.show").length;
+        const zIndex = RP_MODAL_Z_BASE + (10 * modalesAbiertos);
+        el.style.setProperty("z-index", String(zIndex), "important");
+        rpElevarBackdropModal(zIndex);
+    });
+
+    document.addEventListener("hidden.bs.modal", (event) => {
+        if (!(event.target instanceof HTMLElement) || !event.target.classList.contains("modal")) {
+            return;
+        }
+        requestAnimationFrame(() => {
+            rpSincronizarEstadoModales();
+            requestAnimationFrame(rpSincronizarEstadoModales);
+        });
+    });
+}
+
 async function MakeAjax(options) {
     return $.ajax({
         type: options.type,
@@ -65,13 +162,68 @@ function formatNumber(number) {
 
 
 
-function mostrarModalConContador(modal, texto, tiempo) {
-    $(`#${modal}Text`).text(texto);
-    $(`#${modal}`).modal('show');
+function mostrarModalConContador(modalId, texto, tiempo) {
+    const el = document.getElementById(modalId);
+    if (!el) return;
 
-    setTimeout(function () {
-        $(`#${modal}`).modal('hide');
-    }, tiempo);
+    const textEl = document.getElementById(`${modalId}Text`);
+    if (textEl) textEl.textContent = texto;
+
+    if (_rpModalAutoCloseTimers[modalId]) {
+        clearTimeout(_rpModalAutoCloseTimers[modalId]);
+        _rpModalAutoCloseTimers[modalId] = null;
+    }
+
+    const cancelarTimerAutoCierre = () => {
+        if (_rpModalAutoCloseTimers[modalId]) {
+            clearTimeout(_rpModalAutoCloseTimers[modalId]);
+            _rpModalAutoCloseTimers[modalId] = null;
+        }
+    };
+
+    const programarAutoCierre = (cerrarFn) => {
+        cancelarTimerAutoCierre();
+        _rpModalAutoCloseTimers[modalId] = setTimeout(() => {
+            _rpModalAutoCloseTimers[modalId] = null;
+            if (el.classList.contains("show")) {
+                cerrarFn();
+            }
+        }, tiempo);
+    };
+
+    el.addEventListener("hidden.bs.modal", () => {
+        cancelarTimerAutoCierre();
+        requestAnimationFrame(() => {
+            rpSincronizarEstadoModales();
+            requestAnimationFrame(rpSincronizarEstadoModales);
+        });
+    }, { once: true });
+
+    const abrir = () => {
+        rpElevarModalFeedback(el);
+
+        if (window.bootstrap?.Modal) {
+            const inst = bootstrap.Modal.getOrCreateInstance(el);
+            el.addEventListener("shown.bs.modal", () => rpElevarModalFeedback(el), { once: true });
+            inst.show();
+            programarAutoCierre(() => {
+                if (el.classList.contains("show")) {
+                    inst.hide();
+                }
+            });
+        } else if (window.jQuery) {
+            const $el = window.jQuery(el);
+            $el.one("shown.bs.modal", () => rpElevarModalFeedback(el));
+            $el.modal("show");
+            programarAutoCierre(() => {
+                if (el.classList.contains("show")) {
+                    $el.modal("hide");
+                }
+            });
+        }
+    };
+
+    abrir();
 }
 
 function exitoModal(texto) {
@@ -221,14 +373,38 @@ function toggleAcciones(id) {
 
 
 
+function _formatearFechaNativa(fecha, paraVista) {
+    if (fecha == null || fecha === "") return "";
+
+    const s = String(fecha).trim();
+    const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (iso) {
+        return paraVista ? `${iso[3]}/${iso[2]}/${iso[1]}` : `${iso[1]}-${iso[2]}-${iso[3]}`;
+    }
+
+    const d = new Date(fecha);
+    if (Number.isNaN(d.getTime())) return s;
+
+    const dd = String(d.getDate()).padStart(2, "0");
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const yyyy = d.getFullYear();
+    return paraVista ? `${dd}/${mm}/${yyyy}` : `${yyyy}-${mm}-${dd}`;
+}
+
 function formatearFechaParaInput(fecha) {
-    const m = moment(fecha, [moment.ISO_8601, 'YYYY-MM-DD HH:mm:ss', 'YYYY-MM-DD']);
-    return m.isValid() ? m.format('YYYY-MM-DD') : '';
+    if (typeof moment !== "undefined") {
+        const m = moment(fecha, [moment.ISO_8601, "YYYY-MM-DD HH:mm:ss", "YYYY-MM-DD"]);
+        return m.isValid() ? m.format("YYYY-MM-DD") : "";
+    }
+    return _formatearFechaNativa(fecha, false);
 }
 
 function formatearFechaParaVista(fecha) {
-    const m = moment(fecha, [moment.ISO_8601, 'YYYY-MM-DD HH:mm:ss', 'YYYY-MM-DD']);
-    return m.isValid() ? m.format('DD/MM/YYYY') : '';
+    if (typeof moment !== "undefined") {
+        const m = moment(fecha, [moment.ISO_8601, "YYYY-MM-DD HH:mm:ss", "YYYY-MM-DD"]);
+        return m.isValid() ? m.format("DD/MM/YYYY") : "";
+    }
+    return _formatearFechaNativa(fecha, true);
 }
 
 function formatearMilesInput(input) {
@@ -634,88 +810,30 @@ function cerrarErrorCampos() {
 function mostrarErrorCampos(
     mensaje,
     idReferencia = null,
-    tipo = "validacion" // validacion | duplicado | relacion | error
+    tipo = "validacion", // validacion | duplicado | relacion | error
+    handlerVerFicha = null
 ) {
-
     const container = document.getElementById("errorCampos");
     if (!container) return;
 
-    /* =========================
-       CONFIG SEGÚN TIPO
-    ========================= */
+    const handler = handlerVerFicha || window.rpVerFichaHandlerDefault || "verFicha";
 
-    let titulo = "";
-    let icono = "fa-exclamation-triangle";
-
-    switch (tipo) {
-
-        case "duplicado":
-            titulo = "Registro duplicado detectado";
-            break;
-
-        case "relacion":
-            titulo = "No se puede eliminar";
-            icono = "fa-link";
-            break;
-
-        case "error":
-            titulo = "No se pudo guardar";
-            icono = "fa-times-circle";
-            break;
-
-        default:
-            titulo = "Campos requeridos";
-            icono = "fa-exclamation-circle";
-            break;
+    if (window.RpVerFicha?.renderErrorCampos) {
+        window.RpVerFicha.renderErrorCampos(container, mensaje, idReferencia, tipo, handler);
+        return;
     }
 
-    /* =========================
-       BOTON REFERENCIA
-    ========================= */
-
-    let botonReferencia = "";
-
-    if (idReferencia) {
-        botonReferencia = `
-            <button class="rp-btn-ref"
-                onclick="verFicha(${idReferencia})">
-                <i class="fa fa-eye me-1"></i>
-                Abrir ficha existente →
-            </button>`;
-    }
-
-    /* =========================
-       RENDER
-    ========================= */
-
+    const { titulo, icono } = { titulo: "Campos requeridos", icono: "fa-exclamation-circle" };
     container.innerHTML = `
         <div class="rp-error-box">
-
-            <div class="rp-error-icon">
-                <i class="fa ${icono}"></i>
-            </div>
-
+            <div class="rp-error-icon"><i class="fa ${icono}"></i></div>
             <div class="rp-error-content">
-                <div class="rp-error-title">
-                    ${titulo}
-                </div>
-
-                <div class="rp-error-text">
-                    ${mensaje}
-                </div>
+                <div class="rp-error-title">${titulo}</div>
+                <div class="rp-error-text">${mensaje}</div>
             </div>
-
-            ${botonReferencia}
-
-        </div>
-    `;
-
+        </div>`;
     container.classList.remove("d-none");
-
-    container.scrollIntoView({
-        behavior: "smooth",
-        block: "center"
-    });
+    container.scrollIntoView({ behavior: "smooth", block: "center" });
 }
 
 
@@ -851,10 +969,11 @@ function tienePermiso() {
 ========================================================= */
 
 document.addEventListener("click", async (e) => {
-    const btn = e.target.closest(".rp-btn-plus[data-config-controller]");
+    const btn = e.target.closest(".rp-btn-plus[data-config-controller], .vn-btn-plus[data-config-controller]");
     if (!btn || btn.disabled) return;
 
     e.preventDefault();
+    window._rpUltimoAtajoConfigBtn = btn;
 
     const modalPadre = btn.closest(".modal");
     if (modalPadre?.getAttribute("data-sololectura") === "1") return;

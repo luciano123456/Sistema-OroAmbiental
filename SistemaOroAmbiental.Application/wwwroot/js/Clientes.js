@@ -20,17 +20,15 @@ $(document).ready(() => {
         return;
     }
 
-    clienteModal = new ClienteModal(modalEl, {
-        token: token,
-        onSaved: async () => { await listaClientes(); },
-        onDeleted: async () => { await listaClientes(); }
-    });
+    clienteModal = typeof initClienteModal === "function"
+        ? initClienteModal({
+            token: token,
+            onSaved: async () => { await listaClientes(); },
+            onDeleted: async () => { await listaClientes(); }
+        })
+        : null;
 
-    window.verCliente = (id) => clienteModal.abrirVer(id);
-    window.editarCliente = (id) => clienteModal.abrirEditar(id);
-    window.eliminarCliente = (id) => clienteModal.eliminar(id);
-    window.verFicha = (id) => clienteModal.abrirVer(id);
-    window.nuevoCliente = () => clienteModal.abrirNuevo();
+    if (!clienteModal) return;
 
     $(document)
         .off("click.select2fix.clientes")

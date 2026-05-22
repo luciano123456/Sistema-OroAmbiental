@@ -34,6 +34,15 @@ namespace SistemaOroAmbiental.DAL.Repository
             decimal importe,
             int idUsuario);
 
+        Task<bool> RegistrarCobroSinTransaccion(
+            int idCliente,
+            int idCuenta,
+            DateTime fecha,
+            string concepto,
+            decimal importe,
+            int idUsuario,
+            int? idEntrega = null);
+
         Task<bool> RegistrarAjuste(
             int idCliente,
             int? idCuenta,
@@ -44,5 +53,7 @@ namespace SistemaOroAmbiental.DAL.Repository
             int idUsuario);
 
         Task<bool> Eliminar(int idMovimiento);
+
+        Task<bool> EliminarSinTransaccion(int idMovimiento);
     }
 }

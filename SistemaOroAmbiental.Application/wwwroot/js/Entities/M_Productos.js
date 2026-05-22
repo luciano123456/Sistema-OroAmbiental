@@ -472,6 +472,7 @@
         }
 
         async abrirVer(id) {
+            this.cerrarErrorCampos();
             try {
                 this._ultimoModo = "ver";
                 const url = this._replaceUrl(this.options.endpoints.editar, { id });
@@ -858,6 +859,10 @@
         mostrarErrorCampos(mensaje, idReferencia = null, tipo = "validacion") {
             if (tipo === "validacion") this._validacion?.cancelarPanelExito?.();
             const container = this._id("errorCampos");
+            if (window.RpVerFicha?.renderErrorCampos) {
+                window.RpVerFicha.renderErrorCampos(container, mensaje, idReferencia, tipo, "verProducto");
+                return;
+            }
             if (!container) return;
 
             let titulo = "Campos requeridos";
@@ -869,8 +874,10 @@
 
             let botonReferencia = "";
             if (idReferencia) {
-                botonReferencia = `
-                    <button class="rp-btn-ref" onclick="verProducto(${idReferencia})">
+                botonReferencia = window.RpVerFicha?.botonHtml
+                    ? window.RpVerFicha.botonHtml(idReferencia, "verProducto")
+                    : `
+                    <button class="rp-btn-ref" data-rp-ver-ficha data-id="${idReferencia}" data-handler="verProducto">
                         <i class="fa fa-eye me-1"></i> Abrir ficha existente �??
                     </button>`;
             }
@@ -1004,13 +1011,19 @@
             Object.assign(window.productoModal.options, merged);
         }
 
+        const abrirVer = (id) => window.productoModal?.abrirVer?.(id);
+
         window.nuevoProducto = () => window.productoModal?.abrirNuevo?.();
-        window.verProducto = (id) => window.productoModal?.abrirVer?.(id);
+        window.verProducto = abrirVer;
         window.editarProducto = (id) => window.productoModal?.abrirEditar?.(id);
         window.eliminarProducto = (id) => window.productoModal?.eliminar?.(id);
-        window.verFicha = (id) => window.productoModal?.abrirVer?.(id);
+        window.verFicha = abrirVer;
         window.verHistorialCostoProducto = (id, nombre) =>
             window.productoModal?.abrirHistorialCostoPorId?.(id, nombre);
+
+        if (window.RpVerFicha?.registrar) {
+            window.RpVerFicha.registrar("verProducto", abrirVer);
+        }
 
         return window.productoModal;
     }

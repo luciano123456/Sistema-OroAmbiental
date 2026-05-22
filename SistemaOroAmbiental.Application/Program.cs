@@ -39,9 +39,6 @@ builder.Services.AddScoped<ILoginService, LoginService>();
 builder.Services.AddScoped<IUsuariosPermisosRepository, UsuariosPermisosRepository>();
 builder.Services.AddScoped<IUsuariosPermisosService, UsuariosPermisosService>();
 
-builder.Services.AddScoped<IRolesRepository<UsuariosRol>, RolesRepository>();
-builder.Services.AddScoped<IRolesService, RolesService>();
-
 builder.Services.AddScoped<IClientesRepository, ClientesRepository>();
 builder.Services.AddScoped<IClientesService, ClientesService>();
 
@@ -72,8 +69,8 @@ builder.Services.AddScoped<IDiasService, DiasService>();
 builder.Services.AddScoped<IEntregasEstadosRepository, EntregasEstadosRepository>();
 builder.Services.AddScoped<IEntregasEstadosService, EntregasEstadosService>();
 
-builder.Services.AddScoped<IEstadosUsuariosRepository, EstadosUsuariosRepository>();
-builder.Services.AddScoped<IEstadosUsuariosService, EstadosUsuariosService>();
+builder.Services.AddScoped<IUsuariosEstadosRepository, UsuariosEstadosRepository>();
+builder.Services.AddScoped<IUsuariosEstadosService, UsuariosEstadosService>();
 
 builder.Services.AddScoped<IProductosCategoriasRepository, ProductosCategoriasRepository>();
 builder.Services.AddScoped<IProductosCategoriasService, ProductosCategoriasService>();
@@ -92,9 +89,6 @@ builder.Services.AddScoped<IUnidadesMedidaService, UnidadesMedidaService>();
 
 builder.Services.AddScoped<IUsuariosRolesRepository, UsuariosRolesRepository>();
 builder.Services.AddScoped<IUsuariosRolesService, UsuariosRolesService>();
-
-builder.Services.AddScoped<IRolRepository, RolRepository>();
-builder.Services.AddScoped<IRolService, RolService>();
 
 builder.Services.AddScoped<IGastosCategoriasRepository, GastosCategoriasRepository>();
 builder.Services.AddScoped<IGastosCategoriasService, GastosCategoriasService>();
@@ -131,6 +125,15 @@ builder.Services.AddScoped<IInventarioService, InventarioService>();
 
 builder.Services.AddScoped<IComprasRepository, ComprasRepository>();
 builder.Services.AddScoped<IComprasService, ComprasService>();
+
+builder.Services.AddScoped<IContratosRepository, ContratosRepository>();
+builder.Services.AddScoped<IContratosService, ContratosService>();
+
+builder.Services.AddScoped<IContratosRenovacionesRepository, ContratosRenovacionesRepository>();
+builder.Services.AddScoped<IContratosRenovacionesService, ContratosRenovacionesService>();
+
+builder.Services.AddScoped<IClientesEntregasRepository, ClientesEntregasRepository>();
+builder.Services.AddScoped<IClientesEntregasService, ClientesEntregasService>();
 
 builder.Services.AddScoped<IGastosRepository, GastosRepository>();
 builder.Services.AddScoped<IGastosService, GastosService>();

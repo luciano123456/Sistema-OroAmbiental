@@ -8,6 +8,7 @@ namespace SistemaOroAmbiental.DAL.Repository
     {
         public const string TIPO_COBRO_CLIENTE = "COBRO CLIENTE";
         public const string TIPO_AJUSTE_CLIENTE = "AJUSTE CLIENTE";
+        public const string TIPO_ENTREGA = "ENTREGA";
 
         private readonly SistemaOroAmbientalContext _db;
 
@@ -82,7 +83,7 @@ namespace SistemaOroAmbiental.DAL.Repository
             {
                 "PAGO" or "COBRO" => query.Where(x => x.TipoMovimiento == TIPO_COBRO_CLIENTE),
                 "AJUSTE" => query.Where(x => x.TipoMovimiento == TIPO_AJUSTE_CLIENTE),
-                "ENTREGA" => query.Where(x => x.TipoMovimiento == "ENTREGA"),
+                "ENTREGA" => query.Where(x => x.TipoMovimiento == TIPO_ENTREGA),
                 _ => query.Where(x => x.TipoMovimiento == tipoMovimiento)
             };
         }
@@ -240,63 +241,15 @@ namespace SistemaOroAmbiental.DAL.Repository
 
             try
             {
-                var cc = await ObtenerOCrearCuentaCorriente(idCliente);
-                var ahora = DateTime.Now;
+                var ok = await RegistrarCobroSinTransaccion(
+                    idCliente, idCuenta, fecha, concepto, importe, idUsuario, null);
 
-                var cobro = new ClientesCobro
+                if (!ok)
                 {
-                    IdCliente = idCliente,
-                    IdCuentaCorriente = cc.Id,
-                    IdCuenta = idCuenta,
-                    Fecha = fecha,
-                    Concepto = concepto,
-                    Importe = importe,
-                    IdUsuarioRegistra = idUsuario,
-                    FechaUsuarioRegistra = ahora
-                };
+                    await trx.RollbackAsync();
+                    return false;
+                }
 
-                _db.ClientesCobros.Add(cobro);
-                await _db.SaveChangesAsync();
-
-                var cajaSaldo = await ObtenerOCrearCajasSaldo(idCuenta);
-
-                var cajaMov = new CajasMovimiento
-                {
-                    IdCaja = cajaSaldo.Id,
-                    TipoMovimiento = TIPO_COBRO_CLIENTE,
-                    IdMovimiento = cobro.Id,
-                    Fecha = fecha,
-                    Concepto = $"Cobro cliente - {concepto}",
-                    Ingreso = importe,
-                    Egreso = 0,
-                    IdUsuarioRegistra = idUsuario,
-                    FechaUsuarioRegistra = ahora
-                };
-
-                _db.CajasMovimientos.Add(cajaMov);
-                cajaSaldo.Saldo += importe;
-
-                await _db.SaveChangesAsync();
-
-                cobro.IdMovCaja = cajaMov.Id;
-
-                var movCc = new ClientesCuentaCorrienteMovimiento
-                {
-                    IdCuentaCorriente = cc.Id,
-                    TipoMovimiento = TIPO_COBRO_CLIENTE,
-                    IdMovimiento = cobro.Id,
-                    Fecha = fecha,
-                    Concepto = concepto,
-                    Debe = 0,
-                    Haber = importe,
-                    IdUsuarioRegistra = idUsuario,
-                    FechaUsuarioRegistra = ahora
-                };
-
-                _db.ClientesCuentaCorrienteMovimientos.Add(movCc);
-                cc.Saldo -= importe;
-
-                await _db.SaveChangesAsync();
                 await trx.CommitAsync();
                 return true;
             }
@@ -305,6 +258,79 @@ namespace SistemaOroAmbiental.DAL.Repository
                 await trx.RollbackAsync();
                 return false;
             }
+        }
+
+        public async Task<bool> RegistrarCobroSinTransaccion(
+            int idCliente,
+            int idCuenta,
+            DateTime fecha,
+            string concepto,
+            decimal importe,
+            int idUsuario,
+            int? idEntrega = null)
+        {
+            if (importe <= 0)
+                return false;
+
+            var cc = await ObtenerOCrearCuentaCorriente(idCliente);
+            var ahora = DateTime.Now;
+
+            var cobro = new ClientesCobro
+            {
+                IdCliente = idCliente,
+                IdCuentaCorriente = cc.Id,
+                IdEntrega = idEntrega,
+                IdCuenta = idCuenta,
+                Fecha = fecha,
+                Concepto = concepto,
+                Importe = importe,
+                IdUsuarioRegistra = idUsuario,
+                FechaUsuarioRegistra = ahora
+            };
+
+            _db.ClientesCobros.Add(cobro);
+            await _db.SaveChangesAsync();
+
+            var cajaSaldo = await ObtenerOCrearCajasSaldo(idCuenta);
+
+            var cajaMov = new CajasMovimiento
+            {
+                IdCaja = cajaSaldo.Id,
+                TipoMovimiento = TIPO_COBRO_CLIENTE,
+                IdMovimiento = cobro.Id,
+                Fecha = fecha,
+                Concepto = $"Cobro cliente - {concepto}",
+                Ingreso = importe,
+                Egreso = 0,
+                IdUsuarioRegistra = idUsuario,
+                FechaUsuarioRegistra = ahora
+            };
+
+            _db.CajasMovimientos.Add(cajaMov);
+            cajaSaldo.Saldo += importe;
+
+            await _db.SaveChangesAsync();
+
+            cobro.IdMovCaja = cajaMov.Id;
+
+            var movCc = new ClientesCuentaCorrienteMovimiento
+            {
+                IdCuentaCorriente = cc.Id,
+                TipoMovimiento = TIPO_COBRO_CLIENTE,
+                IdMovimiento = cobro.Id,
+                Fecha = fecha,
+                Concepto = concepto,
+                Debe = 0,
+                Haber = importe,
+                IdUsuarioRegistra = idUsuario,
+                FechaUsuarioRegistra = ahora
+            };
+
+            _db.ClientesCuentaCorrienteMovimientos.Add(movCc);
+            cc.Saldo -= importe;
+
+            await _db.SaveChangesAsync();
+            return true;
         }
 
         public async Task<bool> RegistrarAjuste(
@@ -384,6 +410,27 @@ namespace SistemaOroAmbiental.DAL.Repository
 
             try
             {
+                var ok = await EliminarSinTransaccion(idMovimiento);
+                if (!ok)
+                {
+                    await trx.RollbackAsync();
+                    return false;
+                }
+
+                await trx.CommitAsync();
+                return true;
+            }
+            catch
+            {
+                await trx.RollbackAsync();
+                return false;
+            }
+        }
+
+        public async Task<bool> EliminarSinTransaccion(int idMovimiento)
+        {
+            try
+            {
                 var mov = await _db.ClientesCuentaCorrienteMovimientos
                     .Include(x => x.IdCuentaCorrienteNavigation)
                     .FirstOrDefaultAsync(x => x.Id == idMovimiento);
@@ -440,12 +487,10 @@ namespace SistemaOroAmbiental.DAL.Repository
                 _db.ClientesCuentaCorrienteMovimientos.Remove(mov);
 
                 await _db.SaveChangesAsync();
-                await trx.CommitAsync();
                 return true;
             }
             catch
             {
-                await trx.RollbackAsync();
                 return false;
             }
         }

@@ -10,7 +10,6 @@
   <ItemGroup>
     <Content Remove="wwwroot\css\NavBarLogin.css~RF1f800e21.TMP" />
     <Content Remove="wwwroot\js\Clientes.js" />
-    <Content Remove="wwwroot\js\CurrencyWidget.js" />
     <Content Remove="wwwroot\js\Dashboard.js" />
     <Content Remove="wwwroot\js\Home.js" />
     <Content Remove="wwwroot\js\Login.js" />
@@ -27,7 +26,6 @@
     <None Include="wwwroot\js\Permisos.js" />
     <None Include="wwwroot\js\Login.js" />
     <None Include="wwwroot\js\Clientes.js" />
-    <None Include="wwwroot\js\CurrencyWidget.js" />
     <None Include="wwwroot\js\UsuariosConfiguracion.js" />
     <None Include="wwwroot\js\Usuarios.js" />
     <None Include="wwwroot\js\NavBarLogin.js" />

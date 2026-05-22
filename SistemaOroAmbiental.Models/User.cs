@@ -107,9 +107,9 @@ public partial class User
 
     public virtual ICollection<Gasto> GastoIdUsuarioRegistraNavigations { get; set; } = new List<Gasto>();
 
-    public virtual EstadosUsuario IdEstadoNavigation { get; set; } = null!;
+    public virtual UsuariosEstado IdEstadoNavigation { get; set; } = null!;
 
-    public virtual Rol IdRolNavigation { get; set; } = null!;
+    public virtual UsuariosRol IdRolNavigation { get; set; } = null!;
 
     public virtual ICollection<InventarioMovimiento> InventarioMovimientoIdUsuarioModificaNavigations { get; set; } = new List<InventarioMovimiento>();
 

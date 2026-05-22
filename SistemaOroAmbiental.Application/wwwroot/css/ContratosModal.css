@@ -1,0 +1,409 @@
+/* Modal Contratos — tabs y sub-sección renovaciones */
+[data-contrato-modal] {
+    --ctr-accent: #8b5cf6;
+    --ctr-accent-soft: rgba(139, 92, 246, 0.14);
+    --ctr-success: #6ee7b7;
+    --ctr-line: rgba(255, 255, 255, 0.1);
+    --ctr-panel: rgba(255, 255, 255, 0.03);
+    --ctr-muted: #9aa4b2;
+}
+
+[data-contrato-modal] .modal-content.rp-modal-shell {
+    background: radial-gradient(circle at top right, rgba(139, 92, 246, 0.12), transparent 28%),
+        linear-gradient(180deg, #0d1630 0%, #091123 100%);
+    border: 1px solid var(--ctr-line);
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+}
+
+[data-contrato-modal] .rp-modal-header,
+[data-contrato-modal] .modal-header.colorEncabezado {
+    border-bottom: 1px solid var(--ctr-line);
+    padding: 16px 20px;
+}
+
+[data-contrato-modal] .rp-modal-title-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+[data-contrato-modal] .rp-modal-subtitle {
+    color: #c1c9df;
+    opacity: 0.85;
+    font-size: 0.85rem;
+}
+
+[data-contrato-modal] .modal-body {
+    padding: 18px 20px 20px;
+}
+
+/* Panel validación / error */
+[data-contrato-modal] #errorCamposContrato.rp-error-panel {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px 16px;
+    border-radius: 12px;
+    border: 1px solid rgba(248, 113, 113, 0.45);
+    background: linear-gradient(135deg, rgba(220, 53, 69, 0.18), rgba(220, 53, 69, 0.08));
+}
+
+[data-contrato-modal] #errorCamposContrato.rp-error-panel.rp-panel-exito {
+    border-color: rgba(72, 220, 130, 0.45);
+    background: linear-gradient(135deg, rgba(46, 204, 113, 0.14), rgba(46, 204, 113, 0.06));
+}
+
+[data-contrato-modal] #errorCamposContrato.rp-error-panel.d-none {
+    display: none !important;
+}
+
+[data-contrato-modal] #errorCamposContrato.rp-error-panel .rp-error-icon {
+    color: #f87171;
+    flex-shrink: 0;
+    width: 28px;
+    text-align: center;
+    font-size: 1.15rem;
+    margin-top: 2px;
+}
+
+[data-contrato-modal] #errorCamposContrato.rp-error-panel.rp-panel-exito .rp-error-icon {
+    color: #5dffb0;
+}
+
+[data-contrato-modal] #errorCamposContrato.rp-error-panel .rp-error-content {
+    flex: 1;
+    min-width: 0;
+}
+
+[data-contrato-modal] #errorCamposContrato.rp-error-panel .rp-error-title {
+    color: #fecaca;
+    font-weight: 700;
+}
+
+[data-contrato-modal] #errorCamposContrato.rp-error-panel.rp-panel-exito .rp-error-title {
+    color: #9ef5c8;
+}
+
+[data-contrato-modal] #errorCamposContrato.rp-error-panel .rp-error-message {
+    color: #fde8e8;
+    font-size: 14px;
+}
+
+[data-contrato-modal] #errorCamposContrato.rp-error-panel .rp-error-close {
+    flex-shrink: 0;
+    align-self: center;
+    width: 30px;
+    height: 30px;
+    margin: 0;
+    padding: 0;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.2);
+    color: #b8c4d8;
+    font-size: 14px;
+    line-height: 1;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.85;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+[data-contrato-modal] #errorCamposContrato.rp-error-panel .rp-error-close:hover {
+    opacity: 1;
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.28);
+    background: rgba(255, 255, 255, 0.1);
+}
+
+[data-contrato-modal] #errorCamposContrato.rp-error-panel.rp-panel-exito .rp-error-close {
+    display: none;
+}
+
+[data-contrato-modal] .invalid-feedback {
+    display: none;
+    color: #f87171;
+    font-size: 12px;
+    margin-top: 4px;
+}
+
+[data-contrato-modal] .invalid-feedback:not(.d-none) {
+    display: block;
+}
+
+[data-contrato-modal] .rp-tabs-shell {
+    margin-bottom: 4px;
+}
+
+[data-contrato-modal] .rp-section-disabled {
+    opacity: 0.55;
+    pointer-events: none;
+    filter: grayscale(0.12);
+}
+
+[data-contrato-modal] .rp-sub-page {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+[data-contrato-modal] .rp-sub-hero {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    padding: 16px 18px;
+    border-radius: 16px;
+    border: 1px solid var(--ctr-line);
+    background: var(--ctr-panel);
+}
+
+[data-contrato-modal] .rp-sub-hero-name {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #eaf1ff;
+}
+
+[data-contrato-modal] .rp-sub-hero-hint {
+    font-size: 0.85rem;
+    color: var(--ctr-muted);
+    margin-top: 4px;
+    line-height: 1.4;
+}
+
+[data-contrato-modal] .rp-sub-hero-hint.success {
+    color: var(--ctr-success);
+}
+
+[data-contrato-modal] .rp-kpi-card-mini {
+    min-width: 100px;
+    padding: 12px 14px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+[data-contrato-modal] .rp-kpi-card-mini span {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--ctr-muted);
+}
+
+[data-contrato-modal] .rp-kpi-card-mini strong {
+    font-size: 1.5rem;
+    line-height: 1.1;
+    color: #fff;
+}
+
+[data-contrato-modal] .rp-sub-layout {
+    display: grid;
+    grid-template-columns: minmax(260px, 1fr) minmax(340px, 1.3fr);
+    gap: 16px;
+}
+
+@media (max-width: 992px) {
+    [data-contrato-modal] .rp-sub-layout {
+        grid-template-columns: 1fr;
+    }
+}
+
+[data-contrato-modal] .rp-sub-panel {
+    border: 1px solid var(--ctr-line);
+    border-radius: 16px;
+    background: var(--ctr-panel);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    min-height: 380px;
+}
+
+[data-contrato-modal] .rp-sub-panel-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--ctr-line);
+    background: rgba(0, 0, 0, 0.14);
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: #e8edf7;
+}
+
+[data-contrato-modal] .rp-sub-panel-head > i:first-child {
+    color: var(--ctr-accent);
+    width: 20px;
+    text-align: center;
+}
+
+[data-contrato-modal] .rp-sub-panel-head small {
+    font-weight: 500;
+    color: var(--ctr-muted);
+    margin-left: auto;
+    font-size: 0.78rem;
+}
+
+[data-contrato-modal] .rp-sub-panel-body {
+    padding: 14px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+[data-contrato-modal] .rp-sub-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    flex: 1;
+    max-height: 340px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+[data-contrato-modal] .rp-sub-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+[data-contrato-modal] .rp-sub-list::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 6px;
+}
+
+[data-contrato-modal] .rp-sub-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(0, 0, 0, 0.2);
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s, transform 0.1s;
+}
+
+[data-contrato-modal] .rp-sub-item:hover {
+    border-color: rgba(139, 92, 246, 0.4);
+    background: var(--ctr-accent-soft);
+}
+
+[data-contrato-modal] .rp-sub-item.active {
+    border-color: rgba(139, 92, 246, 0.55);
+    background: rgba(139, 92, 246, 0.16);
+    box-shadow: 0 0 0 1px rgba(139, 92, 246, 0.22);
+}
+
+[data-contrato-modal] .rp-sub-item-avatar {
+    width: 42px;
+    height: 42px;
+    border-radius: 11px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(139, 92, 246, 0.18);
+    color: #c4b5fd;
+    flex-shrink: 0;
+    font-size: 1rem;
+}
+
+[data-contrato-modal] .rp-sub-item-avatar.tipo-ampliacion {
+    background: rgba(59, 130, 246, 0.18);
+    color: #93c5fd;
+}
+
+[data-contrato-modal] .rp-sub-item-avatar.tipo-modificacion {
+    background: rgba(251, 191, 36, 0.15);
+    color: #fcd34d;
+}
+
+[data-contrato-modal] .rp-sub-item-body {
+    flex: 1;
+    min-width: 0;
+}
+
+[data-contrato-modal] .rp-sub-item-title {
+    font-weight: 700;
+    font-size: 0.92rem;
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+[data-contrato-modal] .rp-sub-item-meta {
+    font-size: 0.78rem;
+    color: var(--ctr-muted);
+    margin-top: 4px;
+}
+
+[data-contrato-modal] .rp-sub-item-actions {
+    flex-shrink: 0;
+}
+
+[data-contrato-modal] .rp-sub-empty {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 36px 16px;
+    color: var(--ctr-muted);
+    gap: 10px;
+    min-height: 200px;
+}
+
+[data-contrato-modal] .rp-sub-empty i {
+    font-size: 2.2rem;
+    opacity: 0.4;
+    color: var(--ctr-accent);
+}
+
+[data-contrato-modal] .rp-sub-empty p {
+    margin: 0;
+    font-size: 0.88rem;
+    max-width: 240px;
+    line-height: 1.45;
+}
+
+[data-contrato-modal] .rp-sub-form .form-label {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #b8c0cc;
+    margin-bottom: 4px;
+}
+
+[data-contrato-modal] .rp-sub-form .form-label i {
+    margin-right: 6px;
+    color: var(--ctr-accent);
+    opacity: 0.9;
+}
+
+[data-contrato-modal] .rp-form-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: auto;
+    padding-top: 14px;
+    border-top: 1px dashed var(--ctr-line);
+}
+
+[data-contrato-modal] .rp-form-actions .btn-primary {
+    box-shadow: 0 4px 14px rgba(139, 92, 246, 0.3);
+}
+
+[data-contrato-modal] .rp-datos-panel {
+    padding: 4px 2px 8px;
+}
+
+[data-contrato-modal] .modal-footer {
+    border-top: 1px solid var(--ctr-line);
+    padding: 14px 20px;
+}

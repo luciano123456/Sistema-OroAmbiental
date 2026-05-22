@@ -33,28 +33,12 @@ function hideAllModals() {
     });
 }
 
-/** Apila modales: el que se abre queda siempre encima (ej. config sobre editar cliente). */
-if (!window._rpModalStackInit) {
-    window._rpModalStackInit = true;
-
-    document.addEventListener("show.bs.modal", (event) => {
-        const modalesAbiertos = document.querySelectorAll(".modal.show").length;
-        const zIndex = 1055 + (10 * modalesAbiertos);
-        event.target.style.zIndex = String(zIndex);
-
-        setTimeout(() => {
-            const backdrops = document.querySelectorAll(".modal-backdrop");
-            const backdrop = backdrops[backdrops.length - 1];
-            if (backdrop) backdrop.style.zIndex = String(zIndex - 1);
-        }, 0);
-    });
-}
-
 document.addEventListener("DOMContentLoaded", function () {
 
     var userSession = JSON.parse(localStorage.getItem('userSession'));
 
     mostrarMenuCompleto();
+    marcarNavActivo();
 
     if (userSession) {
 
@@ -74,44 +58,27 @@ document.addEventListener("DOMContentLoaded", function () {
         //    document.getElementById("seccionGastos").removeAttribute("hidden");
         //}
         // Si el usuario está en el localStorage, actualizar el texto del enlace
-        var userFullName = userSession.Nombre + ' ' + userSession.Apellido;
-        $("#userName").html('<i class="fa fa-user"></i> ' + userFullName); // Cambiar el contenido del enlace
+        var userFullName = (userSession.Nombre + ' ' + userSession.Apellido).trim();
+        $("#userName").text(userFullName || "Usuario");
 
     }
-    // Busca todos los elementos con la clase "dropdown-toggle"
-    var dropdownToggleList = document.querySelectorAll('.dropdown-toggle');
 
-    // Itera sobre cada elemento y agrega un evento de clic
-    dropdownToggleList.forEach(function (dropdownToggle) {
-        dropdownToggle.addEventListener('click', function (event) {
-            event.preventDefault(); // Evita la acción predeterminada del enlace
+    initNavbarDropdowns();
+});
 
-            // Obtiene el menú desplegable correspondiente
-            var dropdownMenu = dropdownToggle.nextElementSibling;
+/** Dropdowns del navbar con Popper fixed (quedan por encima de tablas/modales de página). */
+function initNavbarDropdowns() {
+    if (!window.bootstrap?.Dropdown) return;
 
-            // Cambia el atributo "aria-expanded" para alternar la visibilidad del menú desplegable
-            var isExpanded = dropdownToggle.getAttribute('aria-expanded') === 'true';
-            dropdownToggle.setAttribute('aria-expanded', !isExpanded);
-            dropdownMenu.classList.toggle('show'); // Agrega o quita la clase "show" para mostrar u ocultar el menú desplegable
+    document.querySelectorAll(".rp-navbar [data-bs-toggle='dropdown']").forEach(toggle => {
+        bootstrap.Dropdown.getOrCreateInstance(toggle, {
+            offset: [0, 4],
+            popperConfig(defaultBootstrapConfig) {
+                return Object.assign({}, defaultBootstrapConfig, { strategy: "fixed" });
+            }
         });
     });
-
-    // Agrega un manejador de eventos de clic al documento para ocultar el menú desplegable cuando se hace clic en cualquier lugar que no sea el menú desplegable
-    document.addEventListener('click', function (event) {
-        var isDropdownToggle = event.target.closest('.dropdown-toggle'); // Verifica si el elemento clicado es un elemento con la clase "dropdown-toggle"
-        var isDropdownMenu = event.target.closest('.dropdown-menu'); // Verifica si el elemento clicado es un menú desplegable
-
-        // Si el elemento clicado no es un menú desplegable ni un elemento con la clase "dropdown-toggle", oculta todos los menús desplegables
-        if (!isDropdownToggle && !isDropdownMenu) {
-            var dropdownMenus = document.querySelectorAll('.dropdown-menu.show');
-            dropdownMenus.forEach(function (dropdownMenu) {
-                dropdownMenu.classList.remove('show');
-                var dropdownToggle = dropdownMenu.previousElementSibling;
-                dropdownToggle.setAttribute('aria-expanded', 'false');
-            });
-        }
-    });
-});
+}
 
 function mostrarMenuCompleto() {
     document.querySelectorAll("#navbarSupportedContent .nav-item").forEach(el => {
@@ -119,8 +86,37 @@ function mostrarMenuCompleto() {
     });
 }
 
+/** Resalta el ítem del menú según la URL actual. */
+function marcarNavActivo() {
+    const path = (window.location.pathname || "").toLowerCase().replace(/\/+$/, "") || "/";
+
+    document.querySelectorAll(".rp-navbar .dropdown-item[href], .rp-navbar .rp-nav-link[href]").forEach(anchor => {
+        const href = (anchor.getAttribute("href") || "").trim();
+        if (!href || href === "#") return;
+
+        const target = href.toLowerCase().replace(/\/+$/, "");
+        const match = path === target || (target.length > 1 && path.startsWith(target + "/"));
+
+        anchor.classList.toggle("active", match);
+
+        if (match) {
+            const dropdown = anchor.closest(".dropdown");
+            const toggle = dropdown?.querySelector(".nav-link.dropdown-toggle");
+            if (toggle) toggle.classList.add("active");
+        }
+    });
+}
+
+/** En configuraciones, Sucursales debe listar todas (no solo las asignadas al usuario). */
+function urlListaCatalogoConfig(controller) {
+    if (controller === "Sucursales") {
+        return `/${controller}/ListaTodas`;
+    }
+    return `/${controller}/Lista`;
+}
+
 async function listaConfiguracion() {
-    const url = `/${controllerConfiguracion}/Lista`;
+    const url = urlListaCatalogoConfig(controllerConfiguracion);
     const response = await fetch(url, {
         headers: {
             'Authorization': 'Bearer ' + token,
@@ -368,7 +364,7 @@ async function eliminarConfiguracion(id) {
 
 
 async function llenarComboConfiguracion() {
-    const res = await fetch(`/${comboController}/Lista`, {
+    const res = await fetch(urlListaCatalogoConfig(comboController), {
         headers: {
             'Authorization': 'Bearer ' + token,
             'Content-Type': 'application/json'
@@ -514,6 +510,47 @@ function abrirConfiguraciones() {
     showModalById("ModalEdicionConfiguraciones");
     $("#btnGuardarConfiguracion").text("Aceptar");
     $("#modalEdicionLabel").text("Configuraciones");
+
+    const buscadorSecciones = document.getElementById("txtBuscarSeccionesConfiguracion");
+    if (buscadorSecciones) {
+        buscadorSecciones.value = "";
+        filtrarSeccionesConfiguraciones();
+        $("#txtBuscarSeccionesConfiguracion").off("input").on("input", filtrarSeccionesConfiguraciones);
+        setTimeout(() => buscadorSecciones.focus(), 150);
+    }
+}
+
+function filtrarSeccionesConfiguraciones() {
+    const input = document.getElementById("txtBuscarSeccionesConfiguracion");
+    const grid = document.getElementById("rpConfigSeccionesGrid");
+    const lblVacio = document.getElementById("lblSeccionesConfiguracionVacio");
+
+    if (!input || !grid) return;
+
+    const texto = input.value.trim().toLowerCase();
+    const cards = grid.querySelectorAll(".rp-config-card");
+    let visibles = 0;
+
+    cards.forEach(card => {
+        const titulo = card.querySelector(".rp-config-title")?.textContent || "";
+        const sub = card.querySelector(".rp-config-sub")?.textContent || "";
+        const extra = card.getAttribute("data-buscar") || "";
+        const blob = `${titulo} ${sub} ${extra}`.toLowerCase();
+        const coincide = !texto || blob.includes(texto);
+
+        card.style.display = coincide ? "" : "none";
+        if (coincide) visibles++;
+    });
+
+    if (!lblVacio) return;
+
+    if (texto && visibles === 0) {
+        lblVacio.textContent = `No se encontraron secciones para "${input.value}".`;
+        lblVacio.removeAttribute("hidden");
+    } else {
+        lblVacio.textContent = "";
+        lblVacio.setAttribute("hidden", "hidden");
+    }
 }
 
     document.querySelectorAll('.nav-item.dropdown').forEach(dropdown => {

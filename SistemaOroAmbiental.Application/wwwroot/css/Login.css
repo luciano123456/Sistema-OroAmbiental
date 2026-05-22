@@ -137,11 +137,25 @@ body {
 
     /* BOTON HOVER */
 
-    .btn-login:hover {
+    .btn-login:hover:not(:disabled) {
         color: #EDE1A8;
         transform: translateY(-1px);
         box-shadow: 0 8px 18px rgba(0,0,0,0.25);
     }
+
+.btn-login:disabled {
+    opacity: 0.92;
+    cursor: wait;
+    transform: none;
+    box-shadow: none;
+}
+
+.btn-login-loading {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
 
 /* ERROR */
 

@@ -572,6 +572,7 @@
         }
 
         async abrirVer(id) {
+            this.cerrarErrorCampos();
             try {
                 this._ultimoModo = "ver";
                 const url = this._replaceUrl(this.options.endpoints.editar, { id });
@@ -863,35 +864,9 @@
         mostrarErrorCampos(mensaje, idReferencia = null, tipo = "validacion") {
             if (tipo === "validacion") this._validacion?.cancelarPanelExito?.();
             const container = this._id("errorCampos");
-            if (!container) return;
-
-            let titulo = "Campos requeridos";
-            let icono = "fa-exclamation-circle";
-
-            if (tipo === "duplicado") titulo = "Registro duplicado detectado";
-            else if (tipo === "relacion") { titulo = "No se puede eliminar"; icono = "fa-link"; }
-            else if (tipo === "error") { titulo = "No se pudo guardar"; icono = "fa-times-circle"; }
-
-            let botonReferencia = "";
-            if (idReferencia) {
-                botonReferencia = `
-                    <button class="rp-btn-ref" onclick="verFicha(${idReferencia})">
-                        <i class="fa fa-eye me-1"></i> Abrir ficha existente ???
-                    </button>`;
+            if (window.RpVerFicha?.renderErrorCampos) {
+                window.RpVerFicha.renderErrorCampos(container, mensaje, idReferencia, tipo, "verCliente");
             }
-
-            container.innerHTML = `
-                <div class="rp-error-box">
-                    <div class="rp-error-icon"><i class="fa ${icono}"></i></div>
-                    <div class="rp-error-content">
-                        <div class="rp-error-title">${titulo}</div>
-                        <div class="rp-error-text">${mensaje}</div>
-                    </div>
-                    ${botonReferencia}
-                </div>`;
-
-            container.classList.remove("d-none");
-            container.scrollIntoView({ behavior: "smooth", block: "center" });
         }
 
         cerrarErrorCampos() {
@@ -989,5 +964,37 @@
     };
 
     window.ClienteModal = ClienteModal;
+
+    function initClienteModal(options = {}) {
+        const root = document.querySelector("[data-cliente-modal]");
+        if (!root) {
+            console.warn("initClienteModal: incluya el partial M_Clientes en la vista.");
+            return null;
+        }
+
+        const merged = Object.assign({ token: window.token || "" }, options || {});
+
+        if (!window.clienteModal || window.clienteModal.modalEl !== root) {
+            window.clienteModal = new ClienteModal(root, merged);
+        } else {
+            Object.assign(window.clienteModal.options, merged);
+        }
+
+        const abrirVer = (id) => window.clienteModal?.abrirVer?.(id);
+        window.nuevoCliente = () => window.clienteModal?.abrirNuevo?.();
+        window.verCliente = abrirVer;
+        window.editarCliente = (id) => window.clienteModal?.abrirEditar?.(id);
+        window.eliminarCliente = (id) => window.clienteModal?.eliminar?.(id);
+        window.verFicha = abrirVer;
+
+        if (window.RpVerFicha?.registrar) {
+            window.RpVerFicha.registrar("verCliente", abrirVer);
+            window.RpVerFicha.registrar("verFicha", abrirVer);
+        }
+
+        return window.clienteModal;
+    }
+
+    window.initClienteModal = initClienteModal;
 
 })(window);

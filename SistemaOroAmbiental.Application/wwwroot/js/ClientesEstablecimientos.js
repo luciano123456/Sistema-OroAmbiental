@@ -12,6 +12,23 @@ const columnConfigEst = [
     { index: 8, filterType: 'text' }
 ];
 
+function initModalClienteEstablecimientos() {
+    if (typeof initClienteModal !== "function") return;
+    initClienteModal({
+        token: token,
+        onSaved: async (data, modelo) => {
+            const id = data?.id ?? modelo?.Id;
+            if (establecimientoModal) {
+                await establecimientoModal.cargarCombos();
+                if (id) {
+                    establecimientoModal._setFieldValue("cmbClienteEst", id, true);
+                    establecimientoModal.cerrarErrorCampos();
+                }
+            }
+        }
+    });
+}
+
 $(document).ready(() => {
     const modalEl = document.querySelector("[data-establecimiento-modal]");
     if (!modalEl) {
@@ -19,17 +36,17 @@ $(document).ready(() => {
         return;
     }
 
-    establecimientoModal = new EstablecimientoModal(modalEl, {
-        token: token,
-        onSaved: async () => { await listaEstablecimientos(); },
-        onDeleted: async () => { await listaEstablecimientos(); }
-    });
+    initModalClienteEstablecimientos();
 
-    window.verEstablecimiento = (id) => establecimientoModal.abrirVer(id);
-    window.editarEstablecimiento = (id) => establecimientoModal.abrirEditar(id);
-    window.eliminarEstablecimiento = (id) => establecimientoModal.eliminar(id);
-    window.verFichaEstablecimiento = (id) => establecimientoModal.abrirVer(id);
-    window.nuevoEstablecimiento = () => establecimientoModal.abrirNuevo();
+    establecimientoModal = typeof initEstablecimientoModal === "function"
+        ? initEstablecimientoModal({
+            token: token,
+            onSaved: async () => { await listaEstablecimientos(); },
+            onDeleted: async () => { await listaEstablecimientos(); }
+        })
+        : null;
+
+    if (!establecimientoModal) return;
 
     $(document).off("click.select2fix.est").on(
         "click.select2fix.est",

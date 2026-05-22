@@ -95,14 +95,16 @@ namespace SistemaOroAmbiental.Application.Controllers
                 }
             };
 
-            foreach (var m in movimientos)
+            var filasMov = new List<VMClienteCCMovimiento>();
+
+            foreach (var m in movimientos.OrderBy(x => x.Fecha).ThenBy(x => x.Id))
             {
                 saldo += m.Debe - m.Haber;
 
                 var puedeEliminar = m.TipoMovimiento is ClientesCuentaCorrienteRepository.TIPO_COBRO_CLIENTE
                     or ClientesCuentaCorrienteRepository.TIPO_AJUSTE_CLIENTE;
 
-                lista.Add(new VMClienteCCMovimiento
+                filasMov.Add(new VMClienteCCMovimiento
                 {
                     Id = m.Id,
                     Fecha = m.Fecha,
@@ -115,6 +117,9 @@ namespace SistemaOroAmbiental.Application.Controllers
                     Origen = ObtenerOrigen(m.TipoMovimiento)
                 });
             }
+
+            filasMov.Reverse();
+            lista.AddRange(filasMov);
 
             return Ok(lista);
         }

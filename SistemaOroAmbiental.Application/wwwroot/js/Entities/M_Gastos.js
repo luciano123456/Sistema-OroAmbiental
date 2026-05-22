@@ -285,26 +285,9 @@
         mostrarErrorCampos(mensaje, idReferencia = null, tipo = "validacion") {
             if (tipo === "validacion") this._validacion?.cancelarPanelExito?.();
             const container = this._id("errorCampos");
-            if (!container) return;
-
-            let titulo = "Campos requeridos";
-            let icono = "fa-exclamation-circle";
-
-            if (tipo === "duplicado") titulo = "Registro duplicado detectado";
-            else if (tipo === "relacion") { titulo = "No se puede eliminar"; icono = "fa-link"; }
-            else if (tipo === "error") { titulo = "No se pudo guardar"; icono = "fa-times-circle"; }
-
-            container.innerHTML = `
-                <div class="rp-error-box">
-                    <div class="rp-error-icon"><i class="fa ${icono}"></i></div>
-                    <div class="rp-error-content">
-                        <div class="rp-error-title">${titulo}</div>
-                        <div class="rp-error-text">${mensaje}</div>
-                    </div>
-                </div>`;
-
-            container.classList.remove("d-none");
-            container.scrollIntoView({ behavior: "smooth", block: "center" });
+            if (window.RpVerFicha?.renderErrorCampos) {
+                window.RpVerFicha.renderErrorCampos(container, mensaje, idReferencia, tipo, "verGasto");
+            }
         }
 
         cerrarErrorCampos() {
@@ -391,6 +374,7 @@
         }
 
         async abrirVer(id) {
+            this.cerrarErrorCampos();
             try {
                 this._ultimoModo = "ver";
                 const url = this._replaceUrl(this.options.endpoints.editar, { id });
@@ -477,7 +461,7 @@
                 if (!data?.valor) {
                     this.mostrarErrorCampos(
                         data?.mensaje || "No se pudo guardar el gasto.",
-                        null,
+                        data?.idReferencia ?? null,
                         data?.tipo || "validacion"
                     );
                     return false;
@@ -629,10 +613,17 @@
             Object.assign(window.gastoModal.options, merged);
         }
 
+        const abrirVer = (id) => window.gastoModal?.abrirVer?.(id);
+
         window.nuevoGasto = () => window.gastoModal?.abrirNuevo?.();
-        window.verGasto = (id) => window.gastoModal?.abrirVer?.(id);
+        window.verGasto = abrirVer;
         window.editarGasto = (id) => window.gastoModal?.abrirEditar?.(id);
         window.eliminarGasto = (id) => window.gastoModal?.eliminar?.(id);
+        window.verFicha = abrirVer;
+
+        if (window.RpVerFicha?.registrar) {
+            window.RpVerFicha.registrar("verGasto", abrirVer);
+        }
 
         return window.gastoModal;
     }

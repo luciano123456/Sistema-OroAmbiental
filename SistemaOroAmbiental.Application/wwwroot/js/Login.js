@@ -41,6 +41,18 @@
        LOGIN
     ============================== */
 
+    function setLoginLoading(loading) {
+        const $btn = $("#btnLogin");
+        const $form = $("#loginForm");
+
+        $btn.prop("disabled", loading);
+        $form.find("input:not([type='hidden'])").prop("disabled", loading);
+        $("#togglePassword").css("pointer-events", loading ? "none" : "");
+
+        $btn.find(".btn-login-text").toggleClass("d-none", loading);
+        $btn.find(".btn-login-loading").toggleClass("d-none", !loading);
+    }
+
     $("#loginForm").on("submit", function (e) {
 
         e.preventDefault();
@@ -51,6 +63,9 @@
         const token = $('input[name="__RequestVerificationToken"]').val();
 
         const rememberMe = $("#rememberMe").prop("checked");
+
+        setLoginLoading(true);
+        $("#diverrorMessage").hide();
 
         fetch(loginUrl, {
 
@@ -104,6 +119,8 @@
 
             })
             .catch(err => {
+
+                setLoginLoading(false);
 
                 const mensaje =
                     err?.message ||

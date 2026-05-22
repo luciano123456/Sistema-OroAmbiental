@@ -2068,7 +2068,8 @@ table.dataTable.display tbody tr.selected td {
 [data-producto-modal] #errorCampos.rp-panel-exito,
 [data-cliente-modal] #errorCampos.rp-panel-exito,
 [data-proveedor-modal] #errorCampos.rp-panel-exito,
-[data-gasto-modal] #errorCampos.rp-panel-exito {
+[data-gasto-modal] #errorCampos.rp-panel-exito,
+[data-contrato-modal] #errorCamposContrato.rp-panel-exito {
     position: relative;
     overflow: hidden;
 }
@@ -2092,7 +2093,8 @@ table.dataTable.display tbody tr.selected td {
 [data-producto-modal] #errorCampos.rp-panel-exito::before,
 [data-cliente-modal] #errorCampos.rp-panel-exito::before,
 [data-proveedor-modal] #errorCampos.rp-panel-exito::before,
-[data-gasto-modal] #errorCampos.rp-panel-exito::before {
+[data-gasto-modal] #errorCampos.rp-panel-exito::before,
+[data-contrato-modal] #errorCamposContrato.rp-panel-exito::before {
     content: "";
     position: absolute;
     inset: 0;
@@ -2116,7 +2118,8 @@ table.dataTable.display tbody tr.selected td {
 [data-producto-modal] #errorCampos.rp-panel-exito::after,
 [data-cliente-modal] #errorCampos.rp-panel-exito::after,
 [data-proveedor-modal] #errorCampos.rp-panel-exito::after,
-[data-gasto-modal] #errorCampos.rp-panel-exito::after {
+[data-gasto-modal] #errorCampos.rp-panel-exito::after,
+[data-contrato-modal] #errorCamposContrato.rp-panel-exito::after {
     content: "";
     position: absolute;
     width: 5px;
@@ -2200,6 +2203,7 @@ table.dataTable.display tbody tr.selected td {
 [data-cliente-modal] #errorCampos.rp-panel-exito-out,
 [data-proveedor-modal] #errorCampos.rp-panel-exito-out,
 [data-gasto-modal] #errorCampos.rp-panel-exito-out,
+[data-contrato-modal] #errorCamposContrato.rp-panel-exito-out,
 .rp-error-panel.rp-panel-exito-out {
     animation: rpSuccessExit 0.7s ease forwards !important;
     pointer-events: none;

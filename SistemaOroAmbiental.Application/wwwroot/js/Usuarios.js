@@ -1,6 +1,4 @@
 let gridUsuarios;
-let personalSelectorData = [];
-let personalSeleccionado = null;
 
 let permisosUsuarioCache = [];
 let permisosUsuarioOriginal = [];
@@ -35,7 +33,7 @@ $(document).ready(() => {
             await listaRoles();
             if (d.nuevoId) $("#Roles").val(d.nuevoId).trigger("change");
         }
-        if (d.tipo === "EstadosUsuarios") {
+        if (d.tipo === "UsuariosEstados") {
             await listaEstados();
             if (d.nuevoId) $("#Estados").val(d.nuevoId).trigger("change");
         }
@@ -54,17 +52,6 @@ $(document).ready(() => {
     $("#txtUsuario, #txtNombre, #txtApellido").on("input", function () {
         actualizarBadgeUsuarioPermisos();
         actualizarBadgeUsuarioSucursales();
-    });
-
-    $("#buscarPersonalSelector").on("keyup", function () {
-        const txt = ($(this).val() || "").toLowerCase();
-
-        const filtrado = personalSelectorData.filter(p =>
-            (p.Nombre || "").toLowerCase().includes(txt) ||
-            String(p.Dni || p.NumeroDocumento || "").toLowerCase().includes(txt)
-        );
-
-        renderPersonalSelector(filtrado);
     });
 
     $(document).on("input", "#txtBuscarModuloPermiso", function () {
@@ -459,7 +446,7 @@ async function configurarDataTable(data) {
 ========================= */
 
 async function listaRoles() {
-    const response = await fetch(`/Roles/Lista`);
+    const response = await fetch(`/UsuariosRoles/Lista`);
     const data = await response.json();
 
     $('#Roles option').remove();
@@ -479,7 +466,7 @@ async function listaRoles() {
 }
 
 async function listaEstados() {
-    const response = await fetch(`/EstadosUsuarios/Lista`);
+    const response = await fetch(`/UsuariosEstados/Lista`);
     const data = await response.json();
 
     $('#Estados option').remove();
@@ -499,13 +486,13 @@ async function listaEstados() {
 }
 
 async function listaEstadosFilter() {
-    const response = await fetch(`/EstadosUsuarios/Lista`);
+    const response = await fetch(`/UsuariosEstados/Lista`);
     const data = await response.json();
     return (data || []).map(x => ({ Id: x.Id, Nombre: x.Nombre }));
 }
 
 async function listaRolesFilter() {
-    const response = await fetch(`/Roles/Lista`);
+    const response = await fetch(`/UsuariosRoles/Lista`);
     const data = await response.json();
     return (data || []).map(x => ({ Id: x.Id, Nombre: x.Nombre }));
 }
@@ -599,8 +586,6 @@ function limpiarModal() {
 
     validacionUsuarioModal?.reset();
 
-    personalSeleccionado = null;
-    personalSelectorData = [];
     permisosUsuarioCache = [];
     permisosUsuarioOriginal = [];
     moduloPermisoSeleccionadoId = 0;
@@ -727,85 +712,6 @@ const verUsuario = id => {
         })
         .catch(_ => errorModal("Ha ocurrido un error."));
 };
-
-/* =========================
-   SELECTOR PERSONAL
-========================= */
-
-async function abrirSelectorPersonal() {
-    $('#modalSelectorPersonal').modal('show');
-
-    const r = await fetch('/Personal/Lista', {
-        headers: { 'Authorization': 'Bearer ' + token }
-    });
-
-    personalSelectorData = await r.json();
-    renderPersonalSelector(personalSelectorData);
-}
-
-function renderPersonalSelector(data) {
-    const container = $("#listaPersonalSelector");
-    container.empty();
-
-    data.forEach(p => {
-        container.append(`
-            <div class="rp-personal-card" data-id="${p.Id}">
-                <div class="rp-personal-name">${escapeHtml(p.Nombre || "")}</div>
-
-                <div class="rp-personal-info">
-                    <i class="fa fa-id-card"></i>
-                    ${escapeHtml(p.Dni ?? p.NumeroDocumento ?? "-")}
-                </div>
-
-                <div class="rp-personal-info">
-                    <i class="fa fa-phone"></i>
-                    ${escapeHtml(p.Telefono ?? "-")}
-                </div>
-
-                <div class="rp-personal-info">
-                    <i class="fa fa-envelope"></i>
-                    ${escapeHtml(p.Email ?? "-")}
-                </div>
-            </div>
-        `);
-    });
-
-    $(".rp-personal-card").off("click").on("click", function () {
-        $(".rp-personal-card").removeClass("selected");
-        $(this).addClass("selected");
-
-        const id = $(this).data("id");
-        personalSeleccionado = personalSelectorData.find(x => x.Id === id);
-    });
-
-    $(".rp-personal-card").off("dblclick").on("dblclick", function () {
-        $(".rp-personal-card").removeClass("selected");
-        $(this).addClass("selected");
-
-        const id = $(this).data("id");
-        personalSeleccionado = personalSelectorData.find(x => x.Id === id);
-
-        aplicarPersonalSeleccionado();
-    });
-}
-
-function aplicarPersonalSeleccionado() {
-    if (!personalSeleccionado) {
-        errorModal("Seleccione un personal.");
-        return;
-    }
-
-    const p = personalSeleccionado;
-
-    $("#txtNombre").val(p.Nombre ?? "");
-    $("#txtDni").val(p.Dni || p.NumeroDocumento || "");
-    $("#txtTelefono").val(p.Telefono ?? "");
-    $("#txtDireccion").val(p.Direccion ?? "");
-    $("#txtCorreo").val(p.Email ?? "");
-
-    $('#modalSelectorPersonal').modal('hide');
-    actualizarBadgeUsuarioPermisos();
-}
 
 /* =========================
    SUCURSALES

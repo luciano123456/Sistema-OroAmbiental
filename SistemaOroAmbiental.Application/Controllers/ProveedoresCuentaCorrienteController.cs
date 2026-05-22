@@ -95,14 +95,16 @@ namespace SistemaOroAmbiental.Application.Controllers
                 }
             };
 
-            foreach (var m in movimientos)
+            var filasMov = new List<VMProveedorCCMovimiento>();
+
+            foreach (var m in movimientos.OrderBy(x => x.Fecha).ThenBy(x => x.Id))
             {
                 saldo += m.Debe - m.Haber;
 
                 var puedeEliminar = m.TipoMovimiento is ProveedoresCuentaCorrienteRepository.TIPO_PAGO_PROVEEDOR
                     or ProveedoresCuentaCorrienteRepository.TIPO_AJUSTE_PROVEEDOR;
 
-                lista.Add(new VMProveedorCCMovimiento
+                filasMov.Add(new VMProveedorCCMovimiento
                 {
                     Id = m.Id,
                     Fecha = m.Fecha,
@@ -115,6 +117,9 @@ namespace SistemaOroAmbiental.Application.Controllers
                     Origen = ObtenerOrigen(m.TipoMovimiento)
                 });
             }
+
+            filasMov.Reverse();
+            lista.AddRange(filasMov);
 
             return Ok(lista);
         }

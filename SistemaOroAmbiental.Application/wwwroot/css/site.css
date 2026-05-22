@@ -113,6 +113,8 @@ tbody tr:nth-child(odd) {
     display: flex;
     justify-content: center;
     align-items: center;
+    position: relative;
+    z-index: 1;
 }
 
 .imageLogo {
@@ -892,9 +894,45 @@ thead tr.filters th {
     touch-action: pan-y;
 }
 
+/* Todos los modales: centrados en pantalla y por debajo del navbar fijo */
+:root {
+    --rp-navbar-clearance: 76px;
+}
+
+.modal {
+    z-index: 10000055 !important;
+}
+
+/* Éxito, error, advertencia y confirmación siempre por encima de modales de edición */
+#exitoModal,
+#errorModal,
+#AdvertenciaModal,
+#modalConfirmar {
+    z-index: 10000090 !important;
+}
+
+/* z-index por capa lo asigna site.js al abrir cada modal */
+.modal-backdrop {
+    z-index: 10000054;
+}
+
+.modal.show {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    padding: var(--rp-navbar-clearance) 0.75rem 1.25rem !important;
+    overflow-y: auto;
+}
+
+.modal.show .modal-dialog {
+    margin: auto !important;
+    max-height: calc(100vh - var(--rp-navbar-clearance) - 2.5rem);
+    width: calc(100% - 1.5rem);
+}
+
 .modal-dialog-scrollable .modal-body {
     overflow-y: auto;
-    max-height: calc(100vh - header - footer);
+    max-height: calc(100vh - var(--rp-navbar-clearance) - 11rem);
 }
 
 ::-webkit-scrollbar {

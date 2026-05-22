@@ -66,7 +66,6 @@ public partial class SistemaOroAmbientalContext : DbContext
 
     public virtual DbSet<EntregasEstado> EntregasEstados { get; set; }
 
-    public virtual DbSet<EstadosUsuario> EstadosUsuarios { get; set; }
 
     public virtual DbSet<Feriado> Feriados { get; set; }
 
@@ -100,7 +99,6 @@ public partial class SistemaOroAmbientalContext : DbContext
 
     public virtual DbSet<Provincia> Provincias { get; set; }
 
-    public virtual DbSet<Rol> Roles { get; set; }
 
     public virtual DbSet<Semana> Semanas { get; set; }
 
@@ -789,13 +787,6 @@ public partial class SistemaOroAmbientalContext : DbContext
                 .IsUnicode(false);
         });
 
-        modelBuilder.Entity<EstadosUsuario>(entity =>
-        {
-            entity.Property(e => e.Nombre)
-                .HasMaxLength(100)
-                .IsUnicode(false);
-        });
-
         modelBuilder.Entity<Feriado>(entity =>
         {
             entity.Property(e => e.Descripcion)
@@ -1154,13 +1145,6 @@ public partial class SistemaOroAmbientalContext : DbContext
                 .IsUnicode(false);
         });
 
-        modelBuilder.Entity<Rol>(entity =>
-        {
-            entity.Property(e => e.Nombre)
-                .HasMaxLength(100)
-                .IsUnicode(false);
-        });
-
         modelBuilder.Entity<Semana>(entity =>
         {
             entity.Property(e => e.Nombre)
@@ -1227,11 +1211,12 @@ public partial class SistemaOroAmbientalContext : DbContext
             entity.HasOne(d => d.IdEstadoNavigation).WithMany(p => p.Usuarios)
                 .HasForeignKey(d => d.IdEstado)
                 .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_Usuarios_EstadosUsuarios");
+                .HasConstraintName("FK_Usuarios_Usuarios_Estados");
 
             entity.HasOne(d => d.IdRolNavigation).WithMany(p => p.Usuarios)
                 .HasForeignKey(d => d.IdRol)
-                .HasConstraintName("FK_Usuarios_Roles");
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_Usuarios_Usuarios_Roles");
         });
 
         modelBuilder.Entity<UsuariosEstado>(entity =>

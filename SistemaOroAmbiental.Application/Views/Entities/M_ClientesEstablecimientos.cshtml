@@ -54,8 +54,17 @@
                             <input type="text" id="txtIdEst" hidden />
 
                             <div class="col-md-6">
-                                <label class="form-label">Cliente</label>
-                                <select id="cmbClienteEst" class="form-control" required></select>
+                                <label class="form-label" for="cmbClienteEst">Cliente</label>
+                                <div class="rp-select-plus">
+                                    <select id="cmbClienteEst" class="form-control" required></select>
+                                    <button type="button"
+                                            id="btnAgregarClienteEst"
+                                            class="rp-btn-plus"
+                                            title="Agregar cliente">
+                                        <i class="fa fa-plus"></i>
+                                    </button>
+                                </div>
+                                <div class="form-text text-muted">No requiere contrato. Si no hay clientes, usá el botón +.</div>
                                 <div class="invalid-feedback">Campo obligatorio</div>
                             </div>
 

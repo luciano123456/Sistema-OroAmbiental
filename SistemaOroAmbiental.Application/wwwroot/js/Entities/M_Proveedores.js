@@ -243,6 +243,7 @@
         }
 
         async abrirVer(id) {
+            this.cerrarErrorCampos();
             try {
                 this._ultimoModo = "ver";
                 const url = this._replaceUrl(this.options.endpoints.editar, { id });
@@ -489,6 +490,10 @@
         mostrarErrorCampos(mensaje, idReferencia = null, tipo = "validacion") {
             if (tipo === "validacion") this._validacion?.cancelarPanelExito?.();
             const container = this._id("errorCampos");
+            if (window.RpVerFicha?.renderErrorCampos) {
+                window.RpVerFicha.renderErrorCampos(container, mensaje, idReferencia, tipo, "verProveedor");
+                return;
+            }
             if (!container) return;
 
             let titulo = "Campos requeridos";
@@ -500,8 +505,10 @@
 
             let botonReferencia = "";
             if (idReferencia) {
-                botonReferencia = `
-                    <button class="rp-btn-ref" onclick="verFichaProveedor(${idReferencia})">
+                botonReferencia = window.RpVerFicha?.botonHtml
+                    ? window.RpVerFicha.botonHtml(idReferencia, "verProveedor")
+                    : `
+                    <button class="rp-btn-ref" data-rp-ver-ficha data-id="${idReferencia}" data-handler="verProveedor">
                         <i class="fa fa-eye me-1"></i> Abrir ficha existente �??
                     </button>`;
             }
@@ -626,11 +633,18 @@
             Object.assign(window.proveedorModal.options, merged);
         }
 
+        const abrirVer = (id) => window.proveedorModal?.abrirVer?.(id);
+
         window.nuevoProveedor = () => window.proveedorModal?.abrirNuevo?.();
-        window.verProveedor = (id) => window.proveedorModal?.abrirVer?.(id);
+        window.verProveedor = abrirVer;
         window.editarProveedor = (id) => window.proveedorModal?.abrirEditar?.(id);
         window.eliminarProveedor = (id) => window.proveedorModal?.eliminar?.(id);
-        window.verFichaProveedor = (id) => window.proveedorModal?.abrirVer?.(id);
+        window.verFichaProveedor = abrirVer;
+
+        if (window.RpVerFicha?.registrar) {
+            window.RpVerFicha.registrar("verProveedor", abrirVer);
+            window.RpVerFicha.registrar("verFichaProveedor", abrirVer);
+        }
 
         return window.proveedorModal;
     }

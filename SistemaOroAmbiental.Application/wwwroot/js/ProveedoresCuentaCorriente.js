@@ -524,7 +524,7 @@ async function configurarDataTable(data) {
             },
             scrollX: true,
             scrollCollapse: true,
-            order: [],
+            order: [[1, "desc"]],
 
             columns: [
                 {

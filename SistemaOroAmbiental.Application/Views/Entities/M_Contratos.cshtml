@@ -1,0 +1,194 @@
+@* Modal Contratos *@
+
+<div class="modal fade contrato-modal-root"
+     data-contrato-modal="contrato"
+     tabindex="-1"
+     data-bs-backdrop="static"
+     data-bs-keyboard="false">
+
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content rp-modal-shell">
+
+            <div class="modal-header colorEncabezado rp-modal-header">
+                <div class="rp-modal-title-wrap">
+                    <h5 class="modal-title fw-bold mb-0" id="modalContratoLabel">Nuevo contrato</h5>
+                    <small class="rp-modal-subtitle">Cliente, establecimiento y vigencia del vínculo</small>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+
+                <div id="errorCamposContrato" class="rp-error-panel d-none mb-3" data-titulo-error="No se pudo guardar">
+                    <div class="rp-error-icon"><i class="fa fa-exclamation-triangle"></i></div>
+                    <div class="rp-error-content">
+                        <div class="rp-error-title">No se pudo guardar</div>
+                        <div class="rp-error-message"></div>
+                    </div>
+                    <button type="button" class="rp-error-close" onclick="cerrarErrorCamposContrato()">
+                        <i class="fa fa-times"></i>
+                    </button>
+                </div>
+
+                <div class="rp-tabs-shell">
+                    <ul class="nav rp-tabs-modern">
+                        <li class="nav-item">
+                            <button class="nav-link active" id="tabBtnDatosContrato" data-bs-toggle="tab" data-bs-target="#tabDatosContrato" type="button">
+                                <i class="fa fa-file-text-o"></i><span>Datos del contrato</span>
+                            </button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link" id="tabBtnRenovContrato" data-bs-toggle="tab" data-bs-target="#tabRenovContrato" type="button">
+                                <i class="fa fa-refresh"></i><span>Renovaciones</span>
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="tab-content mt-3">
+
+                    <div class="tab-pane fade show active" id="tabDatosContrato">
+                        <div class="rp-datos-panel">
+                            <form class="row g-3" id="formContrato" autocomplete="off">
+                                <input type="text" id="txtIdContrato" hidden />
+
+                                <div class="col-md-6">
+                                    <label class="form-label" for="cmbClienteContrato">Cliente</label>
+                                    <div class="rp-select-plus">
+                                        <select id="cmbClienteContrato" class="form-control" required></select>
+                                        <button type="button"
+                                                id="btnAgregarClienteContrato"
+                                                class="rp-btn-plus"
+                                                title="Agregar cliente">
+                                            <i class="fa fa-plus"></i>
+                                        </button>
+                                    </div>
+                                    <div class="invalid-feedback">Campo obligatorio</div>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label class="form-label" for="cmbEstablecimientoContrato">Establecimiento</label>
+                                    <div class="rp-select-plus">
+                                        <select id="cmbEstablecimientoContrato" class="form-control" required></select>
+                                        <button type="button"
+                                                id="btnAgregarEstablecimientoContrato"
+                                                class="rp-btn-plus"
+                                                title="Agregar establecimiento">
+                                            <i class="fa fa-plus"></i>
+                                        </button>
+                                    </div>
+                                    <div class="invalid-feedback">Campo obligatorio</div>
+                                </div>
+
+                                <div class="col-md-4">
+                                    <label class="form-label" for="txtFechaContrato">Fecha contrato</label>
+                                    <input type="date" id="txtFechaContrato" class="form-control" required />
+                                    <div class="invalid-feedback">Campo obligatorio</div>
+                                </div>
+
+                                <div class="col-md-4">
+                                    <label class="form-label" for="txtFechaInicioContrato">Fecha inicio</label>
+                                    <input type="date" id="txtFechaInicioContrato" class="form-control" required />
+                                    <div class="invalid-feedback">Campo obligatorio</div>
+                                </div>
+
+                                <div class="col-md-4">
+                                    <label class="form-label" for="txtFechaVencContrato">Fecha vencimiento</label>
+                                    <input type="date" id="txtFechaVencContrato" class="form-control" required />
+                                    <div class="invalid-feedback">Campo obligatorio</div>
+                                </div>
+                            </form>
+
+                            <div class="rp-auditoria d-none mt-3" id="infoAuditoriaContrato">
+                                <div id="infoRegistroContrato"></div>
+                                <div id="infoModificacionContrato"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="tab-pane fade" id="tabRenovContrato">
+                        <div id="sectionRenovContrato" class="rp-sub-page rp-section-disabled">
+                            <div class="rp-sub-hero">
+                                <div>
+                                    <div class="text-muted small">Contrato</div>
+                                    <div class="rp-sub-hero-name" id="renovContratoNombre">Nuevo</div>
+                                    <div class="rp-sub-hero-hint" id="renovContratoHint">
+                                        <i class="fa fa-info-circle"></i> Guardá el contrato para administrar renovaciones.
+                                    </div>
+                                </div>
+                                <div class="rp-kpi-card-mini">
+                                    <span>Renovaciones</span>
+                                    <strong id="renovContratoCantidad">0</strong>
+                                </div>
+                            </div>
+                            <div class="rp-sub-layout">
+                                <div class="rp-sub-panel">
+                                    <div class="rp-sub-panel-head">
+                                        <i class="fa fa-list"></i> Historial
+                                        <small>Seleccioná para editar</small>
+                                    </div>
+                                    <div class="rp-sub-panel-body">
+                                        <div id="listaRenovContrato" class="rp-sub-list">
+                                            <div class="rp-sub-empty">
+                                                <i class="fa fa-refresh"></i>
+                                                <p>Guardá el contrato para ver renovaciones.</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="rp-sub-panel">
+                                    <div class="rp-sub-panel-head">
+                                        <i class="fa fa-plus-circle"></i>
+                                        <span id="renovContratoFormTitulo">Nueva renovación</span>
+                                    </div>
+                                    <div class="rp-sub-panel-body rp-sub-form">
+                                        <input type="hidden" id="txtRenovContratoId" />
+                                        <div class="row g-3">
+                                            <div class="col-md-6">
+                                                <label class="form-label"><i class="fa fa-tag"></i> Tipo</label>
+                                                <select id="cmbTipoRenovContrato" class="form-control">
+                                                    <option value="RENOVACION">Renovación</option>
+                                                    <option value="AMPLIACION">Ampliación</option>
+                                                    <option value="MODIFICACION">Modificación</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label class="form-label"><i class="fa fa-calendar"></i> Fecha inicio</label>
+                                                <input type="date" id="txtRenovInicioContrato" class="form-control" />
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label class="form-label"><i class="fa fa-calendar-check-o"></i> Fecha vencimiento</label>
+                                                <input type="date" id="txtRenovVencContrato" class="form-control" />
+                                            </div>
+                                        </div>
+                                        <div class="rp-form-actions">
+                                            <button type="button" id="btnGuardarRenovContrato" class="btn btn-primary btn-sm">
+                                                <i class="fa fa-check"></i> <span id="lblGuardarRenovContrato">Registrar renovación</span>
+                                            </button>
+                                            <button type="button" id="btnNuevoRenovContrato" class="btn btn-outline-light btn-sm">
+                                                <i class="fa fa-plus"></i> Nuevo
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fa fa-arrow-left"></i> Volver
+                </button>
+                <button type="button" class="btn btn-danger" id="btnEliminarContrato" hidden>
+                    <i class="fa fa-trash"></i> Eliminar
+                </button>
+                <button type="button" class="btn btn-primary" id="btnGuardarContrato">
+                    <i class="fa fa-check"></i> Registrar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

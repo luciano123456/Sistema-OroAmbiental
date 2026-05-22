@@ -772,9 +772,11 @@
                 });
 
                 if (!data?.valor) {
-                    if (typeof errorModal === "function") {
-                        errorModal(data?.mensaje || "No se pudo guardar el producto.");
-                    }
+                    this.mostrarErrorCampos(
+                        data?.mensaje || "No se pudo guardar el producto.",
+                        null,
+                        data?.tipo || "validacion"
+                    );
                     return;
                 }
 
@@ -871,7 +873,24 @@
 
         // --- ABM principal ---
 
-        async abrirNuevo() {
+        _tieneClientesEnCombo() {
+            const sel = this._id("cmbClienteEst");
+            if (!sel) return false;
+            return Array.from(sel.options).some(o => o.value && o.value !== "");
+        }
+
+        async _abrirNuevoCliente() {
+            if (this.isSoloLectura()) return;
+            if (typeof window.nuevoCliente === "function") {
+                await window.nuevoCliente();
+                return;
+            }
+            if (typeof errorModal === "function") {
+                errorModal("No está disponible el alta de clientes en esta pantalla. Andá a Clientes → Nuevo.");
+            }
+        }
+
+        async abrirNuevo(idClientePreseleccionado = null) {
             try {
                 this._ultimoModo = "nuevo";
                 this._modeloActual = null;
@@ -886,6 +905,20 @@
                 this.prepararProductosNuevo();
 
                 await this.cargarCombos();
+
+                if (idClientePreseleccionado) {
+                    this._setFieldValue("cmbClienteEst", idClientePreseleccionado, true);
+                }
+
+                if (!this._tieneClientesEnCombo()) {
+                    this.mostrarErrorCampos(
+                        "No hay clientes cargados. Creá primero un <strong>Cliente</strong> con el botón + al lado del combo (o en el menú Clientes → Nuevo). Después podés registrar el establecimiento. <em>No hace falta ningún contrato.</em>",
+                        null,
+                        "validacion"
+                    );
+                } else {
+                    this.cerrarErrorCampos();
+                }
 
                 this._setFieldValue("txtHorarioDesdeEst", "08:00");
                 this._setFieldValue("txtHorarioHastaEst", "12:00");
@@ -922,6 +955,7 @@
         }
 
         async abrirVer(id) {
+            this.cerrarErrorCampos();
             try {
                 this._ultimoModo = "ver";
                 const url = this._replaceUrl(this.options.endpoints.editar, { id });
@@ -1238,35 +1272,9 @@
         mostrarErrorCampos(mensaje, idReferencia = null, tipo = "validacion") {
             if (tipo === "validacion") this._validacion?.cancelarPanelExito?.();
             const container = this._id("errorCamposEst");
-            if (!container) return;
-
-            let titulo = "Campos requeridos";
-            let icono = "fa-exclamation-circle";
-
-            if (tipo === "duplicado") titulo = "Registro duplicado detectado";
-            else if (tipo === "relacion") { titulo = "No se puede eliminar"; icono = "fa-link"; }
-            else if (tipo === "error") { titulo = "No se pudo guardar"; icono = "fa-times-circle"; }
-
-            let botonReferencia = "";
-            if (idReferencia) {
-                botonReferencia = `
-                    <button class="rp-btn-ref" onclick="verFichaEstablecimiento(${idReferencia})">
-                        <i class="fa fa-eye me-1"></i> Abrir ficha existente
-                    </button>`;
+            if (window.RpVerFicha?.renderErrorCampos) {
+                window.RpVerFicha.renderErrorCampos(container, mensaje, idReferencia, tipo, "verFichaEstablecimiento");
             }
-
-            container.innerHTML = `
-                <div class="rp-error-box">
-                    <div class="rp-error-icon"><i class="fa ${icono}"></i></div>
-                    <div class="rp-error-content">
-                        <div class="rp-error-title">${titulo}</div>
-                        <div class="rp-error-text">${mensaje}</div>
-                    </div>
-                    ${botonReferencia}
-                </div>`;
-
-            container.classList.remove("d-none");
-            container.scrollIntoView({ behavior: "smooth", block: "center" });
         }
 
         cerrarErrorCampos() {
@@ -1343,6 +1351,11 @@
             if (chkIva) {
                 chkIva.addEventListener("change", () => this._syncIvaCardUI());
             }
+
+            const btnCli = this._id("btnAgregarClienteEst");
+            if (btnCli) {
+                btnCli.addEventListener("click", () => this._abrirNuevoCliente());
+            }
         }
 
         _bindModalEvents() {
@@ -1377,5 +1390,37 @@
     };
 
     window.EstablecimientoModal = EstablecimientoModal;
+
+    function initEstablecimientoModal(options = {}) {
+        const root = document.querySelector("[data-establecimiento-modal]");
+        if (!root) {
+            console.warn("initEstablecimientoModal: incluya el partial M_ClientesEstablecimientos en la vista.");
+            return null;
+        }
+
+        const merged = Object.assign({ token: window.token || "" }, options || {});
+
+        if (!window.establecimientoModal || window.establecimientoModal.modalEl !== root) {
+            window.establecimientoModal = new EstablecimientoModal(root, merged);
+        } else {
+            Object.assign(window.establecimientoModal.options, merged);
+        }
+
+        const abrirVer = (id) => window.establecimientoModal?.abrirVer?.(id);
+
+        window.nuevoEstablecimiento = (idCliente) => window.establecimientoModal?.abrirNuevo?.(idCliente);
+        window.verEstablecimiento = abrirVer;
+        window.editarEstablecimiento = (id) => window.establecimientoModal?.abrirEditar?.(id);
+        window.eliminarEstablecimiento = (id) => window.establecimientoModal?.eliminar?.(id);
+        window.verFichaEstablecimiento = abrirVer;
+
+        if (window.RpVerFicha?.registrar) {
+            window.RpVerFicha.registrar("verFichaEstablecimiento", abrirVer);
+        }
+
+        return window.establecimientoModal;
+    }
+
+    window.initEstablecimientoModal = initEstablecimientoModal;
 
 })(window);

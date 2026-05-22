@@ -21,6 +21,25 @@ namespace SistemaOroAmbiental.Application.Controllers
         public IActionResult Index() => View();
 
         [HttpGet]
+        public async Task<IActionResult> ListaPorCliente(int idCliente)
+        {
+            if (idCliente <= 0)
+                return Ok(new List<object>());
+
+            var items = (await _service.ObtenerTodos())
+                .Where(x => x.IdCliente == idCliente)
+                .ToList();
+
+            return Ok(items.Select(e => new
+            {
+                e.Id,
+                e.Nombre,
+                e.IdCliente,
+                Etiqueta = e.Nombre
+            }));
+        }
+
+        [HttpGet]
         public async Task<IActionResult> Lista()
         {
             var items = (await _service.ObtenerTodos()).ToList();

@@ -1,110 +1,170 @@
-<link href="~/css/navbarlogin.css" rel="stylesheet" />
-<link href="~/css/CurrencyWidget.css" rel="stylesheet" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
+<link href="~/css/NavBarLogin.css?v=2.2" rel="stylesheet" />
 
-<nav class="navbar navbar-expand-lg navbar-light" style="background-color: rgba(112, 112, 112, 0.1);">
+<div class="rp-navbar-shell">
+<nav class="navbar navbar-expand-lg rp-navbar sticky-top">
     <div class="container-fluid">
-        <a class="navbar-brand">SistemaOroAmbiental</a>
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent">
+        <a class="navbar-brand rp-brand" href="@Url.Action("Index", "Clientes")" title="Inicio">
+            <span class="rp-brand-icon"><i class="fa fa-leaf"></i></span>
+            <span class="rp-brand-text">
+                <span class="rp-brand-title">Oro Ambiental</span>
+                <span class="rp-brand-sub">Sistema de gestión</span>
+            </span>
+        </a>
+        <button class="navbar-toggler rp-nav-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-label="Menú">
             <span class="navbar-toggler-icon"></span>
         </button>
 
         <div class="collapse navbar-collapse" id="navbarSupportedContent">
-            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0 rp-nav-main">
 
                 <li class="nav-item dropdown" id="seccionClientes">
-                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                        Clientes
+                    <a class="nav-link dropdown-toggle rp-nav-link" href="#" role="button"
+                       data-bs-toggle="dropdown" data-bs-auto-close="outside" data-bs-offset="0,4" aria-expanded="false">
+                        <span class="rp-nav-ico teal"><i class="fa fa-users"></i></span>
+                        <span>Clientes</span>
                     </a>
-                    <ul class="dropdown-menu">
+                    <ul class="dropdown-menu rp-nav-dropdown">
+                        <li><h6 class="dropdown-header rp-nav-group"><span class="rp-nav-ico xs teal"><i class="fa fa-users"></i></span> Clientes</h6></li>
                         <li>
-                            <a class="dropdown-item" href="@Url.Action("Index", "Clientes")">
-                                <i class="fa fa-users me-2"></i> Clientes
+                            <a class="dropdown-item rp-nav-item" href="@Url.Action("Index", "Clientes")">
+                                <span class="rp-nav-ico sm teal"><i class="fa fa-list"></i></span>
+                                <span class="rp-nav-item-text"><span class="rp-nav-item-title">Listado</span><span class="rp-nav-item-sub">ABM de clientes</span></span>
                             </a>
                         </li>
                         <li>
-                            <a class="dropdown-item" href="@Url.Action("Index", "ClientesCuentaCorriente")">
-                                <i class="fa fa-money me-2"></i> Cuenta corriente
+                            <a class="dropdown-item rp-nav-item" href="@Url.Action("Index", "ClientesCuentaCorriente")">
+                                <span class="rp-nav-ico sm amber"><i class="fa fa-credit-card"></i></span>
+                                <span class="rp-nav-item-text"><span class="rp-nav-item-title">Cuenta corriente</span><span class="rp-nav-item-sub">Saldos y movimientos</span></span>
+                            </a>
+                        </li>
+                        <li><hr class="dropdown-divider rp-nav-divider" /></li>
+                        <li><h6 class="dropdown-header rp-nav-group"><span class="rp-nav-ico xs blue"><i class="fa fa-building"></i></span> Establecimientos</h6></li>
+                        <li>
+                            <a class="dropdown-item rp-nav-item" href="@Url.Action("Index", "ClientesEstablecimientos")">
+                                <span class="rp-nav-ico sm blue"><i class="fa fa-list"></i></span>
+                                <span class="rp-nav-item-text"><span class="rp-nav-item-title">Listado</span><span class="rp-nav-item-sub">Puntos de recolección</span></span>
+                            </a>
+                        </li>
+                        <li><hr class="dropdown-divider rp-nav-divider" /></li>
+                        <li><h6 class="dropdown-header rp-nav-group"><span class="rp-nav-ico xs purple"><i class="fa fa-file-text-o"></i></span> Contratos</h6></li>
+                        <li>
+                            <a class="dropdown-item rp-nav-item" href="@Url.Action("Index", "Contratos")">
+                                <span class="rp-nav-ico sm purple"><i class="fa fa-list"></i></span>
+                                <span class="rp-nav-item-text"><span class="rp-nav-item-title">Listado</span><span class="rp-nav-item-sub">Vigencia y renovaciones</span></span>
+                            </a>
+                        </li>
+                        <li><hr class="dropdown-divider rp-nav-divider" /></li>
+                        <li><h6 class="dropdown-header rp-nav-group"><span class="rp-nav-ico xs green"><i class="fa fa-truck"></i></span> Entregas</h6></li>
+                        <li>
+                            <a class="dropdown-item rp-nav-item" href="@Url.Action("Index", "ClientesEntregas")">
+                                <span class="rp-nav-ico sm green"><i class="fa fa-list"></i></span>
+                                <span class="rp-nav-item-text"><span class="rp-nav-item-title">Listado</span><span class="rp-nav-item-sub">Entregas a clientes</span></span>
                             </a>
                         </li>
                         <li>
-                            <a class="dropdown-item" href="@Url.Action("Index", "ClientesEstablecimientos")">
-                                <i class="fa fa-building me-2"></i> Establecimientos
+                            <a class="dropdown-item rp-nav-item rp-nav-item-accent" href="@Url.Action("NuevoModif", "ClientesEntregas")">
+                                <span class="rp-nav-ico sm green"><i class="fa fa-pencil-square-o"></i></span>
+                                <span class="rp-nav-item-text"><span class="rp-nav-item-title">Nuevo / Modif</span><span class="rp-nav-item-sub">Alta y edición de entrega</span></span>
                             </a>
                         </li>
                     </ul>
                 </li>
 
                 <li class="nav-item" id="seccionProductos">
-                    <a class="nav-link" href="@Url.Action("Index", "Productos")">
-                        Productos
+                    <a class="nav-link rp-nav-link" href="@Url.Action("Index", "Productos")">
+                        <span class="rp-nav-ico orange"><i class="fa fa-cubes"></i></span>
+                        <span>Productos</span>
                     </a>
                 </li>
 
                 <li class="nav-item" id="seccionInventario">
-                    <a class="nav-link" href="@Url.Action("Index", "Inventario")">
-                        Inventario
+                    <a class="nav-link rp-nav-link" href="@Url.Action("Index", "Inventario")">
+                        <span class="rp-nav-ico cyan"><i class="fa fa-archive"></i></span>
+                        <span>Inventario</span>
                     </a>
                 </li>
 
                 <li class="nav-item dropdown" id="seccionProveedores">
-                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                        Proveedores
+                    <a class="nav-link dropdown-toggle rp-nav-link" href="#" role="button"
+                       data-bs-toggle="dropdown" data-bs-auto-close="outside" data-bs-offset="0,4" aria-expanded="false">
+                        <span class="rp-nav-ico indigo"><i class="fa fa-industry"></i></span>
+                        <span>Proveedores</span>
                     </a>
-                    <ul class="dropdown-menu">
+                    <ul class="dropdown-menu rp-nav-dropdown">
+                        <li><h6 class="dropdown-header rp-nav-group"><span class="rp-nav-ico xs indigo"><i class="fa fa-industry"></i></span> Proveedores</h6></li>
                         <li>
-                            <a class="dropdown-item" href="@Url.Action("Index", "Proveedores")">
-                                <i class="fa fa-truck me-2"></i> Proveedores
+                            <a class="dropdown-item rp-nav-item" href="@Url.Action("Index", "Proveedores")">
+                                <span class="rp-nav-ico sm indigo"><i class="fa fa-list"></i></span>
+                                <span class="rp-nav-item-text"><span class="rp-nav-item-title">Listado</span><span class="rp-nav-item-sub">ABM de proveedores</span></span>
                             </a>
                         </li>
                         <li>
-                            <a class="dropdown-item" href="@Url.Action("Index", "ProveedoresCuentaCorriente")">
-                                <i class="fa fa-money me-2"></i> Cuenta corriente
+                            <a class="dropdown-item rp-nav-item" href="@Url.Action("Index", "ProveedoresCuentaCorriente")">
+                                <span class="rp-nav-ico sm amber"><i class="fa fa-credit-card"></i></span>
+                                <span class="rp-nav-item-text"><span class="rp-nav-item-title">Cuenta corriente</span><span class="rp-nav-item-sub">Saldos y movimientos</span></span>
+                            </a>
+                        </li>
+                        <li><hr class="dropdown-divider rp-nav-divider" /></li>
+                        <li><h6 class="dropdown-header rp-nav-group"><span class="rp-nav-ico xs rose"><i class="fa fa-shopping-cart"></i></span> Compras</h6></li>
+                        <li>
+                            <a class="dropdown-item rp-nav-item" href="@Url.Action("Index", "Compras")">
+                                <span class="rp-nav-ico sm rose"><i class="fa fa-list"></i></span>
+                                <span class="rp-nav-item-text"><span class="rp-nav-item-title">Listado</span><span class="rp-nav-item-sub">Compras a proveedores</span></span>
                             </a>
                         </li>
                         <li>
-                            <a class="dropdown-item" href="@Url.Action("Index", "Compras")">
-                                <i class="fa fa-shopping-cart me-2"></i> Compras
+                            <a class="dropdown-item rp-nav-item rp-nav-item-accent" href="@Url.Action("NuevoModif", "Compras")">
+                                <span class="rp-nav-ico sm rose"><i class="fa fa-pencil-square-o"></i></span>
+                                <span class="rp-nav-item-text"><span class="rp-nav-item-title">Nuevo / Modif</span><span class="rp-nav-item-sub">Alta y edición de compra</span></span>
                             </a>
                         </li>
                     </ul>
                 </li>
 
                 <li class="nav-item" id="seccionCajas">
-                    <a class="nav-link" href="@Url.Action("Index", "Cajas")">
-                        Cajas
+                    <a class="nav-link rp-nav-link" href="@Url.Action("Index", "Cajas")">
+                        <span class="rp-nav-ico gold"><i class="fa fa-money"></i></span>
+                        <span>Cajas</span>
                     </a>
                 </li>
 
                 <li class="nav-item" id="seccionGastos">
-                    <a class="nav-link" href="@Url.Action("Index", "Gastos")">
-                        Gastos
+                    <a class="nav-link rp-nav-link" href="@Url.Action("Index", "Gastos")">
+                        <span class="rp-nav-ico red"><i class="fa fa-minus-circle"></i></span>
+                        <span>Gastos</span>
                     </a>
                 </li>
 
                 <li class="nav-item" id="seccionUsuarios">
-                    <a class="nav-link" href="@Url.Action("Index", "Usuarios")">
-                        Usuarios
+                    <a class="nav-link rp-nav-link" href="@Url.Action("Index", "Usuarios")">
+                        <span class="rp-nav-ico slate"><i class="fa fa-id-card-o"></i></span>
+                        <span>Usuarios</span>
                     </a>
                 </li>
 
-                <li class="nav-item" id="seccionExtras">
-                    <a class="nav-link" href="#" onclick="abrirConfiguraciones(); return false;">
-                        Extras
+                <li class="nav-item" id="seccionConfiguraciones">
+                    <a class="nav-link rp-nav-link" href="#" onclick="abrirConfiguraciones(); return false;">
+                        <span class="rp-nav-ico gray"><i class="fa fa-sliders"></i></span>
+                        <span>Configuraciones</span>
                     </a>
                 </li>
 
             </ul>
 
-            <!-- Usuario Dropdown -->
-            <ul class="navbar-nav ms-auto">
+            <ul class="navbar-nav ms-auto rp-nav-user">
                 <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
-                        <i class="fa-lg me-2" id="userName"></i>
+                    <a class="nav-link dropdown-toggle rp-nav-user-link" href="#" id="userDropdown" role="button"
+                       data-bs-toggle="dropdown" data-bs-auto-close="outside" data-bs-offset="0,4" aria-expanded="false">
+                        <span class="rp-user-avatar"><i class="fa fa-user"></i></span>
+                        <span class="rp-user-name" id="userName">Usuario</span>
+                        <i class="fa fa-chevron-down rp-user-chev"></i>
                     </a>
-                    <ul class="dropdown-menu dropdown-menu-end">
+                    <ul class="dropdown-menu dropdown-menu-end rp-nav-dropdown rp-nav-user-menu">
                         <li>
-                            <a class="dropdown-item" href="#" onclick="cerrarSesion()">
-                                Cerrar Sesión
+                            <a class="dropdown-item rp-nav-item rp-nav-logout" href="#" onclick="cerrarSesion(); return false;">
+                                <span class="rp-nav-ico sm red"><i class="fa fa-sign-out"></i></span>
+                                <span class="rp-nav-item-text"><span class="rp-nav-item-title">Cerrar sesión</span></span>
                             </a>
                         </li>
                     </ul>
@@ -114,6 +174,7 @@
         </div>
     </div>
 </nav>
+</div>
 
 
 
@@ -144,7 +205,21 @@
 
             <!-- BODY -->
             <div class="modal-body">
-                <div class="rp-config-grid">
+                <div class="rp-search-box rp-config-secciones-search">
+                    <i class="fa fa-search rp-search-icon"></i>
+                    <input type="text"
+                           id="txtBuscarSeccionesConfiguracion"
+                           class="rp-input rp-search-input"
+                           placeholder="Buscar sección..."
+                           autocomplete="off" />
+                </div>
+
+                <label id="lblSeccionesConfiguracionVacio"
+                       class="rp-empty-label rp-config-secciones-empty"
+                       hidden>
+                </label>
+
+                <div class="rp-config-grid" id="rpConfigSeccionesGrid">
 
                     <button class="rp-config-card" onclick="abrirConfiguracion('Sucursales', 'Sucursales')">
                         <div class="rp-config-icon blue"><i class="fa fa-building"></i></div>
@@ -154,11 +229,11 @@
                         </div>
                     </button>
 
-                    <button class="rp-config-card" onclick="abrirConfiguracion('Usuarios Roles', 'UsuariosRoles')">
+                    <button class="rp-config-card" onclick="abrirConfiguracion('Roles', 'UsuariosRoles')">
                         <div class="rp-config-icon blue"><i class="fa fa-shield"></i></div>
                         <div>
-                            <div class="rp-config-title">Usuarios Roles</div>
-                            <div class="rp-config-sub">Roles de permisos</div>
+                            <div class="rp-config-title">Roles</div>
+                            <div class="rp-config-sub">Roles de usuarios y permisos</div>
                         </div>
                     </button>
 
@@ -175,14 +250,6 @@
                         <div>
                             <div class="rp-config-title">Semanas</div>
                             <div class="rp-config-sub">Semanas de recolección</div>
-                        </div>
-                    </button>
-
-                    <button class="rp-config-card" onclick="abrirConfiguracion('Roles', 'Roles')">
-                        <div class="rp-config-icon blue"><i class="fa fa-user"></i></div>
-                        <div>
-                            <div class="rp-config-title">Roles</div>
-                            <div class="rp-config-sub">Roles de usuarios</div>
                         </div>
                     </button>
 
@@ -218,10 +285,10 @@
                         </div>
                     </button>
 
-                    <button class="rp-config-card" onclick="abrirConfiguracion('Estados Usuarios', 'EstadosUsuarios')">
+                    <button class="rp-config-card" onclick="abrirConfiguracion('Estados de usuarios', 'UsuariosEstados')">
                         <div class="rp-config-icon blue"><i class="fa fa-user-circle"></i></div>
                         <div>
-                            <div class="rp-config-title">Estados Usuarios</div>
+                            <div class="rp-config-title">Estados de usuarios</div>
                             <div class="rp-config-sub">Estados del usuario</div>
                         </div>
                     </button>
@@ -454,14 +521,10 @@
 </div>
 
 
-<div id="currencyWidget" class="currency-widget"></div>
-
-
 <partial name="~/Views/Utils/Modals.cshtml" />
 
-<script src="~/js/CurrencyWidget.js?v=1.0"></script>
 <script src="~/js/Permisos.js"></script>
 
 
 
-<script src="~/js/NavBarLogin.js?v=1.5" asp-append-version="true"></script>
+<script src="~/js/NavBarLogin.js?v=1.7" asp-append-version="true"></script>
