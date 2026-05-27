@@ -26,6 +26,8 @@ builder.Services.AddDbContext<SistemaOroAmbientalContext>(options =>
 
 builder.Services.AddScoped(typeof(IConfiguracionNombreRepository<>), typeof(ConfiguracionNombreRepository<>));
 builder.Services.AddScoped(typeof(IConfiguracionNombreService<>), typeof(ConfiguracionNombreService<>));
+builder.Services.AddScoped<IDeleteConflictChecker, DeleteConflictChecker>();
+builder.Services.AddScoped<IEntidadCascadeRepository, EntidadCascadeRepository>();
 
 builder.Services.AddScoped<IUsuariosRepository<User>, UsuariosRepository>();
 builder.Services.AddScoped<IUsuariosService, UsuariosService>();

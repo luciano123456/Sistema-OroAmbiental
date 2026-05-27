@@ -155,13 +155,11 @@ namespace SistemaOroAmbiental.BLL.Service
                 : ServiceResult.Error("No se pudo transferir. Verifique stock en sucursal origen.");
         }
 
-        public async Task<ServiceResult> Eliminar(int id)
-        {
-            var ok = await _repo.Eliminar(id);
-
-            return ok
-                ? ServiceResult.Success("Movimiento eliminado correctamente.")
-                : ServiceResult.Error("No se pudo eliminar. Solo movimientos manuales o transferencias.");
-        }
+        public Task<ServiceResult> Eliminar(int id)
+            => DeleteOperationHelper.ExecuteAsync(
+                () => _repo.Eliminar(id),
+                "el movimiento de inventario",
+                "Movimiento eliminado correctamente.",
+                id);
     }
 }

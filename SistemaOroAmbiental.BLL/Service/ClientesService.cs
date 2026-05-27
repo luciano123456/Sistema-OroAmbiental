@@ -1,4 +1,3 @@
-using Microsoft.EntityFrameworkCore;
 using SistemaOroAmbiental.BLL.Common;
 using SistemaOroAmbiental.DAL.Repository;
 using SistemaOroAmbiental.Models;
@@ -8,10 +7,12 @@ namespace SistemaOroAmbiental.BLL.Service
     public class ClientesService : IClientesService
     {
         private readonly IClientesRepository _repo;
+        private readonly IEntidadCascadeRepository _cascadeRepo;
 
-        public ClientesService(IClientesRepository repo)
+        public ClientesService(IClientesRepository repo, IEntidadCascadeRepository cascadeRepo)
         {
             _repo = repo;
+            _cascadeRepo = cascadeRepo;
         }
 
         public async Task<ServiceResult> Insertar(Cliente model)
@@ -70,28 +71,49 @@ namespace SistemaOroAmbiental.BLL.Service
                 : ServiceResult.Error("No se pudo guardar");
         }
 
-        public async Task<ServiceResult> Eliminar(int id)
+        public Task<DependenciasEliminacionInfo> ObtenerDependenciasEliminar(int id)
+            => _cascadeRepo.ObtenerDependenciasClienteAsync(id);
+
+        public async Task<ServiceResult> Eliminar(int id, bool cascada = false)
         {
-            try
-            {
-                var ok = await _repo.Eliminar(id);
+            var deps = await _cascadeRepo.ObtenerDependenciasClienteAsync(id);
 
-                if (!ok)
-                    return ServiceResult.Error("No se encontró el registro.");
+            if (deps.TieneDependencias && !cascada)
+            {
+                return new ServiceResult
+                {
+                    Ok = false,
+                    Mensaje = deps.MensajeResumen,
+                    Tipo = "dependencias",
+                    IdReferencia = id,
+                    Dependencias = deps,
+                    InstruccionesPasoAPaso = deps.InstruccionesPasoAPaso
+                };
+            }
 
-                return ServiceResult.Success("Cliente eliminado correctamente");
-            }
-            catch (DbUpdateException)
+            if (deps.TieneDependencias && cascada)
             {
-                return ServiceResult.Error(
-                    "No se puede eliminar porque posee registros relacionados.",
-                    "relacion",
-                    id);
+                try
+                {
+                    await _cascadeRepo.EliminarClienteEnCascadaAsync(id);
+                    return ServiceResult.Success(
+                        "Cliente y todos sus registros asociados fueron eliminados correctamente.");
+                }
+                catch (InvalidOperationException ex)
+                {
+                    return ServiceResult.Error(ex.Message, "relacion", id);
+                }
+                catch (Exception)
+                {
+                    return ServiceResult.Error("Error inesperado al eliminar el cliente en cascada.", "error", id);
+                }
             }
-            catch
-            {
-                return ServiceResult.Error("Error inesperado.");
-            }
+
+            return await DeleteOperationHelper.ExecuteAsync(
+                () => _repo.Eliminar(id),
+                "el cliente",
+                "Cliente eliminado correctamente",
+                id);
         }
 
         public Task<Cliente?> Obtener(int id)

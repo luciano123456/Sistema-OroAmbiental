@@ -136,15 +136,10 @@ namespace SistemaOroAmbiental.DAL.Repository
                 await trx.CommitAsync();
                 return true;
             }
-            catch (DbUpdateException)
-            {
-                await trx.RollbackAsync();
-                throw;
-            }
             catch
             {
                 await trx.RollbackAsync();
-                return false;
+                throw;
             }
         }
 

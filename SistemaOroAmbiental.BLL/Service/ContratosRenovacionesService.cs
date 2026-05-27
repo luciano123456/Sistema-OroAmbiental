@@ -48,13 +48,12 @@ namespace SistemaOroAmbiental.BLL.Service
                 : ServiceResult.Error(errorDb ?? "No se pudo guardar la renovación.");
         }
 
-        public async Task<ServiceResult> Eliminar(int id)
-        {
-            var ok = await _repo.Eliminar(id);
-            return ok
-                ? ServiceResult.Success("Renovación eliminada correctamente")
-                : ServiceResult.Error("No se pudo eliminar la renovación.");
-        }
+        public Task<ServiceResult> Eliminar(int id)
+            => DeleteOperationHelper.ExecuteAsync(
+                () => _repo.Eliminar(id),
+                "la renovación",
+                "Renovación eliminada correctamente",
+                id);
 
         private static ServiceResult? Validar(ContratosRenovacion model)
         {

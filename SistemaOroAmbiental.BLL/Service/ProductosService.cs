@@ -1,4 +1,3 @@
-using Microsoft.EntityFrameworkCore;
 using SistemaOroAmbiental.BLL.Common;
 using SistemaOroAmbiental.DAL.Repository;
 using SistemaOroAmbiental.Models;
@@ -8,10 +7,12 @@ namespace SistemaOroAmbiental.BLL.Service
     public class ProductosService : IProductosService
     {
         private readonly IProductosRepository _repo;
+        private readonly IDeleteConflictChecker _deleteChecker;
 
-        public ProductosService(IProductosRepository repo)
+        public ProductosService(IProductosRepository repo, IDeleteConflictChecker deleteChecker)
         {
             _repo = repo;
+            _deleteChecker = deleteChecker;
         }
 
         public async Task<ServiceResult> Insertar(Producto model)
@@ -58,36 +59,13 @@ namespace SistemaOroAmbiental.BLL.Service
                 : ServiceResult.Error("No se pudo guardar");
         }
 
-        public async Task<ServiceResult> Eliminar(int id)
-        {
-            try
-            {
-                var ok = await _repo.Eliminar(id);
-
-                if (!ok)
-                    return ServiceResult.Error("No se encontró el registro.");
-
-                return ServiceResult.Success("Producto eliminado correctamente");
-            }
-            catch (InvalidOperationException ex) when (ex.Message == "PRODUCTO_EN_USO")
-            {
-                return ServiceResult.Error(
-                    "No se puede eliminar porque posee registros relacionados (compras, entregas o establecimientos).",
-                    "relacion",
-                    id);
-            }
-            catch (DbUpdateException)
-            {
-                return ServiceResult.Error(
-                    "No se puede eliminar porque posee registros relacionados.",
-                    "relacion",
-                    id);
-            }
-            catch
-            {
-                return ServiceResult.Error("Error inesperado.");
-            }
-        }
+        public Task<ServiceResult> Eliminar(int id)
+            => DeleteOperationHelper.ExecuteAsync(
+                () => _repo.Eliminar(id),
+                "el producto",
+                "Producto eliminado correctamente",
+                id,
+                () => _deleteChecker.ProductoAsync(id));
 
         public Task<Producto?> Obtener(int id)
             => _repo.Obtener(id);

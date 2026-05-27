@@ -448,7 +448,10 @@ namespace SistemaOroAmbiental.DAL.Repository
 
                 var editable = mov.TipoMovimiento is TIPO_ENTRADA_MANUAL or TIPO_SALIDA_MANUAL or TIPO_AJUSTE or TIPO_TRANSFERENCIA;
                 if (!editable)
-                    return false;
+                {
+                    throw new InvalidOperationException(
+                        "No se pudo eliminar este movimiento. Solo se pueden eliminar movimientos manuales, ajustes o transferencias.");
+                }
 
                 if (mov.TipoMovimiento == TIPO_TRANSFERENCIA)
                 {
@@ -480,7 +483,7 @@ namespace SistemaOroAmbiental.DAL.Repository
             catch
             {
                 await trx.RollbackAsync();
-                return false;
+                throw;
             }
         }
     }

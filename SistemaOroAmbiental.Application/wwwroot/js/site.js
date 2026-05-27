@@ -289,6 +289,151 @@ function confirmarModal(mensaje) {
     });
 }
 
+/**
+ * Flujo de eliminación con listado de dependencias.
+ * @returns {Promise<{accion:'ok'|'cancelar', data?:object}>}
+ */
+async function ejecutarEliminacionEntidad(opts) {
+    const {
+        entidadLabel = "el registro",
+        urlDependencias,
+        urlEliminar,
+        headers = {},
+        fetchJson = null
+    } = opts || {};
+
+    const doFetch = fetchJson || (async (url, options) => {
+        const r = await fetch(url, options);
+        if (!r.ok) throw new Error(`Error HTTP ${r.status}`);
+        return await r.json();
+    });
+
+    let depInfo;
+    try {
+        depInfo = await doFetch(urlDependencias, { method: "GET", headers });
+    } catch (e) {
+        console.error(e);
+        if (typeof errorModal === "function") errorModal("No se pudieron verificar las dependencias.");
+        return { accion: "cancelar" };
+    }
+
+    const items = depInfo?.items || depInfo?.Items || [];
+    const tieneDeps = items.length > 0;
+
+    if (!tieneDeps) {
+        const ok = typeof confirmarModal === "function"
+            ? await confirmarModal(`¿Desea eliminar ${entidadLabel}?`)
+            : window.confirm(`¿Desea eliminar ${entidadLabel}?`);
+        if (!ok) return { accion: "cancelar" };
+
+        try {
+            const data = await doFetch(urlEliminar(false), { method: "DELETE", headers });
+            const valor = !!(data?.valor ?? data?.Valor);
+            if (!valor) {
+                if (typeof errorModal === "function") {
+                    errorModal(data?.mensaje ?? data?.Mensaje ?? "No se pudo eliminar.");
+                }
+                return { accion: "cancelar" };
+            }
+            return { accion: "ok", data };
+        } catch (e) {
+            console.error(e);
+            if (typeof errorModal === "function") errorModal("Ha ocurrido un error al eliminar.");
+            return { accion: "cancelar" };
+        }
+    }
+
+    const eleccion = await new Promise((resolve) => {
+        const modalEl = document.getElementById("modalEliminarCascada");
+        if (!modalEl) {
+            resolve("manual");
+            return;
+        }
+
+        const titulo = document.getElementById("modalEliminarCascadaTitulo");
+        const intro = document.getElementById("modalEliminarCascadaIntro");
+        const lista = document.getElementById("modalEliminarCascadaLista");
+        const btnCascada = document.getElementById("btnEliminarCascadaConfirmar");
+        const btnManual = document.getElementById("btnEliminarCascadaManual");
+
+        if (titulo) titulo.textContent = `Eliminar ${entidadLabel}`;
+        if (intro) {
+            intro.textContent = depInfo?.mensajeResumen || depInfo?.MensajeResumen
+                || `Este registro tiene datos asociados que impiden borrarlo directamente:`;
+        }
+
+        if (lista) {
+            lista.innerHTML = items.map(it => {
+                const etiqueta = it.etiqueta || it.Etiqueta || "Registro";
+                const cant = Number(it.cantidad ?? it.Cantidad ?? 0);
+                return `<li class="list-group-item bg-transparent text-white border-secondary px-0">
+                    <i class="fa fa-link text-warning me-2"></i>
+                    <strong>${cant}</strong> — ${etiqueta}
+                </li>`;
+            }).join("");
+        }
+
+        const modal = new bootstrap.Modal(modalEl, { backdrop: "static", keyboard: false });
+        let resuelto = false;
+
+        const cerrar = (valor) => {
+            if (resuelto) return;
+            resuelto = true;
+            modal.hide();
+            resolve(valor);
+        };
+
+        btnCascada.onclick = () => cerrar("cascada");
+        btnManual.onclick = () => cerrar("manual");
+        modalEl.addEventListener("hidden.bs.modal", () => {
+            if (!resuelto) cerrar("cancelar");
+        }, { once: true });
+
+        modal.show();
+    });
+
+    if (eleccion === "cancelar") return { accion: "cancelar" };
+
+    if (eleccion === "manual") {
+        const pasos = depInfo?.instruccionesPasoAPaso || depInfo?.InstruccionesPasoAPaso || "";
+        const detalle = items.map((it, i) => {
+            const acc = it.accionManual || it.AccionManual || "";
+            return `${i + 1}. ${acc}`;
+        }).join("\n");
+
+        const msg = (pasos || depInfo?.mensajeResumen || depInfo?.MensajeResumen || "Tiene registros asociados.")
+            + (detalle ? `\n\n${detalle}` : "");
+
+        if (typeof errorModal === "function") errorModal(msg);
+        return { accion: "cancelar" };
+    }
+
+    const okCascada = typeof confirmarModal === "function"
+        ? await confirmarModal(
+            `¿Confirma eliminar ${entidadLabel} y TODOS los registros asociados listados? Esta acción no se puede deshacer.`)
+        : window.confirm("¿Eliminar todo en cascada?");
+
+    if (!okCascada) return { accion: "cancelar" };
+
+    try {
+        const data = await doFetch(urlEliminar(true), { method: "DELETE", headers });
+        const valor = !!(data?.valor ?? data?.Valor);
+        if (!valor) {
+            if (typeof errorModal === "function") {
+                errorModal(data?.mensaje ?? data?.Mensaje ?? "No se pudo eliminar en cascada.");
+            }
+            return { accion: "cancelar" };
+        }
+        return { accion: "ok", data };
+    } catch (e) {
+        console.error(e);
+        if (typeof errorModal === "function") errorModal("Ha ocurrido un error al eliminar en cascada.");
+        return { accion: "cancelar" };
+    }
+}
+
+window.ejecutarEliminacionEntidad = ejecutarEliminacionEntidad;
+
 
 const formatoMoneda = new Intl.NumberFormat('es-AR', {
     style: 'currency',

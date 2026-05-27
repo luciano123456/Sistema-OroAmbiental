@@ -592,6 +592,8 @@ namespace SistemaOroAmbiental.DAL.Repository
                 await RevertirCostosCompra(entity.Id, idUsuario, ahora);
                 await RevertirMovimientoCuentaCorriente(entity);
 
+                await EliminarHistorialYPagosResidualesCompraAsync(entity.Id);
+
                 _db.ComprasProductos.RemoveRange(entity.ComprasProductos);
                 _db.Compras.Remove(entity);
 
@@ -599,11 +601,62 @@ namespace SistemaOroAmbiental.DAL.Repository
                 await trx.CommitAsync();
                 return true;
             }
-            catch
+            catch (InvalidOperationException)
             {
                 await trx.RollbackAsync();
-                return false;
+                throw;
             }
+            catch (DbUpdateException ex)
+            {
+                await trx.RollbackAsync();
+                throw new InvalidOperationException(
+                    DescribirErrorEliminacionCompra(ex), ex);
+            }
+            catch (Exception ex)
+            {
+                await trx.RollbackAsync();
+                throw new InvalidOperationException(
+                    $"No se pudo eliminar la compra: {ex.InnerException?.Message ?? ex.Message}", ex);
+            }
+        }
+
+        private static string DescribirErrorEliminacionCompra(DbUpdateException ex)
+        {
+            var text = (ex.InnerException?.Message ?? ex.Message).ToUpperInvariant();
+
+            if (text.Contains("PRODUCTOSCOSTOHISTORIAL") || text.Contains("FK_PRODUCTOSCOSTOHISTORIAL"))
+                return "No se pudo eliminar la compra: quedó historial de costos de productos sin limpiar. Reintente o contacte soporte.";
+
+            if (text.Contains("PROVEEDORESPAGOS") || text.Contains("FK_PROVEEDORESPAGOS"))
+                return "No se pudo eliminar la compra: aún tiene pagos asociados al proveedor.";
+
+            if (text.Contains("PROVEEDORESCUENTACORRIENTE") || text.Contains("CUENTACORRIENTE"))
+                return "No se pudo eliminar la compra: aún tiene movimientos en la cuenta corriente del proveedor.";
+
+            if (text.Contains("INVENTARIOMOVIMIENTOS") || text.Contains("COMPRASPRODUCTOS"))
+                return "No se pudo eliminar la compra: aún tiene líneas o movimientos de inventario vinculados.";
+
+            return "No se pudo eliminar la compra por registros relacionados en el sistema.";
+        }
+
+        /// <summary>
+        /// Limpia historial de costos y pagos que bloquean el DELETE de la compra (cascada).
+        /// </summary>
+        private async Task EliminarHistorialYPagosResidualesCompraAsync(int idCompra)
+        {
+            var historial = await _db.ProductosCostoHistorials
+                .Where(x => x.IdCompra == idCompra)
+                .ToListAsync();
+
+            if (historial.Count > 0)
+                _db.ProductosCostoHistorials.RemoveRange(historial);
+
+            var pagosRestantes = await _db.ProveedoresPagos
+                .Where(x => x.IdCompra == idCompra)
+                .ToListAsync();
+
+            foreach (var pago in pagosRestantes)
+                await EliminarPagoHuérfanoSinTransaccionAsync(pago);
         }
 
         private async Task EliminarPagosCompraSinTransaccion(int idCompra)
@@ -612,14 +665,51 @@ namespace SistemaOroAmbiental.DAL.Repository
 
             foreach (var pago in pagos)
             {
-                if (!movCcPorPago.TryGetValue(pago.Id, out var idMovCc))
-                    throw new InvalidOperationException(
-                        $"No se encontró el movimiento de cuenta corriente del pago #{pago.Id}.");
+                var idMovCc = 0;
+                if (!movCcPorPago.TryGetValue(pago.Id, out idMovCc) || idMovCc <= 0)
+                {
+                    idMovCc = await _db.ProveedoresCuentaCorrienteMovimientos
+                        .AsNoTracking()
+                        .Where(m =>
+                            m.TipoMovimiento == ProveedoresCuentaCorrienteRepository.TIPO_PAGO_PROVEEDOR &&
+                            m.IdMovimiento == pago.Id)
+                        .Select(m => m.Id)
+                        .FirstOrDefaultAsync();
+                }
 
-                if (!await _ccRepo.EliminarSinTransaccion(idMovCc))
-                    throw new InvalidOperationException(
-                        $"No se pudo revertir el pago #{pago.Id} (caja y cuenta corriente).");
+                if (idMovCc > 0)
+                {
+                    if (!await _ccRepo.EliminarSinTransaccion(idMovCc))
+                    {
+                        throw new InvalidOperationException(
+                            $"No se pudo revertir el pago #{pago.Id} (${pago.Importe:N2}): no se pudo actualizar caja ni cuenta corriente del proveedor.");
+                    }
+                }
+                else
+                {
+                    await EliminarPagoHuérfanoSinTransaccionAsync(pago);
+                }
             }
+        }
+
+        private async Task EliminarPagoHuérfanoSinTransaccionAsync(ProveedoresPago pago)
+        {
+            if (pago.IdMovCaja.HasValue)
+            {
+                var cajaMov = await _db.CajasMovimientos
+                    .Include(x => x.IdCajaNavigation)
+                    .FirstOrDefaultAsync(x => x.Id == pago.IdMovCaja.Value);
+
+                if (cajaMov != null)
+                {
+                    cajaMov.IdCajaNavigation.Saldo -= (cajaMov.Ingreso - cajaMov.Egreso);
+                    _db.CajasMovimientos.Remove(cajaMov);
+                }
+            }
+
+            var tracked = await _db.ProveedoresPagos.FindAsync(pago.Id);
+            if (tracked != null)
+                _db.ProveedoresPagos.Remove(tracked);
         }
 
         public async Task<(decimal importeTotal, List<ProveedoresPago> pagos, Dictionary<int, int> movimientosCcPorPago)> ObtenerPagosCompra(int idCompra)

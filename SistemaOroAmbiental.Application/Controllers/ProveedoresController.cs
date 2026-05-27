@@ -114,17 +114,26 @@ namespace SistemaOroAmbiental.Application.Controllers
             });
         }
 
-        [HttpDelete]
-        public async Task<IActionResult> Eliminar(int id)
+        [HttpGet]
+        public async Task<IActionResult> DependenciasEliminar(int id)
         {
-            ServiceResult result = await _service.Eliminar(id);
+            var info = await _service.ObtenerDependenciasEliminar(id);
+            return Ok(info);
+        }
+
+        [HttpDelete]
+        public async Task<IActionResult> Eliminar(int id, bool cascada = false)
+        {
+            ServiceResult result = await _service.Eliminar(id, cascada);
 
             return Ok(new
             {
                 valor = result.Ok,
                 mensaje = result.Mensaje,
                 tipo = result.Tipo,
-                idReferencia = result.IdReferencia
+                idReferencia = result.IdReferencia,
+                dependencias = result.Dependencias?.Items,
+                instruccionesPasoAPaso = result.InstruccionesPasoAPaso
             });
         }
 

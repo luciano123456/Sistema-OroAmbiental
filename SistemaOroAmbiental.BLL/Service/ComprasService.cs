@@ -109,28 +109,16 @@ namespace SistemaOroAmbiental.BLL.Service
             }
         }
 
-        public async Task<ServiceResult> Eliminar(int id)
+        public Task<ServiceResult> Eliminar(int id)
         {
             if (id <= 0)
-                return ServiceResult.Error("Registro inválido.", "validacion");
+                return Task.FromResult(ServiceResult.Error("Registro inválido.", "validacion"));
 
-            try
-            {
-                var ok = await _repo.Eliminar(id);
-                if (!ok)
-                    return ServiceResult.Error("No se encontró la compra o no se pudo eliminar.");
-
-                return ServiceResult.Success(
-                    "Compra eliminada. Se revirtieron stock, deuda en cuenta corriente, pagos y movimientos de caja.");
-            }
-            catch (DbUpdateException)
-            {
-                return ServiceResult.Error("No se puede eliminar porque posee registros relacionados.", "relacion", id);
-            }
-            catch
-            {
-                return ServiceResult.Error("Error inesperado al eliminar.");
-            }
+            return DeleteOperationHelper.ExecuteAsync(
+                () => _repo.Eliminar(id),
+                "la compra",
+                "Compra eliminada. Se revirtieron stock, deuda en cuenta corriente, pagos y movimientos de caja.",
+                id);
         }
 
         private static bool Validar(Compra compra, List<ComprasProducto>? lineas, out string error)

@@ -1,4 +1,3 @@
-using Microsoft.EntityFrameworkCore;
 using SistemaOroAmbiental.BLL.Common;
 using SistemaOroAmbiental.DAL.Repository;
 using SistemaOroAmbiental.Models;
@@ -8,10 +7,14 @@ namespace SistemaOroAmbiental.BLL.Service
     public class ClientesEstablecimientosService : IClientesEstablecimientosService
     {
         private readonly IClientesEstablecimientosRepository _repo;
+        private readonly IDeleteConflictChecker _deleteChecker;
 
-        public ClientesEstablecimientosService(IClientesEstablecimientosRepository repo)
+        public ClientesEstablecimientosService(
+            IClientesEstablecimientosRepository repo,
+            IDeleteConflictChecker deleteChecker)
         {
             _repo = repo;
+            _deleteChecker = deleteChecker;
         }
 
         public async Task<ServiceResult> Insertar(ClientesEstablecimiento model)
@@ -54,43 +57,13 @@ namespace SistemaOroAmbiental.BLL.Service
                 : ServiceResult.Error("No se pudo guardar");
         }
 
-        public async Task<ServiceResult> Eliminar(int id)
-        {
-            try
-            {
-                if (await _repo.TieneContratos(id))
-                {
-                    return ServiceResult.Error(
-                        "No se puede eliminar porque tiene contratos asociados.",
-                        "relacion",
-                        id);
-                }
-
-                var ok = await _repo.Eliminar(id);
-                if (!ok)
-                    return ServiceResult.Error("No se encontró el registro.");
-
-                return ServiceResult.Success("Establecimiento eliminado correctamente");
-            }
-            catch (InvalidOperationException ex) when (ex.Message == "CONTRATOS")
-            {
-                return ServiceResult.Error(
-                    "No se puede eliminar porque tiene contratos asociados.",
-                    "relacion",
-                    id);
-            }
-            catch (DbUpdateException)
-            {
-                return ServiceResult.Error(
-                    "No se puede eliminar porque posee registros relacionados.",
-                    "relacion",
-                    id);
-            }
-            catch
-            {
-                return ServiceResult.Error("Error inesperado al eliminar.");
-            }
-        }
+        public Task<ServiceResult> Eliminar(int id)
+            => DeleteOperationHelper.ExecuteAsync(
+                () => _repo.Eliminar(id),
+                "el establecimiento",
+                "Establecimiento eliminado correctamente",
+                id,
+                () => _deleteChecker.EstablecimientoAsync(id));
 
         public Task<ClientesEstablecimiento?> Obtener(int id) => _repo.Obtener(id);
 

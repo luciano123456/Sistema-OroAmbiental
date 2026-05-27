@@ -896,16 +896,25 @@
                     headers: this._headers(false)
                 });
                 const res = await r.json();
-                if (!res.valor) {
-                    this.mostrarErrorCampos(
-                        res.mensaje || "No se pudo eliminar.",
-                        res.idReferencia ?? null,
-                        res.tipo || "error"
-                    );
+                const okDel = !!(res?.valor ?? res?.Valor);
+                const msgDel = res?.mensaje ?? res?.Mensaje ?? "No se pudo eliminar.";
+
+                if (!okDel) {
+                    if (typeof errorModal === "function") {
+                        errorModal(msgDel);
+                    } else {
+                        this.mostrarErrorCampos(
+                            msgDel,
+                            res?.idReferencia ?? res?.IdReferencia ?? null,
+                            res?.tipo ?? res?.Tipo ?? "error"
+                        );
+                    }
                     return;
                 }
 
-                if (typeof exitoModal === "function") exitoModal(res.mensaje || "Contrato eliminado correctamente");
+                if (typeof exitoModal === "function") {
+                    exitoModal(res?.mensaje ?? res?.Mensaje ?? "Contrato eliminado correctamente");
+                }
                 this.bsModal.hide();
                 if (typeof this.options.onDeleted === "function") {
                     await this.options.onDeleted(res, id, this);

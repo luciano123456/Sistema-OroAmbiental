@@ -1153,17 +1153,24 @@
                     headers: this._headers(false)
                 });
 
-                if (!data.valor) {
-                    this.mostrarErrorCampos(
-                        data.mensaje || "No se pudo eliminar.",
-                        data.idReferencia ?? null,
-                        data.tipo || "error"
-                    );
+                const ok = !!(data?.valor ?? data?.Valor);
+                const mensaje = data?.mensaje ?? data?.Mensaje ?? "No se pudo eliminar.";
+
+                if (!ok) {
+                    if (typeof errorModal === "function") {
+                        errorModal(mensaje);
+                    } else {
+                        this.mostrarErrorCampos(
+                            mensaje,
+                            data?.idReferencia ?? data?.IdReferencia ?? null,
+                            data?.tipo ?? data?.Tipo ?? "error"
+                        );
+                    }
                     return false;
                 }
 
                 if (typeof exitoModal === "function") {
-                    exitoModal(data.mensaje || "Establecimiento eliminado correctamente");
+                    exitoModal(data?.mensaje ?? data?.Mensaje ?? "Establecimiento eliminado correctamente");
                 }
 
                 if (typeof this.options.onDeleted === "function") {

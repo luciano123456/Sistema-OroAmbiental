@@ -756,36 +756,31 @@
         }
 
         async eliminar(id) {
-            const confirmado = typeof confirmarModal === "function"
-                ? await confirmarModal("\u00BFDesea eliminar este cliente?")
-                : window.confirm("\u00BFDesea eliminar este cliente?");
-
-            if (!confirmado) return false;
-
-            try {
-                const url = this._replaceUrl(this.options.endpoints.eliminar, { id });
-                const data = await this._fetchJson(url, {
-                    method: "DELETE",
-                    headers: this._headers(false)
-                });
-
-                if (!data.valor) {
-                    this.mostrarErrorCampos(data.mensaje || "No se pudo eliminar.", data.idReferencia ?? null, data.tipo || "error");
-                    return false;
-                }
-
-                exitoModal(data.mensaje || "Cliente eliminado correctamente");
-
-                if (typeof this.options.onDeleted === "function") {
-                    await this.options.onDeleted(data, id, this);
-                }
-
-                return true;
-            } catch (e) {
-                console.error(e);
-                errorModal("Ha ocurrido un error.");
+            if (typeof window.ejecutarEliminacionEntidad !== "function") {
+                errorModal("No está disponible el asistente de eliminación.");
                 return false;
             }
+
+            const resultado = await window.ejecutarEliminacionEntidad({
+                entidadLabel: "este cliente",
+                urlDependencias: `/Clientes/DependenciasEliminar?id=${id}`,
+                urlEliminar: cascada => `/Clientes/Eliminar?id=${id}&cascada=${cascada ? "true" : "false"}`,
+                headers: this._headers(false),
+                fetchJson: (url, options) => this._fetchJson(url, options)
+            });
+
+            if (resultado.accion !== "ok") return false;
+
+            const data = resultado.data;
+            if (typeof exitoModal === "function") {
+                exitoModal(data?.mensaje ?? data?.Mensaje ?? "Cliente eliminado correctamente");
+            }
+
+            if (typeof this.options.onDeleted === "function") {
+                await this.options.onDeleted(data, id, this);
+            }
+
+            return true;
         }
 
         limpiarModal() {

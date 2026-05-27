@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using SistemaOroAmbiental.Application.Models.ViewModels;
 using SistemaOroAmbiental.BLL.Service;
 using SistemaOroAmbiental.Models;
@@ -68,8 +69,29 @@ namespace SistemaOroAmbiental.Application.Controllers
         [HttpDelete]
         public async Task<IActionResult> Eliminar(int id)
         {
-            bool ok = await _service.Eliminar(id);
-            return Ok(new { valor = ok });
+            var entity = await _service.Obtener(id);
+            if (entity == null)
+                return Ok(new { valor = false, mensaje = "No se encontró el gasto.", tipo = "validacion" });
+
+            try
+            {
+                bool ok = await _service.Eliminar(id);
+                return Ok(new
+                {
+                    valor = ok,
+                    mensaje = ok ? "Gasto eliminado correctamente." : "No se pudo eliminar el gasto.",
+                    tipo = ok ? "success" : "error"
+                });
+            }
+            catch (DbUpdateException)
+            {
+                return Ok(new
+                {
+                    valor = false,
+                    mensaje = "No se pudo eliminar el gasto porque tiene movimientos de caja u otros registros vinculados.",
+                    tipo = "relacion"
+                });
+            }
         }
 
         private static VMGasto MapToVm(Gasto g) => new()

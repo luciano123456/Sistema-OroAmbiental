@@ -513,7 +513,7 @@ namespace SistemaOroAmbiental.DAL.Repository
             catch
             {
                 await trx.RollbackAsync();
-                return false;
+                throw;
             }
         }
 

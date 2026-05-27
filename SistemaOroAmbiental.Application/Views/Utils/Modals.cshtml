@@ -77,6 +77,34 @@
     </div>
 </div>
 
+<!-- Modal eliminar con dependencias (cascada / manual) -->
+<div class="modal fade" id="modalEliminarCascada" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content text-white" style="background: #323844">
+            <div class="modal-header border-0 bg-danger bg-opacity-10 colorEncabezado">
+                <i class="fa fa-exclamation-triangle text-danger fs-2 me-2"></i>
+                <h5 class="modal-title text-white fw-bold" id="modalEliminarCascadaTitulo">No se puede eliminar</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <p id="modalEliminarCascadaIntro" class="mb-3"></p>
+                <ul id="modalEliminarCascadaLista" class="list-group list-group-flush mb-3"></ul>
+                <p class="small text-muted mb-0">
+                    <strong>Eliminar en cascada:</strong> borra el registro y todo lo listado arriba.<br />
+                    <strong>Hacerlo manualmente:</strong> le muestra los pasos para ir quitando cada cosa por separado.
+                </p>
+            </div>
+            <div class="modal-footer border-0 flex-wrap justify-content-center gap-2">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-outline-light" id="btnEliminarCascadaManual">Hacerlo manualmente</button>
+                <button type="button" class="btn btn-danger" id="btnEliminarCascadaConfirmar">
+                    <i class="fa fa-trash-o"></i> Eliminar todo en cascada
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="modal fade" id="modalExportar" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered modal-md">
         <div class="modal-content export-modal">

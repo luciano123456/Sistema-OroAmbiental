@@ -47,7 +47,7 @@ namespace SistemaOroAmbiental.DAL.Repository
                 await _db.SaveChangesAsync();
                 return true;
             }
-            catch { return false; }
+            catch (DbUpdateException) { throw; }
         }
 
         public async Task<bool> Actualizar(ClientesEstablecimientosProducto model)
@@ -65,7 +65,7 @@ namespace SistemaOroAmbiental.DAL.Repository
                 await _db.SaveChangesAsync();
                 return true;
             }
-            catch { return false; }
+            catch (DbUpdateException) { throw; }
         }
 
         public async Task<bool> Eliminar(int id)
@@ -78,7 +78,7 @@ namespace SistemaOroAmbiental.DAL.Repository
                 await _db.SaveChangesAsync();
                 return true;
             }
-            catch { return false; }
+            catch (DbUpdateException) { throw; }
         }
     }
 }

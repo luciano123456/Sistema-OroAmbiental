@@ -383,36 +383,31 @@
         }
 
         async eliminar(id) {
-            const confirmado = typeof confirmarModal === "function"
-                ? await confirmarModal("¿Desea eliminar este proveedor?")
-                : window.confirm("¿Desea eliminar este proveedor?");
-
-            if (!confirmado) return false;
-
-            try {
-                const url = this._replaceUrl(this.options.endpoints.eliminar, { id });
-                const data = await this._fetchJson(url, {
-                    method: "DELETE",
-                    headers: this._headers(false)
-                });
-
-                if (!data.valor) {
-                    this.mostrarErrorCampos(data.mensaje || "No se pudo eliminar.", data.idReferencia ?? null, data.tipo || "error");
-                    return false;
-                }
-
-                exitoModal(data.mensaje || "Proveedor eliminado correctamente");
-
-                if (typeof this.options.onDeleted === "function") {
-                    await this.options.onDeleted(data, id, this);
-                }
-
-                return true;
-            } catch (e) {
-                console.error(e);
-                errorModal("Ha ocurrido un error.");
+            if (typeof window.ejecutarEliminacionEntidad !== "function") {
+                errorModal("No está disponible el asistente de eliminación.");
                 return false;
             }
+
+            const resultado = await window.ejecutarEliminacionEntidad({
+                entidadLabel: "este proveedor",
+                urlDependencias: `/Proveedores/DependenciasEliminar?id=${id}`,
+                urlEliminar: cascada => `/Proveedores/Eliminar?id=${id}&cascada=${cascada ? "true" : "false"}`,
+                headers: this._headers(false),
+                fetchJson: (url, options) => this._fetchJson(url, options)
+            });
+
+            if (resultado.accion !== "ok") return false;
+
+            const data = resultado.data;
+            if (typeof exitoModal === "function") {
+                exitoModal(data?.mensaje ?? data?.Mensaje ?? "Proveedor eliminado correctamente");
+            }
+
+            if (typeof this.options.onDeleted === "function") {
+                await this.options.onDeleted(data, id, this);
+            }
+
+            return true;
         }
 
         limpiarModal() {

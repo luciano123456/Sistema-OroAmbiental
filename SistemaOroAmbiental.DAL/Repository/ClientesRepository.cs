@@ -95,9 +95,9 @@ namespace SistemaOroAmbiental.DAL.Repository
                 await _db.SaveChangesAsync();
                 return true;
             }
-            catch
+            catch (DbUpdateException)
             {
-                return false;
+                throw;
             }
         }
 

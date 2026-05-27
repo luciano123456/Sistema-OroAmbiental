@@ -1,4 +1,6 @@
-﻿namespace SistemaOroAmbiental.BLL.Common
+﻿using SistemaOroAmbiental.Models;
+
+namespace SistemaOroAmbiental.BLL.Common
 {
     public class ServiceResult
     {
@@ -6,6 +8,8 @@
         public string Mensaje { get; set; } = "";
         public string Tipo { get; set; } = "info";
         public int? IdReferencia { get; set; }
+        public DependenciasEliminacionInfo? Dependencias { get; set; }
+        public string? InstruccionesPasoAPaso { get; set; }
 
         public static ServiceResult Success(string mensaje = "")
             => new() { Ok = true, Mensaje = mensaje, Tipo = "success" };

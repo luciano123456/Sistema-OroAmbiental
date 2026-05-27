@@ -67,13 +67,11 @@ namespace SistemaOroAmbiental.BLL.Service
                 : ServiceResult.Error("No se pudo guardar el contacto");
         }
 
-        public async Task<ServiceResult> Eliminar(int id)
-        {
-            var ok = await _repo.Eliminar(id);
-
-            return ok
-                ? ServiceResult.Success("Contacto eliminado correctamente")
-                : ServiceResult.Error("No se pudo eliminar el contacto");
-        }
+        public Task<ServiceResult> Eliminar(int id)
+            => DeleteOperationHelper.ExecuteAsync(
+                () => _repo.Eliminar(id),
+                "el contacto",
+                "Contacto eliminado correctamente",
+                id);
     }
 }

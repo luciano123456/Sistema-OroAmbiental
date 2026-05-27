@@ -10,11 +10,16 @@ namespace SistemaOroAmbiental.BLL.Service
     {
         private readonly IContratosRepository _repo;
         private readonly SistemaOroAmbientalContext _db;
+        private readonly IDeleteConflictChecker _deleteChecker;
 
-        public ContratosService(IContratosRepository repo, SistemaOroAmbientalContext db)
+        public ContratosService(
+            IContratosRepository repo,
+            SistemaOroAmbientalContext db,
+            IDeleteConflictChecker deleteChecker)
         {
             _repo = repo;
             _db = db;
+            _deleteChecker = deleteChecker;
         }
 
         public Task<List<Contrato>> ListarFiltrado(int? idCliente, bool? soloVigentes, string? texto)
@@ -71,43 +76,13 @@ namespace SistemaOroAmbiental.BLL.Service
                 : ServiceResult.Error("No se pudo guardar el contrato.");
         }
 
-        public async Task<ServiceResult> Eliminar(int id)
-        {
-            try
-            {
-                if (await _repo.TieneEntregas(id))
-                {
-                    return ServiceResult.Error(
-                        "No se puede eliminar porque tiene entregas asociadas.",
-                        "relacion",
-                        id);
-                }
-
-                var ok = await _repo.Eliminar(id);
-                if (!ok)
-                    return ServiceResult.Error("No se encontró el contrato.");
-
-                return ServiceResult.Success("Contrato eliminado correctamente");
-            }
-            catch (InvalidOperationException ex) when (ex.Message == "ENTREGAS")
-            {
-                return ServiceResult.Error(
-                    "No se puede eliminar porque tiene entregas asociadas.",
-                    "relacion",
-                    id);
-            }
-            catch (DbUpdateException)
-            {
-                return ServiceResult.Error(
-                    "No se puede eliminar porque posee registros relacionados.",
-                    "relacion",
-                    id);
-            }
-            catch
-            {
-                return ServiceResult.Error("Error inesperado al eliminar.");
-            }
-        }
+        public Task<ServiceResult> Eliminar(int id)
+            => DeleteOperationHelper.ExecuteAsync(
+                () => _repo.Eliminar(id),
+                "el contrato",
+                "Contrato eliminado correctamente",
+                id,
+                () => _deleteChecker.ContratoAsync(id));
 
         private async Task<ServiceResult?> Validar(Contrato model)
         {

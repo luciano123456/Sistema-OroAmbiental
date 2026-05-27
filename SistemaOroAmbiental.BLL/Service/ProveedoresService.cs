@@ -8,10 +8,12 @@ namespace SistemaOroAmbiental.BLL.Service
     public class ProveedoresService : IProveedoresService
     {
         private readonly IProveedoresRepository _repo;
+        private readonly IEntidadCascadeRepository _cascadeRepo;
 
-        public ProveedoresService(IProveedoresRepository repo)
+        public ProveedoresService(IProveedoresRepository repo, IEntidadCascadeRepository cascadeRepo)
         {
             _repo = repo;
+            _cascadeRepo = cascadeRepo;
         }
 
         public async Task<ServiceResult> Insertar(Proveedore model)
@@ -58,28 +60,55 @@ namespace SistemaOroAmbiental.BLL.Service
                 : ServiceResult.Error("No se pudo guardar");
         }
 
-        public async Task<ServiceResult> Eliminar(int id)
+        public Task<DependenciasEliminacionInfo> ObtenerDependenciasEliminar(int id)
+            => _cascadeRepo.ObtenerDependenciasProveedorAsync(id);
+
+        public async Task<ServiceResult> Eliminar(int id, bool cascada = false)
         {
-            try
-            {
-                var ok = await _repo.Eliminar(id);
+            var deps = await _cascadeRepo.ObtenerDependenciasProveedorAsync(id);
 
-                if (!ok)
-                    return ServiceResult.Error("No se encontró el registro.");
+            if (deps.TieneDependencias && !cascada)
+            {
+                return new ServiceResult
+                {
+                    Ok = false,
+                    Mensaje = deps.MensajeResumen,
+                    Tipo = "dependencias",
+                    IdReferencia = id,
+                    Dependencias = deps,
+                    InstruccionesPasoAPaso = deps.InstruccionesPasoAPaso
+                };
+            }
 
-                return ServiceResult.Success("Proveedor eliminado correctamente");
-            }
-            catch (DbUpdateException)
+            if (deps.TieneDependencias && cascada)
             {
-                return ServiceResult.Error(
-                    "No se puede eliminar porque posee registros relacionados.",
-                    "relacion",
-                    id);
+                try
+                {
+                    await _cascadeRepo.EliminarProveedorEnCascadaAsync(id);
+                    return ServiceResult.Success(
+                        "Proveedor y todos sus registros asociados fueron eliminados correctamente.");
+                }
+                catch (InvalidOperationException ex)
+                {
+                    return ServiceResult.Error(ex.Message, "relacion", id);
+                }
+                catch (DbUpdateException ex)
+                {
+                    var msg = DeleteOperationHelper.MapDbUpdateMessage(ex, "el proveedor")
+                        ?? "No se pudo eliminar el proveedor en cascada por registros relacionados.";
+                    return ServiceResult.Error(msg, "relacion", id);
+                }
+                catch (Exception)
+                {
+                    return ServiceResult.Error("Error inesperado al eliminar el proveedor en cascada.", "error", id);
+                }
             }
-            catch
-            {
-                return ServiceResult.Error("Error inesperado.");
-            }
+
+            return await DeleteOperationHelper.ExecuteAsync(
+                () => _repo.Eliminar(id),
+                "el proveedor",
+                "Proveedor eliminado correctamente",
+                id);
         }
 
         public Task<Proveedore?> Obtener(int id)

@@ -140,13 +140,11 @@ namespace SistemaOroAmbiental.BLL.Service
                 : ServiceResult.Error("No se pudo modificar la transferencia");
         }
 
-        public async Task<ServiceResult> Eliminar(int id, int idUsuario)
-        {
-            var ok = await _repo.Eliminar(id, idUsuario);
-
-            return ok
-                ? ServiceResult.Success("Movimiento eliminado correctamente")
-                : ServiceResult.Error("No se pudo eliminar el movimiento. Puede estar vinculado a otro módulo.");
-        }
+        public Task<ServiceResult> Eliminar(int id, int idUsuario)
+            => DeleteOperationHelper.ExecuteAsync(
+                () => _repo.Eliminar(id, idUsuario),
+                "el movimiento de caja",
+                "Movimiento eliminado correctamente",
+                id);
     }
 }

@@ -68,12 +68,11 @@ namespace SistemaOroAmbiental.BLL.Service
                 : ServiceResult.Error("No se pudo guardar");
         }
 
-        public async Task<ServiceResult> Eliminar(int id)
-        {
-            var ok = await _repo.Eliminar(id);
-            return ok
-                ? ServiceResult.Success("Producto quitado del establecimiento")
-                : ServiceResult.Error("No se pudo eliminar");
-        }
+        public Task<ServiceResult> Eliminar(int id)
+            => DeleteOperationHelper.ExecuteAsync(
+                () => _repo.Eliminar(id),
+                "el producto del establecimiento",
+                "Producto quitado del establecimiento",
+                id);
     }
 }

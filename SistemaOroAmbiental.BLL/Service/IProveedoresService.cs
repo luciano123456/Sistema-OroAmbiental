@@ -9,7 +9,9 @@ namespace SistemaOroAmbiental.BLL.Service
 
         Task<ServiceResult> Actualizar(Proveedore model);
 
-        Task<ServiceResult> Eliminar(int id);
+        Task<DependenciasEliminacionInfo> ObtenerDependenciasEliminar(int id);
+
+        Task<ServiceResult> Eliminar(int id, bool cascada = false);
 
         Task<Proveedore?> Obtener(int id);
 

@@ -429,8 +429,14 @@ namespace SistemaOroAmbiental.DAL.Repository
                     .Include(x => x.IdCajaNavigation)
                     .FirstOrDefaultAsync(x => x.Id == id);
 
-                if (mov == null || !EsEditable(mov.TipoMovimiento))
+                if (mov == null)
                     return false;
+
+                if (!EsEditable(mov.TipoMovimiento))
+                {
+                    throw new InvalidOperationException(
+                        "No se pudo eliminar este movimiento de caja. Solo se pueden eliminar ingresos/egresos manuales o transferencias.");
+                }
 
                 if (mov.TipoMovimiento == TIPO_TRANSFERENCIA)
                 {
@@ -459,7 +465,7 @@ namespace SistemaOroAmbiental.DAL.Repository
             catch
             {
                 await trx.RollbackAsync();
-                return false;
+                throw;
             }
         }
 
