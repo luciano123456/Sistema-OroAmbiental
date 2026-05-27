@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using SistemaOroAmbiental.Application.Configuration;
 using SistemaOroAmbiental.BLL.Service;
 using SistemaOroAmbiental.DAL.DataContext;
 using SistemaOroAmbiental.DAL.Repository;
@@ -113,6 +114,9 @@ builder.Services.AddScoped<IProductosService, ProductosService>();
 builder.Services.AddScoped<IProveedoresRepository, ProveedoresRepository>();
 builder.Services.AddScoped<IProveedoresService, ProveedoresService>();
 
+builder.Services.AddScoped<IProveedoresContactosRepository, ProveedoresContactosRepository>();
+builder.Services.AddScoped<IProveedoresContactosService, ProveedoresContactosService>();
+
 builder.Services.AddScoped<ICajasRepository, CajasRepository>();
 builder.Services.AddScoped<ICajasService, CajasService>();
 
@@ -142,6 +146,15 @@ builder.Services.AddScoped<IClientesEntregasService, ClientesEntregasService>();
 builder.Services.AddScoped<IGastosRepository, GastosRepository>();
 builder.Services.AddScoped<IGastosService, GastosService>();
 
+var sessionSettings = new SessionSettings();
+builder.Configuration.GetSection("SessionSettings").Bind(sessionSettings);
+if (sessionSettings.GetDuration() <= TimeSpan.Zero)
+{
+    throw new InvalidOperationException(
+        "Configure SessionSettings:DurationHours y/o SessionSettings:DurationMinutes en appsettings.json");
+}
+builder.Services.AddSingleton(sessionSettings);
+
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
@@ -154,7 +167,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidIssuer = builder.Configuration["JwtSettings:Issuer"],
             ValidAudience = builder.Configuration["JwtSettings:Audience"],
             IssuerSigningKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(builder.Configuration["JwtSettings:SecretKey"]!))
+                Encoding.UTF8.GetBytes(builder.Configuration["JwtSettings:SecretKey"]!)),
+            ClockSkew = TimeSpan.FromSeconds(30)
         };
     });
 

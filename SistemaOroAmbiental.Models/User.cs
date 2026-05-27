@@ -131,6 +131,10 @@ public partial class User
 
     public virtual ICollection<Proveedore> ProveedoreIdUsuarioRegistraNavigations { get; set; } = new List<Proveedore>();
 
+    public virtual ICollection<ProveedoresContacto> ProveedoresContactoIdUsuarioModificaNavigations { get; set; } = new List<ProveedoresContacto>();
+
+    public virtual ICollection<ProveedoresContacto> ProveedoresContactoIdUsuarioRegistraNavigations { get; set; } = new List<ProveedoresContacto>();
+
     public virtual ICollection<ProveedoresCuentaCorrienteMovimiento> ProveedoresCuentaCorrienteMovimientoIdUsuarioModificaNavigations { get; set; } = new List<ProveedoresCuentaCorrienteMovimiento>();
 
     public virtual ICollection<ProveedoresCuentaCorrienteMovimiento> ProveedoresCuentaCorrienteMovimientoIdUsuarioRegistraNavigations { get; set; } = new List<ProveedoresCuentaCorrienteMovimiento>();

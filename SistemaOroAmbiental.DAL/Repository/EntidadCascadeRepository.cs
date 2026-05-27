@@ -79,6 +79,10 @@ namespace SistemaOroAmbiental.DAL.Repository
         {
             var items = new List<DependenciaEliminacionItem>();
 
+            var cont = await _db.ProveedoresContactos.CountAsync(x => x.IdProveedor == idProveedor);
+            if (cont > 0)
+                items.Add(Item("contactos", "Contactos del proveedor", cont, "Abrí el proveedor y quitá los contactos en la pestaña Contactos."));
+
             var compras = await _db.Compras.CountAsync(x => x.IdProveedor == idProveedor);
             if (compras > 0)
                 items.Add(Item("compras", "Compras", compras, "Eliminá cada compra desde el módulo Compras."));
@@ -183,6 +187,11 @@ namespace SistemaOroAmbiental.DAL.Repository
                     if (!await _comprasRepo.Eliminar(idCompra))
                         throw new InvalidOperationException($"No se pudo eliminar la compra #{idCompra}.");
                 }
+
+                var contactos = await _db.ProveedoresContactos
+                    .Where(x => x.IdProveedor == idProveedor)
+                    .ToListAsync();
+                _db.ProveedoresContactos.RemoveRange(contactos);
 
                 await EliminarCuentaCorrienteProveedorAsync(idProveedor);
                 await _db.SaveChangesAsync();

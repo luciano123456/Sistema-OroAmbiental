@@ -98,6 +98,8 @@ public partial class SistemaOroAmbientalContext : DbContext
 
     public virtual DbSet<Proveedore> Proveedores { get; set; }
 
+    public virtual DbSet<ProveedoresContacto> ProveedoresContactos { get; set; }
+
     public virtual DbSet<ProveedoresCuentaCorriente> ProveedoresCuentaCorrientes { get; set; }
 
     public virtual DbSet<ProveedoresCuentaCorrienteMovimiento> ProveedoresCuentaCorrienteMovimientos { get; set; }
@@ -1077,6 +1079,41 @@ public partial class SistemaOroAmbientalContext : DbContext
                 .HasForeignKey(d => d.IdUsuarioRegistra)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_ProductosPreciosUsuariosIdUsuarioRegistra");
+        });
+
+        modelBuilder.Entity<ProveedoresContacto>(entity =>
+        {
+            entity.Property(e => e.Email)
+                .HasMaxLength(100)
+                .IsUnicode(false);
+            entity.Property(e => e.FechaUsuarioModifica).HasColumnType("datetime");
+            entity.Property(e => e.FechaUsuarioRegistra).HasColumnType("datetime");
+            entity.Property(e => e.Nombre)
+                .HasMaxLength(100)
+                .IsUnicode(false);
+            entity.Property(e => e.Puesto)
+                .HasMaxLength(100)
+                .IsUnicode(false);
+            entity.Property(e => e.Telefono)
+                .HasMaxLength(50)
+                .IsUnicode(false);
+            entity.Property(e => e.TelefonoAlt)
+                .HasMaxLength(50)
+                .IsUnicode(false);
+
+            entity.HasOne(d => d.IdProveedorNavigation).WithMany(p => p.ProveedoresContactos)
+                .HasForeignKey(d => d.IdProveedor)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ProveedoresContactos_Proveedores");
+
+            entity.HasOne(d => d.IdUsuarioModificaNavigation).WithMany(p => p.ProveedoresContactoIdUsuarioModificaNavigations)
+                .HasForeignKey(d => d.IdUsuarioModifica)
+                .HasConstraintName("FK_ProveedoresContactosUsuariosIdUsuarioModifica");
+
+            entity.HasOne(d => d.IdUsuarioRegistraNavigation).WithMany(p => p.ProveedoresContactoIdUsuarioRegistraNavigations)
+                .HasForeignKey(d => d.IdUsuarioRegistra)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ProveedoresContactosUsuariosIdUsuarioRegistra");
         });
 
         modelBuilder.Entity<Proveedore>(entity =>

@@ -566,8 +566,16 @@ function filtrarSeccionesConfiguraciones() {
     });
 
 function cerrarSesion() {
-    localStorage.removeItem('JwtToken'); // Borrar token
-    window.location.href = '/Login/Logout'; // Ir al login
+    if (window.SessionManager?.beginVoluntaryLogout) {
+        window.SessionManager.beginVoluntaryLogout();
+    } else {
+        sessionStorage.removeItem('sesionExpirada');
+        sessionStorage.setItem('logoutVoluntario', '1');
+        localStorage.removeItem('JwtToken');
+        localStorage.removeItem('userSession');
+        localStorage.removeItem('sessionExpiresAt');
+    }
+    window.location.href = '/Login/Logout';
 }
 
 function volverConfiguraciones() {

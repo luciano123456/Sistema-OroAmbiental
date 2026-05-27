@@ -19,7 +19,11 @@
                     actualizar: "/Proveedores/Actualizar",
                     eliminar: "/Proveedores/Eliminar?id={id}",
                     condicionesIva: "/CondicionesIva/Lista",
-                    bancos: "/Bancos/Lista"
+                    bancos: "/Bancos/Lista",
+                    contactosLista: "/ProveedoresContactos/ListaPorProveedor?idProveedor={idProveedor}",
+                    contactosInsertar: "/ProveedoresContactos/Insertar",
+                    contactosActualizar: "/ProveedoresContactos/Actualizar",
+                    contactosEliminar: "/ProveedoresContactos/Eliminar?id={id}"
                 },
                 onSaved: null,
                 onDeleted: null,
@@ -59,9 +63,13 @@
                 Bancos: { selectId: "cmbBanco", url: this.options.endpoints.bancos }
             };
 
+            this._contactosCache = [];
+            this._contactoSeleccionadoId = 0;
+
             window.proveedorModal = this;
             this._bindEvents();
             this._bindModalEvents();
+            this._bindContactosEvents();
             this._bindConfiguracionActualizada();
         }
 
@@ -196,6 +204,313 @@
                     $el.trigger("change.select2");
                 }
             });
+
+            this.bloquearControlesContactos(disabled || !this.getId());
+        }
+
+        _activarTabDatos() {
+            const tabBtn = this._id("tabBtnDatosProveedor");
+            if (tabBtn && window.bootstrap?.Tab) {
+                window.bootstrap.Tab.getOrCreateInstance(tabBtn).show();
+            }
+        }
+
+        prepararContactosNuevo() {
+            this._contactosCache = [];
+            this._contactoSeleccionadoId = 0;
+            this.limpiarFormContacto();
+            this.renderListaContactos();
+            this.actualizarBadgeProveedorContactos();
+            this.habilitarSeccionContactos(false);
+            this._activarTabDatos();
+        }
+
+        habilitarSeccionContactos(habilitar) {
+            const section = this._id("sectionContactosProveedor");
+            const hint = this._id("contactoHint");
+            if (!section || !hint) return;
+
+            if (habilitar) {
+                section.classList.remove("rp-section-disabled");
+                hint.classList.add("success");
+                hint.innerHTML = `<i class="fa fa-check-circle"></i> Ya pod\u00E9s administrar los contactos del proveedor.`;
+            } else {
+                section.classList.add("rp-section-disabled");
+                hint.classList.remove("success");
+                hint.innerHTML = `<i class="fa fa-info-circle"></i> Guard\u00E1 el proveedor para administrar contactos.`;
+            }
+
+            this.bloquearControlesContactos(this.isSoloLectura() || !habilitar);
+        }
+
+        bloquearControlesContactos(bloquear) {
+            const ids = [
+                "txtContactoNombre", "txtContactoPuesto", "txtContactoTelefono",
+                "txtContactoTelefonoAlt", "txtContactoEmail"
+            ];
+            ids.forEach(id => {
+                const el = this._id(id);
+                if (el) el.disabled = !!bloquear;
+            });
+
+            const btnGuardar = this._id("btnGuardarContacto");
+            const btnNuevo = this._id("btnNuevoContacto");
+            if (btnGuardar) btnGuardar.disabled = !!bloquear;
+            if (btnNuevo) btnNuevo.disabled = !!bloquear;
+
+            const lista = this._id("listaContactosProveedor");
+            if (lista) {
+                lista.querySelectorAll(".btn-eliminar-contacto").forEach(btn => {
+                    btn.disabled = !!bloquear;
+                });
+            }
+        }
+
+        actualizarBadgeProveedorContactos() {
+            const nombre = (this._getFieldValue("txtNombre") || "").trim();
+            const badge = this._id("contactoProveedorNombre");
+            if (badge) badge.textContent = nombre || "Nuevo";
+        }
+
+        limpiarFormContacto() {
+            this._contactoSeleccionadoId = 0;
+            this._setFieldValue("txtContactoId", "");
+            this._setFieldValue("txtContactoNombre", "");
+            this._setFieldValue("txtContactoPuesto", "");
+            this._setFieldValue("txtContactoTelefono", "");
+            this._setFieldValue("txtContactoTelefonoAlt", "");
+            this._setFieldValue("txtContactoEmail", "");
+            const titulo = this._id("contactoFormTitulo");
+            if (titulo) titulo.textContent = "Nuevo contacto";
+            this._id("listaContactosProveedor")?.querySelectorAll(".rp-contact-item")
+                .forEach(el => el.classList.remove("active"));
+        }
+
+        renderListaContactos() {
+            const cont = this._id("listaContactosProveedor");
+            const cant = this._id("contactoCantidad");
+            if (!cont) return;
+
+            const items = this._contactosCache || [];
+            if (cant) cant.textContent = String(items.length);
+
+            if (!items.length) {
+                const idProveedor = this.getId();
+                cont.innerHTML = `<div class="rp-contact-empty">${
+                    idProveedor > 0
+                        ? "No hay contactos cargados. Agreg\u00E1 uno desde el formulario."
+                        : "Guard\u00E1 el proveedor para ver contactos."
+                }</div>`;
+                return;
+            }
+
+            cont.innerHTML = items.map(c => {
+                const meta = [c.Telefono, c.Email].filter(Boolean).join(" \u00B7 ");
+                const active = c.Id === this._contactoSeleccionadoId ? " active" : "";
+                return `
+                    <div class="rp-contact-item${active}" data-id="${c.Id}">
+                        <div class="flex-grow-1">
+                            <div class="rp-contact-item-main">
+                                <strong>${this._escapeHtml(c.Nombre || "")}</strong>
+                                ${c.Puesto ? `<small>${this._escapeHtml(c.Puesto)}</small>` : ""}
+                            </div>
+                            ${meta ? `<div class="rp-contact-item-meta">${this._escapeHtml(meta)}</div>` : ""}
+                        </div>
+                        <div class="rp-contact-item-actions">
+                            <button type="button"
+                                    class="btn btn-sm btn-outline-danger btn-eliminar-contacto"
+                                    data-id="${c.Id}"
+                                    title="Eliminar">
+                                <i class="fa fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>`;
+            }).join("");
+        }
+
+        _escapeHtml(text) {
+            return String(text ?? "")
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;");
+        }
+
+        seleccionarContacto(id) {
+            const item = (this._contactosCache || []).find(x => x.Id === id);
+            if (!item) return;
+
+            this._contactoSeleccionadoId = id;
+            this._setFieldValue("txtContactoId", item.Id);
+            this._setFieldValue("txtContactoNombre", item.Nombre || "");
+            this._setFieldValue("txtContactoPuesto", item.Puesto || "");
+            this._setFieldValue("txtContactoTelefono", item.Telefono || "");
+            this._setFieldValue("txtContactoTelefonoAlt", item.TelefonoAlt || "");
+            this._setFieldValue("txtContactoEmail", item.Email || "");
+
+            const titulo = this._id("contactoFormTitulo");
+            if (titulo) titulo.textContent = "Editar contacto";
+
+            this.renderListaContactos();
+        }
+
+        nuevoContacto() {
+            if (!this.getId()) return;
+            this.limpiarFormContacto();
+        }
+
+        validarFormContacto() {
+            const nombre = (this._getFieldValue("txtContactoNombre") || "").trim();
+            if (!nombre) {
+                if (typeof errorModal === "function") {
+                    errorModal("El nombre del contacto es obligatorio.");
+                }
+                return false;
+            }
+            return true;
+        }
+
+        async cargarContactos(idProveedor) {
+            if (!idProveedor || idProveedor <= 0) {
+                this.prepararContactosNuevo();
+                return;
+            }
+
+            try {
+                const url = this._replaceUrl(this.options.endpoints.contactosLista, { idProveedor });
+                const data = await this._fetchJson(url, {
+                    method: "GET",
+                    headers: this._headers(false)
+                });
+                this._contactosCache = Array.isArray(data) ? data : [];
+                this.limpiarFormContacto();
+                this.renderListaContactos();
+                this.habilitarSeccionContactos(true);
+            } catch (e) {
+                console.error(e);
+                this._contactosCache = [];
+                this.renderListaContactos();
+            }
+        }
+
+        async guardarContacto() {
+            if (this.isSoloLectura()) return;
+            const idProveedor = this.getId();
+            if (!idProveedor) {
+                if (typeof errorModal === "function") {
+                    errorModal("Guard\u00E1 el proveedor antes de agregar contactos.");
+                }
+                return;
+            }
+            if (!this.validarFormContacto()) return;
+
+            const idContacto = this._toInt(this._getFieldValue("txtContactoId")) || 0;
+            const modelo = {
+                Id: idContacto,
+                IdProveedor: idProveedor,
+                Nombre: (this._getFieldValue("txtContactoNombre") || "").trim(),
+                Puesto: this._getFieldValue("txtContactoPuesto") || null,
+                Telefono: this._getFieldValue("txtContactoTelefono") || null,
+                TelefonoAlt: this._getFieldValue("txtContactoTelefonoAlt") || null,
+                Email: this._getFieldValue("txtContactoEmail") || null
+            };
+
+            const esNuevo = !modelo.Id;
+            const url = esNuevo
+                ? this.options.endpoints.contactosInsertar
+                : this.options.endpoints.contactosActualizar;
+            const method = esNuevo ? "POST" : "PUT";
+
+            try {
+                const data = await this._fetchJson(url, {
+                    method,
+                    headers: this._headers(true),
+                    body: JSON.stringify(modelo)
+                });
+
+                if (!data?.valor) {
+                    if (typeof errorModal === "function") {
+                        errorModal(data?.mensaje || "No se pudo guardar el contacto.");
+                    }
+                    return;
+                }
+
+                if (typeof exitoModal === "function") {
+                    exitoModal(data.mensaje || "Contacto guardado correctamente");
+                }
+
+                await this.cargarContactos(idProveedor);
+                if (esNuevo && data.id) {
+                    this.seleccionarContacto(data.id);
+                }
+            } catch (e) {
+                console.error(e);
+                if (typeof errorModal === "function") {
+                    errorModal("Ha ocurrido un error al guardar el contacto.");
+                }
+            }
+        }
+
+        async eliminarContacto(id) {
+            if (this.isSoloLectura()) return;
+
+            const confirmado = typeof confirmarModal === "function"
+                ? await confirmarModal("\u00BFDesea eliminar este contacto?")
+                : window.confirm("\u00BFDesea eliminar este contacto?");
+
+            if (!confirmado) return;
+
+            try {
+                const url = this._replaceUrl(this.options.endpoints.contactosEliminar, { id });
+                const data = await this._fetchJson(url, {
+                    method: "DELETE",
+                    headers: this._headers(false)
+                });
+
+                if (!data?.valor) {
+                    if (typeof errorModal === "function") {
+                        errorModal(data?.mensaje || "No se pudo eliminar el contacto.");
+                    }
+                    return;
+                }
+
+                if (typeof exitoModal === "function") {
+                    exitoModal(data.mensaje || "Contacto eliminado correctamente");
+                }
+
+                await this.cargarContactos(this.getId());
+            } catch (e) {
+                console.error(e);
+                if (typeof errorModal === "function") {
+                    errorModal("Ha ocurrido un error al eliminar el contacto.");
+                }
+            }
+        }
+
+        _bindContactosEvents() {
+            const lista = this._id("listaContactosProveedor");
+            if (lista) {
+                lista.addEventListener("click", (e) => {
+                    const btnDel = e.target.closest(".btn-eliminar-contacto");
+                    if (btnDel) {
+                        e.stopPropagation();
+                        const id = parseInt(btnDel.getAttribute("data-id"), 10);
+                        if (id) this.eliminarContacto(id);
+                        return;
+                    }
+
+                    const item = e.target.closest(".rp-contact-item");
+                    if (item) {
+                        const id = parseInt(item.getAttribute("data-id"), 10);
+                        if (id) this.seleccionarContacto(id);
+                    }
+                });
+            }
+
+            const txtNombre = this._id("txtNombre");
+            if (txtNombre) {
+                txtNombre.addEventListener("input", () => this.actualizarBadgeProveedorContactos());
+            }
         }
 
         async abrirNuevo() {
@@ -209,6 +524,7 @@
 
                 this.limpiarModal();
                 this.setModalSoloLectura(false);
+                this.prepararContactosNuevo();
 
                 await this.cargarCombos();
 
@@ -288,6 +604,14 @@
 
             this._id("modalEdicionLabel").textContent = soloLectura ? "Ver Proveedor" : "Editar Proveedor";
             this._id("btnGuardar").innerHTML = `<i class="fa fa-check"></i> Guardar`;
+
+            this.actualizarBadgeProveedorContactos();
+            if (modelo?.Id > 0) {
+                await this.cargarContactos(modelo.Id);
+                this.setModalSoloLectura(soloLectura);
+            } else {
+                this.prepararContactosNuevo();
+            }
 
             this.bsModal.show();
             this.setModalSoloLectura(soloLectura);
@@ -422,6 +746,7 @@
             if (this._id("infoRegistro")) this._id("infoRegistro").innerHTML = "";
             if (this._id("infoModificacion")) this._id("infoModificacion").innerHTML = "";
             this._refreshAllSelect2();
+            this.prepararContactosNuevo();
         }
 
         _valorCampoValido(el) {
@@ -602,6 +927,14 @@
 
     window.guardarProveedor = function () {
         return window.proveedorModal?.guardar?.();
+    };
+
+    window.guardarContactoProveedor = function () {
+        return window.proveedorModal?.guardarContacto?.();
+    };
+
+    window.nuevoContactoProveedor = function () {
+        return window.proveedorModal?.nuevoContacto?.();
     };
 
     window.cerrarErrorCampos = function () {

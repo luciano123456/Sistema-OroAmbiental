@@ -153,6 +153,13 @@
             </ul>
 
             <ul class="navbar-nav ms-auto rp-nav-user">
+                <li class="nav-item d-flex align-items-center me-2">
+                    <div class="rp-session-timer" id="sessionCountdown" title="Tiempo restante de sesión">
+                        <i class="fa fa-clock-o" aria-hidden="true"></i>
+                        <span class="rp-session-timer-label">Sesión</span>
+                        <strong id="sessionCountdownText">--:--:--</strong>
+                    </div>
+                </li>
                 <li class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle rp-nav-user-link" href="#" id="userDropdown" role="button"
                        data-bs-toggle="dropdown" data-bs-auto-close="outside" data-bs-offset="0,4" aria-expanded="false">
@@ -543,4 +550,4 @@
 
 
 
-<script src="~/js/NavBarLogin.js?v=1.7" asp-append-version="true"></script>
+<script src="~/js/NavBarLogin.js?v=1.8" asp-append-version="true"></script>

@@ -45,76 +45,189 @@
                     </button>
                 </div>
 
-                <form class="row g-3">
-
-                    <input type="text" id="txtId" hidden />
-
-                    <div class="col-md-4">
-                        <label class="form-label">Nombre</label>
-                        <input id="txtNombre" class="form-control" required />
-                        <div class="invalid-feedback">Campo obligatorio</div>
-                    </div>
-
-                    <div class="col-md-4">
-                        <label class="form-label">CUIT</label>
-                        <input id="txtCuit" class="form-control" required maxlength="11" />
-                        <div class="invalid-feedback">Campo obligatorio</div>
-                    </div>
-
-                    <div class="col-md-4">
-                        <label class="form-label">Condición IVA</label>
-                        <div class="rp-select-plus">
-                            <select id="cmbCondicionIva" class="form-control"></select>
-                            <button type="button"
-                                    class="rp-btn-plus"
-                                    title="Agregar condición IVA"
-                                    data-config-nombre="Condiciones IVA"
-                                    data-config-controller="CondicionesIva">
-                                <i class="fa fa-plus"></i>
+                <div class="rp-tabs-shell">
+                    <ul class="nav rp-tabs-modern">
+                        <li class="nav-item">
+                            <button class="nav-link active"
+                                    id="tabBtnDatosProveedor"
+                                    data-bs-toggle="tab"
+                                    data-bs-target="#tabDatosProveedor"
+                                    type="button">
+                                <i class="fa fa-truck"></i>
+                                <span>Datos del Proveedor</span>
                             </button>
-                        </div>
-                        <div class="invalid-feedback">Campo obligatorio</div>
-                    </div>
-
-                    <div class="col-md-4">
-                        <label class="form-label">Teléfono</label>
-                        <input id="txtTelefono" class="form-control" />
-                    </div>
-
-                    <div class="col-md-4">
-                        <label class="form-label">Email</label>
-                        <input id="txtEmail" class="form-control" type="email" />
-                    </div>
-
-                    <div class="col-md-4">
-                        <label class="form-label">Banco</label>
-                        <div class="rp-select-plus">
-                            <select id="cmbBanco" class="form-control"></select>
-                            <button type="button"
-                                    class="rp-btn-plus"
-                                    title="Agregar banco"
-                                    data-config-nombre="Bancos"
-                                    data-config-controller="Bancos">
-                                <i class="fa fa-plus"></i>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link"
+                                    id="tabBtnContactosProveedor"
+                                    data-bs-toggle="tab"
+                                    data-bs-target="#tabContactosProveedor"
+                                    type="button">
+                                <i class="fa fa-address-book"></i>
+                                <span>Contactos</span>
                             </button>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="tab-content mt-3">
+
+                    <div class="tab-pane fade show active" id="tabDatosProveedor">
+
+                        <form class="row g-3">
+
+                            <input type="text" id="txtId" hidden />
+
+                            <div class="col-md-4">
+                                <label class="form-label">Nombre</label>
+                                <input id="txtNombre" class="form-control" required />
+                                <div class="invalid-feedback">Campo obligatorio</div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">CUIT</label>
+                                <input id="txtCuit" class="form-control" required maxlength="11" />
+                                <div class="invalid-feedback">Campo obligatorio</div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Condición IVA</label>
+                                <div class="rp-select-plus">
+                                    <select id="cmbCondicionIva" class="form-control"></select>
+                                    <button type="button"
+                                            class="rp-btn-plus"
+                                            title="Agregar condición IVA"
+                                            data-config-nombre="Condiciones IVA"
+                                            data-config-controller="CondicionesIva">
+                                        <i class="fa fa-plus"></i>
+                                    </button>
+                                </div>
+                                <div class="invalid-feedback">Campo obligatorio</div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Teléfono principal</label>
+                                <input id="txtTelefono" class="form-control" />
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Email principal</label>
+                                <input id="txtEmail" class="form-control" type="email" />
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Banco</label>
+                                <div class="rp-select-plus">
+                                    <select id="cmbBanco" class="form-control"></select>
+                                    <button type="button"
+                                            class="rp-btn-plus"
+                                            title="Agregar banco"
+                                            data-config-nombre="Bancos"
+                                            data-config-controller="Bancos">
+                                        <i class="fa fa-plus"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Alias bancario</label>
+                                <input id="txtAliasBancario" class="form-control" maxlength="50" />
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">CBU</label>
+                                <input id="txtCbuBancario" class="form-control" maxlength="50" />
+                            </div>
+
+                        </form>
+
+                        <div class="rp-auditoria d-none mt-3" id="infoAuditoria">
+                            <div id="infoRegistro"></div>
+                            <div id="infoModificacion"></div>
                         </div>
+
                     </div>
 
-                    <div class="col-md-4">
-                        <label class="form-label">Alias bancario</label>
-                        <input id="txtAliasBancario" class="form-control" maxlength="50" />
+                    <div class="tab-pane fade" id="tabContactosProveedor">
+
+                        <div id="sectionContactosProveedor" class="rp-contact-page rp-section-disabled">
+
+                            <div class="rp-contact-hero">
+                                <div>
+                                    <div class="text-muted small">Proveedor</div>
+                                    <div class="rp-contact-hero-name" id="contactoProveedorNombre">Nuevo</div>
+                                    <div class="rp-contact-hero-hint" id="contactoHint">
+                                        <i class="fa fa-info-circle"></i>
+                                        Guardá el proveedor para administrar contactos.
+                                    </div>
+                                </div>
+                                <div class="rp-kpi-card-mini">
+                                    <span>Contactos</span>
+                                    <strong id="contactoCantidad">0</strong>
+                                </div>
+                            </div>
+
+                            <div class="rp-contact-layout">
+
+                                <div class="rp-contact-list-panel">
+                                    <h6><i class="fa fa-list"></i> Listado</h6>
+                                    <div id="listaContactosProveedor" class="rp-contact-list">
+                                        <div class="rp-contact-empty">
+                                            Guardá el proveedor para ver contactos.
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="rp-contact-form-panel">
+                                    <h6><i class="fa fa-user-plus"></i> <span id="contactoFormTitulo">Nuevo contacto</span></h6>
+
+                                    <input type="hidden" id="txtContactoId" />
+
+                                    <div class="row g-2">
+                                        <div class="col-md-12">
+                                            <label class="form-label">Nombre</label>
+                                            <input id="txtContactoNombre" class="form-control" maxlength="100" />
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Puesto</label>
+                                            <input id="txtContactoPuesto" class="form-control" maxlength="100" />
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Teléfono</label>
+                                            <input id="txtContactoTelefono" class="form-control" maxlength="50" />
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Teléfono alternativo</label>
+                                            <input id="txtContactoTelefonoAlt" class="form-control" maxlength="50" />
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Email</label>
+                                            <input id="txtContactoEmail" class="form-control" type="email" maxlength="100" />
+                                        </div>
+                                    </div>
+
+                                    <div class="d-flex flex-wrap gap-2 mt-3">
+                                        <button type="button"
+                                                id="btnGuardarContacto"
+                                                class="btn btn-primary btn-sm"
+                                                onclick="guardarContactoProveedor()">
+                                            <i class="fa fa-check"></i> Guardar contacto
+                                        </button>
+                                        <button type="button"
+                                                id="btnNuevoContacto"
+                                                class="btn btn-outline-secondary btn-sm"
+                                                onclick="nuevoContactoProveedor()">
+                                            <i class="fa fa-plus"></i> Nuevo
+                                        </button>
+                                    </div>
+                                </div>
+
+                            </div>
+
+                        </div>
+
                     </div>
 
-                    <div class="col-md-4">
-                        <label class="form-label">CBU</label>
-                        <input id="txtCbuBancario" class="form-control" maxlength="50" />
-                    </div>
-
-                </form>
-
-                <div class="rp-auditoria d-none mt-3" id="infoAuditoria">
-                    <div id="infoRegistro"></div>
-                    <div id="infoModificacion"></div>
                 </div>
 
             </div>

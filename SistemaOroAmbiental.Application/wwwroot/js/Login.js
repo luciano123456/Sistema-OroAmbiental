@@ -1,5 +1,10 @@
 ﻿$(document).ready(function () {
 
+    if (window.SessionManager?.consumeExpiredMessageOnLogin?.()) {
+        $("#errorMessage").text("La sesión ha expirado. Iniciá sesión nuevamente.");
+        $("#diverrorMessage").show();
+    }
+
     /* =============================
        OJO VER PASSWORD
     ============================== */
@@ -97,8 +102,17 @@
                 if (!data.success)
                     throw data;
 
-                localStorage.setItem("JwtToken", data.token);
-                localStorage.setItem("userSession", JSON.stringify(data.user));
+                const expiresMs = data.expiresAtUnixMs
+                    ?? (data.expiresAt ? Date.parse(data.expiresAt) : null)
+                    ?? (window.SessionManager?.decodeJwtExpMs?.(data.token) ?? null);
+
+                if (window.SessionManager?.setSession) {
+                    window.SessionManager.setSession(data.token, data.user, expiresMs);
+                } else {
+                    localStorage.setItem("JwtToken", data.token);
+                    localStorage.setItem("userSession", JSON.stringify(data.user));
+                    if (expiresMs) localStorage.setItem("sessionExpiresAt", String(expiresMs));
+                }
 
                 if (rememberMe) {
 

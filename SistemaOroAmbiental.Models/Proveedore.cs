@@ -41,6 +41,8 @@ public partial class Proveedore
 
     public virtual User IdUsuarioRegistraNavigation { get; set; } = null!;
 
+    public virtual ICollection<ProveedoresContacto> ProveedoresContactos { get; set; } = new List<ProveedoresContacto>();
+
     public virtual ICollection<ProveedoresCuentaCorriente> ProveedoresCuentaCorrientes { get; set; } = new List<ProveedoresCuentaCorriente>();
 
     public virtual ICollection<ProveedoresPago> ProveedoresPagos { get; set; } = new List<ProveedoresPago>();

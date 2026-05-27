@@ -77,6 +77,25 @@
     </div>
 </div>
 
+<!-- Modal sesión expirada -->
+<div class="modal fade" id="modalSessionExpirada" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content text-white" style="background: #323844">
+            <div class="modal-header border-0 bg-danger bg-opacity-10 colorEncabezado">
+                <i class="fa fa-clock-o text-danger fs-2 me-2"></i>
+                <h5 class="modal-title text-white fw-bold">Sesión expirada</h5>
+            </div>
+            <div class="modal-body text-center">
+                <p class="fs-5 fw-semibold m-0 text-white">La sesión ha expirado</p>
+                <p class="text-muted small mt-2 mb-0">Volvé a iniciar sesión para continuar.</p>
+            </div>
+            <div class="modal-footer border-0 justify-content-center">
+                <button type="button" class="btn btn-danger px-4" id="btnSessionExpiradaAceptar">Aceptar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Modal eliminar con dependencias (cascada / manual) -->
 <div class="modal fade" id="modalEliminarCascada" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">

@@ -172,7 +172,24 @@ Archivos tocados: `M_Clientes.js`, `M_ClientesEstablecimientos.js`, `M_Contratos
 
 ---
 
-## 6. Módulo Gastos (sesión previa en todo list)
+## 6. Proveedores — pestaña Contactos (may 2026)
+
+Mismo patrón que **Clientes**: varios contactos con nombre, puesto, teléfono, teléfono alt., email.
+
+| Pieza | Ruta |
+|-------|------|
+| SQL (ejecutar primero) | `docs/sql/ProveedoresContactos.sql` |
+| Modelo | `Models/ProveedoresContacto.cs` |
+| API | `ProveedoresContactosController` — `ListaPorProveedor`, `Insertar`, `Actualizar`, `Eliminar` |
+| UI | `M_Proveedores.cshtml` pestaña Contactos + `M_Proveedores.js?v=1.5` |
+
+**Flujo:** guardar proveedor → pestaña Contactos → agregar N contactos.
+
+**Cascada eliminar proveedor:** incluye contactos en `EntidadCascadeRepository`.
+
+---
+
+## 7. Módulo Gastos (sesión previa en todo list)
 
 Trabajo registrado como completado en agente:
 
@@ -186,7 +203,7 @@ Trabajo registrado como completado en agente:
 
 ---
 
-## 7. Otros módulos / catálogos migrados
+## 8. Otros módulos / catálogos migrados
 
 Muchos controllers/services/repos nuevos en git status (sin commit aún): Bancos, CondicionesIva, Productos, ListasPrecios, Sucursales, Roles, etc. Patrón: `ConfiguracionNombreControllerBase` + `CatalogosService` donde aplique.
 
@@ -234,7 +251,8 @@ SistemaOroAmbiental.Application/
 
 - [ ] **Commit git** — usuario no lo pidió; hay muchos archivos `??` (incl. `bin/`, `obj/` — conviene `.gitignore` antes de commitear).
 - [ ] Script SQL permisos / dashboard / login redirect (mencionado en conversaciones previas).
-- [ ] Confirmar end-to-end **Proveedores** tras reiniciar app (build bloqueado si VS/app está corriendo).
+- [ ] Ejecutar `docs/sql/ProveedoresContactos.sql` en SQL Server si la tabla no existe.
+- [ ] Confirmar end-to-end **Proveedores** (contactos + cascada) tras reiniciar app.
 - [ ] Alinear **Clientes** con el mismo fix de “cuenta corriente vacía” si aplica (`ObtenerDependenciasClienteAsync` solo cuenta movimientos si existe CC con movs).
 - [ ] Módulos sin cascada UI: solo mensaje `dependencias` si el front no usa `ejecutarEliminacionEntidad`.
 
@@ -263,6 +281,7 @@ SistemaOroAmbiental.Application/
 | Fecha | Notas |
 |-------|--------|
 | 2026-05-21 | Creación: resumen eliminación, cascada clientes/proveedores, compras, JS, gastos, pendientes, transcript id |
+| 2026-05-21 | Proveedores: pestaña Contactos (tabla, API, UI como Clientes) |
 
 ---
 

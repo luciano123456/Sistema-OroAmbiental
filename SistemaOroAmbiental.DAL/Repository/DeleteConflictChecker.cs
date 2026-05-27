@@ -36,6 +36,9 @@ namespace SistemaOroAmbiental.DAL.Repository
         {
             var partes = new List<string>();
 
+            var contactos = await _db.ProveedoresContactos.CountAsync(x => x.IdProveedor == id);
+            if (contactos > 0) partes.Add($"{contactos} contacto(s)");
+
             var compras = await _db.Compras.CountAsync(x => x.IdProveedor == id);
             if (compras > 0) partes.Add($"{compras} compra(s)");
 

@@ -7,6 +7,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using SistemaOroAmbiental.Application.Models.ViewModels;
 using SistemaOroAmbiental.Application.Models;
+using SistemaOroAmbiental.Application.Configuration;
 using SistemaOroAmbiental.BLL.Service;
 using SistemaOroAmbiental.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -19,15 +20,18 @@ namespace SistemaBronx.Application.Controllers
         private readonly ILoginService _loginService;
         private readonly IUsuariosSucursalesService _usuariosSucursales;
         private readonly IConfiguration _config;
+        private readonly SessionSettings _sessionSettings;
 
         public LoginController(
             ILoginService loginService,
             IUsuariosSucursalesService usuariosSucursales,
-            IConfiguration config)
+            IConfiguration config,
+            SessionSettings sessionSettings)
         {
             _loginService = loginService;
             _usuariosSucursales = usuariosSucursales;
             _config = config;
+            _sessionSettings = sessionSettings;
         }
 
 
@@ -68,10 +72,14 @@ namespace SistemaBronx.Application.Controllers
                         .ToList();
                     int? idSucursalDefault = sucursales.Count == 1 ? sucursales[0].Id : null;
 
+                    var expiresAt = DateTime.UtcNow.Add(_sessionSettings.GetDuration());
+
                     return Ok(new
                     {
                         success = true,
                         token,
+                        expiresAt = expiresAt.ToString("o"),
+                        expiresAtUnixMs = new DateTimeOffset(expiresAt).ToUnixTimeMilliseconds(),
                         user = new
                         {
                             user.Id,
@@ -115,7 +123,7 @@ namespace SistemaBronx.Application.Controllers
                     _config["JwtSettings:Issuer"],
                     _config["JwtSettings:Audience"],
                     claims,
-                    expires: DateTime.UtcNow.AddHours(2),
+                    expires: DateTime.UtcNow.Add(_sessionSettings.GetDuration()),
                     signingCredentials: creds);
 
                 return new JwtSecurityTokenHandler().WriteToken(token);
