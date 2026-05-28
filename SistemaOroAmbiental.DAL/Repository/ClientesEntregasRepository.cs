@@ -33,10 +33,9 @@ namespace SistemaOroAmbiental.DAL.Repository
         {
             var query = _db.ClientesEntregas
                 .AsNoTracking()
+                .Include(x => x.IdClienteNavigation)
                 .Include(x => x.IdContratoNavigation)
-                    .ThenInclude(c => c.IdClienteNavigation)
-                .Include(x => x.IdContratoNavigation)
-                    .ThenInclude(c => c.IdEstablecimientoNavigation)
+                    .ThenInclude(c => c!.IdEstablecimientoNavigation)
                 .Include(x => x.IdEstadoNavigation)
                 .Include(x => x.ClientesEntregasProductos)
                 .AsQueryable();
@@ -51,7 +50,7 @@ namespace SistemaOroAmbiental.DAL.Repository
             }
 
             if (idCliente.HasValue && idCliente > 0)
-                query = query.Where(x => x.IdContratoNavigation.IdCliente == idCliente.Value);
+                query = query.Where(x => x.IdCliente == idCliente.Value);
 
             if (idContrato.HasValue && idContrato > 0)
                 query = query.Where(x => x.IdContrato == idContrato.Value);
@@ -65,8 +64,9 @@ namespace SistemaOroAmbiental.DAL.Repository
                 query = query.Where(x =>
                     (x.NotaInterna != null && x.NotaInterna.Contains(t)) ||
                     (x.NotaCliente != null && x.NotaCliente.Contains(t)) ||
-                    x.IdContratoNavigation.IdClienteNavigation.Nombre.Contains(t) ||
-                    x.IdContratoNavigation.IdEstablecimientoNavigation.Nombre.Contains(t));
+                    x.IdClienteNavigation.Nombre.Contains(t) ||
+                    (x.IdContratoNavigation != null && x.IdContratoNavigation.IdEstablecimientoNavigation != null &&
+                     x.IdContratoNavigation.IdEstablecimientoNavigation.Nombre.Contains(t)));
             }
 
             return await query
@@ -78,11 +78,10 @@ namespace SistemaOroAmbiental.DAL.Repository
         public async Task<ClientesEntrega?> Obtener(int id)
         {
             return await _db.ClientesEntregas
+                .Include(x => x.IdClienteNavigation)
+                    .ThenInclude(cl => cl.IdSucursalNavigation)
                 .Include(x => x.IdContratoNavigation)
-                    .ThenInclude(c => c.IdClienteNavigation)
-                        .ThenInclude(cl => cl.IdSucursalNavigation)
-                .Include(x => x.IdContratoNavigation)
-                    .ThenInclude(c => c.IdEstablecimientoNavigation)
+                    .ThenInclude(c => c!.IdEstablecimientoNavigation)
                 .Include(x => x.IdEstadoNavigation)
                 .Include(x => x.ClientesEntregasProductos)
                     .ThenInclude(l => l.IdProductoNavigation)
@@ -125,13 +124,23 @@ namespace SistemaOroAmbiental.DAL.Repository
             entrega.ImporteTotal = lista.Sum(x => SignoLinea(x) * x.SubtotalFinal);
         }
 
-        private async Task<(int idCliente, int idSucursal)> ResolverClienteYSucursal(int idContrato)
+        private async Task<(int idCliente, int idSucursal)> ResolverClienteYSucursal(ClientesEntrega entrega)
         {
-            var contrato = await _db.Contratos
-                .Include(x => x.IdClienteNavigation)
-                .FirstAsync(x => x.Id == idContrato);
+            if (entrega.IdCliente > 0)
+            {
+                var cliente = await _db.Clientes.FirstAsync(x => x.Id == entrega.IdCliente);
+                return (cliente.Id, cliente.IdSucursal);
+            }
 
-            return (contrato.IdCliente, contrato.IdClienteNavigation.IdSucursal);
+            if (entrega.IdContrato.HasValue && entrega.IdContrato > 0)
+            {
+                var contrato = await _db.Contratos
+                    .Include(x => x.IdClienteNavigation)
+                    .FirstAsync(x => x.Id == entrega.IdContrato);
+                return (contrato.IdCliente, contrato.IdClienteNavigation.IdSucursal);
+            }
+
+            throw new InvalidOperationException("Debe indicar un cliente para la entrega.");
         }
 
         private async Task RegistrarStockEntrega(
@@ -277,7 +286,8 @@ namespace SistemaOroAmbiental.DAL.Repository
                 _db.ClientesEntregas.Add(entrega);
                 await _db.SaveChangesAsync();
 
-                var (idCliente, idSucursal) = await ResolverClienteYSucursal(entrega.IdContrato);
+                var (idCliente, idSucursal) = await ResolverClienteYSucursal(entrega);
+                entrega.IdCliente = idCliente;
                 var cliente = await _db.Clientes.FirstAsync(x => x.Id == idCliente);
                 var cc = await _ccRepo.ObtenerOCrearCuentaCorriente(idCliente);
 
@@ -369,6 +379,7 @@ namespace SistemaOroAmbiental.DAL.Repository
                 }
 
                 entity.Fecha = entrega.Fecha;
+                entity.IdCliente = entrega.IdCliente;
                 entity.IdContrato = entrega.IdContrato;
                 entity.IdEstado = entrega.IdEstado;
                 entity.NotaInterna = entrega.NotaInterna;
@@ -378,7 +389,8 @@ namespace SistemaOroAmbiental.DAL.Repository
 
                 RecalcularTotalesEntrega(entity, lineas);
 
-                var (idCliente, idSucursal) = await ResolverClienteYSucursal(entity.IdContrato);
+                var (idCliente, idSucursal) = await ResolverClienteYSucursal(entity);
+                entity.IdCliente = idCliente;
                 var cliente = await _db.Clientes.FirstAsync(x => x.Id == idCliente);
                 var cc = await _ccRepo.ObtenerOCrearCuentaCorriente(idCliente);
 

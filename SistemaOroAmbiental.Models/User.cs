@@ -31,6 +31,8 @@ public partial class User
 
     public string? CodigoRecuperacion { get; set; }
 
+    public bool Activo { get; set; } = true;
+
     public virtual ICollection<CajasMovimiento> CajasMovimientoIdUsuarioModificaNavigations { get; set; } = new List<CajasMovimiento>();
 
     public virtual ICollection<CajasMovimiento> CajasMovimientoIdUsuarioRegistraNavigations { get; set; } = new List<CajasMovimiento>();

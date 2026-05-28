@@ -54,6 +54,7 @@ namespace SistemaOroAmbiental.DAL.Repository
                 entity.IdMedida = model.IdMedida;
                 entity.CostoUnitario = model.CostoUnitario;
                 entity.StockMinimo = model.StockMinimo;
+                entity.Activo = model.Activo;
                 entity.IdUsuarioModifica = model.IdUsuarioModifica;
                 entity.FechaUsuarioModifica = model.FechaUsuarioModifica;
 
@@ -154,16 +155,31 @@ namespace SistemaOroAmbiental.DAL.Repository
                 .FirstOrDefaultAsync(x => x.Id == id);
         }
 
-        public async Task<IQueryable<Producto>> ObtenerTodos()
+        public async Task<IQueryable<Producto>> ObtenerTodos(bool soloActivos = false)
         {
             var query = _db.Productos
                 .AsNoTracking()
                 .Include(x => x.IdCategoriaNavigation)
                 .Include(x => x.IdMedidaNavigation)
                 .Include(x => x.IdUsuarioRegistraNavigation)
-                .Include(x => x.IdUsuarioModificaNavigation);
+                .Include(x => x.IdUsuarioModificaNavigation)
+                .AsQueryable();
+
+            if (soloActivos)
+                query = query.Where(x => x.Activo);
 
             return await Task.FromResult(query);
+        }
+
+        public async Task<bool> CambiarActivo(int id, bool activo)
+        {
+            var entity = await _db.Productos.FirstOrDefaultAsync(x => x.Id == id);
+            if (entity == null)
+                return false;
+
+            entity.Activo = activo;
+            await _db.SaveChangesAsync();
+            return true;
         }
 
         public async Task<Dictionary<int, decimal>> ObtenerStockTotalesPorProducto()

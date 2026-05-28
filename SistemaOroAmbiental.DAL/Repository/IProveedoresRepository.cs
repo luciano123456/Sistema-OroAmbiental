@@ -12,7 +12,9 @@ namespace SistemaOroAmbiental.DAL.Repository
 
         Task<Proveedore?> Obtener(int id);
 
-        Task<IQueryable<Proveedore>> ObtenerTodos();
+        Task<IQueryable<Proveedore>> ObtenerTodos(bool soloActivos = false);
+
+        Task<bool> CambiarActivo(int id, bool activo);
 
         Task<Proveedore?> BuscarDuplicado(int? idExcluir, string? nombre, string? cuit);
     }

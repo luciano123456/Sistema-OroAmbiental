@@ -191,6 +191,9 @@ public partial class SistemaOroAmbientalContext : DbContext
 
         modelBuilder.Entity<Cliente>(entity =>
         {
+            entity.Property(e => e.Activo)
+                .IsRequired()
+                .HasDefaultValueSql("((1))");
             entity.Property(e => e.CodPostal)
                 .HasMaxLength(10)
                 .IsUnicode(false);
@@ -371,9 +374,13 @@ public partial class SistemaOroAmbientalContext : DbContext
                 .HasColumnType("decimal(18, 2)")
                 .HasColumnName("TotalIVA");
 
+            entity.HasOne(d => d.IdClienteNavigation).WithMany(p => p.ClientesEntregas)
+                .HasForeignKey(d => d.IdCliente)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ClientesEntregas_Clientes");
+
             entity.HasOne(d => d.IdContratoNavigation).WithMany(p => p.ClientesEntregas)
                 .HasForeignKey(d => d.IdContrato)
-                .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_ClientesEntregas_Contratos");
 
             entity.HasOne(d => d.IdEstadoNavigation).WithMany(p => p.ClientesEntregas)
@@ -1021,6 +1028,9 @@ public partial class SistemaOroAmbientalContext : DbContext
 
         modelBuilder.Entity<Producto>(entity =>
         {
+            entity.Property(e => e.Activo)
+                .IsRequired()
+                .HasDefaultValueSql("((1))");
             entity.Property(e => e.CostoUnitario).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.FechaUsuarioModifica).HasColumnType("datetime");
             entity.Property(e => e.FechaUsuarioRegistra).HasColumnType("datetime");
@@ -1119,6 +1129,9 @@ public partial class SistemaOroAmbientalContext : DbContext
 
         modelBuilder.Entity<Proveedore>(entity =>
         {
+            entity.Property(e => e.Activo)
+                .IsRequired()
+                .HasDefaultValueSql("((1))");
             entity.Property(e => e.AliasBancario)
                 .HasMaxLength(50)
                 .IsUnicode(false);
@@ -1276,6 +1289,9 @@ public partial class SistemaOroAmbientalContext : DbContext
 
         modelBuilder.Entity<User>(entity =>
         {
+            entity.Property(e => e.Activo)
+                .IsRequired()
+                .HasDefaultValueSql("((1))");
             entity.Property(e => e.Apellido)
                 .HasMaxLength(100)
                 .IsUnicode(false);

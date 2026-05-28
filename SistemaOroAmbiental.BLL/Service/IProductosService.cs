@@ -13,7 +13,9 @@ namespace SistemaOroAmbiental.BLL.Service
 
         Task<Producto?> Obtener(int id);
 
-        Task<IQueryable<Producto>> ObtenerTodos();
+        Task<IQueryable<Producto>> ObtenerTodos(bool soloActivos = false);
+
+        Task<ServiceResult> CambiarActivo(int id, bool activo);
 
         Task<Dictionary<int, decimal>> ObtenerStockTotalesPorProducto();
 

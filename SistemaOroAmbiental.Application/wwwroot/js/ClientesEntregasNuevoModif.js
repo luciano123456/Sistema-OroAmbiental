@@ -6,10 +6,10 @@
     "use strict";
 
     const CM = {
-        init: window.CM_INIT || { id: 0, idContrato: 0 },
+        init: window.CM_INIT || { id: 0, idCliente: 0 },
         id: 0,
         soloLectura: false,
-        contratos: [],
+        clientes: [],
         estadosEntrega: [],
         sucursales: [],
         idSucursalCliente: 0,
@@ -28,7 +28,8 @@
         actualizar: "/ClientesEntregas/Actualizar",
         eliminar: id => `/ClientesEntregas/Eliminar?id=${id}`,
         cobros: id => `/ClientesEntregas/Cobros?id=${id}`,
-        contratos: "/Contratos/Lista?soloVigentes=true",
+        clientes: "/Clientes/Lista?soloActivos=true",
+        clienteInfo: id => `/Clientes/EditarInfo?id=${id}`,
         productos: "/Productos/Lista",
         estadosEntrega: "/EntregasEstados/Lista",
         sucursales: "/Sucursales/Lista",
@@ -98,11 +99,11 @@
             await cargarCobrosEntrega();
         } else {
             setModoNuevo();
-            if (CM.init.idContrato) {
-                const cInit = (CM.contratos || []).find(x => x.Id === CM.init.idContrato);
-                const c0 = cInit ? obtenerContratoRepresentantePorCliente(Number(cInit.IdCliente || 0)) : null;
-                $("#cContrato").val(String(c0?.Id || CM.init.idContrato)).trigger("change.select2");
-                CM.idSucursalCliente = c0 ? Number(c0.IdSucursal || 0) : 0;
+            if (CM.init.idCliente) {
+                const idCli = Number(CM.init.idCliente || 0);
+                $("#cCliente").val(String(idCli)).trigger("change.select2");
+                const cli = (CM.clientes || []).find(x => x.Id === idCli);
+                CM.idSucursalCliente = cli ? Number(cli.IdSucursal || 0) : 0;
             }
             CM.lineas = [];
             CM.cobrosLineas = [];
@@ -280,7 +281,7 @@
         if (!$("#cFecha").val()) {
             erroresDatos.push("Indique la fecha de la entrega.");
         }
-        if (!(parseInt($("#cContrato").val(), 10) > 0)) {
+        if (!(parseInt($("#cCliente").val(), 10) > 0)) {
             erroresDatos.push("Seleccione un cliente.");
         }
         const lineasConProducto = CM.lineas.filter(l => l.IdProducto > 0);
@@ -395,18 +396,18 @@
 
     async function cargarCombosEntrega() {
         await Promise.all([
-            cargarContratoesEntrega(),
+            cargarClientesEntrega(),
             cargarEstadoesEntrega(),
             cargarSucursalesEntrega(),
             cargarProductosEntrega()
         ]);
 
-        initSelectContratoHeader();
+        initSelectClienteHeader();
         ensureSelect2Cm($("#cEstado"), { placeholder: "Seleccionar estado" });
 
-        $("#cContrato").off("change.entregaSuc").on("change.entregaSuc", function () {
+        $("#cCliente").off("change.entregaSuc").on("change.entregaSuc", function () {
             const id = parseInt($(this).val(), 10) || 0;
-            const c = (CM.contratos || []).find(x => x.Id === id);
+            const c = (CM.clientes || []).find(x => x.Id === id);
             CM.idSucursalCliente = c ? Number(c.IdSucursal || 0) : 0;
         });
     }
@@ -417,45 +418,57 @@
             : await (await fetch(API.sucursales, { headers: authHeaders() })).json();
     }
 
-    async function cargarContratoesEntrega() {
-        const r = await fetch(API.contratos, { headers: authHeaders() });
-        CM.contratos = r.ok ? await r.json() : [];
+    /**
+     * Carga clientes activos para el combo.
+     * @param {number} [idClienteIncluir] Si la entrega ya tiene un cliente inactivo asignado, se incluye solo ese.
+     */
+    async function cargarClientesEntrega(idClienteIncluir) {
+        const incluir = Number(idClienteIncluir || 0);
+        const r = await fetch(API.clientes, { headers: authHeaders() });
+        CM.clientes = r.ok ? await r.json() : [];
 
-        const $p = $("#cContrato");
-        const valContratoActual = parseInt($p.val(), 10) || 0;
-        const contratoActual = (CM.contratos || []).find(x => x.Id === valContratoActual);
-        const idClienteActual = Number(contratoActual?.IdCliente || 0);
-
-        const porCliente = new Map();
-        (CM.contratos || []).forEach(c => {
-            const idCli = Number(c.IdCliente || 0);
-            if (idCli <= 0) return;
-            if (!porCliente.has(idCli)) {
-                porCliente.set(idCli, c);
+        if (incluir > 0 && !(CM.clientes || []).some(x => Number(x.Id) === incluir)) {
+            const rCli = await fetch(API.clienteInfo(incluir), { headers: authHeaders() });
+            if (rCli.ok) {
+                const cli = await rCli.json();
+                CM.clientes.push({
+                    Id: cli.Id,
+                    Nombre: cli.Nombre,
+                    IdSucursal: cli.IdSucursal,
+                    Activo: cli.Activo !== false
+                });
             }
-        });
-        const opcionesCliente = Array.from(porCliente.values())
-            .sort((a, b) => String(a.Cliente || "").localeCompare(String(b.Cliente || "")));
+        }
+
+        const idSel = incluir > 0
+            ? incluir
+            : (parseInt($("#cCliente").val(), 10) || 0);
+        llenarSelectClientesEntrega(idSel);
+    }
+
+    function llenarSelectClientesEntrega(idClienteSeleccionado) {
+        const $p = $("#cCliente");
+        const idSel = Number(idClienteSeleccionado || parseInt($p.val(), 10) || 0);
 
         $p.empty().append(`<option value="">Seleccionar</option>`);
-        opcionesCliente.forEach(x => {
-            $p.append(`<option value="${x.Id}">${x.Cliente || x.Etiqueta || ("Cliente #" + x.IdCliente)}</option>`);
-        });
-        if (idClienteActual > 0) {
-            const rep = obtenerContratoRepresentantePorCliente(idClienteActual);
-            if (rep) $p.val(String(rep.Id));
+        (CM.clientes || [])
+            .slice()
+            .sort((a, b) => String(a.Nombre || "").localeCompare(String(b.Nombre || "")))
+            .forEach(x => {
+                const inactivo = x.Activo === false || x.Activo === 0;
+                const nombre = x.Nombre || ("Cliente #" + x.Id);
+                const etiqueta = inactivo ? `${nombre} (inactivo)` : nombre;
+                $p.append(`<option value="${x.Id}">${etiqueta}</option>`);
+            });
+
+        if (idSel > 0 && $p.find(`option[value="${idSel}"]`).length) {
+            $p.val(String(idSel));
         }
-        initSelectContratoHeader();
+        initSelectClienteHeader();
     }
 
-    function obtenerContratoRepresentantePorCliente(idCliente) {
-        const idCli = Number(idCliente || 0);
-        if (idCli <= 0) return null;
-        return (CM.contratos || []).find(x => Number(x.IdCliente || 0) === idCli) || null;
-    }
-
-    function initSelectContratoHeader() {
-        const $p = $("#cContrato");
+    function initSelectClienteHeader() {
+        const $p = $("#cCliente");
         if (!$p.length) return;
         ensureSelect2Cm($p, {
             placeholder: "Seleccionar cliente",
@@ -524,11 +537,13 @@
         $("#cNota").val(d.NotaInterna || "");
         $("#cNotaCliente").val(d.NotaCliente || "");
 
-        const contratoReal = (CM.contratos || []).find(x => x.Id === d.IdContrato);
-        const idCliente = Number(d.IdCliente || contratoReal?.IdCliente || 0);
-        const contratoRepresentante = obtenerContratoRepresentantePorCliente(idCliente);
-        $("#cContrato").val(String(contratoRepresentante?.Id || d.IdContrato)).trigger("change.select2");
-        CM.idSucursalCliente = Number(d.IdSucursal || contratoRepresentante?.IdSucursal || 0);
+        const idCliente = Number(d.IdCliente || 0);
+        await cargarClientesEntrega(idCliente);
+        if (idCliente > 0) {
+            $("#cCliente").val(String(idCliente)).trigger("change.select2");
+        }
+        const cli = (CM.clientes || []).find(x => Number(x.Id) === idCliente);
+        CM.idSucursalCliente = Number(d.IdSucursal || cli?.IdSucursal || 0);
         if (d.IdEstado) $("#cEstado").val(String(d.IdEstado)).trigger("change.select2");
 
         CM.lineas = (d.Lineas || []).map(l => ({
@@ -555,7 +570,7 @@
         $("#btnGuardarEntrega").prop("disabled", true);
         $("#btnAgregarLinea, #btnCrearProducto, #btnAtajoEstadoEntrega").prop("hidden", true);
         $("#cFecha, #cNota").prop("disabled", true);
-        $("#cContrato, #cEstado").prop("disabled", true);
+        $("#cCliente, #cEstado").prop("disabled", true);
         $("#tbodyLineasEntrega input, #tbodyLineasEntrega select").prop("disabled", true);
         $("#tbodyLineasEntrega .btn-quitar-linea").prop("hidden", true);
         $("#btnAgregarCobroEntrega").prop("hidden", true);
@@ -568,7 +583,7 @@
         $("#lblGuardarEntrega").text("Guardar cambios");
         $("#btnAgregarLinea, #btnCrearProducto, #btnAtajoEstadoEntrega").prop("hidden", false);
         $("#cFecha, #cNota").prop("disabled", false);
-        $("#cContrato, #cEstado").prop("disabled", false);
+        $("#cCliente, #cEstado").prop("disabled", false);
         $("#tbodyLineasEntrega input, #tbodyLineasEntrega select").prop("disabled", false);
         $("#tbodyLineasEntrega .btn-quitar-linea").prop("hidden", false);
         $("#btnAgregarCobroEntrega").prop("hidden", false);
@@ -1058,7 +1073,7 @@
         const payload = {
             Id: CM.id,
             Fecha: $("#cFecha").val() || null,
-            IdContrato: parseInt($("#cContrato").val(), 10) || 0,
+            IdCliente: parseInt($("#cCliente").val(), 10) || 0,
             IdEstado: parseInt($("#cEstado").val(), 10) || null,
             NotaInterna: ($("#cNota").val() || "").trim() || null,
             NotaCliente: ($("#cNotaCliente").val() || "").trim() || null,

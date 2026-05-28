@@ -2,7 +2,7 @@
     Layout = "_LayoutModulo";
     ViewData["Title"] = "Entregas - Nuevo / Modificar";
     var id = (int)(ViewBag.Id ?? 0);
-    var idContrato = (int)(ViewBag.IdContrato ?? 0);
+    var idCliente = (int)(ViewBag.IdCliente ?? 0);
 }
 
 @section Estilos {
@@ -99,7 +99,7 @@
                     <div class="row g-3">
                         <div class="col-md-4">
                             <label class="form-label vn-label">Cliente</label>
-                            <select id="cContrato" class="form-select vn-input"></select>
+                            <select id="cCliente" class="form-select vn-input"></select>
                         </div>
                         <div class="col-md-4">
                             <label class="form-label vn-label">Fecha</label>
@@ -295,10 +295,10 @@
 
 @section Scripts {
     <script>
-        window.CM_INIT = { id: @id, idContrato: @idContrato };
+        window.CM_INIT = { id: @id, idCliente: @idCliente };
     </script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script src="~/js/Entities/M_Productos.js?v=1.5"></script>
     <script src="~/js/Entities/M_Contratos.js?v=1.6"></script>
-    <script src="~/js/ClientesEntregasNuevoModif.js?v=4.2"></script>
+    <script src="~/js/ClientesEntregasNuevoModif.js?v=4.4"></script>
 }

@@ -155,7 +155,13 @@ async function configurarDataTable(data) {
                     orderable: true,
                     render: (data, type, row) => renderEstadoStockBadge(row)
                 },
+                typeof columnaGridActivo === "function" ? columnaGridActivo("Productos") : { data: "Activo" },
             ],
+            createdRow: function (row, data) {
+                if (typeof createdRowEstiloActivoGrilla === "function") {
+                    createdRowEstiloActivoGrilla(row, data);
+                }
+            },
             dom: 'Bfrtip',
             buttons: getBotonesExportacion(gridProductos, "Productos"),
             orderCellsTop: true,
@@ -211,8 +217,17 @@ async function configurarDataTable(data) {
                 }
 
                 finalizarFiltrosGridLista(api, '#grd_Productos');
+
+                const idxActivo = typeof indiceColumnaActivoGrilla === "function"
+                    ? indiceColumnaActivoGrilla(api)
+                    : api.columns().count() - 1;
+                if (typeof inicializarFiltroActivoGrilla === "function") {
+                    inicializarFiltroActivoGrilla(api, '#grd_Productos', idxActivo);
+                }
+
                 configurarOpcionesColumnas();
                 actualizarKpis(data);
+                api.draw(false);
             }
         });
 

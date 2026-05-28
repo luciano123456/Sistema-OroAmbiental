@@ -670,7 +670,7 @@ function setModalSoloLectura(soloLectura) {
         if (el.id === "txtBuscarModuloPermiso") return;
 
         if (soloLectura) {
-            if (el.tagName === "SELECT") {
+            if (el.tagName === "SELECT" || el.type === "checkbox") {
                 el.setAttribute("disabled", "disabled");
             } else {
                 el.setAttribute("readonly", "readonly");

@@ -28,7 +28,7 @@ namespace SistemaOroAmbiental.Application.Models.ViewModels
 
         public int IdEstado { get; set; }
 
-
+        public bool Activo { get; set; } = true;
     }
 
 }

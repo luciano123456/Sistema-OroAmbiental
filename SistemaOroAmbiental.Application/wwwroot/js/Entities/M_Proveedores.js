@@ -524,6 +524,10 @@
 
                 this.limpiarModal();
                 this.setModalSoloLectura(false);
+                const chkActivo = this._id("chkActivoProveedor");
+                const lblActivo = this._id("lblActivoProveedor");
+                if (chkActivo) chkActivo.checked = true;
+                if (lblActivo) lblActivo.textContent = "Activo";
                 this.prepararContactosNuevo();
 
                 await this.cargarCombos();
@@ -596,6 +600,10 @@
             this._setFieldValue("txtEmail", modelo.Email || "");
             this._setFieldValue("txtAliasBancario", modelo.AliasBancario || "");
             this._setFieldValue("txtCbuBancario", modelo.CbuBancario || "");
+            const chkActivo = this._id("chkActivoProveedor");
+            const lblActivo = this._id("lblActivoProveedor");
+            if (chkActivo) chkActivo.checked = modelo.Activo !== false;
+            if (lblActivo) lblActivo.textContent = (chkActivo && chkActivo.checked) ? "Activo" : "Inactivo";
 
             if (modelo.IdCondicionIva) this._setFieldValue("cmbCondicionIva", modelo.IdCondicionIva, true);
             if (modelo.IdBanco) this._setFieldValue("cmbBanco", modelo.IdBanco, true);
@@ -662,7 +670,8 @@
                 IdCondicionIva: this._getIntOrNull("cmbCondicionIva"),
                 IdBanco: this._getIntOrNull("cmbBanco"),
                 AliasBancario: this._getFieldValue("txtAliasBancario"),
-                CbuBancario: this._getFieldValue("txtCbuBancario")
+                CbuBancario: this._getFieldValue("txtCbuBancario"),
+                Activo: this._id("chkActivoProveedor") ? this._id("chkActivoProveedor").checked : true
             };
 
             if (typeof this.options.onGuardarModelo === "function") {
@@ -916,6 +925,14 @@
             }
 
             this._validacion?.attachEvents({ select2Namespace: "mproveedores" });
+
+            const chkActivo = this._id("chkActivoProveedor");
+            const lblActivo = this._id("lblActivoProveedor");
+            if (chkActivo && lblActivo) {
+                chkActivo.addEventListener("change", () => {
+                    lblActivo.textContent = chkActivo.checked ? "Activo" : "Inactivo";
+                });
+            }
         }
 
         _bindModalEvents() {

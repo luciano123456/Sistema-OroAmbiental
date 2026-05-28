@@ -24,13 +24,14 @@ namespace SistemaOroAmbiental.Application.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> Lista()
+        public async Task<IActionResult> Lista(bool soloActivos = false)
         {
-            var clientes = (await _service.ObtenerTodos()).ToList();
+            var clientes = (await _service.ObtenerTodos(soloActivos)).ToList();
 
             var lista = clientes.Select(c => new VMCliente
             {
                 Id = c.Id,
+                Activo = c.Activo,
                 IdSucursal = c.IdSucursal,
                 Nombre = c.Nombre,
                 Telefono = c.Telefono,
@@ -77,6 +78,7 @@ namespace SistemaOroAmbiental.Application.Controllers
                 IdCondicionIva = model.IdCondicionIva,
                 Email = model.Email,
                 IdProfesion = model.IdProfesion,
+                Activo = model.Activo,
                 IdUsuarioRegistra = idUsuario,
                 FechaUsuarioRegistra = DateTime.Now
             };
@@ -113,6 +115,7 @@ namespace SistemaOroAmbiental.Application.Controllers
                 IdCondicionIva = model.IdCondicionIva,
                 Email = model.Email,
                 IdProfesion = model.IdProfesion,
+                Activo = model.Activo,
                 IdUsuarioModifica = idUsuario,
                 FechaUsuarioModifica = DateTime.Now
             };
@@ -125,6 +128,18 @@ namespace SistemaOroAmbiental.Application.Controllers
                 mensaje = result.Mensaje,
                 tipo = result.Tipo,
                 idReferencia = result.IdReferencia
+            });
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> CambiarActivo([FromBody] VMActivoToggle model)
+        {
+            var result = await _service.CambiarActivo(model.Id, model.Activo);
+            return Ok(new
+            {
+                valor = result.Ok,
+                mensaje = result.Mensaje,
+                tipo = result.Tipo
             });
         }
 
@@ -174,6 +189,7 @@ namespace SistemaOroAmbiental.Application.Controllers
                 c.IdCondicionIva,
                 c.Email,
                 c.IdProfesion,
+                c.Activo,
                 c.FechaUsuarioRegistra,
                 UsuarioRegistra = c.IdUsuarioRegistraNavigation?.Usuario,
                 c.FechaUsuarioModifica,

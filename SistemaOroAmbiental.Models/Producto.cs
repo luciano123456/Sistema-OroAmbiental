@@ -25,6 +25,8 @@ public partial class Producto
 
     public DateTime? FechaUsuarioModifica { get; set; }
 
+    public bool Activo { get; set; } = true;
+
     public virtual ICollection<ClientesEntregasProducto> ClientesEntregasProductos { get; set; } = new List<ClientesEntregasProducto>();
 
     public virtual ICollection<ClientesEstablecimientosProducto> ClientesEstablecimientosProductos { get; set; } = new List<ClientesEstablecimientosProducto>();

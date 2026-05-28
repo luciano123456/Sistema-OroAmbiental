@@ -43,6 +43,7 @@ namespace SistemaOroAmbiental.DAL.Repository
                 entity.IdBanco = model.IdBanco;
                 entity.AliasBancario = model.AliasBancario;
                 entity.CbuBancario = model.CbuBancario;
+                entity.Activo = model.Activo;
                 entity.IdUsuarioModifica = model.IdUsuarioModifica;
                 entity.FechaUsuarioModifica = model.FechaUsuarioModifica;
 
@@ -108,16 +109,31 @@ namespace SistemaOroAmbiental.DAL.Repository
                 .FirstOrDefaultAsync(x => x.Id == id);
         }
 
-        public async Task<IQueryable<Proveedore>> ObtenerTodos()
+        public async Task<IQueryable<Proveedore>> ObtenerTodos(bool soloActivos = false)
         {
             var query = _db.Proveedores
                 .AsNoTracking()
                 .Include(x => x.IdCondicionIvaNavigation)
                 .Include(x => x.IdBancoNavigation)
                 .Include(x => x.IdUsuarioRegistraNavigation)
-                .Include(x => x.IdUsuarioModificaNavigation);
+                .Include(x => x.IdUsuarioModificaNavigation)
+                .AsQueryable();
+
+            if (soloActivos)
+                query = query.Where(x => x.Activo);
 
             return await Task.FromResult(query);
+        }
+
+        public async Task<bool> CambiarActivo(int id, bool activo)
+        {
+            var entity = await _db.Proveedores.FirstOrDefaultAsync(x => x.Id == id);
+            if (entity == null)
+                return false;
+
+            entity.Activo = activo;
+            await _db.SaveChangesAsync();
+            return true;
         }
     }
 }

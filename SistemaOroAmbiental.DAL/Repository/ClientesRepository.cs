@@ -47,6 +47,7 @@ namespace SistemaOroAmbiental.DAL.Repository
                 entity.IdCondicionIva = model.IdCondicionIva;
                 entity.Email = model.Email;
                 entity.IdProfesion = model.IdProfesion;
+                entity.Activo = model.Activo;
                 entity.IdUsuarioModifica = model.IdUsuarioModifica;
                 entity.FechaUsuarioModifica = model.FechaUsuarioModifica;
 
@@ -114,7 +115,7 @@ namespace SistemaOroAmbiental.DAL.Repository
                 .FirstOrDefaultAsync(x => x.Id == id);
         }
 
-        public async Task<IQueryable<Cliente>> ObtenerTodos()
+        public async Task<IQueryable<Cliente>> ObtenerTodos(bool soloActivos = false)
         {
             var query = _db.Clientes
                 .AsNoTracking()
@@ -123,9 +124,24 @@ namespace SistemaOroAmbiental.DAL.Repository
                 .Include(x => x.IdCondicionIvaNavigation)
                 .Include(x => x.IdProfesionNavigation)
                 .Include(x => x.IdUsuarioRegistraNavigation)
-                .Include(x => x.IdUsuarioModificaNavigation);
+                .Include(x => x.IdUsuarioModificaNavigation)
+                .AsQueryable();
+
+            if (soloActivos)
+                query = query.Where(x => x.Activo);
 
             return await Task.FromResult(query);
+        }
+
+        public async Task<bool> CambiarActivo(int id, bool activo)
+        {
+            var entity = await _db.Clientes.FirstOrDefaultAsync(x => x.Id == id);
+            if (entity == null)
+                return false;
+
+            entity.Activo = activo;
+            await _db.SaveChangesAsync();
+            return true;
         }
     }
 }

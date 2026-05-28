@@ -39,7 +39,11 @@ public partial class Cliente
 
     public DateTime? FechaUsuarioModifica { get; set; }
 
+    public bool Activo { get; set; } = true;
+
     public virtual ICollection<ClientesCobro> ClientesCobros { get; set; } = new List<ClientesCobro>();
+
+    public virtual ICollection<ClientesEntrega> ClientesEntregas { get; set; } = new List<ClientesEntrega>();
 
     public virtual ICollection<ClientesContacto> ClientesContactos { get; set; } = new List<ClientesContacto>();
 

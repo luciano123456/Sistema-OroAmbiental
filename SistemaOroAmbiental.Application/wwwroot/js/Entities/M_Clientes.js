@@ -530,6 +530,10 @@
 
                 this.limpiarModal();
                 this.setModalSoloLectura(false);
+                const chkActivo = this._id("chkActivoCliente");
+                const lblActivo = this._id("lblActivoCliente");
+                if (chkActivo) chkActivo.checked = true;
+                if (lblActivo) lblActivo.textContent = "Activo";
                 this.prepararContactosNuevo();
 
                 await this.cargarCombos();
@@ -616,6 +620,11 @@
             if (modelo.IdProvincia) this._setFieldValue("cmbProvincia", modelo.IdProvincia, true);
             if (modelo.IdProfesion) this._setFieldValue("cmbProfesion", modelo.IdProfesion, true);
             if (modelo.IdCondicionIva) this._setFieldValue("cmbCondicionIva", modelo.IdCondicionIva, true);
+
+            const chkActivo = this._id("chkActivoCliente");
+            const lblActivo = this._id("lblActivoCliente");
+            if (chkActivo) chkActivo.checked = modelo.Activo !== false;
+            if (lblActivo) lblActivo.textContent = (chkActivo && chkActivo.checked) ? "Activo" : "Inactivo";
 
             this._setAuditoria(modelo);
 
@@ -707,7 +716,8 @@
                 CodPostal: this._getFieldValue("txtCodPostal"),
                 IdProvincia: this._getIntOrNull("cmbProvincia"),
                 IdProfesion: this._getIntOrNull("cmbProfesion"),
-                IdCondicionIva: this._getIntOrNull("cmbCondicionIva")
+                IdCondicionIva: this._getIntOrNull("cmbCondicionIva"),
+                Activo: this._id("chkActivoCliente") ? this._id("chkActivoCliente").checked : true
             };
 
             if (typeof this.options.onGuardarModelo === "function") {
@@ -930,6 +940,14 @@
             if (cerrarErrorBtn) {
                 cerrarErrorBtn.removeAttribute("onclick");
                 cerrarErrorBtn.addEventListener("click", () => this.cerrarErrorCampos());
+            }
+
+            const chkActivo = this._id("chkActivoCliente");
+            const lblActivo = this._id("lblActivoCliente");
+            if (chkActivo && lblActivo) {
+                chkActivo.addEventListener("change", () => {
+                    lblActivo.textContent = chkActivo.checked ? "Activo" : "Inactivo";
+                });
             }
 
             this._validacion?.attachEvents({ select2Namespace: "mclientes" });

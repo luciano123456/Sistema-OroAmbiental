@@ -950,6 +950,181 @@ function finalizarFiltrosGridLista(api, tableSelector) {
     ajustarColumnasGrillaLista(api, tableSelector);
 }
 
+const RP_URL_CAMBIAR_ACTIVO = {
+    Clientes: "/Clientes/CambiarActivo",
+    Productos: "/Productos/CambiarActivo",
+    Proveedores: "/Proveedores/CambiarActivo"
+};
+
+/** Última columna: switch activo/inactivo en grillas maestras. */
+function columnaGridActivo(modulo) {
+    return {
+        data: "Activo",
+        name: "grid_activo",
+        title: "Activo",
+        className: "text-center rp-col-activo",
+        orderable: true,
+        searchable: false,
+        render: function (data, type, row) {
+            if (type === "sort" || type === "filter" || type === "type") {
+                return data === false || data === 0 ? 0 : 1;
+            }
+            if (type === "export" || type === "print") {
+                return data === false || data === 0 ? "No" : "Sí";
+            }
+            const checked = data !== false && data !== 0;
+            const id = row?.Id ?? row?.id ?? 0;
+            return `<label class="rp-switch rp-switch-grid dt-no-row-select" title="${checked ? "Activo" : "Inactivo"}">
+                <input type="checkbox" class="rp-switch-input rp-grid-activo-toggle" data-modulo="${modulo}" data-id="${id}" ${checked ? "checked" : ""}>
+                <span class="rp-switch-slider"></span>
+            </label>`;
+        }
+    };
+}
+
+function esFilaActivaGrilla(data) {
+    return data && data.Activo !== false && data.Activo !== 0;
+}
+
+function createdRowEstiloActivoGrilla(row, data) {
+    const $tr = $(row);
+    if (!esFilaActivaGrilla(data)) {
+        $tr.addClass("dt-row-inactivo");
+    } else {
+        $tr.removeClass("dt-row-inactivo");
+    }
+}
+
+function crearFiltroActivoDataTable(tableSelector) {
+    const tableId = $(tableSelector).attr("id") || tableSelector;
+    const state = { modo: "activos" };
+
+    const fn = function (settings, data, dataIndex) {
+        const api = new $.fn.dataTable.Api(settings);
+        const nodeId = $(api.table().node()).attr("id");
+        if (nodeId !== tableId) return true;
+
+        const row = api.row(dataIndex).data();
+        if (!row || typeof row.Activo === "undefined") return true;
+
+        const activo = esFilaActivaGrilla(row);
+        if (state.modo === "activos") return activo;
+        if (state.modo === "inactivos") return !activo;
+        return true;
+    };
+
+    $.fn.dataTable.ext.search.push(fn);
+
+    return {
+        setModo(modo) {
+            state.modo = modo || "activos";
+        },
+        destroy() {
+            const idx = $.fn.dataTable.ext.search.indexOf(fn);
+            if (idx >= 0) $.fn.dataTable.ext.search.splice(idx, 1);
+        }
+    };
+}
+
+function inicializarFiltroActivoGrilla(api, tableSelector, colIndex) {
+    const filtro = crearFiltroActivoDataTable(tableSelector);
+    $(tableSelector).data("rpFiltroActivo", filtro);
+
+    const $th = celdasFiltroGrilla(tableSelector).eq(colIndex);
+    if (!$th.length) return;
+
+    const $sel = $(`<select class="rp-filter-select rp-filter-activo">
+        <option value="activos" selected>Activos</option>
+        <option value="inactivos">Inactivos</option>
+        <option value="todos">Todos</option>
+    </select>`).appendTo($th.empty());
+
+    $sel.on("change", function () {
+        filtro.setModo($(this).val());
+        api.draw(false);
+    });
+}
+
+function indiceColumnaActivoGrilla(api) {
+    return api.columns().indexes().toArray().find(i => {
+        const col = api.settings()[0].aoColumns[i];
+        return col && (col.name === "grid_activo" || col.sName === "grid_activo");
+    });
+}
+
+if (!window._rpGridActivoToggleBound) {
+    window._rpGridActivoToggleBound = true;
+
+    $(document).on("change", ".rp-grid-activo-toggle", async function (e) {
+        e.stopPropagation();
+
+        const $cb = $(this);
+        const $tr = $cb.closest("tr");
+        const $table = $cb.closest("table.dataTable");
+        const modulo = $cb.data("modulo");
+        const url = RP_URL_CAMBIAR_ACTIVO[modulo];
+        const activo = $cb.is(":checked");
+
+        let id = 0;
+        if ($table.length && $.fn.dataTable) {
+            try {
+                const api = $table.DataTable();
+                const row = api.row($tr);
+                const data = row.data();
+                id = Number(data?.Id ?? data?.id ?? 0);
+            } catch { /* ignore */ }
+        }
+
+        if (!url || id <= 0) {
+            $cb.prop("checked", !activo);
+            return;
+        }
+
+        $cb.prop("disabled", true);
+
+        try {
+            const r = await fetch(url, {
+                method: "POST",
+                headers: {
+                    Authorization: "Bearer " + (token || ""),
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ Id: id, Activo: activo })
+            });
+
+            const result = r.ok ? await r.json() : null;
+            const ok = result?.valor === true || result?.valor === "true" || result?.ok === true;
+
+            if (!ok) {
+                $cb.prop("checked", !activo);
+                if (typeof errorModal === "function") {
+                    errorModal(result?.mensaje || "No se pudo actualizar el estado.");
+                }
+                return;
+            }
+
+            if ($table.length && $.fn.dataTable) {
+                const api = $table.DataTable();
+                const row = api.row($tr);
+                const data = row.data();
+                if (data) {
+                    data.Activo = activo;
+                    row.data(data);
+                    createdRowEstiloActivoGrilla($tr[0], data);
+
+                    const filtro = $table.data("rpFiltroActivo");
+                    if (filtro) api.draw(false);
+                }
+            }
+        } catch {
+            $cb.prop("checked", !activo);
+            if (typeof errorModal === "function") errorModal("Error de comunicación con el servidor.");
+        } finally {
+            $cb.prop("disabled", false);
+        }
+    });
+}
+
 /** Corrige desalineación de encabezado/cuerpo con scrollX + fixedHeader. */
 function ajustarColumnasGrillaLista(api, tableSelector) {
     if (!api) return;
@@ -1568,7 +1743,7 @@ async function prepararFiltroSucursalDataTable($select, api, columnIndex, initSe
 
     function esClicEnControlInteractivo(e) {
         return $(e.target).closest(
-            "button, a, input, select, textarea, label, .cm-prod-trigger, .select2-container, .rp-row-actions, .dt-no-row-select"
+            "button, a, input, select, textarea, label, .cm-prod-trigger, .select2-container, .rp-row-actions, .dt-no-row-select, .rp-switch, .rp-switch-grid"
         ).length > 0;
     }
 

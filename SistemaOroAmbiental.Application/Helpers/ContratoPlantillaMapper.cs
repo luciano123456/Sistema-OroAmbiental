@@ -40,10 +40,14 @@ namespace SistemaOroAmbiental.Application.Helpers
             var cuit = !string.IsNullOrWhiteSpace(est?.Cuit) ? est.Cuit!.Trim() : (cli?.Cuit?.Trim() ?? "");
             var diasHorarios = ArmarDiasHorariosCliente(est);
 
-            var fc = c.FechaContrato;
-            var dia = fc.Day.ToString();
-            var mes = fc.ToString("MMMM", new CultureInfo("es-AR"));
-            var anio = fc.Year.ToString();
+            // {DIA} {MES} {ANIO} en plantilla = fecha inicio del contrato (no fecha de firma)
+            var fechaInicio = c.FechaInicio != default ? c.FechaInicio : c.FechaContrato;
+            if (fechaInicio == default)
+                fechaInicio = hoy;
+
+            var (dia, mes, anio) = PartesFecha(fechaInicio);
+            var (diaContrato, mesContrato, anioContrato) = PartesFecha(
+                c.FechaContrato != default ? c.FechaContrato : fechaInicio);
 
             return new VMContratoDatosPlantilla
             {
@@ -91,6 +95,9 @@ namespace SistemaOroAmbiental.Application.Helpers
                 Dia = dia,
                 Mes = mes,
                 Anio = anio,
+                DiaContrato = diaContrato,
+                MesContrato = mesContrato,
+                AnioContrato = anioContrato,
                 FechaContrato = c.FechaContrato,
                 FechaInicio = c.FechaInicio,
                 FechaVencimiento = c.FechaVencimiento,
@@ -132,6 +139,18 @@ namespace SistemaOroAmbiental.Application.Helpers
             Agregar("DIA", d.Dia);
             Agregar("MES", d.Mes);
             Agregar("ANIO", d.Anio);
+            Agregar("DIAINICIO", d.Dia);
+            Agregar("MESINICIO", d.Mes);
+            Agregar("ANIOINICIO", d.Anio);
+            Agregar("FECHAINICIO", d.FechaInicio != default
+                ? d.FechaInicio.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture)
+                : "");
+            Agregar("DIACONTRATO", d.DiaContrato);
+            Agregar("MESCONTRATO", d.MesContrato);
+            Agregar("ANIOCONTRATO", d.AnioContrato);
+            Agregar("FECHACONTRATO", d.FechaContrato != default
+                ? d.FechaContrato.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture)
+                : "");
             Agregar("CIUDAD", d.Ciudad);
             Agregar("EMPRESA", d.Empresa);
             Agregar("OPERADOR", d.OperadorNumero);
@@ -155,6 +174,15 @@ namespace SistemaOroAmbiental.Application.Helpers
             Agregar("NombreArchivo", nombreArchivo);
 
             return mapa;
+        }
+
+        private static (string Dia, string Mes, string Anio) PartesFecha(DateTime fecha)
+        {
+            var cultura = new CultureInfo("es-AR");
+            var mes = fecha.ToString("MMMM", cultura);
+            if (!string.IsNullOrEmpty(mes))
+                mes = char.ToUpper(mes[0], cultura) + mes[1..];
+            return (fecha.Day.ToString(), mes, fecha.Year.ToString());
         }
 
         private static string FormatearHorarioRecoleccion(TimeSpan t)

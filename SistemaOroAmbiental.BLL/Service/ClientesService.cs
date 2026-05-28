@@ -119,7 +119,18 @@ namespace SistemaOroAmbiental.BLL.Service
         public Task<Cliente?> Obtener(int id)
             => _repo.Obtener(id);
 
-        public Task<IQueryable<Cliente>> ObtenerTodos()
-            => _repo.ObtenerTodos();
+        public Task<IQueryable<Cliente>> ObtenerTodos(bool soloActivos = false)
+            => _repo.ObtenerTodos(soloActivos);
+
+        public async Task<ServiceResult> CambiarActivo(int id, bool activo)
+        {
+            if (id <= 0)
+                return ServiceResult.Error("Registro inválido.", "validacion");
+
+            var ok = await _repo.CambiarActivo(id, activo);
+            return ok
+                ? ServiceResult.Success(activo ? "Registro activado." : "Registro desactivado.")
+                : ServiceResult.Error("No se pudo actualizar el estado.");
+        }
     }
 }

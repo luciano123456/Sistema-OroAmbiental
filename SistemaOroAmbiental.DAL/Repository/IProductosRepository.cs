@@ -12,7 +12,9 @@ namespace SistemaOroAmbiental.DAL.Repository
 
         Task<Producto?> Obtener(int id);
 
-        Task<IQueryable<Producto>> ObtenerTodos();
+        Task<IQueryable<Producto>> ObtenerTodos(bool soloActivos = false);
+
+        Task<bool> CambiarActivo(int id, bool activo);
 
         Task<Dictionary<int, decimal>> ObtenerStockTotalesPorProducto();
 

@@ -142,9 +142,9 @@ namespace SistemaOroAmbiental.BLL.Service
                 return false;
             }
 
-            if (entrega.IdContrato <= 0)
+            if (entrega.IdCliente <= 0)
             {
-                error = "Seleccione un contrato.";
+                error = "Seleccione un cliente.";
                 return false;
             }
 

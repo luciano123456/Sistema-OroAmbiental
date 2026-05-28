@@ -437,6 +437,10 @@
 
                 this.limpiarModal();
                 this.setModalSoloLectura(false);
+                const chkActivo = this._id("chkActivoProducto");
+                const lblActivo = this._id("lblActivoProducto");
+                if (chkActivo) chkActivo.checked = true;
+                if (lblActivo) lblActivo.textContent = "Activo";
 
                 await this.cargarCombos();
                 await this.cargarPreciosPorLista(0);
@@ -508,6 +512,10 @@
             const stockMin = modelo.StockMinimo ?? 0;
             this._setFieldValue("txtStockMinimo",
                 typeof formatearMiles === "function" ? formatearMiles(String(stockMin)) : stockMin);
+            const chkActivo = this._id("chkActivoProducto");
+            const lblActivo = this._id("lblActivoProducto");
+            if (chkActivo) chkActivo.checked = modelo.Activo !== false;
+            if (lblActivo) lblActivo.textContent = (chkActivo && chkActivo.checked) ? "Activo" : "Inactivo";
 
             if (modelo.IdCategoria) this._setFieldValue("cmbCategoria", modelo.IdCategoria, true);
             if (modelo.IdMedida) this._setFieldValue("cmbMedida", modelo.IdMedida, true);
@@ -674,7 +682,8 @@
                 IdCategoria: this._getIntOrNull("cmbCategoria"),
                 IdMedida: this._getIntOrNull("cmbMedida"),
                 CostoUnitario: this._getDecimal("txtCostoUnitario"),
-                StockMinimo: this._getIntOrNull("txtStockMinimo") ?? 0
+                StockMinimo: this._getIntOrNull("txtStockMinimo") ?? 0,
+                Activo: this._id("chkActivoProducto") ? this._id("chkActivoProducto").checked : true
             };
 
             if (typeof this.options.onGuardarModelo === "function") {
@@ -969,6 +978,14 @@
                 btnHist.addEventListener("click", (e) => {
                     e.preventDefault();
                     this.abrirHistorialCosto();
+                });
+            }
+
+            const chkActivo = this._id("chkActivoProducto");
+            const lblActivo = this._id("lblActivoProducto");
+            if (chkActivo && lblActivo) {
+                chkActivo.addEventListener("change", () => {
+                    lblActivo.textContent = chkActivo.checked ? "Activo" : "Inactivo";
                 });
             }
 

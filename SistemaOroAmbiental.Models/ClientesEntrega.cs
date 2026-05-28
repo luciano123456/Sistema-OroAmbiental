@@ -9,7 +9,9 @@ public partial class ClientesEntrega
 
     public int? IdCuentaCorriente { get; set; }
 
-    public int IdContrato { get; set; }
+    public int IdCliente { get; set; }
+
+    public int? IdContrato { get; set; }
 
     public int? IdEstado { get; set; }
 
@@ -43,7 +45,9 @@ public partial class ClientesEntrega
 
     public virtual ICollection<ClientesEntregasProducto> ClientesEntregasProductos { get; set; } = new List<ClientesEntregasProducto>();
 
-    public virtual Contrato IdContratoNavigation { get; set; } = null!;
+    public virtual Cliente IdClienteNavigation { get; set; } = null!;
+
+    public virtual Contrato? IdContratoNavigation { get; set; }
 
     public virtual EntregasEstado? IdEstadoNavigation { get; set; }
 

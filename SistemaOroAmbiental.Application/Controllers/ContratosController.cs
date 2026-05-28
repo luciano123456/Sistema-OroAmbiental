@@ -40,8 +40,8 @@ namespace SistemaOroAmbiental.Application.Controllers
 
             var entregasPorContrato = await _db.ClientesEntregas
                 .AsNoTracking()
-                .Where(x => ids.Contains(x.IdContrato))
-                .GroupBy(x => x.IdContrato)
+                .Where(x => x.IdContrato.HasValue && ids.Contains(x.IdContrato.Value))
+                .GroupBy(x => x.IdContrato!.Value)
                 .Select(g => new { Id = g.Key, Cant = g.Count() })
                 .ToDictionaryAsync(x => x.Id, x => x.Cant);
 

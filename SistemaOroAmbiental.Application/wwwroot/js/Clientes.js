@@ -112,7 +112,13 @@ async function configurarDataTable(data) {
                 { data: 'CondicionIva' },
                 { data: 'Telefono' },
                 { data: 'Email' },
+                typeof columnaGridActivo === "function" ? columnaGridActivo("Clientes") : { data: "Activo" },
             ],
+            createdRow: function (row, data) {
+                if (typeof createdRowEstiloActivoGrilla === "function") {
+                    createdRowEstiloActivoGrilla(row, data);
+                }
+            },
             dom: 'Bfrtip',
             buttons: getBotonesExportacion(gridClientes, "Clientes"),
             orderCellsTop: true,
@@ -169,8 +175,17 @@ async function configurarDataTable(data) {
                 }
 
                 finalizarFiltrosGridLista(api, '#grd_Clientes');
+
+                const idxActivo = typeof indiceColumnaActivoGrilla === "function"
+                    ? indiceColumnaActivoGrilla(api)
+                    : api.columns().count() - 1;
+                if (typeof inicializarFiltroActivoGrilla === "function") {
+                    inicializarFiltroActivoGrilla(api, '#grd_Clientes', idxActivo);
+                }
+
                 configurarOpcionesColumnas();
                 actualizarKpis(data);
+                api.draw(false);
             }
         });
 

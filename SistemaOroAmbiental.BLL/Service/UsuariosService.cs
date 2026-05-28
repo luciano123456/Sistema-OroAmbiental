@@ -38,12 +38,10 @@ namespace SistemaOroAmbiental.BLL.Service
         }
 
 
-        public async Task<IQueryable<User>> ObtenerTodos()
-        {
-            return await _contactRepo.ObtenerTodos();
-        }
+        public Task<IQueryable<User>> ObtenerTodos(bool soloActivos = false)
+            => _contactRepo.ObtenerTodos(soloActivos);
 
-
-
+        public Task<bool> CambiarActivo(int id, bool activo)
+            => _contactRepo.CambiarActivo(id, activo);
     }
 }

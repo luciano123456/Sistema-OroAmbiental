@@ -24,13 +24,14 @@ namespace SistemaOroAmbiental.Application.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> Lista()
+        public async Task<IActionResult> Lista(bool soloActivos = false)
         {
-            var proveedores = (await _service.ObtenerTodos()).ToList();
+            var proveedores = (await _service.ObtenerTodos(soloActivos)).ToList();
 
             var lista = proveedores.Select(p => new VMProveedor
             {
                 Id = p.Id,
+                Activo = p.Activo,
                 Nombre = p.Nombre,
                 Telefono = p.Telefono,
                 Email = p.Email,
@@ -67,6 +68,7 @@ namespace SistemaOroAmbiental.Application.Controllers
                 IdBanco = model.IdBanco,
                 AliasBancario = model.AliasBancario,
                 CbuBancario = model.CbuBancario,
+                Activo = model.Activo,
                 IdUsuarioRegistra = idUsuario,
                 FechaUsuarioRegistra = DateTime.Now
             };
@@ -99,6 +101,7 @@ namespace SistemaOroAmbiental.Application.Controllers
                 IdBanco = model.IdBanco,
                 AliasBancario = model.AliasBancario,
                 CbuBancario = model.CbuBancario,
+                Activo = model.Activo,
                 IdUsuarioModifica = idUsuario,
                 FechaUsuarioModifica = DateTime.Now
             };
@@ -111,6 +114,18 @@ namespace SistemaOroAmbiental.Application.Controllers
                 mensaje = result.Mensaje,
                 tipo = result.Tipo,
                 idReferencia = result.IdReferencia
+            });
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> CambiarActivo([FromBody] VMActivoToggle model)
+        {
+            var result = await _service.CambiarActivo(model.Id, model.Activo);
+            return Ok(new
+            {
+                valor = result.Ok,
+                mensaje = result.Mensaje,
+                tipo = result.Tipo
             });
         }
 
@@ -156,6 +171,7 @@ namespace SistemaOroAmbiental.Application.Controllers
                 p.IdBanco,
                 p.AliasBancario,
                 p.CbuBancario,
+                p.Activo,
                 p.FechaUsuarioRegistra,
                 UsuarioRegistra = p.IdUsuarioRegistraNavigation?.Usuario,
                 p.FechaUsuarioModifica,

@@ -15,6 +15,8 @@ namespace SistemaOroAmbiental.BLL.Service
 
         Task<Proveedore?> Obtener(int id);
 
-        Task<IQueryable<Proveedore>> ObtenerTodos();
+        Task<IQueryable<Proveedore>> ObtenerTodos(bool soloActivos = false);
+
+        Task<ServiceResult> CambiarActivo(int id, bool activo);
     }
 }

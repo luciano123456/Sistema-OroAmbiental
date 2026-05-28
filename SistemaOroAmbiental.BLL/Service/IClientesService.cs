@@ -15,6 +15,8 @@ namespace SistemaOroAmbiental.BLL.Service
 
         Task<Cliente?> Obtener(int id);
 
-        Task<IQueryable<Cliente>> ObtenerTodos();
+        Task<IQueryable<Cliente>> ObtenerTodos(bool soloActivos = false);
+
+        Task<ServiceResult> CambiarActivo(int id, bool activo);
     }
 }

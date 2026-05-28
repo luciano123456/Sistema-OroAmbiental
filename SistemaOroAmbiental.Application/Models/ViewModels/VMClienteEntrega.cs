@@ -14,7 +14,7 @@ namespace SistemaOroAmbiental.Application.Models.ViewModels
     {
         public int Id { get; set; }
         public DateTime Fecha { get; set; }
-        public int IdContrato { get; set; }
+        public int? IdContrato { get; set; }
         public int IdCliente { get; set; }
         public string Cliente { get; set; } = "";
         public string Establecimiento { get; set; } = "";
@@ -58,7 +58,7 @@ namespace SistemaOroAmbiental.Application.Models.ViewModels
     {
         public int Id { get; set; }
         public DateTime Fecha { get; set; }
-        public int IdContrato { get; set; }
+        public int? IdContrato { get; set; }
         public int IdCliente { get; set; }
         public string Cliente { get; set; } = "";
         public string Establecimiento { get; set; } = "";
@@ -84,7 +84,8 @@ namespace SistemaOroAmbiental.Application.Models.ViewModels
     {
         public int Id { get; set; }
         public DateTime Fecha { get; set; }
-        public int IdContrato { get; set; }
+        public int IdCliente { get; set; }
+        public int? IdContrato { get; set; }
         public int? IdEstado { get; set; }
         public string? NotaInterna { get; set; }
         public string? NotaCliente { get; set; }

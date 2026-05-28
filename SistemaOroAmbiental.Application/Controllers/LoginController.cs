@@ -58,9 +58,9 @@ namespace SistemaBronx.Application.Controllers
                     return Unauthorized(new { success = false, message = "Usuario o contraseña incorrectos." });
                 }
 
-                if (user.IdEstado == 2)
+                if (!user.Activo || user.IdEstado == 2)
                 {
-                    return Unauthorized(new { success = false, message = "Tu usuario se encuentra bloqueado." });
+                    return Unauthorized(new { success = false, message = "Tu usuario se encuentra bloqueado o inactivo." });
                 }
 
                 var passwordHasher = new PasswordHasher<User>();
@@ -156,9 +156,9 @@ namespace SistemaBronx.Application.Controllers
                     return Unauthorized(new { success = false, message = "Usuario no encontrado." });
                 }
 
-                if (user.IdEstado == 2)
+                if (!user.Activo || user.IdEstado == 2)
                 {
-                    return Unauthorized(new { success = false, message = "Tu usuario se encuentra bloqueado." });
+                    return Unauthorized(new { success = false, message = "Tu usuario se encuentra bloqueado o inactivo." });
                 }
 
                 var token = GenerarToken(user);

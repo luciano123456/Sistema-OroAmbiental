@@ -167,7 +167,8 @@
 
         const fechaFirma = d.FechaContrato || d.fechaContrato || new Date();
         const fc = partesFecha(fechaFirma);
-        const fi = partesFecha(d.FechaInicio || d.fechaInicio);
+        const fechaInicioRaw = d.FechaInicio || d.fechaInicio;
+        const fi = partesFecha(fechaInicioRaw || fechaFirma);
         const fv = partesFecha(d.FechaVencimiento || d.fechaVencimiento);
         const hoy = partesFecha(new Date());
 
@@ -198,10 +199,14 @@
             DIASCLIENTE: diasHorarios,
             EMAILCLIENTE: email,
 
-            /* Pie de firma */
-            DIA: fc.dia,
-            MES: fc.mesNombre,
-            ANIO: fc.anio,
+            /* Pie de firma: {DIA} {MES} {ANIO} = fecha inicio del contrato */
+            DIA: fi.dia,
+            MES: fi.mesNombre,
+            ANIO: fi.anio,
+            DIAINICIO: fi.dia,
+            MESINICIO: fi.mesNombre,
+            ANIOINICIO: fi.anio,
+            FECHAINICIO: fmtFecha(fechaInicioRaw || fechaFirma),
 
             /* Alias compatibles */
             NombreCliente: nombreCliente,

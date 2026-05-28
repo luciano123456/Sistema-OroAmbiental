@@ -105,6 +105,9 @@ namespace SistemaOroAmbiental.Application.Models.ViewModels
         public string Dia { get; set; } = "";
         public string Mes { get; set; } = "";
         public string Anio { get; set; } = "";
+        public string DiaContrato { get; set; } = "";
+        public string MesContrato { get; set; } = "";
+        public string AnioContrato { get; set; } = "";
         public DateTime FechaContrato { get; set; }
         public DateTime FechaInicio { get; set; }
         public DateTime FechaVencimiento { get; set; }

@@ -21,10 +21,10 @@ namespace SistemaOroAmbiental.Application.Controllers
         public IActionResult Index() => View();
 
         [AllowAnonymous]
-        public IActionResult NuevoModif(int id = 0, int idContrato = 0)
+        public IActionResult NuevoModif(int id = 0, int idCliente = 0)
         {
             ViewBag.Id = id;
-            ViewBag.IdContrato = idContrato;
+            ViewBag.IdCliente = idCliente;
             return View();
         }
 
@@ -50,8 +50,8 @@ namespace SistemaOroAmbiental.Application.Controllers
                     Id = e.Id,
                     Fecha = e.Fecha,
                     IdContrato = e.IdContrato,
-                    IdCliente = e.IdContratoNavigation.IdCliente,
-                    Cliente = e.IdContratoNavigation?.IdClienteNavigation?.Nombre ?? "",
+                    IdCliente = e.IdCliente,
+                    Cliente = e.IdClienteNavigation?.Nombre ?? "",
                     Establecimiento = e.IdContratoNavigation?.IdEstablecimientoNavigation?.Nombre ?? "",
                     IdEstado = e.IdEstado,
                     Estado = e.IdEstadoNavigation?.Nombre,
@@ -78,15 +78,15 @@ namespace SistemaOroAmbiental.Application.Controllers
                 return NotFound();
 
             var resumenCobros = await _service.ObtenerCobros(id);
+            var cliente = e.IdClienteNavigation;
             var contrato = e.IdContratoNavigation;
-            var cliente = contrato?.IdClienteNavigation;
 
             var detalle = new VMClienteEntregaDetalle
             {
                 Id = e.Id,
                 Fecha = e.Fecha,
                 IdContrato = e.IdContrato,
-                IdCliente = contrato?.IdCliente ?? 0,
+                IdCliente = e.IdCliente,
                 Cliente = cliente?.Nombre ?? "",
                 Establecimiento = contrato?.IdEstablecimientoNavigation?.Nombre ?? "",
                 IdSucursal = cliente?.IdSucursal ?? 0,
@@ -223,6 +223,7 @@ namespace SistemaOroAmbiental.Application.Controllers
             {
                 Id = model.Id,
                 Fecha = model.Fecha == default ? DateTime.Now : model.Fecha,
+                IdCliente = model.IdCliente,
                 IdContrato = model.IdContrato,
                 IdEstado = model.IdEstado,
                 NotaInterna = model.NotaInterna?.Trim(),

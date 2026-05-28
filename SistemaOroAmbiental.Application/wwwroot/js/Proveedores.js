@@ -102,7 +102,13 @@ async function configurarDataTable(data) {
                 { data: 'Banco' },
                 { data: 'Telefono' },
                 { data: 'Email' },
+                typeof columnaGridActivo === "function" ? columnaGridActivo("Proveedores") : { data: "Activo" },
             ],
+            createdRow: function (row, data) {
+                if (typeof createdRowEstiloActivoGrilla === "function") {
+                    createdRowEstiloActivoGrilla(row, data);
+                }
+            },
             dom: 'Bfrtip',
             buttons: getBotonesExportacion(gridProveedores, "Proveedores"),
             orderCellsTop: true,
@@ -156,8 +162,17 @@ async function configurarDataTable(data) {
                 }
 
                 finalizarFiltrosGridLista(api, '#grd_Proveedores');
+
+                const idxActivo = typeof indiceColumnaActivoGrilla === "function"
+                    ? indiceColumnaActivoGrilla(api)
+                    : api.columns().count() - 1;
+                if (typeof inicializarFiltroActivoGrilla === "function") {
+                    inicializarFiltroActivoGrilla(api, '#grd_Proveedores', idxActivo);
+                }
+
                 configurarOpcionesColumnas();
                 actualizarKpis(data);
+                api.draw(false);
             }
         });
 

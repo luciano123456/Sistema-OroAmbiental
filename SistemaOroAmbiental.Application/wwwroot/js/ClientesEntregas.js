@@ -10,9 +10,9 @@ const API = {
     lista: "/ClientesEntregas/ListaFiltrada",
     editarInfo: id => `/ClientesEntregas/EditarInfo?id=${id}`,
     eliminar: id => `/ClientesEntregas/Eliminar?id=${id}`,
-    nuevoModif: (id, idContrato) => {
+    nuevoModif: (id, idCliente) => {
         let url = `/ClientesEntregas/NuevoModif?id=${id || 0}`;
-        if (idContrato) url += `&idContrato=${idContrato}`;
+        if (idCliente) url += `&idCliente=${idCliente}`;
         return url;
     },
     contratos: "/Contratos/Lista",

@@ -47,5 +47,7 @@ namespace SistemaOroAmbiental.Application.Models.ViewModels
         public DateTime? FechaUsuarioModifica { get; set; }
 
         public string? UsuarioModifica { get; set; }
+
+        public bool Activo { get; set; } = true;
     }
 }

@@ -89,21 +89,40 @@ namespace SistemaOroAmbiental.DAL.Repository
             }
         }
 
-        public async Task<IQueryable<User>> ObtenerTodos()
+        public async Task<IQueryable<User>> ObtenerTodos(bool soloActivos = false)
         {
             try
             {
                 IQueryable<User> query = _dbcontext.Usuarios
                     .Include(c => c.IdEstadoNavigation)
-                    .Include(c => c.IdRolNavigation);
+                    .Include(c => c.IdRolNavigation)
+                    .AsQueryable();
+
+                if (soloActivos)
+                    query = query.Where(x => x.Activo);
 
                 return await Task.FromResult(query);
-
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                return null;
+                return Enumerable.Empty<User>().AsQueryable();
             }
+        }
+
+        public async Task<bool> CambiarActivo(int id, bool activo)
+        {
+            var entity = await _dbcontext.Usuarios.FirstOrDefaultAsync(x => x.Id == id);
+            if (entity == null)
+                return false;
+
+            entity.Activo = activo;
+            if (!activo)
+                entity.IdEstado = 2;
+            else if (entity.IdEstado == 2)
+                entity.IdEstado = 1;
+
+            await _dbcontext.SaveChangesAsync();
+            return true;
         }
 
 

@@ -31,6 +31,8 @@ public partial class Proveedore
 
     public DateTime? FechaUsuarioModifica { get; set; }
 
+    public bool Activo { get; set; } = true;
+
     public virtual ICollection<Compra> Compras { get; set; } = new List<Compra>();
 
     public virtual Banco? IdBancoNavigation { get; set; }

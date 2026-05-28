@@ -24,9 +24,9 @@ namespace SistemaOroAmbiental.Application.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> Lista()
+        public async Task<IActionResult> Lista(bool soloActivos = false)
         {
-            var productos = (await _service.ObtenerTodos()).ToList();
+            var productos = (await _service.ObtenerTodos(soloActivos)).ToList();
             var stocks = await _service.ObtenerStockTotalesPorProducto();
 
             var lista = productos.Select(p =>
@@ -37,6 +37,7 @@ namespace SistemaOroAmbiental.Application.Controllers
                 return new VMProducto
                 {
                     Id = p.Id,
+                    Activo = p.Activo,
                     Nombre = p.Nombre,
                     IdCategoria = p.IdCategoria,
                     IdMedida = p.IdMedida,
@@ -85,6 +86,7 @@ namespace SistemaOroAmbiental.Application.Controllers
                 IdMedida = model.IdMedida,
                 CostoUnitario = model.CostoUnitario,
                 StockMinimo = model.StockMinimo,
+                Activo = model.Activo,
                 IdUsuarioRegistra = idUsuario,
                 FechaUsuarioRegistra = DateTime.Now
             };
@@ -114,6 +116,7 @@ namespace SistemaOroAmbiental.Application.Controllers
                 IdMedida = model.IdMedida,
                 CostoUnitario = model.CostoUnitario,
                 StockMinimo = model.StockMinimo,
+                Activo = model.Activo,
                 IdUsuarioModifica = idUsuario,
                 FechaUsuarioModifica = DateTime.Now
             };
@@ -126,6 +129,18 @@ namespace SistemaOroAmbiental.Application.Controllers
                 mensaje = result.Mensaje,
                 tipo = result.Tipo,
                 idReferencia = result.IdReferencia
+            });
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> CambiarActivo([FromBody] VMActivoToggle model)
+        {
+            var result = await _service.CambiarActivo(model.Id, model.Activo);
+            return Ok(new
+            {
+                valor = result.Ok,
+                mensaje = result.Mensaje,
+                tipo = result.Tipo
             });
         }
 
@@ -205,6 +220,7 @@ namespace SistemaOroAmbiental.Application.Controllers
                 p.IdMedida,
                 p.CostoUnitario,
                 p.StockMinimo,
+                p.Activo,
                 p.FechaUsuarioRegistra,
                 UsuarioRegistra = p.IdUsuarioRegistraNavigation?.Usuario,
                 p.FechaUsuarioModifica,

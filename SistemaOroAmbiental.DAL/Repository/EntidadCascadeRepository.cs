@@ -118,7 +118,7 @@ namespace SistemaOroAmbiental.DAL.Repository
                 .ToListAsync();
 
             var idsEntregas = await _db.ClientesEntregas
-                .Where(e => idsContratos.Contains(e.IdContrato))
+                .Where(e => e.IdCliente == idCliente || (e.IdContrato.HasValue && idsContratos.Contains(e.IdContrato.Value)))
                 .Select(e => e.Id)
                 .ToListAsync();
 
