@@ -2,14 +2,14 @@ let gridEstablecimientos;
 let establecimientoModal;
 
 const columnConfigEst = [
-    { index: 1, filterType: 'select', fetchDataFunc: listaClientesFilterEst },
-    { index: 2, filterType: 'text' },
+    { index: 2, filterType: 'select', fetchDataFunc: listaClientesFilterEst },
     { index: 3, filterType: 'text' },
-    { index: 4, filterType: 'select', fetchDataFunc: listaProvinciasFilterEst },
-    { index: 5, filterType: 'select', fetchDataFunc: listaDiasFilterEst },
-    { index: 6, filterType: 'select', fetchDataFunc: listaSemanasFilterEst },
-    { index: 7, filterType: 'select', fetchDataFunc: listaListasPrecioFilterEst },
-    { index: 8, filterType: 'text' }
+    { index: 4, filterType: 'text' },
+    { index: 5, filterType: 'select', fetchDataFunc: listaProvinciasFilterEst },
+    { index: 6, filterType: 'select', fetchDataFunc: listaDiasFilterEst },
+    { index: 7, filterType: 'select', fetchDataFunc: listaSemanasFilterEst },
+    { index: 8, filterType: 'select', fetchDataFunc: listaListasPrecioFilterEst },
+    { index: 9, filterType: 'text' }
 ];
 
 function initModalClienteEstablecimientos() {
@@ -105,31 +105,20 @@ async function listaEstablecimientos() {
 
 async function configurarDataTableEst(data) {
     if (!gridEstablecimientos) {
-        const $thead = $("#grd_Establecimientos thead");
-        if ($thead.find("tr.filters").length === 0) {
-            $thead.find("tr").first().clone(true).addClass("filters").appendTo($thead);
-        }
-
         gridEstablecimientos = $("#grd_Establecimientos").DataTable({
             data: data,
             language: { sLengthMenu: "Mostrar MENU registros", url: "//cdn.datatables.net/plug-ins/2.0.7/i18n/es-MX.json" },
+            autoWidth: false,
+            columnDefs: typeof columnDefsGridLista === "function" ? columnDefsGridLista() : [],
             scrollX: true,
             scrollCollapse: true,
             columns: [
-                {
-                    data: "Id",
-                    title: "",
-                    width: "1%",
-                    render: function (data) {
-                        return renderAccionesGrid(data, {
-                            ver: "verEstablecimiento",
-                            editar: "editarEstablecimiento",
-                            eliminar: "eliminarEstablecimiento"
-                        }, "Clientes");
-                    },
-                    orderable: false,
-                    searchable: false
-                },
+                columnaGridAcciones({
+                    ver: "verEstablecimiento",
+                    editar: "editarEstablecimiento",
+                    eliminar: "eliminarEstablecimiento"
+                }, "Clientes"),
+                columnaGridId(),
                 { data: "Cliente" },
                 { data: "Nombre" },
                 { data: "Cuit" },
@@ -152,8 +141,11 @@ async function configurarDataTableEst(data) {
             fixedHeader: true,
             initComplete: async function () {
                 const api = this.api();
+                inicializarFilaFiltrosGrilla(api, "#grd_Establecimientos");
+                finalizarFiltrosGridLista(api, "#grd_Establecimientos");
+
                 for (const config of columnConfigEst) {
-                    const cell = $(".filters th").eq(config.index);
+                    const cell = celdasFiltroGrilla("#grd_Establecimientos").eq(config.index);
                     if (!cell.length) continue;
                     cell.empty();
 
@@ -183,7 +175,7 @@ async function configurarDataTableEst(data) {
                             });
                     }
                 }
-                $(".filters th").eq(0).html("");
+                finalizarFiltrosGridLista(api, "#grd_Establecimientos");
                 configurarOpcionesColumnasEst();
                 actualizarKpisEst(data);
             }

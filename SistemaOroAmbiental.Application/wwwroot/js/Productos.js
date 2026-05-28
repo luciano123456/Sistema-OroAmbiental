@@ -2,13 +2,13 @@ let gridProductos;
 let productoModal;
 
 const columnConfig = [
-    { index: 1, filterType: 'text' },
-    { index: 2, filterType: 'select', fetchDataFunc: listaCategoriasFilter },
-    { index: 3, filterType: 'select', fetchDataFunc: listaMedidasFilter },
-    { index: 4, filterType: 'text' },
+    { index: 2, filterType: 'text' },
+    { index: 3, filterType: 'select', fetchDataFunc: listaCategoriasFilter },
+    { index: 4, filterType: 'select', fetchDataFunc: listaMedidasFilter },
     { index: 5, filterType: 'text' },
     { index: 6, filterType: 'text' },
-    { index: 7, filterType: 'select', fetchDataFunc: listaEstadosStockFilter, localOptions: true }
+    { index: 7, filterType: 'text' },
+    { index: 8, filterType: 'select', fetchDataFunc: listaEstadosStockFilter, localOptions: true }
 ];
 
 const ESTADOS_STOCK_ICONOS = {
@@ -102,34 +102,23 @@ async function configurarDataTable(data) {
 
     if (!gridProductos) {
 
-        const $thead = $('#grd_Productos thead');
-        if ($thead.find('tr.filters').length === 0) {
-            $thead.find('tr').first().clone(true).addClass('filters').appendTo($thead);
-        }
-
         gridProductos = $('#grd_Productos').DataTable({
             data: data,
             language: {
                 sLengthMenu: "Mostrar MENU registros",
                 url: "//cdn.datatables.net/plug-ins/2.0.7/i18n/es-MX.json"
             },
+            autoWidth: false,
+            columnDefs: typeof columnDefsGridLista === "function" ? columnDefsGridLista() : [],
             scrollX: true,
             scrollCollapse: true,
             columns: [
-                {
-                    data: "Id",
-                    title: '',
-                    width: "1%",
-                    render: function (data) {
-                        return renderAccionesGrid(data, {
-                            ver: "verProducto",
-                            editar: "editarProducto",
-                            eliminar: "eliminarProducto"
-                        }, "Productos");
-                    },
-                    orderable: false,
-                    searchable: false,
-                },
+                columnaGridAcciones({
+                    ver: "verProducto",
+                    editar: "editarProducto",
+                    eliminar: "eliminarProducto"
+                }, "Productos"),
+                columnaGridId(),
                 { data: 'Nombre' },
                 { data: 'Categoria' },
                 { data: 'Medida' },
@@ -173,9 +162,11 @@ async function configurarDataTable(data) {
             fixedHeader: true,
             initComplete: async function () {
                 const api = this.api();
+                inicializarFilaFiltrosGrilla(api, '#grd_Productos');
+                finalizarFiltrosGridLista(api, '#grd_Productos');
 
                 for (const config of columnConfig) {
-                    const cell = $('.filters th').eq(config.index);
+                    const cell = celdasFiltroGrilla('#grd_Productos').eq(config.index);
                     if (!cell.length) continue;
                     cell.empty();
 
@@ -219,7 +210,7 @@ async function configurarDataTable(data) {
                     }
                 }
 
-                $('.filters th').eq(0).html('');
+                finalizarFiltrosGridLista(api, '#grd_Productos');
                 configurarOpcionesColumnas();
                 actualizarKpis(data);
             }
@@ -287,7 +278,7 @@ function configurarOpcionesColumnas() {
     container.empty();
 
     columnas.forEach((col, index) => {
-        if (col.data && col.data !== "Id") {
+        if (typeof esColumnaMenuGrilla === "function" ? esColumnaMenuGrilla(col) : (col.data && col.data !== "Id")) {
             const isChecked = savedConfig[`col_${index}`] !== undefined
                 ? savedConfig[`col_${index}`]
                 : true;

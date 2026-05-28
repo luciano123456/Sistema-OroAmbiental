@@ -12,15 +12,15 @@ let validacionUsuarioModal = null;
 const PERMISOS_COLUMNAS = ["VER", "CREAR", "EDITAR", "ELIMINAR", "EXPORTAR"];
 
 const columnConfig = [
-    { index: 1, filterType: 'text' },
     { index: 2, filterType: 'text' },
     { index: 3, filterType: 'text' },
     { index: 4, filterType: 'text' },
     { index: 5, filterType: 'text' },
     { index: 6, filterType: 'text' },
-    { index: 7, filterType: 'select', fetchDataFunc: listaRolesFilter },
-    { index: 8, filterType: 'select', fetchDataFunc: listaEstadosFilter },
-    { index: 9, filterType: 'text' }
+    { index: 7, filterType: 'text' },
+    { index: 8, filterType: 'select', fetchDataFunc: listaRolesFilter },
+    { index: 9, filterType: 'select', fetchDataFunc: listaEstadosFilter },
+    { index: 10, filterType: 'text' }
 ];
 
 $(document).ready(() => {
@@ -316,31 +316,23 @@ async function configurarDataTable(data) {
 
     if (!gridUsuarios) {
 
-        $('#grd_Usuarios thead tr').clone(true).addClass('filters').appendTo('#grd_Usuarios thead');
-
         gridUsuarios = $('#grd_Usuarios').DataTable({
             data: data,
             language: {
                 sLengthMenu: "Mostrar MENU registros",
                 url: "//cdn.datatables.net/plug-ins/2.0.7/i18n/es-MX.json"
             },
+            autoWidth: false,
+            columnDefs: typeof columnDefsGridLista === "function" ? columnDefsGridLista() : [],
             scrollX: true,
             scrollCollapse: true,
             columns: [
-                {
-                    data: "Id",
-                    title: '',
-                    width: "1%",
-                    render: function (data) {
-                        return renderAccionesGrid(data, {
-                            ver: "verUsuario",
-                            editar: "editarUsuario",
-                            eliminar: "eliminarUsuario"
-                        }, "Usuarios");
-                    },
-                    orderable: false,
-                    searchable: false,
-                },
+                columnaGridAcciones({
+                    ver: "verUsuario",
+                    editar: "editarUsuario",
+                    eliminar: "eliminarUsuario"
+                }, "Usuarios"),
+                columnaGridId(),
                 { data: 'Usuario' },
                 { data: 'Nombre' },
                 { data: 'Apellido' },
@@ -381,13 +373,20 @@ async function configurarDataTable(data) {
             ],
             orderCellsTop: true,
             fixedHeader: true,
+            drawCallback: function () {
+                if (typeof ajustarColumnasGrillaLista === "function") {
+                    ajustarColumnasGrillaLista(this.api(), "#grd_Usuarios");
+                }
+            },
             initComplete: async function () {
                 const api = this.api();
+                inicializarFilaFiltrosGrilla(api, '#grd_Usuarios');
+                finalizarFiltrosGridLista(api, '#grd_Usuarios');
 
                 for (const config of columnConfig) {
-                    if (config.index > 8) continue;
+                    if (config.index > 10) continue;
 
-                    const cell = $('.filters th').eq(config.index);
+                    const cell = celdasFiltroGrilla('#grd_Usuarios').eq(config.index);
 
                     if (config.filterType === 'select') {
                         const select = $(`<select class="rp-filter-select" id="filter${config.index}">
@@ -425,8 +424,7 @@ async function configurarDataTable(data) {
                     }
                 }
 
-                $('.filters th').eq(0).html('');
-
+                finalizarFiltrosGridLista(api, '#grd_Usuarios');
                 configurarOpcionesColumnas();
 
                 setTimeout(() => gridUsuarios.columns.adjust(), 10);
@@ -512,7 +510,7 @@ function configurarOpcionesColumnas() {
     container.empty();
 
     columnas.forEach((col, index) => {
-        if (col.data && col.data !== "Id") {
+        if (typeof esColumnaMenuGrilla === "function" ? esColumnaMenuGrilla(col) : (col.data && col.data !== "Id")) {
             const isChecked = savedConfig[`col_${index}`] !== undefined ? savedConfig[`col_${index}`] : true;
             grid.column(index).visible(isChecked);
 

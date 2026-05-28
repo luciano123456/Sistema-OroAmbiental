@@ -961,3 +961,120 @@
         display: none;
     }
 }
+
+/* Modal renovar sesión (últimos 5 min) */
+.rp-session-renew-modal .rp-session-renew-countdown {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 14px 28px;
+    border-radius: 14px;
+    border: 1px solid rgba(251, 191, 36, 0.35);
+    background: rgba(251, 191, 36, 0.08);
+}
+
+.rp-session-renew-countdown-label {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    opacity: 0.75;
+}
+
+#modalSessionPorExpirarCountdown {
+    font-size: 1.75rem;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.05em;
+    color: #fde68a;
+}
+
+#btnSessionRenovar .fa-refresh {
+    transition: transform 0.35s ease;
+}
+
+#btnSessionRenovar:not(:disabled):hover .fa-refresh {
+    transform: rotate(-180deg);
+}
+
+#btnSessionRenovar:disabled {
+    opacity: 0.65;
+    cursor: wait;
+}
+
+/* Modal renovar sesión (últimos 5 min) */
+.rp-session-renew-modal .rp-session-renew-countdown {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 14px 28px;
+    border-radius: 14px;
+    border: 1px solid rgba(251, 191, 36, 0.35);
+    background: rgba(251, 191, 36, 0.08);
+}
+
+.rp-session-renew-countdown-label {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    opacity: 0.75;
+}
+
+#modalSessionPorExpirarCountdown {
+    font-size: 1.75rem;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.05em;
+    color: #fde68a;
+}
+
+#btnSessionRenovar .fa-refresh {
+    transition: transform 0.35s ease;
+}
+
+#btnSessionRenovar:not(:disabled):hover .fa-refresh {
+    transform: rotate(-180deg);
+}
+
+#btnSessionRenovar:disabled {
+    opacity: 0.65;
+    cursor: wait;
+}
+
+/* Modal renovar sesión (últimos 5 min) */
+.rp-session-renew-modal .rp-session-renew-countdown {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 14px 28px;
+    border-radius: 14px;
+    border: 1px solid rgba(251, 191, 36, 0.35);
+    background: rgba(251, 191, 36, 0.08);
+}
+
+.rp-session-renew-countdown-label {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    opacity: 0.75;
+}
+
+#modalSessionPorExpirarCountdown {
+    font-size: 1.75rem;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.05em;
+    color: #fde68a;
+}
+
+#btnSessionRenovar .fa-refresh {
+    transition: transform 0.35s ease;
+}
+
+#btnSessionRenovar:not(:disabled):hover .fa-refresh {
+    transform: rotate(-180deg);
+}
+
+#btnSessionRenovar:disabled {
+    opacity: 0.65;
+    cursor: wait;
+}

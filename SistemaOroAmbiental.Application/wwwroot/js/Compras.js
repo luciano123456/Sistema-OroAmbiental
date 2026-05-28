@@ -24,6 +24,20 @@ const authHeaders = () => ({
     "Content-Type": "application/json"
 });
 
+const columnConfigCompras = [
+    { index: 2, filterType: "text" },  // Fecha
+    { index: 3, filterType: "text" },  // Proveedor
+    { index: 4, filterType: "text" },  // Sucursal
+    { index: 5, filterType: "text" },  // Productos
+    { index: 6, filterType: "text" },  // Subtotal
+    { index: 7, filterType: "text" },  // Descuentos
+    { index: 8, filterType: "text" },  // IVA
+    { index: 9, filterType: "text" },  // Total
+    { index: 10, filterType: "text" }, // Pagado
+    { index: 11, filterType: "text" }, // Restante
+    { index: 12, filterType: "text" }  // Nota
+];
+
 $(document).ready(async () => {
     if (typeof initPanelFiltrosPersistido === "function") {
         initPanelFiltrosPersistido("panelFiltrosCompras");
@@ -171,22 +185,35 @@ function configurarGrillaCompras(data) {
         gridCompras = $("#grd_Compras").DataTable({
             data,
             language: { url: "//cdn.datatables.net/plug-ins/2.0.7/i18n/es-MX.json" },
+            autoWidth: false,
+            columnDefs: typeof columnDefsGridLista === "function" ? columnDefsGridLista() : [],
             scrollX: true,
-            order: [[1, "desc"]],
+            order: [[2, "desc"]],
             dom: "Bfrtip",
             buttons: typeof getBotonesExportacion === "function"
                 ? getBotonesExportacion(gridCompras, "Compras")
                 : [],
+            orderCellsTop: true,
             fixedHeader: true,
+            initComplete: async function () {
+                const api = this.api();
+                inicializarFilaFiltrosGrilla(api, "#grd_Compras");
+                finalizarFiltrosGridLista(api, "#grd_Compras");
+
+                for (const config of columnConfigCompras) {
+                    const cell = celdasFiltroGrilla("#grd_Compras").eq(config.index);
+                    if (!cell.length) continue;
+
+                    $('<input class="rp-filter-input" type="text" placeholder="Buscar..." autocomplete="off">')
+                        .appendTo(cell.empty())
+                        .on("keyup change", function () {
+                            api.column(config.index).search(this.value).draw(false);
+                        });
+                }
+            },
             columns: [
-                {
-                    data: "Id",
-                    title: "",
-                    orderable: false,
-                    searchable: false,
-                    width: "1%",
-                    render: (id, type, row) => renderAccionesCompra(id, row)
-                },
+                columnaGridAcciones(null, "Compras", (id, type, row) => renderAccionesCompra(id, row)),
+                columnaGridId(),
                 {
                     data: "Fecha",
                     render: v => formatearFechaParaVista(v)

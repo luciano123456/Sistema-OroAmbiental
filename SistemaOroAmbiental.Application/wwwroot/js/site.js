@@ -1,4 +1,4 @@
-﻿function obtenerTokenJwt() {
+function obtenerTokenJwt() {
     return localStorage.getItem("JwtToken");
 }
 
@@ -820,6 +820,154 @@ function renderAccionesGrid(id, acciones, modulo = null) {
         </div>
     `;
 }
+
+/** Definición de anchos fijos para Id + acciones (evita desalineado con scrollX). */
+function columnDefsGridLista() {
+    return [
+        { targets: 0, className: "rp-col-acciones", width: "118px", orderable: false },
+        { targets: 1, className: "rp-col-id", width: "92px" }
+    ];
+}
+
+/** Crea fila de filtros alineada con las columnas del DataTable (llamar en initComplete). */
+function inicializarFilaFiltrosGrilla(api, tableSelector) {
+    const $table = $(tableSelector);
+    const $thead = $table.find("thead");
+    $thead.find("tr.filters").remove();
+
+    const colCount = api.columns().count();
+    const $row = $('<tr class="filters"></tr>');
+
+    for (let i = 0; i < colCount; i++) {
+        let cls = "";
+        if (i === 0) cls = "rp-col-acciones-h";
+        else if (i === 1) cls = "rp-col-id-h";
+        $row.append($("<th></th>").addClass(cls));
+    }
+
+    $thead.append($row);
+
+    const $scrollThead = $(api.table().container()).find(".dataTables_scrollHeadInner table thead");
+    if ($scrollThead.length) {
+        $scrollThead.find("tr.filters").remove();
+        const $rowScroll = $('<tr class="filters"></tr>');
+        for (let i = 0; i < colCount; i++) {
+            let cls = "";
+            if (i === 0) cls = "rp-col-acciones-h";
+            else if (i === 1) cls = "rp-col-id-h";
+            $rowScroll.append($("<th></th>").addClass(cls));
+        }
+        $scrollThead.append($rowScroll);
+    }
+}
+
+/** Con scrollX, replica la fila de filtros en el thead del scroll head (después de armar inputs). */
+function sincronizarFiltrosScrollHeadGrilla(api, tableSelector) {
+    // Ya no clonamos nodos para evitar inconsistencias de Select2/eventos.
+    // La fila de filtros se crea explícitamente en el thead visible.
+}
+
+/** Devuelve las celdas de filtro de una grilla. */
+function celdasFiltroGrilla(tableSelector) {
+    if (!tableSelector) return $("thead tr.filters th");
+
+    const $table = $(tableSelector);
+    const $wrapper = $table.closest(".dataTables_wrapper");
+    const $scrollHeadCells = $wrapper.find(".dataTables_scrollHeadInner table thead tr.filters th");
+
+    if ($scrollHeadCells.length) return $scrollHeadCells;
+    return $(`${tableSelector} thead tr.filters th`);
+}
+
+/** Primera columna de grillas: muestra el Id numérico. */
+function columnaGridId() {
+    return {
+        data: "Id",
+        name: "grid_id",
+        title: "Id",
+        width: "92px",
+        className: "text-center rp-col-id",
+        orderable: true,
+        searchable: true,
+        render: function (data, type) {
+            if (data === null || data === undefined || data === "") return "";
+            if (type === "sort" || type === "filter" || type === "type") return data;
+            if (type === "export" || type === "print") return data;
+            return `<span class="rp-grid-id" title="ID ${data}"><span class="rp-grid-id-hash">#</span>${data}</span>`;
+        }
+    };
+}
+
+/** Segunda columna: botones de acción (mismo campo Id, solo render visual). */
+function columnaGridAcciones(acciones, modulo, renderCustom) {
+    return {
+        data: "Id",
+        name: "grid_acciones",
+        title: "",
+        width: "118px",
+        className: "text-center rp-col-acciones",
+        orderable: false,
+        searchable: false,
+        render: function (data, type, row) {
+            if (type === "sort" || type === "filter" || type === "type") return "";
+            if (type === "export" || type === "print") return "";
+
+            const id = row?.Id ?? row?.id ?? data;
+            if (typeof renderCustom === "function") {
+                return renderCustom(id, type, row);
+            }
+            if (acciones) {
+                return renderAccionesGrid(id, acciones, modulo);
+            }
+            return "";
+        }
+    };
+}
+
+/** Indica si la columna puede mostrarse en el menú "Config. columnas". */
+function esColumnaMenuGrilla(col) {
+    if (!col) return false;
+    if (col.name === "grid_id" || col.name === "grid_acciones") return false;
+    if (String(col.className || "").includes("rp-col-acciones")) return false;
+    if (col.data === "Id") return false;
+    return !!col.data;
+}
+
+/** Vacía acciones (índice 0) y crea filtro de Id (índice 1). */
+function finalizarFiltrosGridLista(api, tableSelector) {
+    const $th = celdasFiltroGrilla(tableSelector);
+
+    $th.eq(0).empty().addClass("rp-col-acciones-h");
+
+    const cellId = $th.eq(1);
+    if (cellId.length) {
+        $('<input class="rp-filter-input rp-filter-id" type="text" placeholder="Id..." autocomplete="off">')
+            .appendTo(cellId.empty())
+            .on("keyup change", function () {
+                api.column(1).search(this.value.trim()).draw(false);
+            });
+    }
+    ajustarColumnasGrillaLista(api, tableSelector);
+}
+
+/** Corrige desalineación de encabezado/cuerpo con scrollX + fixedHeader. */
+function ajustarColumnasGrillaLista(api, tableSelector) {
+    if (!api) return;
+    try {
+        api.columns.adjust();
+    } catch { /* sin tabla lista */ }
+
+    if (!tableSelector) return;
+    setTimeout(() => {
+        try {
+            api.columns.adjust();
+            if (api.fixedHeader) {
+                api.fixedHeader.adjust();
+            }
+        } catch { /* ignore */ }
+    }, 60);
+}
+
 /* ======================================================
 EXPORTADOR GLOBAL DATATABLES
 (usar desde cualquier grid)

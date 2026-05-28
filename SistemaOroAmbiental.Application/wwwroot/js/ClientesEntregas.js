@@ -24,6 +24,21 @@ const authHeaders = () => ({
     "Content-Type": "application/json"
 });
 
+const columnConfigEntregas = [
+    { index: 2, filterType: "text" },  // Fecha
+    { index: 3, filterType: "text" },  // Cliente
+    { index: 4, filterType: "text" },  // Establecimiento
+    { index: 5, filterType: "text" },  // Estado
+    { index: 6, filterType: "text" },  // Productos
+    { index: 7, filterType: "text" },  // Subtotal
+    { index: 8, filterType: "text" },  // Descuentos
+    { index: 9, filterType: "text" },  // IVA
+    { index: 10, filterType: "text" }, // Total
+    { index: 11, filterType: "text" }, // Pagado
+    { index: 12, filterType: "text" }, // Restante
+    { index: 13, filterType: "text" }  // Nota
+];
+
 $(document).ready(async () => {
     if (typeof initPanelFiltrosPersistido === "function") {
         initPanelFiltrosPersistido("panelFiltrosEntregas");
@@ -161,22 +176,35 @@ function configurarGrillaEntregas(data) {
         gridEntregas = $("#grd_Entregas").DataTable({
             data,
             language: { url: "//cdn.datatables.net/plug-ins/2.0.7/i18n/es-MX.json" },
+            autoWidth: false,
+            columnDefs: typeof columnDefsGridLista === "function" ? columnDefsGridLista() : [],
             scrollX: true,
-            order: [[1, "desc"]],
+            order: [[2, "desc"]],
             dom: "Bfrtip",
             buttons: typeof getBotonesExportacion === "function"
                 ? getBotonesExportacion(gridEntregas, "Entregas")
                 : [],
+            orderCellsTop: true,
             fixedHeader: true,
+            initComplete: async function () {
+                const api = this.api();
+                inicializarFilaFiltrosGrilla(api, "#grd_Entregas");
+                finalizarFiltrosGridLista(api, "#grd_Entregas");
+
+                for (const config of columnConfigEntregas) {
+                    const cell = celdasFiltroGrilla("#grd_Entregas").eq(config.index);
+                    if (!cell.length) continue;
+
+                    $('<input class="rp-filter-input" type="text" placeholder="Buscar..." autocomplete="off">')
+                        .appendTo(cell.empty())
+                        .on("keyup change", function () {
+                            api.column(config.index).search(this.value).draw(false);
+                        });
+                }
+            },
             columns: [
-                {
-                    data: "Id",
-                    title: "",
-                    orderable: false,
-                    searchable: false,
-                    width: "1%",
-                    render: (id, type, row) => renderAccionesEntrega(id, row)
-                },
+                columnaGridAcciones(null, "Entregas", (id, type, row) => renderAccionesEntrega(id, row)),
+                columnaGridId(),
                 {
                     data: "Fecha",
                     render: v => formatearFechaParaVista(v)

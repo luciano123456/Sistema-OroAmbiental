@@ -4,15 +4,15 @@ let clienteModalContratos;
 let establecimientoModalContratos;
 
 const columnConfigContratos = [
-    { index: 1, filterType: "select", fetchDataFunc: listaClientesFilterContratos },
-    { index: 2, filterType: "text" },
+    { index: 2, filterType: "select", fetchDataFunc: listaClientesFilterContratos },
     { index: 3, filterType: "text" },
     { index: 4, filterType: "text" },
     { index: 5, filterType: "text" },
     { index: 6, filterType: "text" },
-    { index: 7, filterType: "select", opcionesEstaticas: ["Vigente", "Vencido"] },
-    { index: 8, filterType: "text" },
-    { index: 9, filterType: "text" }
+    { index: 7, filterType: "text" },
+    { index: 8, filterType: "select", opcionesEstaticas: ["Vigente", "Vencido"] },
+    { index: 9, filterType: "text" },
+    { index: 10, filterType: "text" }
 ];
 
 function initModalesAtajosContratos() {
@@ -146,26 +146,21 @@ function badgeVigencia(vigente) {
 
 async function configurarDataTableContratos(data) {
     if (!gridContratos) {
-        const $thead = $("#grd_Contratos thead");
-        if ($thead.find("tr.filters").length === 0) {
-            $thead.find("tr").first().clone(true).addClass("filters").appendTo($thead);
-        }
-
         gridContratos = $("#grd_Contratos").DataTable({
             data: data || [],
             language: { url: "//cdn.datatables.net/plug-ins/2.0.7/i18n/es-MX.json" },
+            autoWidth: false,
+            columnDefs: typeof columnDefsGridLista === "function" ? columnDefsGridLista() : [],
             scrollX: true,
             scrollCollapse: true,
-            order: [[4, "desc"]],
+            order: [[5, "desc"]],
             columns: [
-                {
-                    data: "Id",
-                    title: "",
-                    width: "1%",
-                    orderable: false,
-                    searchable: false,
-                    render: id => renderAccionesContrato(id)
-                },
+                columnaGridAcciones({
+                    ver: "verContrato",
+                    editar: "editarContrato",
+                    eliminar: "eliminarContrato"
+                }, "Clientes"),
+                columnaGridId(),
                 { data: "Cliente" },
                 { data: "Establecimiento" },
                 { data: "Sucursal", defaultContent: "" },
@@ -208,9 +203,11 @@ async function configurarDataTableContratos(data) {
             fixedHeader: true,
             initComplete: async function () {
                 const api = this.api();
+                inicializarFilaFiltrosGrilla(api, "#grd_Contratos");
+                finalizarFiltrosGridLista(api, "#grd_Contratos");
 
                 for (const config of columnConfigContratos) {
-                    const cell = $(".filters th").eq(config.index);
+                    const cell = celdasFiltroGrilla("#grd_Contratos").eq(config.index);
                     if (!cell.length) continue;
                     cell.empty();
 
@@ -255,7 +252,7 @@ async function configurarDataTableContratos(data) {
                     }
                 }
 
-                $(".filters th").eq(0).html("");
+                finalizarFiltrosGridLista(api, "#grd_Contratos");
                 actualizarKpisContratos(data);
             }
         });

@@ -50,12 +50,12 @@ const API = {
 };
 
 const columnConfigInv = [
-    { index: 1, filterType: 'text' },
-    { index: 2, filterType: 'select', fetchDataFunc: listaTiposMovFilterInv },
-    { index: 3, filterType: 'text' },
+    { index: 2, filterType: 'text' },
+    { index: 3, filterType: 'select', fetchDataFunc: listaTiposMovFilterInv },
     { index: 4, filterType: 'text' },
     { index: 5, filterType: 'text' },
-    { index: 6, filterType: 'text' }
+    { index: 6, filterType: 'text' },
+    { index: 7, filterType: 'text' }
 ];
 
 const authHeaders = () => ({
@@ -639,35 +639,26 @@ function renderMovimientosInv() {
 
 async function configurarDataTableInv(data) {
     if (!gridInventario) {
-        const $thead = $('#grd_Inventario thead');
-        if ($thead.find('tr.filters').length === 0) {
-            $thead.find('tr').first().clone(true).addClass('filters').appendTo($thead);
-        }
-
         gridInventario = $('#grd_Inventario').DataTable({
             data: data,
             language: { url: "//cdn.datatables.net/plug-ins/2.0.7/i18n/es-MX.json" },
+            autoWidth: false,
+            columnDefs: typeof columnDefsGridLista === "function" ? columnDefsGridLista() : [],
             scrollX: true,
             scrollCollapse: true,
             order: [],
             columns: [
-                {
-                    data: "Id",
-                    title: '',
-                    width: "1%",
-                    render: function (data, type, row) {
-                        if (row.Id === 0) return "";
-                        if (typeof renderAccionesGrid === "function" && row.PuedeEliminar) {
-                            return renderAccionesGrid(data, { ver: "verMovimientoInv", eliminar: "eliminarMovimientoInv" }, "Inventario");
-                        }
-                        return `<div class="cc-actions">
-                            <button class="cc-btn ver" onclick="verMovimientoInv(${data})"><i class="fa fa-eye"></i></button>
-                            ${row.PuedeEliminar ? `<button class="cc-btn del" onclick="eliminarMovimientoInv(${data})"><i class="fa fa-trash"></i></button>` : ""}
+                columnaGridAcciones(null, "Inventario", function (id, type, row) {
+                    if (row.Id === 0) return "";
+                    if (typeof renderAccionesGrid === "function" && row.PuedeEliminar) {
+                        return renderAccionesGrid(id, { ver: "verMovimientoInv", eliminar: "eliminarMovimientoInv" }, "Inventario");
+                    }
+                    return `<div class="cc-actions">
+                            <button class="cc-btn ver" onclick="verMovimientoInv(${id})"><i class="fa fa-eye"></i></button>
+                            ${row.PuedeEliminar ? `<button class="cc-btn del" onclick="eliminarMovimientoInv(${id})"><i class="fa fa-trash"></i></button>` : ""}
                         </div>`;
-                    },
-                    orderable: false,
-                    searchable: false
-                },
+                }),
+                columnaGridId(),
                 { data: 'Fecha', render: v => formatearFecha(v) },
                 { data: 'TipoMovimiento' },
                 { data: 'Concepto' },
@@ -686,8 +677,11 @@ async function configurarDataTableInv(data) {
             fixedHeader: true,
             initComplete: async function () {
                 const api = this.api();
+                inicializarFilaFiltrosGrilla(api, '#grd_Inventario');
+                finalizarFiltrosGridLista(api, '#grd_Inventario');
+
                 for (const config of columnConfigInv) {
-                    const cell = $('.filters th').eq(config.index);
+                    const cell = celdasFiltroGrilla('#grd_Inventario').eq(config.index);
                     if (!cell.length) continue;
                     cell.empty();
                     if (config.filterType === 'select') {
@@ -706,7 +700,7 @@ async function configurarDataTableInv(data) {
                             .on('keyup change', function () { api.column(config.index).search(this.value).draw(false); });
                     }
                 }
-                $('.filters th').eq(0).html('');
+                finalizarFiltrosGridLista(api, '#grd_Inventario');
                 configurarOpcionesColumnasInv();
                 actualizarKpisInv();
             }
@@ -739,7 +733,7 @@ function configurarOpcionesColumnasInv() {
     container.empty();
 
     columnas.forEach((col, index) => {
-        if (col.data && col.data !== "Id") {
+        if (typeof esColumnaMenuGrilla === "function" ? esColumnaMenuGrilla(col) : (col.data && col.data !== "Id")) {
             const isChecked = savedConfig[`col_${index}`] !== undefined ? savedConfig[`col_${index}`] : true;
             grid.column(index).visible(isChecked);
             const name = $('#grd_Inventario thead tr').first().find('th').eq(index).text();

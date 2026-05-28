@@ -37,15 +37,15 @@ const CJ = {
  * 9 Saldo
  */
 const columnConfig = [
-    { index: 1, filterType: 'text' },
-    { index: 2, filterType: 'select_local' },
+    { index: 2, filterType: 'text' },
     { index: 3, filterType: 'select_local' },
-    { index: 4, filterType: 'select', fetchDataFunc: listaSucursalesFilter },
-    { index: 5, filterType: 'select', fetchDataFunc: listaCuentasFilter },
-    { index: 6, filterType: 'text' },
-    { index: 7, filterType: 'number' },
+    { index: 4, filterType: 'select_local' },
+    { index: 5, filterType: 'select', fetchDataFunc: listaSucursalesFilter },
+    { index: 6, filterType: 'select', fetchDataFunc: listaCuentasFilter },
+    { index: 7, filterType: 'text' },
     { index: 8, filterType: 'number' },
-    { index: 9, filterType: 'number' }
+    { index: 9, filterType: 'number' },
+    { index: 10, filterType: 'number' }
 ];
 
 const API = {
@@ -623,9 +623,15 @@ function asegurarFilaFiltrosCaja(api) {
     const cols = api.columns().count();
     const $row = $('<tr class="filters"></tr>');
     for (let i = 0; i < cols; i++) {
-        $row.append('<th></th>');
+        let cls = "";
+        if (i === 0) cls = "rp-col-id-h";
+        else if (i === 1) cls = "rp-col-acciones-h";
+        $row.append($("<th></th>").addClass(cls));
     }
     $thead.append($row);
+    if (typeof sincronizarFiltrosScrollHeadGrilla === "function") {
+        sincronizarFiltrosScrollHeadGrilla(api, "#grd_Caja");
+    }
 }
 
 /**
@@ -639,14 +645,14 @@ function limpiarFiltrosColumnasGrilla(api, opts = {}) {
     const unica = opts.preserveSucursalUnica !== false
         && typeof usuarioTieneUnicaSucursal === "function"
         && usuarioTieneUnicaSucursal();
-    const sucursalSearch = unica ? dt.column(4).search() : "";
+    const sucursalSearch = unica ? dt.column(5).search() : "";
 
     dt.columns().every(function () {
         this.search("");
     });
 
     for (const config of columnConfig) {
-        if (config.index === 4 && unica) continue;
+        if (config.index === 5 && unica) continue;
 
         const cell = $celdaFiltroColumnaCaja(config.index);
         const $select = cell.find("select");
@@ -664,7 +670,7 @@ function limpiarFiltrosColumnasGrilla(api, opts = {}) {
     }
 
     if (unica && sucursalSearch) {
-        dt.column(4).search(sucursalSearch);
+        dt.column(5).search(sucursalSearch);
     }
 
     dt.draw(false);
@@ -680,19 +686,15 @@ async function configurarDataTable(data) {
                 sLengthMenu: "Mostrar MENU registros",
                 url: "//cdn.datatables.net/plug-ins/2.0.7/i18n/es-MX.json"
             },
+            autoWidth: false,
+            columnDefs: typeof columnDefsGridLista === "function" ? columnDefsGridLista() : [],
             scrollX: true,
             scrollCollapse: true,
             columns: [
-                {
-                    data: "Id",
-                    title: '',
-                    width: "1%",
-                    render: function (data, type, row) {
-                        return renderAccionesCaja(data, row);
-                    },
-                    orderable: false,
-                    searchable: false
-                },
+                columnaGridAcciones(null, "Cajas", function (id, type, row) {
+                    return renderAccionesCaja(id, row);
+                }),
+                columnaGridId(),
                 {
                     data: 'Fecha',
                     render: function (v, type, row) {
@@ -744,7 +746,7 @@ async function configurarDataTable(data) {
                     }
                 }
             ],
-            order: [[1, 'asc']],
+            order: [[2, 'asc']],
             dom: 'Bfrtip',
             buttons: getBotonesExportacion(gridCaja, "Cajas"),
             orderCellsTop: true,
@@ -753,6 +755,7 @@ async function configurarDataTable(data) {
                 const api = this.api();
 
                 asegurarFilaFiltrosCaja(api);
+                finalizarFiltrosGridLista(api, '#grd_Caja');
 
                 for (const config of columnConfig) {
                     const cell = $celdaFiltroColumnaCaja(config.index, api);
@@ -762,16 +765,16 @@ async function configurarDataTable(data) {
 
                     if (config.filterType === 'select' || config.filterType === 'select_local') {
 
-                        const esFiltroSucursal = config.index === 4 && config.filterType === 'select';
+                        const esFiltroSucursal = config.index === 5 && config.filterType === 'select';
                         const $select = $(`
                             <select class="rp-filter-select" style="width:100%" autocomplete="off"></select>
                         `).appendTo(cell);
 
-                        if (config.index === 4) {
+                        if (config.index === 5) {
                             $select.addClass("rp-filter-select-sucursal");
                         }
 
-                        if (config.index === 5) {
+                        if (config.index === 6) {
                             $select.addClass("rp-filter-select-cuenta");
                         }
 
@@ -780,7 +783,7 @@ async function configurarDataTable(data) {
 
                             if (typeof usuarioTieneUnicaSucursal === "function" && usuarioTieneUnicaSucursal()) {
                                 const value = $select.val();
-                                const $cuentaSelect = $celdaFiltroColumnaCaja(5, api).find('select.rp-filter-select-cuenta');
+                                const $cuentaSelect = $celdaFiltroColumnaCaja(6, api).find('select.rp-filter-select-cuenta');
                                 if ($cuentaSelect.length) {
                                     const cuentas = await listaCuentasFilter(value || null);
                                     $cuentaSelect.empty().append(`<option value="">Todos</option>`);
@@ -830,8 +833,8 @@ async function configurarDataTable(data) {
                         $select.on('change', async function () {
                             const value = $(this).val();
 
-                            if (config.index === 4) {
-                                const $cuentaSelect = $celdaFiltroColumnaCaja(5, api).find('select.rp-filter-select-cuenta');
+                            if (config.index === 5) {
+                                const $cuentaSelect = $celdaFiltroColumnaCaja(6, api).find('select.rp-filter-select-cuenta');
 
                                 if ($cuentaSelect.length) {
                                     const cuentas = await listaCuentasFilter(value || null);
@@ -843,7 +846,7 @@ async function configurarDataTable(data) {
 
                                     inicializarSelect2Filtro($cuentaSelect);
                                     $cuentaSelect.val("").trigger("change.select2");
-                                    api.column(5).search('').draw(false);
+                                    api.column(6).search('').draw(false);
                                 }
                             }
 
@@ -886,7 +889,7 @@ async function configurarDataTable(data) {
                     }
                 }
 
-                $celdaFiltroColumnaCaja(0, api).html('');
+                finalizarFiltrosGridLista(api, '#grd_Caja');
                 configurarOpcionesColumnasCaja();
                 actualizarKpis();
             }
@@ -924,7 +927,7 @@ function configurarOpcionesColumnasCaja() {
     container.empty();
 
     columnas.forEach((col, index) => {
-        if (col.data && col.data !== "Id") {
+        if (typeof esColumnaMenuGrilla === "function" ? esColumnaMenuGrilla(col) : (col.data && col.data !== "Id")) {
             const isChecked = savedConfig[`col_${index}`] !== undefined ? savedConfig[`col_${index}`] : true;
             grid.column(index).visible(isChecked);
 

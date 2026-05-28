@@ -2,14 +2,14 @@ let gridClientes;
 let clienteModal;
 
 const columnConfig = [
-    { index: 1, filterType: 'text' },
     { index: 2, filterType: 'text' },
-    { index: 3, filterType: 'select', fetchDataFunc: listaSucursalesFilter },
-    { index: 4, filterType: 'select', fetchDataFunc: listaProvinciasFilter },
-    { index: 5, filterType: 'select', fetchDataFunc: listaProfesionesFilter },
-    { index: 6, filterType: 'select', fetchDataFunc: listaCondicionesIvaFilter },
-    { index: 7, filterType: 'text' },
-    { index: 8, filterType: 'text' }
+    { index: 3, filterType: 'text' },
+    { index: 4, filterType: 'select', fetchDataFunc: listaSucursalesFilter },
+    { index: 5, filterType: 'select', fetchDataFunc: listaProvinciasFilter },
+    { index: 6, filterType: 'select', fetchDataFunc: listaProfesionesFilter },
+    { index: 7, filterType: 'select', fetchDataFunc: listaCondicionesIvaFilter },
+    { index: 8, filterType: 'text' },
+    { index: 9, filterType: 'text' }
 ];
 
 $(document).ready(() => {
@@ -87,34 +87,23 @@ async function configurarDataTable(data) {
 
     if (!gridClientes) {
 
-        const $thead = $('#grd_Clientes thead');
-        if ($thead.find('tr.filters').length === 0) {
-            $thead.find('tr').first().clone(true).addClass('filters').appendTo($thead);
-        }
-
         gridClientes = $('#grd_Clientes').DataTable({
             data: data,
             language: {
                 sLengthMenu: "Mostrar MENU registros",
                 url: "//cdn.datatables.net/plug-ins/2.0.7/i18n/es-MX.json"
             },
+            autoWidth: false,
+            columnDefs: typeof columnDefsGridLista === "function" ? columnDefsGridLista() : [],
             scrollX: true,
             scrollCollapse: true,
             columns: [
-                {
-                    data: "Id",
-                    title: '',
-                    width: "1%",
-                    render: function (data) {
-                        return renderAccionesGrid(data, {
-                            ver: "verCliente",
-                            editar: "editarCliente",
-                            eliminar: "eliminarCliente"
-                        }, "Clientes");
-                    },
-                    orderable: false,
-                    searchable: false,
-                },
+                columnaGridAcciones({
+                    ver: "verCliente",
+                    editar: "editarCliente",
+                    eliminar: "eliminarCliente"
+                }, "Clientes"),
+                columnaGridId(),
                 { data: 'Nombre' },
                 { data: 'Cuit' },
                 { data: 'Sucursal' },
@@ -130,9 +119,11 @@ async function configurarDataTable(data) {
             fixedHeader: true,
             initComplete: async function () {
                 const api = this.api();
+                inicializarFilaFiltrosGrilla(api, '#grd_Clientes');
+                finalizarFiltrosGridLista(api, '#grd_Clientes');
 
                 for (const config of columnConfig) {
-                    const cell = $('.filters th').eq(config.index);
+                    const cell = celdasFiltroGrilla('#grd_Clientes').eq(config.index);
                     if (!cell.length) continue;
                     cell.empty();
 
@@ -141,7 +132,7 @@ async function configurarDataTable(data) {
                             <select class="rp-filter-select" style="width:100%"></select>
                         `).appendTo(cell);
 
-                        if (config.index === 3 && typeof prepararFiltroSucursalDataTable === "function") {
+                        if (config.index === 4 && typeof prepararFiltroSucursalDataTable === "function") {
                             await prepararFiltroSucursalDataTable($select, api, config.index, inicializarSelect2Filtro);
                         } else {
                             const datos = await config.fetchDataFunc();
@@ -177,7 +168,7 @@ async function configurarDataTable(data) {
                     }
                 }
 
-                $('.filters th').eq(0).html('');
+                finalizarFiltrosGridLista(api, '#grd_Clientes');
                 configurarOpcionesColumnas();
                 actualizarKpis(data);
             }
@@ -224,7 +215,7 @@ function configurarOpcionesColumnas() {
     container.empty();
 
     columnas.forEach((col, index) => {
-        if (col.data && col.data !== "Id") {
+        if (typeof esColumnaMenuGrilla === "function" ? esColumnaMenuGrilla(col) : (col.data && col.data !== "Id")) {
             const isChecked = savedConfig[`col_${index}`] !== undefined
                 ? savedConfig[`col_${index}`]
                 : true;

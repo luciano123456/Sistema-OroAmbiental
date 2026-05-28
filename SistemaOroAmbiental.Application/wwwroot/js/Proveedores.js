@@ -2,12 +2,12 @@ let gridProveedores;
 let proveedorModal;
 
 const columnConfig = [
-    { index: 1, filterType: 'text' },
     { index: 2, filterType: 'text' },
-    { index: 3, filterType: 'select', fetchDataFunc: listaCondicionesIvaFilter },
-    { index: 4, filterType: 'select', fetchDataFunc: listaBancosFilter },
-    { index: 5, filterType: 'text' },
-    { index: 6, filterType: 'text' }
+    { index: 3, filterType: 'text' },
+    { index: 4, filterType: 'select', fetchDataFunc: listaCondicionesIvaFilter },
+    { index: 5, filterType: 'select', fetchDataFunc: listaBancosFilter },
+    { index: 6, filterType: 'text' },
+    { index: 7, filterType: 'text' }
 ];
 
 $(document).ready(() => {
@@ -79,34 +79,23 @@ async function configurarDataTable(data) {
 
     if (!gridProveedores) {
 
-        const $thead = $('#grd_Proveedores thead');
-        if ($thead.find('tr.filters').length === 0) {
-            $thead.find('tr').first().clone(true).addClass('filters').appendTo($thead);
-        }
-
         gridProveedores = $('#grd_Proveedores').DataTable({
             data: data,
             language: {
                 sLengthMenu: "Mostrar MENU registros",
                 url: "//cdn.datatables.net/plug-ins/2.0.7/i18n/es-MX.json"
             },
+            autoWidth: false,
+            columnDefs: typeof columnDefsGridLista === "function" ? columnDefsGridLista() : [],
             scrollX: true,
             scrollCollapse: true,
             columns: [
-                {
-                    data: "Id",
-                    title: '',
-                    width: "1%",
-                    render: function (data) {
-                        return renderAccionesGrid(data, {
-                            ver: "verProveedor",
-                            editar: "editarProveedor",
-                            eliminar: "eliminarProveedor"
-                        }, "Proveedores");
-                    },
-                    orderable: false,
-                    searchable: false,
-                },
+                columnaGridAcciones({
+                    ver: "verProveedor",
+                    editar: "editarProveedor",
+                    eliminar: "eliminarProveedor"
+                }, "Proveedores"),
+                columnaGridId(),
                 { data: 'Nombre' },
                 { data: 'Cuit' },
                 { data: 'CondicionIva' },
@@ -120,9 +109,11 @@ async function configurarDataTable(data) {
             fixedHeader: true,
             initComplete: async function () {
                 const api = this.api();
+                inicializarFilaFiltrosGrilla(api, '#grd_Proveedores');
+                finalizarFiltrosGridLista(api, '#grd_Proveedores');
 
                 for (const config of columnConfig) {
-                    const cell = $('.filters th').eq(config.index);
+                    const cell = celdasFiltroGrilla('#grd_Proveedores').eq(config.index);
                     if (!cell.length) continue;
                     cell.empty();
 
@@ -164,7 +155,7 @@ async function configurarDataTable(data) {
                     }
                 }
 
-                $('.filters th').eq(0).html('');
+                finalizarFiltrosGridLista(api, '#grd_Proveedores');
                 configurarOpcionesColumnas();
                 actualizarKpis(data);
             }
@@ -200,7 +191,7 @@ function configurarOpcionesColumnas() {
     container.empty();
 
     columnas.forEach((col, index) => {
-        if (col.data && col.data !== "Id") {
+        if (typeof esColumnaMenuGrilla === "function" ? esColumnaMenuGrilla(col) : (col.data && col.data !== "Id")) {
             const isChecked = savedConfig[`col_${index}`] !== undefined
                 ? savedConfig[`col_${index}`]
                 : true;

@@ -77,6 +77,34 @@
     </div>
 </div>
 
+<!-- Modal sesión por expirar (últimos 5 minutos) -->
+<div class="modal fade" id="modalSessionPorExpirar" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content text-white rp-session-renew-modal" style="background: #323844">
+            <div class="modal-header border-0 bg-warning bg-opacity-10 colorEncabezado">
+                <i class="fa fa-hourglass-half text-warning fs-2 me-2"></i>
+                <h5 class="modal-title text-white fw-bold">Sesión por expirar</h5>
+            </div>
+            <div class="modal-body text-center">
+                <p class="fs-5 fw-semibold m-0 text-white">Tu sesión está por finalizar</p>
+                <p class="text-muted small mt-2 mb-3">Quedan menos de 5 minutos. Podés renovarla para seguir trabajando sin interrupciones.</p>
+                <div class="rp-session-renew-countdown">
+                    <span class="rp-session-renew-countdown-label">Tiempo restante</span>
+                    <strong id="modalSessionPorExpirarCountdown">--:--</strong>
+                </div>
+            </div>
+            <div class="modal-footer border-0 justify-content-center flex-wrap gap-2">
+                <button type="button" class="btn btn-outline-light px-3" id="btnSessionPorExpirarContinuar" data-bs-dismiss="modal">
+                    Continuar
+                </button>
+                <button type="button" class="btn btn-warning px-4" id="btnSessionRenovar">
+                    <i class="fa fa-refresh me-1"></i> Renovar sesión
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Modal sesión expirada -->
 <div class="modal fade" id="modalSessionExpirada" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
     <div class="modal-dialog modal-dialog-centered">

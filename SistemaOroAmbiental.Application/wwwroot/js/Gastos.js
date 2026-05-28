@@ -24,18 +24,18 @@ const authHeaders = () => ({
 });
 
 const columnConfig = [
-    { index: 1, filterType: "text" },
-    { index: 2, filterType: "select", fetchDataFunc: listaCategoriasFilter },
-    { index: 3, filterType: "select", sucursalDt: true },
-    { index: 4, filterType: "select", fetchDataFunc: listaCuentasFilter },
-    { index: 5, filterType: "text" },
+    { index: 2, filterType: "text" },
+    { index: 3, filterType: "select", fetchDataFunc: listaCategoriasFilter },
+    { index: 4, filterType: "select", sucursalDt: true },
+    { index: 5, filterType: "select", fetchDataFunc: listaCuentasFilter },
     { index: 6, filterType: "text" },
-    { index: 7, filterType: "number" },
+    { index: 7, filterType: "text" },
     { index: 8, filterType: "number" },
     { index: 9, filterType: "number" },
     { index: 10, filterType: "number" },
     { index: 11, filterType: "number" },
-    { index: 12, filterType: "text" }
+    { index: 12, filterType: "number" },
+    { index: 13, filterType: "text" }
 ];
 
 let gastoModal;
@@ -284,30 +284,21 @@ async function listaGastos(usarFiltros = true) {
 
 async function configurarDataTable(data) {
     if (!gridGastos) {
-        const $thead = $("#grd_Gastos thead");
-        if ($thead.find("tr.filters").length === 0) {
-            $thead.find("tr").first().clone(true).addClass("filters").appendTo($thead);
-        }
-
         gridGastos = $("#grd_Gastos").DataTable({
             data: data,
             language: { url: "//cdn.datatables.net/plug-ins/2.0.7/i18n/es-MX.json" },
+            autoWidth: false,
+            columnDefs: typeof columnDefsGridLista === "function" ? columnDefsGridLista() : [],
             scrollX: true,
             scrollCollapse: true,
-            order: [[1, "desc"]],
+            order: [[2, "desc"]],
             columns: [
-                {
-                    data: "Id",
-                    title: "",
-                    width: "1%",
-                    orderable: false,
-                    searchable: false,
-                    render: id => renderAccionesGrid(id, {
-                        ver: "verGasto",
-                        editar: "editarGasto",
-                        eliminar: "eliminarGasto"
-                    }, "Gastos")
-                },
+                columnaGridAcciones({
+                    ver: "verGasto",
+                    editar: "editarGasto",
+                    eliminar: "eliminarGasto"
+                }, "Gastos"),
+                columnaGridId(),
                 { data: "Fecha", render: d => normalizarFechaTabla(d) },
                 { data: "Categoria", defaultContent: "" },
                 { data: "Sucursal", defaultContent: "" },
@@ -329,9 +320,11 @@ async function configurarDataTable(data) {
             fixedHeader: true,
             initComplete: async function () {
                 const api = this.api();
+                inicializarFilaFiltrosGrilla(api, "#grd_Gastos");
+                finalizarFiltrosGridLista(api, "#grd_Gastos");
 
                 for (const config of columnConfig) {
-                    const cell = $(".filters th").eq(config.index);
+                    const cell = celdasFiltroGrilla("#grd_Gastos").eq(config.index);
                     if (!cell.length) continue;
                     cell.empty();
 
@@ -344,7 +337,7 @@ async function configurarDataTable(data) {
                             const datos = await config.fetchDataFunc();
                             $select.append(`<option value="">Todos</option>`);
                             (datos || []).forEach(item => {
-                                const label = config.index === 4
+                                const label = config.index === 5
                                     ? etiquetaCuenta(item, true)
                                     : (item.Nombre || "");
                                 $select.append(`<option value="${item.Id}">${label}</option>`);
@@ -362,7 +355,7 @@ async function configurarDataTable(data) {
                                     api.column(config.index).search("").draw(false);
                                     return;
                                 }
-                                const searchText = config.index === 4
+                                const searchText = config.index === 5
                                     ? $(this).find("option:selected").text().split(" (")[0].trim()
                                     : $(this).find("option:selected").text();
 
@@ -391,7 +384,7 @@ async function configurarDataTable(data) {
                     }
                 }
 
-                $(".filters th").eq(0).html("");
+                finalizarFiltrosGridLista(api, "#grd_Gastos");
                 configurarOpcionesColumnas();
                 actualizarKpis(data);
             }
@@ -410,7 +403,7 @@ function configurarOpcionesColumnas() {
     container.empty();
 
     grid.columns().every(function (index) {
-        if (index === 0) return;
+        if (index === 0 || index === 1) return;
         const isChecked = savedConfig[`col_${index}`] !== false;
         grid.column(index).visible(isChecked);
         const name = $("#grd_Gastos thead tr").first().find("th").eq(index).text();
