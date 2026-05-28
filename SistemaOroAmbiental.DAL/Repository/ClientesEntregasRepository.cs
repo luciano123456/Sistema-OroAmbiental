@@ -8,19 +8,23 @@ namespace SistemaOroAmbiental.DAL.Repository
     {
         public const int TIPO_LINEA_ENTREGA = 1;
         public const int TIPO_LINEA_RETIRO = 2;
+        public const int TIPO_LINEA_RECUPERADO = 3;
 
         private readonly SistemaOroAmbientalContext _db;
         private readonly IClientesCuentaCorrienteRepository _ccRepo;
         private readonly IInventarioRepository _invRepo;
+        private readonly IInventarioRecuperadoRepository _invRecRepo;
 
         public ClientesEntregasRepository(
             SistemaOroAmbientalContext context,
             IClientesCuentaCorrienteRepository ccRepo,
-            IInventarioRepository invRepo)
+            IInventarioRepository invRepo,
+            IInventarioRecuperadoRepository invRecRepo)
         {
             _db = context;
             _ccRepo = ccRepo;
             _invRepo = invRepo;
+            _invRecRepo = invRecRepo;
         }
 
         public async Task<List<ClientesEntrega>> ListarFiltrado(
@@ -38,6 +42,7 @@ namespace SistemaOroAmbiental.DAL.Repository
                     .ThenInclude(c => c!.IdEstablecimientoNavigation)
                 .Include(x => x.IdEstadoNavigation)
                 .Include(x => x.ClientesEntregasProductos)
+                .Include(x => x.ClientesEntregasProductosRecuperados)
                 .AsQueryable();
 
             if (fechaDesde.HasValue)
@@ -86,27 +91,110 @@ namespace SistemaOroAmbiental.DAL.Repository
                 .Include(x => x.ClientesEntregasProductos)
                     .ThenInclude(l => l.IdProductoNavigation)
                         .ThenInclude(p => p.IdMedidaNavigation)
+                .Include(x => x.ClientesEntregasProductosRecuperados)
+                    .ThenInclude(l => l.IdProductoNavigation)
+                        .ThenInclude(p => p.IdMedidaNavigation)
                 .FirstOrDefaultAsync(x => x.Id == id);
         }
 
         public static void RecalcularLinea(ClientesEntregasProducto linea)
         {
-            var cant = linea.Cantidad > 0 ? linea.Cantidad : 0;
-            var precio = linea.PrecioVenta;
-            var porcDesc = linea.PorcDescuento;
-            var porcIva = linea.PorcIva;
-            var costo = linea.CostoUnitario;
+            RecalcularImportesLinea(
+                linea.Cantidad,
+                linea.PrecioVenta,
+                linea.PorcDescuento,
+                linea.PorcIva,
+                linea.CostoUnitario,
+                out var descUnitario,
+                out var descTotal,
+                out var precioVentacDesc,
+                out var subtotalcDesc,
+                out var ivaUnitario,
+                out var totalIva,
+                out var precioVentaFinal,
+                out var subtotalFinal,
+                out var subtotalCosto,
+                out var ganancia);
 
-            linea.DescUnitario = Math.Round(precio * porcDesc / 100m, 4);
-            linea.DescTotal = Math.Round(linea.DescUnitario * cant, 2);
-            linea.PrecioVentacDesc = Math.Round(precio - linea.DescUnitario, 4);
-            linea.SubtotalcDesc = Math.Round(linea.PrecioVentacDesc * cant, 2);
-            linea.Ivaunitario = Math.Round(linea.PrecioVentacDesc * porcIva / 100m, 4);
-            linea.TotalIva = Math.Round(linea.Ivaunitario * cant, 2);
-            linea.PrecioVentaFinal = Math.Round(linea.PrecioVentacDesc + linea.Ivaunitario, 4);
-            linea.SubtotalFinal = Math.Round(linea.SubtotalcDesc + linea.TotalIva, 2);
-            linea.SubtotalCosto = Math.Round(costo * cant, 2);
-            linea.Ganancia = Math.Round(linea.SubtotalcDesc - linea.SubtotalCosto, 2);
+            linea.DescUnitario = descUnitario;
+            linea.DescTotal = descTotal;
+            linea.PrecioVentacDesc = precioVentacDesc;
+            linea.SubtotalcDesc = subtotalcDesc;
+            linea.Ivaunitario = ivaUnitario;
+            linea.TotalIva = totalIva;
+            linea.PrecioVentaFinal = precioVentaFinal;
+            linea.SubtotalFinal = subtotalFinal;
+            linea.SubtotalCosto = subtotalCosto;
+            linea.Ganancia = ganancia;
+        }
+
+        public static void RecalcularLineaRecuperado(ClientesEntregasProductosRecuperado linea)
+        {
+            RecalcularImportesLinea(
+                linea.Cantidad,
+                linea.PrecioVenta,
+                linea.PorcDescuento,
+                linea.PorcIva,
+                linea.CostoUnitario,
+                out var descUnitario,
+                out var descTotal,
+                out var precioVentacDesc,
+                out var subtotalcDesc,
+                out var ivaUnitario,
+                out var totalIva,
+                out var precioVentaFinal,
+                out var subtotalFinal,
+                out var subtotalCosto,
+                out var ganancia);
+
+            linea.DescUnitario = descUnitario;
+            linea.DescTotal = descTotal;
+            linea.PrecioVentacDesc = precioVentacDesc;
+            linea.SubtotalcDesc = subtotalcDesc;
+            linea.Ivaunitario = ivaUnitario;
+            linea.TotalIva = totalIva;
+            linea.PrecioVentaFinal = precioVentaFinal;
+            linea.SubtotalFinal = subtotalFinal;
+            linea.SubtotalCosto = subtotalCosto;
+            linea.Ganancia = ganancia;
+        }
+
+        private static void RecalcularImportesLinea(
+            decimal cantidad,
+            decimal precioVenta,
+            decimal porcDescuento,
+            decimal porcIva,
+            decimal costoUnitario,
+            out decimal descUnitario,
+            out decimal descTotal,
+            out decimal precioVentacDesc,
+            out decimal subtotalcDesc,
+            out decimal ivaUnitario,
+            out decimal totalIva,
+            out decimal precioVentaFinal,
+            out decimal subtotalFinal,
+            out decimal subtotalCosto,
+            out decimal ganancia)
+        {
+            var cant = cantidad > 0 ? cantidad : 0;
+
+            descUnitario = Math.Round(precioVenta * porcDescuento / 100m, 4);
+            descTotal = Math.Round(descUnitario * cant, 2);
+            precioVentacDesc = Math.Round(precioVenta - descUnitario, 4);
+            subtotalcDesc = Math.Round(precioVentacDesc * cant, 2);
+            ivaUnitario = Math.Round(precioVentacDesc * porcIva / 100m, 4);
+            totalIva = Math.Round(ivaUnitario * cant, 2);
+            precioVentaFinal = Math.Round(precioVentacDesc + ivaUnitario, 4);
+            subtotalFinal = Math.Round(subtotalcDesc + totalIva, 2);
+            subtotalCosto = Math.Round(costoUnitario * cant, 2);
+            ganancia = Math.Round(subtotalcDesc - subtotalCosto, 2);
+        }
+
+        private static void NormalizarTipoLinea(ClientesEntregasProducto linea)
+        {
+            linea.TipoMovimiento = linea.TipoMovimiento == TIPO_LINEA_RETIRO
+                ? TIPO_LINEA_RETIRO
+                : TIPO_LINEA_ENTREGA;
         }
 
         private static bool EsRetiro(ClientesEntregasProducto linea)
@@ -143,6 +231,26 @@ namespace SistemaOroAmbiental.DAL.Repository
             throw new InvalidOperationException("Debe indicar un cliente para la entrega.");
         }
 
+        private async Task RegistrarStockRecuperadoEntrega(
+            int idEntrega,
+            int idSucursal,
+            DateTime fecha,
+            ClientesEntregasProductosRecuperado linea,
+            int idUsuario)
+        {
+            var producto = await _db.Productos.FirstAsync(x => x.Id == linea.IdProducto);
+
+            await _invRecRepo.RegistrarEntrada(
+                idSucursal,
+                linea.IdProducto,
+                linea.Cantidad,
+                fecha,
+                $"Recuperado #{idEntrega} - {producto.Nombre}",
+                InventarioRecuperadoRepository.TIPO_ENTREGA,
+                idEntrega,
+                idUsuario);
+        }
+
         private async Task RegistrarStockEntrega(
             int idEntrega,
             int idSucursal,
@@ -151,11 +259,32 @@ namespace SistemaOroAmbiental.DAL.Repository
             int idUsuario,
             DateTime ahora)
         {
-            var inv = await _invRepo.ObtenerOCrearInventario(idSucursal, linea.IdProducto);
             var producto = await _db.Productos.FirstAsync(x => x.Id == linea.IdProducto);
 
-            var esRetiro = EsRetiro(linea);
-            if (!esRetiro && inv.Stock < linea.Cantidad)
+            var inv = await _invRepo.ObtenerOCrearInventario(idSucursal, linea.IdProducto);
+
+            if (EsRetiro(linea))
+            {
+                var movRetiro = new InventarioMovimiento
+                {
+                    IdInventario = inv.Id,
+                    TipoMovimiento = InventarioRepository.TIPO_ENTREGA,
+                    IdMovimiento = idEntrega,
+                    Fecha = fecha,
+                    Concepto = $"Retiro #{idEntrega} - {producto.Nombre}",
+                    Entrada = linea.Cantidad,
+                    Salida = 0,
+                    IdUsuarioRegistra = idUsuario,
+                    FechaUsuarioRegistra = ahora
+                };
+
+                _db.InventarioMovimientos.Add(movRetiro);
+                inv.Stock += linea.Cantidad;
+                await _db.SaveChangesAsync();
+                return;
+            }
+
+            if (inv.Stock < linea.Cantidad)
                 throw new InvalidOperationException(
                     $"Stock insuficiente para {producto.Nombre} (disponible: {inv.Stock:N2}).");
 
@@ -165,15 +294,15 @@ namespace SistemaOroAmbiental.DAL.Repository
                 TipoMovimiento = InventarioRepository.TIPO_ENTREGA,
                 IdMovimiento = idEntrega,
                 Fecha = fecha,
-                Concepto = $"{(esRetiro ? "Retiro" : "Entrega")} #{idEntrega} - {producto.Nombre}",
-                Entrada = esRetiro ? linea.Cantidad : 0,
-                Salida = esRetiro ? 0 : linea.Cantidad,
+                Concepto = $"Entrega #{idEntrega} - {producto.Nombre}",
+                Entrada = 0,
+                Salida = linea.Cantidad,
                 IdUsuarioRegistra = idUsuario,
                 FechaUsuarioRegistra = ahora
             };
 
             _db.InventarioMovimientos.Add(mov);
-            inv.Stock += esRetiro ? linea.Cantidad : -linea.Cantidad;
+            inv.Stock -= linea.Cantidad;
             if (inv.Stock < 0) inv.Stock = 0;
 
             await _db.SaveChangesAsync();
@@ -181,11 +310,13 @@ namespace SistemaOroAmbiental.DAL.Repository
 
         private async Task RevertirStockEntrega(int idEntrega)
         {
+            await _invRecRepo.RevertirMovimientosEntrega(idEntrega);
+
             var movs = await _db.InventarioMovimientos
                 .Include(x => x.IdInventarioNavigation)
                 .Where(x =>
-                    x.TipoMovimiento == InventarioRepository.TIPO_ENTREGA &&
-                    x.IdMovimiento == idEntrega)
+                    x.IdMovimiento == idEntrega &&
+                    x.TipoMovimiento == InventarioRepository.TIPO_ENTREGA)
                 .ToListAsync();
 
             foreach (var mov in movs)
@@ -259,6 +390,7 @@ namespace SistemaOroAmbiental.DAL.Repository
         public async Task<int> Insertar(
             ClientesEntrega entrega,
             List<ClientesEntregasProducto> lineas,
+            List<ClientesEntregasProductosRecuperado> lineasRecuperadas,
             List<EntregaCobroRegistrar> cobros,
             int idUsuario)
         {
@@ -268,13 +400,17 @@ namespace SistemaOroAmbiental.DAL.Repository
             {
                 var ahora = DateTime.Now;
                 lineas ??= new List<ClientesEntregasProducto>();
+                lineasRecuperadas ??= new List<ClientesEntregasProductosRecuperado>();
                 cobros ??= new List<EntregaCobroRegistrar>();
 
                 foreach (var l in lineas)
                 {
-                    l.TipoMovimiento = l.TipoMovimiento == TIPO_LINEA_RETIRO ? TIPO_LINEA_RETIRO : TIPO_LINEA_ENTREGA;
+                    NormalizarTipoLinea(l);
                     RecalcularLinea(l);
                 }
+
+                foreach (var l in lineasRecuperadas)
+                    RecalcularLineaRecuperado(l);
 
                 RecalcularTotalesEntrega(entrega, lineas);
                 entrega.ImporteAbonado = 0;
@@ -308,6 +444,24 @@ namespace SistemaOroAmbiental.DAL.Repository
                         linea,
                         idUsuario,
                         ahora);
+                }
+
+                foreach (var lineaRec in lineasRecuperadas)
+                {
+                    lineaRec.IdEntrega = entrega.Id;
+                    lineaRec.IdUsuarioRegistra = idUsuario;
+                    lineaRec.FechaUsuarioRegistra = ahora;
+                    RecalcularLineaRecuperado(lineaRec);
+
+                    _db.ClientesEntregasProductosRecuperados.Add(lineaRec);
+                    await _db.SaveChangesAsync();
+
+                    await RegistrarStockRecuperadoEntrega(
+                        entrega.Id,
+                        idSucursal,
+                        entrega.Fecha,
+                        lineaRec,
+                        idUsuario);
                 }
 
                 await RegistrarMovimientoCuentaCorriente(cc, entrega, cliente, idUsuario, ahora);
@@ -348,6 +502,7 @@ namespace SistemaOroAmbiental.DAL.Repository
         public async Task<bool> Actualizar(
             ClientesEntrega entrega,
             List<ClientesEntregasProducto> lineas,
+            List<ClientesEntregasProductosRecuperado> lineasRecuperadas,
             List<EntregaCobroRegistrar> cobros,
             int idUsuario)
         {
@@ -357,6 +512,7 @@ namespace SistemaOroAmbiental.DAL.Repository
             {
                 var entity = await _db.ClientesEntregas
                     .Include(x => x.ClientesEntregasProductos)
+                    .Include(x => x.ClientesEntregasProductosRecuperados)
                     .FirstOrDefaultAsync(x => x.Id == entrega.Id);
 
                 if (entity == null)
@@ -365,18 +521,23 @@ namespace SistemaOroAmbiental.DAL.Repository
                 var ahora = DateTime.Now;
                 cobros ??= new List<EntregaCobroRegistrar>();
                 lineas ??= new List<ClientesEntregasProducto>();
+                lineasRecuperadas ??= new List<ClientesEntregasProductosRecuperado>();
 
                 await RevertirStockEntrega(entity.Id);
                 await RevertirMovimientoCuentaCorriente(entity);
 
                 _db.ClientesEntregasProductos.RemoveRange(entity.ClientesEntregasProductos);
+                _db.ClientesEntregasProductosRecuperados.RemoveRange(entity.ClientesEntregasProductosRecuperados);
                 await _db.SaveChangesAsync();
 
                 foreach (var l in lineas)
                 {
-                    l.TipoMovimiento = l.TipoMovimiento == TIPO_LINEA_RETIRO ? TIPO_LINEA_RETIRO : TIPO_LINEA_ENTREGA;
+                    NormalizarTipoLinea(l);
                     RecalcularLinea(l);
                 }
+
+                foreach (var l in lineasRecuperadas)
+                    RecalcularLineaRecuperado(l);
 
                 entity.Fecha = entrega.Fecha;
                 entity.IdCliente = entrega.IdCliente;
@@ -412,6 +573,25 @@ namespace SistemaOroAmbiental.DAL.Repository
                         linea,
                         idUsuario,
                         ahora);
+                }
+
+                foreach (var lineaRec in lineasRecuperadas)
+                {
+                    lineaRec.Id = 0;
+                    lineaRec.IdEntrega = entity.Id;
+                    lineaRec.IdUsuarioRegistra = idUsuario;
+                    lineaRec.FechaUsuarioRegistra = ahora;
+                    RecalcularLineaRecuperado(lineaRec);
+
+                    _db.ClientesEntregasProductosRecuperados.Add(lineaRec);
+                    await _db.SaveChangesAsync();
+
+                    await RegistrarStockRecuperadoEntrega(
+                        entity.Id,
+                        idSucursal,
+                        entity.Fecha,
+                        lineaRec,
+                        idUsuario);
                 }
 
                 await RegistrarMovimientoCuentaCorriente(cc, entity, cliente, idUsuario, ahora);
@@ -524,6 +704,7 @@ namespace SistemaOroAmbiental.DAL.Repository
             {
                 var entity = await _db.ClientesEntregas
                     .Include(x => x.ClientesEntregasProductos)
+                    .Include(x => x.ClientesEntregasProductosRecuperados)
                     .FirstOrDefaultAsync(x => x.Id == id);
 
                 if (entity == null)
@@ -534,6 +715,7 @@ namespace SistemaOroAmbiental.DAL.Repository
                 await RevertirMovimientoCuentaCorriente(entity);
 
                 _db.ClientesEntregasProductos.RemoveRange(entity.ClientesEntregasProductos);
+                _db.ClientesEntregasProductosRecuperados.RemoveRange(entity.ClientesEntregasProductosRecuperados);
                 _db.ClientesEntregas.Remove(entity);
 
                 await _db.SaveChangesAsync();

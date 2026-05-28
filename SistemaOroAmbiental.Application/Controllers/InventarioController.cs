@@ -237,7 +237,7 @@ namespace SistemaOroAmbiental.Application.Controllers
             InventarioRepository.TIPO_SALIDA_MANUAL => "Salida manual",
             InventarioRepository.TIPO_AJUSTE => "Ajuste",
             InventarioRepository.TIPO_COMPRA => "Compra",
-            InventarioRepository.TIPO_ENTREGA => "Entrega",
+            InventarioRepository.TIPO_ENTREGA => salida > 0 ? "Entrega" : "Entrega (entrada)",
             InventarioRepository.TIPO_TRANSFERENCIA => entrada > 0 ? "Transferencia (entrada)" : "Transferencia (salida)",
             "STOCK_ANTERIOR" => "Stock anterior",
             _ => tipo

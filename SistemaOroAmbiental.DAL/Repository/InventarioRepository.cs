@@ -118,7 +118,9 @@ namespace SistemaOroAmbiental.DAL.Repository
                 "AJUSTE" => query.Where(x => x.TipoMovimiento == TIPO_AJUSTE),
                 "TRANSFERENCIA" => query.Where(x => x.TipoMovimiento == TIPO_TRANSFERENCIA),
                 "COMPRA" => query.Where(x => x.TipoMovimiento == TIPO_COMPRA),
-                "ENTREGA" => query.Where(x => x.TipoMovimiento == TIPO_ENTREGA),
+                "ENTREGA" => query.Where(x =>
+                    x.TipoMovimiento == TIPO_ENTREGA &&
+                    x.Salida > 0),
                 _ => query.Where(x => x.TipoMovimiento == tipoMovimiento)
             };
         }

@@ -720,7 +720,8 @@ async function listaTiposMovFilterInv() {
         { Id: "5", Nombre: "Transferencia (entrada)" },
         { Id: "6", Nombre: "Transferencia (salida)" },
         { Id: "7", Nombre: "Compra" },
-        { Id: "8", Nombre: "Entrega" }
+        { Id: "8", Nombre: "Entrega" },
+        { Id: "9", Nombre: "Producto recuperado" }
     ];
 }
 

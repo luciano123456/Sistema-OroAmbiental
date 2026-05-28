@@ -44,12 +44,14 @@ namespace SistemaOroAmbiental.BLL.Service
         Task<ServiceResult> Insertar(
             ClientesEntrega entrega,
             List<ClientesEntregasProducto> lineas,
+            List<ClientesEntregasProductosRecuperado> lineasRecuperadas,
             List<EntregaCobroRegistrar> cobros,
             int idUsuario);
 
         Task<ServiceResult> Actualizar(
             ClientesEntrega entrega,
             List<ClientesEntregasProducto> lineas,
+            List<ClientesEntregasProductosRecuperado> lineasRecuperadas,
             List<EntregaCobroRegistrar> cobros,
             int idUsuario);
 

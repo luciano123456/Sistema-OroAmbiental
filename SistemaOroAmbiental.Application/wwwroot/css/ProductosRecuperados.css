@@ -1,0 +1,589 @@
+/* Productos recuperados — estilo cards (Ventas / Levels) */
+
+
+
+.pr-recuperados-index {
+
+    color: #eaf1ff;
+
+    padding-bottom: 2rem;
+
+}
+
+
+
+.pr-recuperados-index .vi-card {
+
+    min-height: auto;
+
+}
+
+
+
+.pr-recuperados-index .vi-kpis {
+
+    grid-template-columns: repeat(4, 1fr);
+
+}
+
+
+
+@media (max-width: 1100px) {
+
+    .pr-recuperados-index .vi-kpis {
+
+        grid-template-columns: repeat(2, 1fr);
+
+    }
+
+}
+
+
+
+@media (max-width: 576px) {
+
+    .pr-recuperados-index .vi-kpis {
+
+        grid-template-columns: 1fr;
+
+    }
+
+}
+
+
+
+.pr-kpi-rec .sub {
+
+    font-size: 0.72rem;
+
+    opacity: 0.65;
+
+    margin-top: 4px;
+
+}
+
+
+
+.pr-kpi-stock .val {
+
+    color: #7dffb8;
+
+}
+
+
+
+/* Stock en cards */
+
+.pr-stock-grid {
+
+    display: grid;
+
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+
+    gap: 12px;
+
+}
+
+
+
+.pr-stock-card {
+
+    border-radius: 14px;
+
+    padding: 14px;
+
+    border: 1px solid rgba(255, 255, 255, 0.1);
+
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
+
+    transition: transform 0.15s ease, border-color 0.15s ease;
+
+}
+
+
+
+.pr-stock-card:hover {
+
+    transform: translateY(-2px);
+
+    border-color: rgba(125, 255, 184, 0.35);
+
+}
+
+
+
+.pr-stock-card .pr-sc-top {
+
+    display: flex;
+
+    align-items: flex-start;
+
+    gap: 10px;
+
+    margin-bottom: 10px;
+
+}
+
+
+
+.pr-stock-card .pr-sc-icon {
+
+    width: 40px;
+
+    height: 40px;
+
+    border-radius: 12px;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    background: rgba(62, 207, 142, 0.15);
+
+    color: #7dffb8;
+
+    flex-shrink: 0;
+
+}
+
+
+
+.pr-stock-card .pr-sc-name {
+
+    font-weight: 800;
+
+    font-size: 0.95rem;
+
+    line-height: 1.25;
+
+}
+
+
+
+.pr-stock-card .pr-sc-meta {
+
+    font-size: 0.78rem;
+
+    opacity: 0.75;
+
+    margin-top: 2px;
+
+}
+
+
+
+.pr-stock-card .pr-sc-qty {
+
+    font-size: 1.35rem;
+
+    font-weight: 900;
+
+    color: #7dffb8;
+
+    text-align: right;
+
+}
+
+
+
+.pr-stock-card .pr-sc-qty-lbl {
+
+    font-size: 0.7rem;
+
+    opacity: 0.6;
+
+    text-transform: uppercase;
+
+    text-align: right;
+
+}
+
+
+
+/* Ranking */
+
+.pr-rank-list {
+
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 8px;
+
+    max-height: 360px;
+
+    overflow-y: auto;
+
+}
+
+
+
+.pr-rank-item {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 12px;
+
+    padding: 10px 12px;
+
+    border-radius: 12px;
+
+    border: 1px solid rgba(255, 255, 255, 0.08);
+
+    background: rgba(255, 255, 255, 0.03);
+
+}
+
+
+
+.pr-rank-item .pr-rk-pos {
+
+    width: 28px;
+
+    height: 28px;
+
+    border-radius: 8px;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    font-weight: 900;
+
+    font-size: 0.8rem;
+
+    background: rgba(91, 140, 255, 0.2);
+
+    color: #a8c4ff;
+
+    flex-shrink: 0;
+
+}
+
+
+
+.pr-rank-item.pr-rk-top .pr-rk-pos {
+
+    background: rgba(62, 207, 142, 0.25);
+
+    color: #7dffb8;
+
+}
+
+
+
+.pr-rank-item .pr-rk-main {
+
+    flex: 1;
+
+    min-width: 0;
+
+}
+
+
+
+.pr-rank-item .pr-rk-name {
+
+    font-weight: 700;
+
+    white-space: nowrap;
+
+    overflow: hidden;
+
+    text-overflow: ellipsis;
+
+}
+
+
+
+.pr-rank-item .pr-rk-cat {
+
+    font-size: 0.75rem;
+
+    opacity: 0.7;
+
+}
+
+
+
+.pr-rank-item .pr-rk-stats {
+
+    text-align: right;
+
+    flex-shrink: 0;
+
+}
+
+
+
+.pr-rank-item .pr-rk-qty {
+
+    font-weight: 800;
+
+    color: #e8f2ff;
+
+}
+
+
+
+.pr-rank-item .pr-rk-mov {
+
+    font-size: 0.72rem;
+
+    opacity: 0.65;
+
+}
+
+
+
+/* Historial — cards tipo venta */
+
+.pr-recuperados-index .pr-historial-list {
+
+    max-height: 65vh;
+
+}
+
+
+
+.pr-rec-card {
+
+    border-radius: 14px;
+
+    padding: 14px;
+
+    border: 1px solid rgba(255, 255, 255, 0.1);
+
+    background: rgba(255, 255, 255, 0.03);
+
+    cursor: default;
+
+    transition: background 0.15s ease;
+
+}
+
+
+
+.pr-rec-card:hover {
+
+    background: rgba(255, 255, 255, 0.06);
+
+}
+
+
+
+.pr-rec-card .pr-rc-top {
+
+    display: flex;
+
+    justify-content: space-between;
+
+    align-items: flex-start;
+
+    gap: 10px;
+
+    margin-bottom: 8px;
+
+}
+
+
+
+.pr-rec-card .pr-rc-title {
+
+    font-weight: 900;
+
+    font-size: 1rem;
+
+}
+
+
+
+.pr-rec-card .pr-rc-badge {
+
+    font-size: 0.72rem;
+
+    padding: 4px 10px;
+
+    border-radius: 999px;
+
+    font-weight: 700;
+
+    white-space: nowrap;
+
+}
+
+
+
+.pr-rec-card .badge-rec-entrega {
+
+    background: rgba(62, 207, 142, 0.2);
+
+    color: #7dffb8;
+
+}
+
+
+
+.pr-rec-card .badge-rec-manual {
+
+    background: rgba(107, 159, 255, 0.2);
+
+    color: #a8c4ff;
+
+}
+
+
+
+.pr-rec-card .pr-rc-middle {
+
+    display: flex;
+
+    justify-content: space-between;
+
+    align-items: center;
+
+    gap: 12px;
+
+    flex-wrap: wrap;
+
+}
+
+
+
+.pr-rec-card .pr-rc-fecha {
+
+    font-size: 0.85rem;
+
+    opacity: 0.85;
+
+}
+
+
+
+.pr-rec-card .pr-rc-cantidad {
+
+    font-size: 1.2rem;
+
+    font-weight: 900;
+
+    color: #7dffb8;
+
+}
+
+
+
+.pr-rec-card .pr-rc-meta {
+
+    font-size: 0.82rem;
+
+    opacity: 0.8;
+
+    margin-top: 8px;
+
+    display: flex;
+
+    flex-wrap: wrap;
+
+    gap: 12px;
+
+}
+
+
+
+.pr-rec-card .pr-rc-meta span i {
+
+    opacity: 0.7;
+
+    margin-right: 4px;
+
+}
+
+
+
+.pr-rec-card .pr-rc-concepto {
+
+    margin-top: 8px;
+
+    font-size: 0.8rem;
+
+    opacity: 0.75;
+
+    font-style: italic;
+
+}
+
+
+
+.pr-rec-card .pr-rc-actions {
+
+    margin-top: 10px;
+
+}
+
+
+
+.pr-rec-card .pr-rc-actions .btn {
+
+    font-size: 0.78rem;
+
+    padding: 4px 10px;
+
+}
+
+
+
+.pr-recuperados-index .vi-empty {
+
+    padding: 2.5rem 1rem;
+
+}
+
+/* Acordeón rankings + historial */
+.pr-rec-acc-wrap .cc-card-body {
+    padding: 0;
+}
+
+.pr-rec-acc .accordion-item {
+    border-color: rgba(255, 255, 255, 0.08);
+    background: transparent;
+}
+
+.pr-rec-acc .accordion-button {
+    font-weight: 700;
+    background: rgba(255, 255, 255, 0.03);
+    color: #eaf1ff;
+    box-shadow: none;
+}
+
+.pr-rec-acc .accordion-button:not(.collapsed) {
+    background: rgba(91, 140, 255, 0.12);
+    color: #fff;
+}
+
+.pr-rec-acc .accordion-button::after {
+    filter: brightness(2);
+}
+
+.pr-rec-acc .accordion-body {
+    padding: 12px 14px 16px;
+}
+
+.pr-acc-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 26px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 800;
+    background: rgba(125, 255, 184, 0.2);
+    color: #7dffb8;
+}
+

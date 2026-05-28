@@ -31,12 +31,13 @@ namespace SistemaOroAmbiental.BLL.Service
         public async Task<ServiceResult> Insertar(
             ClientesEntrega entrega,
             List<ClientesEntregasProducto> lineas,
+            List<ClientesEntregasProductosRecuperado> lineasRecuperadas,
             List<EntregaCobroRegistrar> cobros,
             int idUsuario)
         {
             cobros ??= new List<EntregaCobroRegistrar>();
 
-            if (!Validar(entrega, lineas, out var error))
+            if (!Validar(entrega, lineas, lineasRecuperadas, out var error))
                 return ServiceResult.Error(error, "validacion");
 
             if (!ValidarCobros(lineas, cobros, out error))
@@ -45,7 +46,7 @@ namespace SistemaOroAmbiental.BLL.Service
             int id;
             try
             {
-                id = await _repo.Insertar(entrega, lineas, cobros, idUsuario);
+                id = await _repo.Insertar(entrega, lineas, lineasRecuperadas, cobros, idUsuario);
             }
             catch (Exception ex)
             {
@@ -78,6 +79,7 @@ namespace SistemaOroAmbiental.BLL.Service
         public async Task<ServiceResult> Actualizar(
             ClientesEntrega entrega,
             List<ClientesEntregasProducto> lineas,
+            List<ClientesEntregasProductosRecuperado> lineasRecuperadas,
             List<EntregaCobroRegistrar> cobros,
             int idUsuario)
         {
@@ -86,7 +88,7 @@ namespace SistemaOroAmbiental.BLL.Service
 
             cobros ??= new List<EntregaCobroRegistrar>();
 
-            if (!Validar(entrega, lineas, out var error))
+            if (!Validar(entrega, lineas, lineasRecuperadas, out var error))
                 return ServiceResult.Error(error, "validacion");
 
             if (!ValidarCobros(lineas, cobros, out error))
@@ -94,7 +96,7 @@ namespace SistemaOroAmbiental.BLL.Service
 
             try
             {
-                var ok = await _repo.Actualizar(entrega, lineas, cobros, idUsuario);
+                var ok = await _repo.Actualizar(entrega, lineas, lineasRecuperadas, cobros, idUsuario);
 
                 var msg = cobros.Count > 0
                     ? "Entrega y cobros guardados correctamente."
@@ -132,7 +134,11 @@ namespace SistemaOroAmbiental.BLL.Service
                 id);
         }
 
-        private static bool Validar(ClientesEntrega entrega, List<ClientesEntregasProducto>? lineas, out string error)
+        private static bool Validar(
+            ClientesEntrega entrega,
+            List<ClientesEntregasProducto>? lineas,
+            List<ClientesEntregasProductosRecuperado>? lineasRecuperadas,
+            out string error)
         {
             error = "";
 
@@ -149,14 +155,15 @@ namespace SistemaOroAmbiental.BLL.Service
             }
 
             lineas ??= new List<ClientesEntregasProducto>();
+            lineasRecuperadas ??= new List<ClientesEntregasProductosRecuperado>();
 
-            if (lineas.Count == 0)
+            if (lineas.Count == 0 && lineasRecuperadas.Count == 0)
             {
-                error = "Agregue al menos un producto a la entrega.";
+                error = "Agregue al menos un producto entregado/retirado o recuperado.";
                 return false;
             }
 
-            var productos = new HashSet<string>();
+            var productosOperacion = new HashSet<string>();
 
             foreach (var l in lineas)
             {
@@ -166,16 +173,18 @@ namespace SistemaOroAmbiental.BLL.Service
                     return false;
                 }
 
-                var keyProducto = $"{l.IdProducto}_{(l.TipoMovimiento is 2 ? 2 : 1)}";
-                if (!productos.Add(keyProducto))
+                var tipo = l.TipoMovimiento;
+                if (tipo is not ClientesEntregasRepository.TIPO_LINEA_ENTREGA
+                    and not ClientesEntregasRepository.TIPO_LINEA_RETIRO)
                 {
-                    error = "No puede repetir el mismo producto con el mismo tipo en la entrega.";
+                    error = "Tipo de movimiento inválido en productos (solo entrega o retiro).";
                     return false;
                 }
 
-                if (l.TipoMovimiento is not 1 and not 2)
+                var keyProducto = $"{l.IdProducto}_{tipo}";
+                if (!productosOperacion.Add(keyProducto))
                 {
-                    error = "Tipo de movimiento inválido en una línea de producto.";
+                    error = "No puede repetir el mismo producto con el mismo tipo en productos.";
                     return false;
                 }
 
@@ -188,6 +197,35 @@ namespace SistemaOroAmbiental.BLL.Service
                 if (l.PrecioVenta < 0)
                 {
                     error = "El precio de venta no puede ser negativo.";
+                    return false;
+                }
+            }
+
+            var productosRecuperados = new HashSet<int>();
+
+            foreach (var l in lineasRecuperadas)
+            {
+                if (l.IdProducto <= 0)
+                {
+                    error = "Hay líneas recuperadas sin producto seleccionado.";
+                    return false;
+                }
+
+                if (!productosRecuperados.Add(l.IdProducto))
+                {
+                    error = "No puede repetir el mismo producto en productos recuperados.";
+                    return false;
+                }
+
+                if (l.Cantidad <= 0)
+                {
+                    error = "Las cantidades recuperadas deben ser mayores a cero.";
+                    return false;
+                }
+
+                if (l.PrecioVenta < 0)
+                {
+                    error = "El precio de referencia no puede ser negativo.";
                     return false;
                 }
             }

@@ -17,12 +17,14 @@ namespace SistemaOroAmbiental.DAL.Repository
         Task<int> Insertar(
             ClientesEntrega entrega,
             List<ClientesEntregasProducto> lineas,
+            List<ClientesEntregasProductosRecuperado> lineasRecuperadas,
             List<EntregaCobroRegistrar> cobros,
             int idUsuario);
 
         Task<bool> Actualizar(
             ClientesEntrega entrega,
             List<ClientesEntregasProducto> lineas,
+            List<ClientesEntregasProductosRecuperado> lineasRecuperadas,
             List<EntregaCobroRegistrar> cobros,
             int idUsuario);
 

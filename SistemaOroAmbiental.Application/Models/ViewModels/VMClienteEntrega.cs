@@ -35,7 +35,7 @@ namespace SistemaOroAmbiental.Application.Models.ViewModels
     {
         public int Id { get; set; }
         public int IdProducto { get; set; }
-        public int TipoMovimiento { get; set; } = 1; // 1=Entrega, 2=Retiro
+        public int TipoMovimiento { get; set; } = 1; // 1=Entrega, 2=Retiro, 3=Recuperado (inv. recuperado)
         public string Producto { get; set; } = "";
         public string? Medida { get; set; }
         public decimal Cantidad { get; set; }
@@ -78,6 +78,9 @@ namespace SistemaOroAmbiental.Application.Models.ViewModels
         public bool PuedeEditar { get; set; }
         public bool PuedeEliminar { get; set; }
         public List<VMClienteEntregaLinea> Lineas { get; set; } = new();
+
+        /// <summary>Líneas de inventario recuperado (tabla ClientesEntregasProductosRecuperados).</summary>
+        public List<VMClienteEntregaLinea> LineasRecuperadas { get; set; } = new();
     }
 
     public class VMClienteEntregaGuardar
@@ -90,6 +93,9 @@ namespace SistemaOroAmbiental.Application.Models.ViewModels
         public string? NotaInterna { get; set; }
         public string? NotaCliente { get; set; }
         public List<VMClienteEntregaLineaGuardar> Lineas { get; set; } = new();
+
+        public List<VMClienteEntregaLineaGuardar> LineasRecuperadas { get; set; } = new();
+
         public List<VMClienteEntregaCobroRegistrar> Cobros { get; set; } = new();
     }
 
@@ -97,7 +103,7 @@ namespace SistemaOroAmbiental.Application.Models.ViewModels
     {
         public int Id { get; set; }
         public int IdProducto { get; set; }
-        public int TipoMovimiento { get; set; } = 1; // 1=Entrega, 2=Retiro
+        public int TipoMovimiento { get; set; } = 1; // 1=Entrega, 2=Retiro, 3=Recuperado (inv. recuperado)
         public decimal Cantidad { get; set; }
         public decimal PrecioVenta { get; set; }
         public decimal CostoUnitario { get; set; }

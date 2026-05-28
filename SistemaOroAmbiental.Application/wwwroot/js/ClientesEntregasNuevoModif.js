@@ -38,6 +38,7 @@
 
     const TIPO_LINEA_ENTREGA = 1;
     const TIPO_LINEA_RETIRO = 2;
+    const TIPO_LINEA_RECUPERADO = 3;
 
     const authHeaders = () => ({
         Authorization: "Bearer " + (token || ""),
@@ -59,7 +60,7 @@
     }
 
     function prepararInputsMilesLinea($scope) {
-        ($scope || $("#tbodyLineasEntrega")).find(".linea-cant, .linea-precio, .linea-desc, .linea-iva").each(function () {
+        ($scope || $("#tbodyLineasEntrega, #tbodyLineasRecuperados")).find(".linea-cant, .linea-precio, .linea-desc, .linea-iva").each(function () {
             if (typeof prepararInputMiles === "function") {
                 prepararInputMiles(this);
             } else {
@@ -113,24 +114,46 @@
         }
     });
 
+    function esLineaRecuperada(linea) {
+        return Number(linea?.TipoMovimiento) === TIPO_LINEA_RECUPERADO;
+    }
+
+    function lineasProductosOperacion() {
+        return (CM.lineas || []).filter(l => !esLineaRecuperada(l));
+    }
+
+    function lineasRecuperadas() {
+        return (CM.lineas || []).filter(esLineaRecuperada);
+    }
+
     /** Productos / cobros vacíos: cartel visible + animación en botones agregar */
     function actualizarUIEstadoVaciosEntrega() {
-        const sinProductos = (CM.lineas || []).length === 0;
+        const productosOp = lineasProductosOperacion();
+        const recuperados = lineasRecuperadas();
+        const sinProductos = productosOp.length === 0;
+        const sinRecuperados = recuperados.length === 0;
         const sinCobros = (CM.cobrosLineas || []).length === 0;
         const lectura = !!CM.soloLectura;
 
         $("#lblSinLineas").prop("hidden", !sinProductos);
         $("#tblLineasEntrega").closest(".vn-gridtable").toggleClass("d-none", sinProductos);
 
+        $("#lblSinRecuperados").prop("hidden", !sinRecuperados);
+        $("#tblLineasRecuperados").closest(".vn-gridtable").toggleClass("d-none", sinRecuperados);
+
         $("#lblSinCobros").prop("hidden", !sinCobros);
         $("#tblCobrosEntrega").closest(".vn-gridtable").toggleClass("d-none", sinCobros);
         $("#lblCobrosHint").toggleClass("d-none", sinCobros);
 
         $("#wrapAgregarLinea").toggleClass("vn-agregar-wrap--pulse", sinProductos && !lectura);
+        $("#wrapAgregarRecuperado").toggleClass("vn-agregar-wrap--pulse", sinRecuperados && !lectura);
         $("#wrapAgregarCobro").toggleClass("vn-agregar-wrap--pulse", sinCobros && !lectura);
 
-        $("#cntProductos").text(`(${CM.lineas.length})`);
+        $("#cntProductos").text(`(${productosOp.length})`);
+        $("#cntRecuperados").text(`(${recuperados.length})`);
         $("#cntCobros").text(`(${CM.cobrosLineas.length})`);
+
+        actualizarBotonesAgregarLinea();
     }
 
     function initTabsEntrega() {
@@ -146,7 +169,8 @@
     function wireEventosEntrega() {
         $("#btnGuardarEntrega").on("click", guardarEntrega);
         $("#btnEliminarEntrega").on("click", eliminarEntregaActual);
-        $("#btnAgregarLinea").on("click", () => agregarLinea());
+        $("#btnAgregarLinea").on("click", () => agregarLinea({ TipoMovimiento: TIPO_LINEA_ENTREGA }));
+        $("#btnAgregarRecuperado").on("click", () => agregarLinea({ TipoMovimiento: TIPO_LINEA_RECUPERADO }));
 
         $("#btnCrearProducto").on("click", () => {
             window.nuevoProducto?.();
@@ -174,6 +198,9 @@
         if (secciones.productos) {
             $('.vn-head-btn[data-sec="productos"]').addClass("error");
         }
+        if (secciones.recuperados) {
+            $('.vn-head-btn[data-sec="recuperados"]').addClass("error");
+        }
         if (secciones.cobros) {
             $('.vn-head-btn[data-sec="cobros"]').addClass("error");
         }
@@ -182,6 +209,8 @@
             activarTabEntrega("datos");
         } else if (secciones.productos) {
             activarTabEntrega("productos");
+        } else if (secciones.recuperados) {
+            activarTabEntrega("recuperados");
         } else if (secciones.cobros) {
             activarTabEntrega("cobros");
         }
@@ -195,13 +224,15 @@
 
     function inferirSeccionesErrorEntrega(mensaje) {
         const m = String(mensaje || "").toLowerCase();
-        const secciones = { datos: false, productos: false };
+        const secciones = { datos: false, productos: false, recuperados: false };
 
         const clavesDatos = ["contrato", "estado", "fecha", "nota"];
         const clavesCobros = ["cobro", "cobros", "cuenta", "caja"];
         const clavesProductos = ["producto", "línea", "linea", "cantidad", "costo", "ítem", "item", "líneas", "lineas"];
+        const clavesRecuperados = ["recuperado", "recuperados"];
 
         clavesDatos.forEach(k => { if (m.includes(k)) secciones.datos = true; });
+        clavesRecuperados.forEach(k => { if (m.includes(k)) secciones.recuperados = true; });
         clavesProductos.forEach(k => { if (m.includes(k)) secciones.productos = true; });
         clavesCobros.forEach(k => { if (m.includes(k)) secciones.cobros = true; });
 
@@ -265,7 +296,7 @@
     }
 
     function sincronizarLineasDesdeDom() {
-        $("#tbodyLineasEntrega tr").each(function () {
+        $("#tbodyLineasEntrega tr, #tbodyLineasRecuperados tr").each(function () {
             const key = Number($(this).data("key"));
             const linea = CM.lineas.find(x => x._key === key);
             if (linea) syncLineaFromRow($(this), linea);
@@ -287,7 +318,7 @@
         const lineasConProducto = CM.lineas.filter(l => l.IdProducto > 0);
 
         if (lineasConProducto.length === 0) {
-            erroresProductos.push("Agregue al menos un producto a la entrega.");
+            erroresProductos.push("Agregue al menos un producto entregado o recuperado.");
         } else {
             const sinProducto = CM.lineas.some(l => !l.IdProducto);
             if (sinProducto) {
@@ -308,7 +339,8 @@
         const mensajes = [...erroresDatos, ...erroresProductos];
         const secciones = {
             datos: erroresDatos.length > 0,
-            productos: erroresProductos.length > 0
+            productos: erroresProductos.length > 0,
+            recuperados: erroresProductos.length > 0
         };
 
         return {
@@ -325,7 +357,7 @@
         $p.removeClass("d-none");
 
         const flags = secciones || inferirSeccionesErrorEntrega(texto);
-        if (flags.datos || flags.productos) {
+        if (flags.datos || flags.productos || flags.recuperados) {
             marcarSeccionesErrorEntrega(flags);
         } else {
             limpiarMarcasErrorSeccionesEntrega();
@@ -546,17 +578,9 @@
         CM.idSucursalCliente = Number(d.IdSucursal || cli?.IdSucursal || 0);
         if (d.IdEstado) $("#cEstado").val(String(d.IdEstado)).trigger("change.select2");
 
-        CM.lineas = (d.Lineas || []).map(l => ({
-            _key: CM.nextLineId++,
-            Id: l.Id,
-            IdProducto: l.IdProducto,
-            TipoMovimiento: Number(l.TipoMovimiento || TIPO_LINEA_ENTREGA),
-            Cantidad: Number(l.Cantidad || 0),
-            PrecioVenta: Number(l.PrecioVenta || 0),
-            CostoUnitario: Number(l.CostoUnitario || 0),
-            PorcDescuento: Number(l.PorcDescuento || 0),
-            PorcIva: Number(l.PorcIva || 0)
-        }));
+        const lineasOperacion = (d.Lineas || []).map(l => mapLineaDesdeApi(l, Number(l.TipoMovimiento || TIPO_LINEA_ENTREGA)));
+        const lineasRecuperadasApi = (d.LineasRecuperadas || []).map(l => mapLineaDesdeApi(l, TIPO_LINEA_RECUPERADO));
+        CM.lineas = [...lineasOperacion, ...lineasRecuperadasApi];
 
         renderLineas();
         recalcularTotalesUI();
@@ -568,11 +592,11 @@
 
     function aplicarSoloLectura() {
         $("#btnGuardarEntrega").prop("disabled", true);
-        $("#btnAgregarLinea, #btnCrearProducto, #btnAtajoEstadoEntrega").prop("hidden", true);
+        $("#btnAgregarLinea, #btnAgregarRecuperado, #btnCrearProducto, #btnAtajoEstadoEntrega").prop("hidden", true);
         $("#cFecha, #cNota").prop("disabled", true);
         $("#cCliente, #cEstado").prop("disabled", true);
-        $("#tbodyLineasEntrega input, #tbodyLineasEntrega select").prop("disabled", true);
-        $("#tbodyLineasEntrega .btn-quitar-linea").prop("hidden", true);
+        $("#tbodyLineasEntrega input, #tbodyLineasEntrega select, #tbodyLineasRecuperados input, #tbodyLineasRecuperados select").prop("disabled", true);
+        $("#tbodyLineasEntrega .btn-quitar-linea, #tbodyLineasRecuperados .btn-quitar-linea").prop("hidden", true);
         $("#btnAgregarCobroEntrega").prop("hidden", true);
         $("#tbodyCobrosEntrega input, #tbodyCobrosEntrega select").prop("disabled", true);
         $("#tbodyCobrosEntrega .btn-quitar-cobro-linea, #tbodyCobrosEntrega .btn-atajo-cuenta-cobro").prop("hidden", true);
@@ -581,16 +605,16 @@
     function restaurarEdicionEntrega() {
         $("#btnGuardarEntrega").prop("disabled", false);
         $("#lblGuardarEntrega").text("Guardar cambios");
-        $("#btnAgregarLinea, #btnCrearProducto, #btnAtajoEstadoEntrega").prop("hidden", false);
+        $("#btnAgregarLinea, #btnAgregarRecuperado, #btnCrearProducto, #btnAtajoEstadoEntrega").prop("hidden", false);
         $("#cFecha, #cNota").prop("disabled", false);
         $("#cCliente, #cEstado").prop("disabled", false);
-        $("#tbodyLineasEntrega input, #tbodyLineasEntrega select").prop("disabled", false);
-        $("#tbodyLineasEntrega .btn-quitar-linea").prop("hidden", false);
+        $("#tbodyLineasEntrega input, #tbodyLineasEntrega select, #tbodyLineasRecuperados input, #tbodyLineasRecuperados select").prop("disabled", false);
+        $("#tbodyLineasEntrega .btn-quitar-linea, #tbodyLineasRecuperados .btn-quitar-linea").prop("hidden", false);
         $("#btnAgregarCobroEntrega").prop("hidden", false);
         $("#tbodyCobrosEntrega input, #tbodyCobrosEntrega select").prop("disabled", false);
         $("#tbodyCobrosEntrega .btn-quitar-cobro-linea, #tbodyCobrosEntrega .btn-atajo-cuenta-cobro").prop("hidden", false);
         refrescarSelectsProducto();
-        actualizarBotonAgregarLinea();
+        actualizarBotonesAgregarLinea();
     }
 
     async function cargarCuentasCajaEntrega() {
@@ -865,20 +889,29 @@
     function agregarLinea(preset) {
         if (CM.soloLectura) return;
 
-        const linea = preset || {
+        const tipo = Number((preset && preset.TipoMovimiento) || TIPO_LINEA_ENTREGA);
+        const linea = Object.assign({
             _key: CM.nextLineId++,
             Id: 0,
             IdProducto: 0,
-            TipoMovimiento: TIPO_LINEA_ENTREGA,
+            TipoMovimiento: tipo,
             Cantidad: 1,
             PrecioVenta: 0,
             PorcDescuento: 0,
             PorcIva: 21
-        };
+        }, preset || {});
+        if (!linea._key) linea._key = CM.nextLineId++;
+        linea.TipoMovimiento = tipo;
 
         CM.lineas.push(linea);
         renderLineas();
         recalcularTotalesUI();
+
+        if (tipo === TIPO_LINEA_RECUPERADO) {
+            activarTabEntrega("recuperados");
+        } else {
+            activarTabEntrega("productos");
+        }
     }
 
     function quitarLinea(key) {
@@ -928,18 +961,55 @@
         });
     }
 
+    function hayProductosDisponiblesParaTipo(tipoMovimiento) {
+        const usados = new Set(
+            CM.lineas
+                .filter(l => l.IdProducto > 0)
+                .map(l => `${l.IdProducto}_${Number(l.TipoMovimiento || TIPO_LINEA_ENTREGA)}`)
+        );
+        return (CM.productos || []).some(p => !usados.has(`${p.Id}_${tipoMovimiento}`));
+    }
+
+    function hayProductosDisponiblesEnSeccionProductos() {
+        const usados = new Set(
+            CM.lineas
+                .filter(l => l.IdProducto > 0)
+                .map(l => `${l.IdProducto}_${Number(l.TipoMovimiento || TIPO_LINEA_ENTREGA)}`)
+        );
+        return (CM.productos || []).some(p =>
+            !usados.has(`${p.Id}_${TIPO_LINEA_ENTREGA}`) ||
+            !usados.has(`${p.Id}_${TIPO_LINEA_RETIRO}`)
+        );
+    }
+
+    function actualizarBotonesAgregarLinea() {
+        $("#btnAgregarLinea").prop("disabled", CM.soloLectura || !hayProductosDisponiblesEnSeccionProductos());
+        $("#btnAgregarRecuperado").prop("disabled", CM.soloLectura || !hayProductosDisponiblesParaTipo(TIPO_LINEA_RECUPERADO));
+    }
+
     function renderLineas() {
+        renderLineasProductos();
+        renderLineasRecuperadas();
+        actualizarUIEstadoVaciosEntrega();
+    }
+
+    function renderLineasProductos() {
         const $tb = $("#tbodyLineasEntrega");
         $tb.empty();
 
-        CM.lineas.forEach(linea => {
+        CM.lineas.filter(l => !esLineaRecuperada(l)).forEach(linea => {
+            const tipo = Number(linea.TipoMovimiento || TIPO_LINEA_ENTREGA);
+            if (tipo !== TIPO_LINEA_ENTREGA && tipo !== TIPO_LINEA_RETIRO) {
+                linea.TipoMovimiento = TIPO_LINEA_ENTREGA;
+            }
+
             const k = linea._key;
             const prodOpts = htmlOpcionesProducto(linea);
-
             const calc = calcularLinea(linea);
+            const t = Number(linea.TipoMovimiento);
 
             const tr = $(`
-                <tr data-key="${k}">
+                <tr data-key="${k}" data-seccion="productos">
                     <td>
                         <select id="linea_${k}_producto" class="form-select vn-input vn-mini linea-producto">
                             <option value="">Seleccionar</option>
@@ -948,8 +1018,8 @@
                     </td>
                     <td>
                         <select class="form-select vn-input vn-mini linea-tipo">
-                            <option value="${TIPO_LINEA_ENTREGA}" ${Number(linea.TipoMovimiento || TIPO_LINEA_ENTREGA) === TIPO_LINEA_ENTREGA ? "selected" : ""}>Entrega</option>
-                            <option value="${TIPO_LINEA_RETIRO}" ${Number(linea.TipoMovimiento || TIPO_LINEA_ENTREGA) === TIPO_LINEA_RETIRO ? "selected" : ""}>Retiro</option>
+                            <option value="${TIPO_LINEA_ENTREGA}" ${t === TIPO_LINEA_ENTREGA ? "selected" : ""}>Entrega</option>
+                            <option value="${TIPO_LINEA_RETIRO}" ${t === TIPO_LINEA_RETIRO ? "selected" : ""}>Retiro</option>
                         </select>
                     </td>
                     <td><input type="text" inputmode="decimal" autocomplete="off" class="form-control vn-input vn-mini Inputmiles linea-cant" value="${fmtInputNum(linea.Cantidad)}" /></td>
@@ -975,6 +1045,9 @@
             $tipo.on("change", function () {
                 linea.TipoMovimiento = parseInt($(this).val(), 10) || TIPO_LINEA_ENTREGA;
                 syncLineaFromRow(tr, linea);
+                refrescarSelectsProducto();
+                actualizarBotonesAgregarLinea();
+                tr.find(".linea-subtotal").text(fmtMoney(calcularLinea(linea).signedSubtotalFinal));
                 recalcularTotalesUI();
             });
 
@@ -990,6 +1063,8 @@
                 }
                 syncLineaFromRow(tr, linea);
                 tr.find(".linea-subtotal").text(fmtMoney(calcularLinea(linea).signedSubtotalFinal));
+                refrescarSelectsProducto();
+                actualizarBotonesAgregarLinea();
                 recalcularTotalesUI();
             });
 
@@ -1001,22 +1076,79 @@
 
             tr.find(".btn-quitar-linea").on("click", () => quitarLinea(k));
         });
+    }
 
-        const usados = new Set(
-            CM.lineas
-                .filter(l => l.IdProducto > 0)
-                .map(l => `${l.IdProducto}_${Number(l.TipoMovimiento || TIPO_LINEA_ENTREGA)}`)
-        );
-        const quedan = (CM.productos || []).some(p => (
-            !usados.has(`${p.Id}_${TIPO_LINEA_ENTREGA}`) ||
-            !usados.has(`${p.Id}_${TIPO_LINEA_RETIRO}`)
-        ));
-        $("#btnAgregarLinea").prop("disabled", CM.soloLectura || !quedan);
-        actualizarUIEstadoVaciosEntrega();
+    function renderLineasRecuperadas() {
+        const $tb = $("#tbodyLineasRecuperados");
+        $tb.empty();
+
+        lineasRecuperadas().forEach(linea => {
+            linea.TipoMovimiento = TIPO_LINEA_RECUPERADO;
+            const k = linea._key;
+            const prodOpts = htmlOpcionesProducto(linea);
+            const calc = calcularLinea(linea);
+
+            const tr = $(`
+                <tr data-key="${k}" data-tipo="${TIPO_LINEA_RECUPERADO}">
+                    <td>
+                        <select id="linea_${k}_producto" class="form-select vn-input vn-mini linea-producto">
+                            <option value="">Seleccionar</option>
+                            ${prodOpts}
+                        </select>
+                    </td>
+                    <td><input type="text" inputmode="decimal" autocomplete="off" class="form-control vn-input vn-mini Inputmiles linea-cant" value="${fmtInputNum(linea.Cantidad)}" /></td>
+                    <td><input type="text" inputmode="decimal" autocomplete="off" class="form-control vn-input vn-mini Inputmiles linea-precio" value="${fmtInputNum(linea.PrecioVenta)}" /></td>
+                    <td><input type="text" inputmode="decimal" autocomplete="off" class="form-control vn-input vn-mini Inputmiles linea-desc" value="${fmtInputNum(linea.PorcDescuento)}" /></td>
+                    <td><input type="text" inputmode="decimal" autocomplete="off" class="form-control vn-input vn-mini Inputmiles linea-iva" value="${fmtInputNum(linea.PorcIva)}" /></td>
+                    <td class="text-end linea-subtotal-cell linea-subtotal text-success">${fmtMoney(calc.signedSubtotalFinal)}</td>
+                    <td class="text-center">
+                        <button type="button" class="btn btn-outline-danger btn-quitar-linea" title="Quitar">
+                            <i class="fa fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `);
+
+            $tb.append(tr);
+            prepararInputsMilesLinea(tr);
+
+            const $sel = tr.find(".linea-producto");
+            ensureSelect2Cm($sel, { placeholder: "Producto", dropdownParent: $(".entregas-nuevo") });
+
+            $sel.on("change", function () {
+                linea.IdProducto = parseInt($(this).val(), 10) || 0;
+                const prod = CM.productos.find(p => p.Id === linea.IdProducto);
+                if (prod) {
+                    if (!linea.PrecioVenta) {
+                        linea.PrecioVenta = Number(prod.PrecioVenta || 0);
+                        setValorInputMiles(tr.find(".linea-precio"), linea.PrecioVenta);
+                    }
+                    linea.CostoUnitario = Number(prod.CostoUnitario || 0);
+                }
+                syncLineaFromRow(tr, linea);
+                tr.find(".linea-subtotal").text(fmtMoney(calcularLinea(linea).signedSubtotalFinal));
+                refrescarSelectsProducto();
+                actualizarBotonesAgregarLinea();
+                recalcularTotalesUI();
+            });
+
+            tr.find(".linea-cant, .linea-precio, .linea-desc, .linea-iva").on("input change", function () {
+                syncLineaFromRow(tr, linea);
+                tr.find(".linea-subtotal").text(fmtMoney(calcularLinea(linea).signedSubtotalFinal));
+                recalcularTotalesUI();
+            });
+
+            tr.find(".btn-quitar-linea").on("click", () => quitarLinea(k));
+        });
     }
 
     function syncLineaFromRow($tr, linea) {
-        linea.TipoMovimiento = parseInt($tr.find(".linea-tipo").val(), 10) || TIPO_LINEA_ENTREGA;
+        const tipoDom = parseInt($tr.data("tipo"), 10);
+        if (tipoDom === TIPO_LINEA_RECUPERADO) {
+            linea.TipoMovimiento = TIPO_LINEA_RECUPERADO;
+        } else if ($tr.find(".linea-tipo").length) {
+            linea.TipoMovimiento = parseInt($tr.find(".linea-tipo").val(), 10) || TIPO_LINEA_ENTREGA;
+        }
         linea.Cantidad = leerNum($tr.find(".linea-cant").val());
         linea.PrecioVenta = leerNum($tr.find(".linea-precio").val());
         linea.PorcDescuento = leerNum($tr.find(".linea-desc").val());
@@ -1036,7 +1168,8 @@
         const ivaUnit = costoCdesc * porcIva / 100;
         const ivaTotal = ivaUnit * cant;
         const subtotalFinal = subtotalCdesc + ivaTotal;
-        const signo = Number(linea.TipoMovimiento || TIPO_LINEA_ENTREGA) === TIPO_LINEA_RETIRO ? -1 : 1;
+        const t = Number(linea.TipoMovimiento || TIPO_LINEA_ENTREGA);
+        const signo = t === TIPO_LINEA_RECUPERADO ? 0 : (t === TIPO_LINEA_RETIRO ? -1 : 1);
 
         return {
             descTotal: descUnit * cant,
@@ -1049,6 +1182,16 @@
             signedIvaTotal: ivaTotal * signo,
             signedSubtotalFinal: subtotalFinal * signo
         };
+    }
+
+    function actualizarAvisoProductosCruzados() {
+        const idsOperacion = new Set(
+            lineasProductosOperacion()
+                .filter(l => l.IdProducto > 0)
+                .map(l => l.IdProducto)
+        );
+        const hayCruce = lineasRecuperadas().some(l => l.IdProducto > 0 && idsOperacion.has(l.IdProducto));
+        $("#alertProductoEntregaRecuperado").prop("hidden", !hayCruce);
     }
 
     function recalcularTotalesUI() {
@@ -1067,9 +1210,39 @@
         $("#totIva").text(fmtMoney(iva));
         $("#totImporte").text(fmtMoney(tot));
         actualizarResumenCobrosUI();
+        actualizarAvisoProductosCruzados();
+    }
+
+    function mapLineaDesdeApi(l, tipoMovimiento) {
+        return {
+            _key: CM.nextLineId++,
+            Id: l.Id,
+            IdProducto: l.IdProducto,
+            TipoMovimiento: tipoMovimiento,
+            Cantidad: Number(l.Cantidad || 0),
+            PrecioVenta: Number(l.PrecioVenta || 0),
+            CostoUnitario: Number(l.CostoUnitario || 0),
+            PorcDescuento: Number(l.PorcDescuento || 0),
+            PorcIva: Number(l.PorcIva || 0)
+        };
+    }
+
+    function mapLineaParaGuardar(l) {
+        return {
+            Id: l.Id || 0,
+            IdProducto: l.IdProducto,
+            Cantidad: l.Cantidad,
+            PrecioVenta: l.PrecioVenta,
+            CostoUnitario: l.CostoUnitario || 0,
+            PorcDescuento: l.PorcDescuento,
+            PorcIva: l.PorcIva
+        };
     }
 
     function obtenerPayload() {
+        const lineasOperacion = lineasProductosOperacion().filter(l => l.IdProducto > 0);
+        const lineasRec = lineasRecuperadas().filter(l => l.IdProducto > 0);
+
         const payload = {
             Id: CM.id,
             Fecha: $("#cFecha").val() || null,
@@ -1077,16 +1250,11 @@
             IdEstado: parseInt($("#cEstado").val(), 10) || null,
             NotaInterna: ($("#cNota").val() || "").trim() || null,
             NotaCliente: ($("#cNotaCliente").val() || "").trim() || null,
-            Lineas: CM.lineas.map(l => ({
-                Id: l.Id || 0,
-                IdProducto: l.IdProducto,
-                TipoMovimiento: Number(l.TipoMovimiento || TIPO_LINEA_ENTREGA),
-                Cantidad: l.Cantidad,
-                PrecioVenta: l.PrecioVenta,
-                CostoUnitario: l.CostoUnitario || 0,
-                PorcDescuento: l.PorcDescuento,
-                PorcIva: l.PorcIva
+            Lineas: lineasOperacion.map(l => ({
+                ...mapLineaParaGuardar(l),
+                TipoMovimiento: Number(l.TipoMovimiento || TIPO_LINEA_ENTREGA)
             })),
+            LineasRecuperadas: lineasRec.map(mapLineaParaGuardar),
             Cobros: cobrosParaGuardar().map(p => ({
                 IdCobro: p.IdCobro || 0,
                 IdMovimientoCc: p.IdMovimientoCc || 0,

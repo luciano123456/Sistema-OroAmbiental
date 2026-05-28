@@ -143,6 +143,10 @@ builder.Services.AddScoped<IContratosDocumentosRepository, ContratosDocumentosRe
 builder.Services.AddScoped<IClientesEntregasRepository, ClientesEntregasRepository>();
 builder.Services.AddScoped<IClientesEntregasService, ClientesEntregasService>();
 
+builder.Services.AddScoped<IInventarioRecuperadoRepository, InventarioRecuperadoRepository>();
+builder.Services.AddScoped<IProductosRecuperadosRepository, ProductosRecuperadosRepository>();
+builder.Services.AddScoped<IProductosRecuperadosService, ProductosRecuperadosService>();
+
 builder.Services.AddScoped<IGastosRepository, GastosRepository>();
 builder.Services.AddScoped<IGastosService, GastosService>();
 

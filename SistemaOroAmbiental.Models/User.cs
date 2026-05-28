@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace SistemaOroAmbiental.Models;
@@ -116,6 +116,10 @@ public partial class User
     public virtual ICollection<InventarioMovimiento> InventarioMovimientoIdUsuarioModificaNavigations { get; set; } = new List<InventarioMovimiento>();
 
     public virtual ICollection<InventarioMovimiento> InventarioMovimientoIdUsuarioRegistraNavigations { get; set; } = new List<InventarioMovimiento>();
+
+    public virtual ICollection<InventarioRecuperadoMovimiento> InventarioRecuperadoMovimientoIdUsuarioModificaNavigations { get; set; } = new List<InventarioRecuperadoMovimiento>();
+
+    public virtual ICollection<InventarioRecuperadoMovimiento> InventarioRecuperadoMovimientoIdUsuarioRegistraNavigations { get; set; } = new List<InventarioRecuperadoMovimiento>();
 
     public virtual ICollection<ListasPrecio> ListasPrecioIdUsuarioModificaNavigations { get; set; } = new List<ListasPrecio>();
 

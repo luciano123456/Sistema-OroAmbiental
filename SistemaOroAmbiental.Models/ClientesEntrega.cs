@@ -45,6 +45,8 @@ public partial class ClientesEntrega
 
     public virtual ICollection<ClientesEntregasProducto> ClientesEntregasProductos { get; set; } = new List<ClientesEntregasProducto>();
 
+    public virtual ICollection<ClientesEntregasProductosRecuperado> ClientesEntregasProductosRecuperados { get; set; } = new List<ClientesEntregasProductosRecuperado>();
+
     public virtual Cliente IdClienteNavigation { get; set; } = null!;
 
     public virtual Contrato? IdContratoNavigation { get; set; }

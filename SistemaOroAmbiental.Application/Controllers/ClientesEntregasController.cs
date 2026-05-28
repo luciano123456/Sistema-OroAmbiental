@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using SistemaOroAmbiental.Application.Models.ViewModels;
 using SistemaOroAmbiental.BLL.Common;
 using SistemaOroAmbiental.BLL.Service;
+using SistemaOroAmbiental.DAL.Repository;
 using SistemaOroAmbiental.Models;
 
 namespace SistemaOroAmbiental.Application.Controllers
@@ -61,7 +62,8 @@ namespace SistemaOroAmbiental.Application.Controllers
                     ImporteTotal = e.ImporteTotal,
                     ImporteAbonado = totalCobrado > 0 ? totalCobrado : e.ImporteAbonado,
                     Saldo = e.ImporteTotal - (totalCobrado > 0 ? totalCobrado : e.ImporteAbonado),
-                    CantidadProductos = e.ClientesEntregasProductos?.Count ?? 0,
+                    CantidadProductos = (e.ClientesEntregasProductos?.Count ?? 0)
+                        + (e.ClientesEntregasProductosRecuperados?.Count ?? 0),
                     NotaInterna = e.NotaInterna,
                     TieneCobros = totalCobrado > 0
                 };
@@ -105,30 +107,11 @@ namespace SistemaOroAmbiental.Application.Controllers
                 PuedeEditar = true,
                 PuedeEliminar = true,
                 Lineas = (e.ClientesEntregasProductos ?? new List<ClientesEntregasProducto>())
+                    .Where(l => l.TipoMovimiento != ClientesEntregasRepository.TIPO_LINEA_RECUPERADO)
                     .OrderBy(x => x.Id)
-                    .Select(l => new VMClienteEntregaLinea
-                    {
-                        Id = l.Id,
-                        IdProducto = l.IdProducto,
-                        TipoMovimiento = l.TipoMovimiento,
-                        Producto = l.IdProductoNavigation?.Nombre ?? "",
-                        Medida = l.IdProductoNavigation?.IdMedidaNavigation?.Nombre,
-                        Cantidad = l.Cantidad,
-                        PrecioVenta = l.PrecioVenta,
-                        CostoUnitario = l.CostoUnitario,
-                        PorcDescuento = l.PorcDescuento,
-                        PorcIva = l.PorcIva,
-                        DescUnitario = l.DescUnitario,
-                        DescTotal = l.DescTotal,
-                        PrecioVentacDesc = l.PrecioVentacDesc,
-                        SubtotalcDesc = l.SubtotalcDesc,
-                        IvaUnitario = l.Ivaunitario,
-                        TotalIva = l.TotalIva,
-                        PrecioVentaFinal = l.PrecioVentaFinal,
-                        SubtotalFinal = l.SubtotalFinal,
-                        Ganancia = l.Ganancia
-                    })
-                    .ToList()
+                    .Select(MapLineaOperacionVm)
+                    .ToList(),
+                LineasRecuperadas = MapearLineasRecuperadas(e)
             };
 
             return Ok(detalle);
@@ -140,10 +123,10 @@ namespace SistemaOroAmbiental.Application.Controllers
             int idUsuario = int.Parse(User.FindFirst("Id")!.Value);
 
             var entrega = MapEntrega(model);
-            var lineas = MapLineas(model.Lineas);
+            var (lineas, lineasRecuperadas) = MapLineasDesdeGuardar(model);
             var cobros = MapCobros(model.Cobros);
 
-            ServiceResult result = await _service.Insertar(entrega, lineas, cobros, idUsuario);
+            ServiceResult result = await _service.Insertar(entrega, lineas, lineasRecuperadas, cobros, idUsuario);
 
             return Ok(new
             {
@@ -161,10 +144,10 @@ namespace SistemaOroAmbiental.Application.Controllers
 
             var entrega = MapEntrega(model);
             entrega.Id = model.Id;
-            var lineas = MapLineas(model.Lineas);
+            var (lineas, lineasRecuperadas) = MapLineasDesdeGuardar(model);
             var cobros = MapCobros(model.Cobros);
 
-            ServiceResult result = await _service.Actualizar(entrega, lineas, cobros, idUsuario);
+            ServiceResult result = await _service.Actualizar(entrega, lineas, lineasRecuperadas, cobros, idUsuario);
 
             return Ok(new
             {
@@ -231,23 +214,130 @@ namespace SistemaOroAmbiental.Application.Controllers
             };
         }
 
-        private static List<ClientesEntregasProducto> MapLineas(List<VMClienteEntregaLineaGuardar>? lineas)
+        private static (List<ClientesEntregasProducto>, List<ClientesEntregasProductosRecuperado>) MapLineasDesdeGuardar(
+            VMClienteEntregaGuardar model)
         {
-            return (lineas ?? new List<VMClienteEntregaLineaGuardar>())
-                .Where(x => x.IdProducto > 0 && x.Cantidad > 0)
-                .Select(x => new ClientesEntregasProducto
-                {
-                    Id = x.Id,
-                    IdProducto = x.IdProducto,
-                    TipoMovimiento = x.TipoMovimiento is 2 ? 2 : 1,
-                    Cantidad = x.Cantidad,
-                    PrecioVenta = x.PrecioVenta,
-                    CostoUnitario = x.CostoUnitario,
-                    PorcDescuento = x.PorcDescuento,
-                    PorcIva = x.PorcIva
-                })
-                .ToList();
+            var operacion = new List<ClientesEntregasProducto>();
+            var recuperadas = new List<ClientesEntregasProductosRecuperado>();
+
+            foreach (var x in model.Lineas ?? new List<VMClienteEntregaLineaGuardar>())
+            {
+                if (x.IdProducto <= 0 || x.Cantidad <= 0)
+                    continue;
+
+                if (x.TipoMovimiento == ClientesEntregasRepository.TIPO_LINEA_RECUPERADO)
+                    recuperadas.Add(MapLineaRecuperadaGuardar(x));
+                else
+                    operacion.Add(MapLineaOperacionGuardar(x));
+            }
+
+            foreach (var x in model.LineasRecuperadas ?? new List<VMClienteEntregaLineaGuardar>())
+            {
+                if (x.IdProducto <= 0 || x.Cantidad <= 0)
+                    continue;
+
+                recuperadas.Add(MapLineaRecuperadaGuardar(x));
+            }
+
+            return (operacion, recuperadas);
         }
+
+        private static ClientesEntregasProducto MapLineaOperacionGuardar(VMClienteEntregaLineaGuardar x)
+            => new()
+            {
+                Id = x.Id,
+                IdProducto = x.IdProducto,
+                TipoMovimiento = MapTipoMovimientoLinea(x.TipoMovimiento),
+                Cantidad = x.Cantidad,
+                PrecioVenta = x.PrecioVenta,
+                CostoUnitario = x.CostoUnitario,
+                PorcDescuento = x.PorcDescuento,
+                PorcIva = x.PorcIva
+            };
+
+        private static ClientesEntregasProductosRecuperado MapLineaRecuperadaGuardar(VMClienteEntregaLineaGuardar x)
+            => new()
+            {
+                Id = x.Id,
+                IdProducto = x.IdProducto,
+                Cantidad = x.Cantidad,
+                PrecioVenta = x.PrecioVenta,
+                CostoUnitario = x.CostoUnitario,
+                PorcDescuento = x.PorcDescuento,
+                PorcIva = x.PorcIva
+            };
+
+        private static int MapTipoMovimientoLinea(int tipo)
+            => tipo == ClientesEntregasRepository.TIPO_LINEA_RETIRO
+                ? ClientesEntregasRepository.TIPO_LINEA_RETIRO
+                : ClientesEntregasRepository.TIPO_LINEA_ENTREGA;
+
+        private static List<VMClienteEntregaLinea> MapearLineasRecuperadas(ClientesEntrega e)
+        {
+            var desdeTabla = (e.ClientesEntregasProductosRecuperados ?? new List<ClientesEntregasProductosRecuperado>())
+                .OrderBy(x => x.Id)
+                .Select(MapLineaRecuperadaVm);
+
+            var legacy = (e.ClientesEntregasProductos ?? new List<ClientesEntregasProducto>())
+                .Where(l => l.TipoMovimiento == ClientesEntregasRepository.TIPO_LINEA_RECUPERADO)
+                .OrderBy(x => x.Id)
+                .Select(l =>
+                {
+                    var vm = MapLineaOperacionVm(l);
+                    vm.TipoMovimiento = ClientesEntregasRepository.TIPO_LINEA_RECUPERADO;
+                    return vm;
+                });
+
+            return desdeTabla.Concat(legacy).ToList();
+        }
+
+        private static VMClienteEntregaLinea MapLineaOperacionVm(ClientesEntregasProducto l)
+            => new()
+            {
+                Id = l.Id,
+                IdProducto = l.IdProducto,
+                TipoMovimiento = l.TipoMovimiento,
+                Producto = l.IdProductoNavigation?.Nombre ?? "",
+                Medida = l.IdProductoNavigation?.IdMedidaNavigation?.Nombre,
+                Cantidad = l.Cantidad,
+                PrecioVenta = l.PrecioVenta,
+                CostoUnitario = l.CostoUnitario,
+                PorcDescuento = l.PorcDescuento,
+                PorcIva = l.PorcIva,
+                DescUnitario = l.DescUnitario,
+                DescTotal = l.DescTotal,
+                PrecioVentacDesc = l.PrecioVentacDesc,
+                SubtotalcDesc = l.SubtotalcDesc,
+                IvaUnitario = l.Ivaunitario,
+                TotalIva = l.TotalIva,
+                PrecioVentaFinal = l.PrecioVentaFinal,
+                SubtotalFinal = l.SubtotalFinal,
+                Ganancia = l.Ganancia
+            };
+
+        private static VMClienteEntregaLinea MapLineaRecuperadaVm(ClientesEntregasProductosRecuperado l)
+            => new()
+            {
+                Id = l.Id,
+                IdProducto = l.IdProducto,
+                TipoMovimiento = ClientesEntregasRepository.TIPO_LINEA_RECUPERADO,
+                Producto = l.IdProductoNavigation?.Nombre ?? "",
+                Medida = l.IdProductoNavigation?.IdMedidaNavigation?.Nombre,
+                Cantidad = l.Cantidad,
+                PrecioVenta = l.PrecioVenta,
+                CostoUnitario = l.CostoUnitario,
+                PorcDescuento = l.PorcDescuento,
+                PorcIva = l.PorcIva,
+                DescUnitario = l.DescUnitario,
+                DescTotal = l.DescTotal,
+                PrecioVentacDesc = l.PrecioVentacDesc,
+                SubtotalcDesc = l.SubtotalcDesc,
+                IvaUnitario = l.Ivaunitario,
+                TotalIva = l.TotalIva,
+                PrecioVentaFinal = l.PrecioVentaFinal,
+                SubtotalFinal = l.SubtotalFinal,
+                Ganancia = l.Ganancia
+            };
 
         private static List<EntregaCobroRegistrar> MapCobros(List<VMClienteEntregaCobroRegistrar>? cobros)
         {

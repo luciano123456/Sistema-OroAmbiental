@@ -595,6 +595,29 @@ table.fixedHeader-locked thead tr.filters {
 }
 
 #sec-productos .vn-gridtable.d-none,
+#sec-recuperados .vn-gridtable.d-none,
 #sec-cobros .vn-gridtable.d-none {
     display: none !important;
+}
+
+/* Pestaña productos recuperados en entrega */
+.entregas-nuevo .vn-section-recuperados .vn-subtitle-rec {
+    background: rgba(62, 207, 142, 0.15);
+    color: #7dffb8;
+}
+
+.entregas-nuevo .vn-agregar-wrap--rec .vn-agregar-arrow {
+    color: #7dffb8;
+}
+
+.entregas-nuevo .vn-table-recuperados thead th {
+    color: #9edfc0;
+}
+
+.entregas-nuevo .vn-empty-recuperados {
+    border-color: rgba(62, 207, 142, 0.2);
+}
+
+.entregas-nuevo .vn-empty-recuperados i {
+    color: #7dffb8;
 }
