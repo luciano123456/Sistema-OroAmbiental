@@ -85,15 +85,6 @@
     $(document).ready(async () => {
         CM.id = Number(CM.init.id || 0);
 
-        const modalContratoEl = document.querySelector("[data-contrato-modal]");
-        if (modalContratoEl && typeof ContratoModal !== "undefined" && !window.contratoModal) {
-            window.contratoModal = new ContratoModal(modalContratoEl, {
-                token: token || "",
-                onSaved: async () => { await cargarContratoesEntrega(); }
-            });
-            window.nuevoContrato = (idCliente, idEst) => window.contratoModal?.abrirNuevo(idCliente, idEst);
-        }
-
         initTabsEntrega();
         wireEventosEntrega();
         initModalesAtajos();
@@ -108,8 +99,9 @@
         } else {
             setModoNuevo();
             if (CM.init.idContrato) {
-                $("#cContrato").val(String(CM.init.idContrato)).trigger("change.select2");
-                const c0 = (CM.contratos || []).find(x => x.Id === CM.init.idContrato);
+                const cInit = (CM.contratos || []).find(x => x.Id === CM.init.idContrato);
+                const c0 = cInit ? obtenerContratoRepresentantePorCliente(Number(cInit.IdCliente || 0)) : null;
+                $("#cContrato").val(String(c0?.Id || CM.init.idContrato)).trigger("change.select2");
                 CM.idSucursalCliente = c0 ? Number(c0.IdSucursal || 0) : 0;
             }
             CM.lineas = [];
@@ -154,16 +146,6 @@
         $("#btnGuardarEntrega").on("click", guardarEntrega);
         $("#btnEliminarEntrega").on("click", eliminarEntregaActual);
         $("#btnAgregarLinea").on("click", () => agregarLinea());
-
-        $("#btnCrearContrato").on("click", () => {
-            const idContrato = parseInt($("#cContrato").val(), 10) || 0;
-            const c = (CM.contratos || []).find(x => x.Id === idContrato);
-            if (typeof window.nuevoContrato === "function") {
-                window.nuevoContrato(c?.IdCliente || 0, c?.IdEstablecimiento || 0);
-            } else {
-                window.open("/Contratos/Index", "_blank");
-            }
-        });
 
         $("#btnCrearProducto").on("click", () => {
             window.nuevoProducto?.();
@@ -299,7 +281,7 @@
             erroresDatos.push("Indique la fecha de la entrega.");
         }
         if (!(parseInt($("#cContrato").val(), 10) > 0)) {
-            erroresDatos.push("Seleccione un contrato.");
+            erroresDatos.push("Seleccione un cliente.");
         }
         const lineasConProducto = CM.lineas.filter(l => l.IdProducto > 0);
 
@@ -392,17 +374,6 @@
     }
 
     function initModalesAtajos() {
-        if (typeof initContratoModal === "function") {
-            initContratoModal({
-                token: token,
-                onSaved: async (data) => {
-                    await cargarContratoesEntrega();
-                    const id = data?.id ?? data?.Id;
-                    if (id) $("#cContrato").val(String(id)).trigger("change.select2");
-                }
-            });
-        }
-
         if (typeof initProductoModal === "function") {
             initProductoModal({
                 token: token,
@@ -451,20 +422,43 @@
         CM.contratos = r.ok ? await r.json() : [];
 
         const $p = $("#cContrato");
-        const val = $p.val();
-        $p.empty().append(`<option value="">Seleccionar</option>`);
-        CM.contratos.forEach(x => {
-            $p.append(`<option value="${x.Id}">${x.Etiqueta || x.Cliente}</option>`);
+        const valContratoActual = parseInt($p.val(), 10) || 0;
+        const contratoActual = (CM.contratos || []).find(x => x.Id === valContratoActual);
+        const idClienteActual = Number(contratoActual?.IdCliente || 0);
+
+        const porCliente = new Map();
+        (CM.contratos || []).forEach(c => {
+            const idCli = Number(c.IdCliente || 0);
+            if (idCli <= 0) return;
+            if (!porCliente.has(idCli)) {
+                porCliente.set(idCli, c);
+            }
         });
-        if (val) $p.val(val);
+        const opcionesCliente = Array.from(porCliente.values())
+            .sort((a, b) => String(a.Cliente || "").localeCompare(String(b.Cliente || "")));
+
+        $p.empty().append(`<option value="">Seleccionar</option>`);
+        opcionesCliente.forEach(x => {
+            $p.append(`<option value="${x.Id}">${x.Cliente || x.Etiqueta || ("Cliente #" + x.IdCliente)}</option>`);
+        });
+        if (idClienteActual > 0) {
+            const rep = obtenerContratoRepresentantePorCliente(idClienteActual);
+            if (rep) $p.val(String(rep.Id));
+        }
         initSelectContratoHeader();
+    }
+
+    function obtenerContratoRepresentantePorCliente(idCliente) {
+        const idCli = Number(idCliente || 0);
+        if (idCli <= 0) return null;
+        return (CM.contratos || []).find(x => Number(x.IdCliente || 0) === idCli) || null;
     }
 
     function initSelectContratoHeader() {
         const $p = $("#cContrato");
         if (!$p.length) return;
         ensureSelect2Cm($p, {
-            placeholder: "Seleccionar contrato",
+            placeholder: "Seleccionar cliente",
             dropdownParent: $(".entregas-nuevo")
         });
     }
@@ -530,8 +524,11 @@
         $("#cNota").val(d.NotaInterna || "");
         $("#cNotaCliente").val(d.NotaCliente || "");
 
-        $("#cContrato").val(String(d.IdContrato)).trigger("change.select2");
-        CM.idSucursalCliente = Number(d.IdSucursal || 0);
+        const contratoReal = (CM.contratos || []).find(x => x.Id === d.IdContrato);
+        const idCliente = Number(d.IdCliente || contratoReal?.IdCliente || 0);
+        const contratoRepresentante = obtenerContratoRepresentantePorCliente(idCliente);
+        $("#cContrato").val(String(contratoRepresentante?.Id || d.IdContrato)).trigger("change.select2");
+        CM.idSucursalCliente = Number(d.IdSucursal || contratoRepresentante?.IdSucursal || 0);
         if (d.IdEstado) $("#cEstado").val(String(d.IdEstado)).trigger("change.select2");
 
         CM.lineas = (d.Lineas || []).map(l => ({
@@ -556,7 +553,7 @@
 
     function aplicarSoloLectura() {
         $("#btnGuardarEntrega").prop("disabled", true);
-        $("#btnAgregarLinea, #btnCrearProducto, #btnCrearContrato, #btnAtajoEstadoEntrega").prop("hidden", true);
+        $("#btnAgregarLinea, #btnCrearProducto, #btnAtajoEstadoEntrega").prop("hidden", true);
         $("#cFecha, #cNota").prop("disabled", true);
         $("#cContrato, #cEstado").prop("disabled", true);
         $("#tbodyLineasEntrega input, #tbodyLineasEntrega select").prop("disabled", true);
@@ -569,7 +566,7 @@
     function restaurarEdicionEntrega() {
         $("#btnGuardarEntrega").prop("disabled", false);
         $("#lblGuardarEntrega").text("Guardar cambios");
-        $("#btnAgregarLinea, #btnCrearProducto, #btnCrearContrato, #btnAtajoEstadoEntrega").prop("hidden", false);
+        $("#btnAgregarLinea, #btnCrearProducto, #btnAtajoEstadoEntrega").prop("hidden", false);
         $("#cFecha, #cNota").prop("disabled", false);
         $("#cContrato, #cEstado").prop("disabled", false);
         $("#tbodyLineasEntrega input, #tbodyLineasEntrega select").prop("disabled", false);
