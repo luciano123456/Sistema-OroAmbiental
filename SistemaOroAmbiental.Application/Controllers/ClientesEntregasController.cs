@@ -110,6 +110,7 @@ namespace SistemaOroAmbiental.Application.Controllers
                     {
                         Id = l.Id,
                         IdProducto = l.IdProducto,
+                        TipoMovimiento = l.TipoMovimiento,
                         Producto = l.IdProductoNavigation?.Nombre ?? "",
                         Medida = l.IdProductoNavigation?.IdMedidaNavigation?.Nombre,
                         Cantidad = l.Cantidad,
@@ -237,6 +238,7 @@ namespace SistemaOroAmbiental.Application.Controllers
                 {
                     Id = x.Id,
                     IdProducto = x.IdProducto,
+                    TipoMovimiento = x.TipoMovimiento is 2 ? 2 : 1,
                     Cantidad = x.Cantidad,
                     PrecioVenta = x.PrecioVenta,
                     CostoUnitario = x.CostoUnitario,

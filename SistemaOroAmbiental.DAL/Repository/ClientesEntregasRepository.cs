@@ -6,6 +6,9 @@ namespace SistemaOroAmbiental.DAL.Repository
 {
     public class ClientesEntregasRepository : IClientesEntregasRepository
     {
+        public const int TIPO_LINEA_ENTREGA = 1;
+        public const int TIPO_LINEA_RETIRO = 2;
+
         private readonly SistemaOroAmbientalContext _db;
         private readonly IClientesCuentaCorrienteRepository _ccRepo;
         private readonly IInventarioRepository _invRepo;
@@ -107,13 +110,19 @@ namespace SistemaOroAmbiental.DAL.Repository
             linea.Ganancia = Math.Round(linea.SubtotalcDesc - linea.SubtotalCosto, 2);
         }
 
+        private static bool EsRetiro(ClientesEntregasProducto linea)
+            => (linea?.TipoMovimiento ?? TIPO_LINEA_ENTREGA) == TIPO_LINEA_RETIRO;
+
+        private static decimal SignoLinea(ClientesEntregasProducto linea)
+            => EsRetiro(linea) ? -1m : 1m;
+
         public static void RecalcularTotalesEntrega(ClientesEntrega entrega, IEnumerable<ClientesEntregasProducto> lineas)
         {
             var lista = lineas.ToList();
-            entrega.Subtotal = lista.Sum(x => x.SubtotalcDesc);
-            entrega.Descuentos = lista.Sum(x => x.DescTotal);
-            entrega.TotalIva = lista.Sum(x => x.TotalIva);
-            entrega.ImporteTotal = lista.Sum(x => x.SubtotalFinal);
+            entrega.Subtotal = lista.Sum(x => SignoLinea(x) * x.SubtotalcDesc);
+            entrega.Descuentos = lista.Sum(x => SignoLinea(x) * x.DescTotal);
+            entrega.TotalIva = lista.Sum(x => SignoLinea(x) * x.TotalIva);
+            entrega.ImporteTotal = lista.Sum(x => SignoLinea(x) * x.SubtotalFinal);
         }
 
         private async Task<(int idCliente, int idSucursal)> ResolverClienteYSucursal(int idContrato)
@@ -136,7 +145,8 @@ namespace SistemaOroAmbiental.DAL.Repository
             var inv = await _invRepo.ObtenerOCrearInventario(idSucursal, linea.IdProducto);
             var producto = await _db.Productos.FirstAsync(x => x.Id == linea.IdProducto);
 
-            if (inv.Stock < linea.Cantidad)
+            var esRetiro = EsRetiro(linea);
+            if (!esRetiro && inv.Stock < linea.Cantidad)
                 throw new InvalidOperationException(
                     $"Stock insuficiente para {producto.Nombre} (disponible: {inv.Stock:N2}).");
 
@@ -146,15 +156,15 @@ namespace SistemaOroAmbiental.DAL.Repository
                 TipoMovimiento = InventarioRepository.TIPO_ENTREGA,
                 IdMovimiento = idEntrega,
                 Fecha = fecha,
-                Concepto = $"Entrega #{idEntrega} - {producto.Nombre}",
-                Entrada = 0,
-                Salida = linea.Cantidad,
+                Concepto = $"{(esRetiro ? "Retiro" : "Entrega")} #{idEntrega} - {producto.Nombre}",
+                Entrada = esRetiro ? linea.Cantidad : 0,
+                Salida = esRetiro ? 0 : linea.Cantidad,
                 IdUsuarioRegistra = idUsuario,
                 FechaUsuarioRegistra = ahora
             };
 
             _db.InventarioMovimientos.Add(mov);
-            inv.Stock -= linea.Cantidad;
+            inv.Stock += esRetiro ? linea.Cantidad : -linea.Cantidad;
             if (inv.Stock < 0) inv.Stock = 0;
 
             await _db.SaveChangesAsync();
@@ -173,6 +183,8 @@ namespace SistemaOroAmbiental.DAL.Repository
             {
                 var inv = mov.IdInventarioNavigation;
                 inv.Stock += mov.Salida;
+                inv.Stock -= mov.Entrada;
+                if (inv.Stock < 0) inv.Stock = 0;
                 _db.InventarioMovimientos.Remove(mov);
             }
 
@@ -194,14 +206,14 @@ namespace SistemaOroAmbiental.DAL.Repository
                 IdMovimiento = entrega.Id,
                 Fecha = entrega.Fecha,
                 Concepto = $"Entrega #{entrega.Id} - {cliente.Nombre}",
-                Debe = entrega.ImporteTotal,
-                Haber = 0,
+                Debe = entrega.ImporteTotal >= 0 ? entrega.ImporteTotal : 0,
+                Haber = entrega.ImporteTotal < 0 ? Math.Abs(entrega.ImporteTotal) : 0,
                 IdUsuarioRegistra = idUsuario,
                 FechaUsuarioRegistra = ahora
             };
 
             _db.ClientesCuentaCorrienteMovimientos.Add(movCc);
-            cc.Saldo += entrega.ImporteTotal;
+            cc.Saldo += (movCc.Debe - movCc.Haber);
             entrega.IdCuentaCorriente = cc.Id;
         }
 
@@ -250,7 +262,10 @@ namespace SistemaOroAmbiental.DAL.Repository
                 cobros ??= new List<EntregaCobroRegistrar>();
 
                 foreach (var l in lineas)
+                {
+                    l.TipoMovimiento = l.TipoMovimiento == TIPO_LINEA_RETIRO ? TIPO_LINEA_RETIRO : TIPO_LINEA_ENTREGA;
                     RecalcularLinea(l);
+                }
 
                 RecalcularTotalesEntrega(entrega, lineas);
                 entrega.ImporteAbonado = 0;
@@ -348,7 +363,10 @@ namespace SistemaOroAmbiental.DAL.Repository
                 await _db.SaveChangesAsync();
 
                 foreach (var l in lineas)
+                {
+                    l.TipoMovimiento = l.TipoMovimiento == TIPO_LINEA_RETIRO ? TIPO_LINEA_RETIRO : TIPO_LINEA_ENTREGA;
                     RecalcularLinea(l);
+                }
 
                 entity.Fecha = entrega.Fecha;
                 entity.IdContrato = entrega.IdContrato;

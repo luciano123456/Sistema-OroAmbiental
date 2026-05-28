@@ -35,6 +35,7 @@ namespace SistemaOroAmbiental.Application.Models.ViewModels
     {
         public int Id { get; set; }
         public int IdProducto { get; set; }
+        public int TipoMovimiento { get; set; } = 1; // 1=Entrega, 2=Retiro
         public string Producto { get; set; } = "";
         public string? Medida { get; set; }
         public decimal Cantidad { get; set; }
@@ -95,6 +96,7 @@ namespace SistemaOroAmbiental.Application.Models.ViewModels
     {
         public int Id { get; set; }
         public int IdProducto { get; set; }
+        public int TipoMovimiento { get; set; } = 1; // 1=Entrega, 2=Retiro
         public decimal Cantidad { get; set; }
         public decimal PrecioVenta { get; set; }
         public decimal CostoUnitario { get; set; }

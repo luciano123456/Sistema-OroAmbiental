@@ -35,6 +35,9 @@
         cuentas: "/Cuentas/Lista"
     };
 
+    const TIPO_LINEA_ENTREGA = 1;
+    const TIPO_LINEA_RETIRO = 2;
+
     const authHeaders = () => ({
         Authorization: "Bearer " + (token || ""),
         "Content-Type": "application/json"
@@ -535,6 +538,7 @@
             _key: CM.nextLineId++,
             Id: l.Id,
             IdProducto: l.IdProducto,
+            TipoMovimiento: Number(l.TipoMovimiento || TIPO_LINEA_ENTREGA),
             Cantidad: Number(l.Cantidad || 0),
             PrecioVenta: Number(l.PrecioVenta || 0),
             CostoUnitario: Number(l.CostoUnitario || 0),
@@ -853,6 +857,7 @@
             _key: CM.nextLineId++,
             Id: 0,
             IdProducto: 0,
+            TipoMovimiento: TIPO_LINEA_ENTREGA,
             Cantidad: 1,
             PrecioVenta: 0,
             PorcDescuento: 0,
@@ -876,7 +881,7 @@
         const ids = new Set();
         CM.lineas.forEach(l => {
             if (l._key !== excluirKey && l.IdProducto > 0) {
-                ids.add(l.IdProducto);
+                ids.add(`${l.IdProducto}_${Number(l.TipoMovimiento || TIPO_LINEA_ENTREGA)}`);
             }
         });
         return ids;
@@ -884,8 +889,9 @@
 
     function htmlOpcionesProducto(linea) {
         const usados = idsProductosEnOtrasLineas(linea._key);
+        const tipo = Number(linea.TipoMovimiento || TIPO_LINEA_ENTREGA);
         return (CM.productos || [])
-            .filter(p => !usados.has(p.Id) || p.Id === linea.IdProducto)
+            .filter(p => !usados.has(`${p.Id}_${tipo}`) || p.Id === linea.IdProducto)
             .map(p =>
                 `<option value="${p.Id}" ${String(p.Id) === String(linea.IdProducto) ? "selected" : ""}>${p.Nombre}</option>`
             )
@@ -928,11 +934,17 @@
                             ${prodOpts}
                         </select>
                     </td>
+                    <td>
+                        <select class="form-select vn-input vn-mini linea-tipo">
+                            <option value="${TIPO_LINEA_ENTREGA}" ${Number(linea.TipoMovimiento || TIPO_LINEA_ENTREGA) === TIPO_LINEA_ENTREGA ? "selected" : ""}>Entrega</option>
+                            <option value="${TIPO_LINEA_RETIRO}" ${Number(linea.TipoMovimiento || TIPO_LINEA_ENTREGA) === TIPO_LINEA_RETIRO ? "selected" : ""}>Retiro</option>
+                        </select>
+                    </td>
                     <td><input type="text" inputmode="decimal" autocomplete="off" class="form-control vn-input vn-mini Inputmiles linea-cant" value="${fmtInputNum(linea.Cantidad)}" /></td>
                     <td><input type="text" inputmode="decimal" autocomplete="off" class="form-control vn-input vn-mini Inputmiles linea-precio" value="${fmtInputNum(linea.PrecioVenta)}" /></td>
                     <td><input type="text" inputmode="decimal" autocomplete="off" class="form-control vn-input vn-mini Inputmiles linea-desc" value="${fmtInputNum(linea.PorcDescuento)}" /></td>
                     <td><input type="text" inputmode="decimal" autocomplete="off" class="form-control vn-input vn-mini Inputmiles linea-iva" value="${fmtInputNum(linea.PorcIva)}" /></td>
-                    <td class="text-end linea-subtotal-cell linea-subtotal">${fmtMoney(calc.subtotalFinal)}</td>
+                    <td class="text-end linea-subtotal-cell linea-subtotal">${fmtMoney(calc.signedSubtotalFinal)}</td>
                     <td class="text-center">
                         <button type="button" class="btn btn-outline-danger btn-quitar-linea" title="Quitar">
                             <i class="fa fa-trash"></i>
@@ -945,7 +957,14 @@
             prepararInputsMilesLinea(tr);
 
             const $sel = tr.find(".linea-producto");
+            const $tipo = tr.find(".linea-tipo");
             ensureSelect2Cm($sel, { placeholder: "Producto", dropdownParent: $(".entregas-nuevo") });
+
+            $tipo.on("change", function () {
+                linea.TipoMovimiento = parseInt($(this).val(), 10) || TIPO_LINEA_ENTREGA;
+                syncLineaFromRow(tr, linea);
+                recalcularTotalesUI();
+            });
 
             $sel.on("change", function () {
                 linea.IdProducto = parseInt($(this).val(), 10) || 0;
@@ -958,27 +977,34 @@
                     linea.CostoUnitario = Number(prod.CostoUnitario || 0);
                 }
                 syncLineaFromRow(tr, linea);
-                tr.find(".linea-subtotal").text(fmtMoney(calcularLinea(linea).subtotalFinal));
+                tr.find(".linea-subtotal").text(fmtMoney(calcularLinea(linea).signedSubtotalFinal));
                 recalcularTotalesUI();
-                refrescarSelectsProducto();
             });
 
             tr.find(".linea-cant, .linea-precio, .linea-desc, .linea-iva").on("input change", function () {
                 syncLineaFromRow(tr, linea);
-                tr.find(".linea-subtotal").text(fmtMoney(calcularLinea(linea).subtotalFinal));
+                tr.find(".linea-subtotal").text(fmtMoney(calcularLinea(linea).signedSubtotalFinal));
                 recalcularTotalesUI();
             });
 
             tr.find(".btn-quitar-linea").on("click", () => quitarLinea(k));
         });
 
-        const usados = new Set(CM.lineas.filter(l => l.IdProducto > 0).map(l => l.IdProducto));
-        const quedan = (CM.productos || []).some(p => !usados.has(p.Id));
+        const usados = new Set(
+            CM.lineas
+                .filter(l => l.IdProducto > 0)
+                .map(l => `${l.IdProducto}_${Number(l.TipoMovimiento || TIPO_LINEA_ENTREGA)}`)
+        );
+        const quedan = (CM.productos || []).some(p => (
+            !usados.has(`${p.Id}_${TIPO_LINEA_ENTREGA}`) ||
+            !usados.has(`${p.Id}_${TIPO_LINEA_RETIRO}`)
+        ));
         $("#btnAgregarLinea").prop("disabled", CM.soloLectura || !quedan);
         actualizarUIEstadoVaciosEntrega();
     }
 
     function syncLineaFromRow($tr, linea) {
+        linea.TipoMovimiento = parseInt($tr.find(".linea-tipo").val(), 10) || TIPO_LINEA_ENTREGA;
         linea.Cantidad = leerNum($tr.find(".linea-cant").val());
         linea.PrecioVenta = leerNum($tr.find(".linea-precio").val());
         linea.PorcDescuento = leerNum($tr.find(".linea-desc").val());
@@ -998,12 +1024,18 @@
         const ivaUnit = costoCdesc * porcIva / 100;
         const ivaTotal = ivaUnit * cant;
         const subtotalFinal = subtotalCdesc + ivaTotal;
+        const signo = Number(linea.TipoMovimiento || TIPO_LINEA_ENTREGA) === TIPO_LINEA_RETIRO ? -1 : 1;
 
         return {
             descTotal: descUnit * cant,
             subtotalCdesc,
             ivaTotal,
-            subtotalFinal
+            subtotalFinal,
+            signo,
+            signedSubtotalcDesc: subtotalCdesc * signo,
+            signedDescTotal: (descUnit * cant) * signo,
+            signedIvaTotal: ivaTotal * signo,
+            signedSubtotalFinal: subtotalFinal * signo
         };
     }
 
@@ -1012,10 +1044,10 @@
 
         CM.lineas.forEach(l => {
             const c = calcularLinea(l);
-            sub += c.subtotalCdesc;
-            desc += c.descTotal;
-            iva += c.ivaTotal;
-            tot += c.subtotalFinal;
+            sub += c.signedSubtotalcDesc;
+            desc += c.signedDescTotal;
+            iva += c.signedIvaTotal;
+            tot += c.signedSubtotalFinal;
         });
 
         $("#totSubtotal").text(fmtMoney(sub));
@@ -1036,6 +1068,7 @@
             Lineas: CM.lineas.map(l => ({
                 Id: l.Id || 0,
                 IdProducto: l.IdProducto,
+                TipoMovimiento: Number(l.TipoMovimiento || TIPO_LINEA_ENTREGA),
                 Cantidad: l.Cantidad,
                 PrecioVenta: l.PrecioVenta,
                 CostoUnitario: l.CostoUnitario || 0,

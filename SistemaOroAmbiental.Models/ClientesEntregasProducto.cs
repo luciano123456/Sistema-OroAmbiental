@@ -11,6 +11,8 @@ public partial class ClientesEntregasProducto
 
     public int IdProducto { get; set; }
 
+    public int TipoMovimiento { get; set; }
+
     public decimal Cantidad { get; set; }
 
     public decimal PrecioVenta { get; set; }

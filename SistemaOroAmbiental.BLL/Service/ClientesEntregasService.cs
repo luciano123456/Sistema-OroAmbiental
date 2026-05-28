@@ -156,7 +156,7 @@ namespace SistemaOroAmbiental.BLL.Service
                 return false;
             }
 
-            var productos = new HashSet<int>();
+            var productos = new HashSet<string>();
 
             foreach (var l in lineas)
             {
@@ -166,9 +166,16 @@ namespace SistemaOroAmbiental.BLL.Service
                     return false;
                 }
 
-                if (!productos.Add(l.IdProducto))
+                var keyProducto = $"{l.IdProducto}_{(l.TipoMovimiento is 2 ? 2 : 1)}";
+                if (!productos.Add(keyProducto))
                 {
-                    error = "No puede repetir el mismo producto en la entrega.";
+                    error = "No puede repetir el mismo producto con el mismo tipo en la entrega.";
+                    return false;
+                }
+
+                if (l.TipoMovimiento is not 1 and not 2)
+                {
+                    error = "Tipo de movimiento inválido en una línea de producto.";
                     return false;
                 }
 
