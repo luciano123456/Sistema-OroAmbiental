@@ -10,6 +10,10 @@ const columnConfig = [
     { index: 7, filterType: 'text' }
 ];
 
+registrarFiltrosGrilla('grd_Proveedores', columnConfig, {
+    initSelect2: ($el) => inicializarSelect2Filtro($el)
+});
+
 $(document).ready(() => {
 
     proveedorModal = typeof initProveedorModal === "function"
@@ -115,61 +119,9 @@ async function configurarDataTable(data) {
             fixedHeader: true,
             initComplete: async function () {
                 const api = this.api();
-                inicializarFilaFiltrosGrilla(api, '#grd_Proveedores');
-                finalizarFiltrosGridLista(api, '#grd_Proveedores');
-
-                for (const config of columnConfig) {
-                    const cell = celdasFiltroGrilla('#grd_Proveedores').eq(config.index);
-                    if (!cell.length) continue;
-                    cell.empty();
-
-                    if (config.filterType === 'select') {
-                        const $select = $(`
-                            <select class="rp-filter-select" style="width:100%">
-                                <option value="">Todos</option>
-                            </select>
-                        `).appendTo(cell);
-
-                        const datos = await config.fetchDataFunc();
-                        (datos || []).forEach(item => {
-                            $select.append(`<option value="${item.Id}">${item.Nombre}</option>`);
-                        });
-
-                        inicializarSelect2Filtro($select);
-
-                        $select.on('select2:clear', function () {
-                            api.column(config.index).search('').draw(false);
-                        });
-
-                        $select.on('change', function () {
-                            const value = $(this).val();
-                            if (!value) {
-                                api.column(config.index).search('').draw(false);
-                                return;
-                            }
-                            const text = $(this).find('option:selected').text();
-                            api.column(config.index)
-                                .search('^' + escapeRegex(text) + '$', true, false)
-                                .draw(false);
-                        });
-                    } else {
-                        $('<input class="rp-filter-input" type="text" placeholder="Buscar...">')
-                            .appendTo(cell)
-                            .on('keyup change', function () {
-                                api.column(config.index).search(this.value).draw(false);
-                            });
-                    }
-                }
-
-                finalizarFiltrosGridLista(api, '#grd_Proveedores');
-
-                const idxActivo = typeof indiceColumnaActivoGrilla === "function"
-                    ? indiceColumnaActivoGrilla(api)
-                    : api.columns().count() - 1;
-                if (typeof inicializarFiltroActivoGrilla === "function") {
-                    inicializarFiltroActivoGrilla(api, '#grd_Proveedores', idxActivo);
-                }
-
+                await armarFiltrosGrillaLista(api, '#grd_Proveedores', columnConfig, {
+                    initSelect2: ($el) => inicializarSelect2Filtro($el)
+                });
                 configurarOpcionesColumnas();
                 actualizarKpis(data);
                 api.draw(false);

@@ -1,0 +1,10 @@
+/* Camiones — estilos mínimos de página */
+
+.camiones-badge {
+    background: linear-gradient(135deg, rgba(56, 189, 248, 0.35), rgba(14, 116, 144, 0.45));
+    border-color: rgba(56, 189, 248, 0.4);
+}
+
+.camiones-badge .fa {
+    color: #7dd3fc;
+}

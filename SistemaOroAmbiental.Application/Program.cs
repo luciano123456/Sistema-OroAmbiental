@@ -45,6 +45,9 @@ builder.Services.AddScoped<IUsuariosPermisosService, UsuariosPermisosService>();
 builder.Services.AddScoped<IClientesRepository, ClientesRepository>();
 builder.Services.AddScoped<IClientesService, ClientesService>();
 
+builder.Services.AddScoped<IClientesOperativoRepository, ClientesOperativoRepository>();
+builder.Services.AddScoped<IClientesOperativoService, ClientesOperativoService>();
+
 builder.Services.AddScoped<IClientesContactosRepository, ClientesContactosRepository>();
 builder.Services.AddScoped<IClientesContactosService, ClientesContactosService>();
 
@@ -81,6 +84,12 @@ builder.Services.AddScoped<IProductosCategoriasService, ProductosCategoriasServi
 builder.Services.AddScoped<IProvinciasRepository, ProvinciasRepository>();
 builder.Services.AddScoped<IProvinciasService, ProvinciasService>();
 
+builder.Services.AddScoped<IPartidosRepository, PartidosRepository>();
+builder.Services.AddScoped<IPartidosService, PartidosService>();
+
+builder.Services.AddScoped<ILocalidadesRepository, LocalidadesRepository>();
+builder.Services.AddScoped<ILocalidadesService, LocalidadesService>();
+
 builder.Services.AddScoped<ICondicionesIvaRepository, CondicionesIvaRepository>();
 builder.Services.AddScoped<ICondicionesIvaService, CondicionesIvaService>();
 
@@ -110,6 +119,12 @@ builder.Services.AddScoped<IProductosPreciosService, ProductosPreciosService>();
 
 builder.Services.AddScoped<IProductosRepository, ProductosRepository>();
 builder.Services.AddScoped<IProductosService, ProductosService>();
+
+builder.Services.AddScoped<ICamionesRepository, CamionesRepository>();
+builder.Services.AddScoped<ICamionesService, CamionesService>();
+
+builder.Services.AddScoped<IRecorridosRepository, RecorridosRepository>();
+builder.Services.AddScoped<IRecorridosService, RecorridosService>();
 
 builder.Services.AddScoped<IProveedoresRepository, ProveedoresRepository>();
 builder.Services.AddScoped<IProveedoresService, ProveedoresService>();
@@ -149,6 +164,9 @@ builder.Services.AddScoped<IProductosRecuperadosService, ProductosRecuperadosSer
 
 builder.Services.AddScoped<IGastosRepository, GastosRepository>();
 builder.Services.AddScoped<IGastosService, GastosService>();
+
+builder.Services.AddScoped<ILibroDiarioRepository, LibroDiarioRepository>();
+builder.Services.AddScoped<ILibroDiarioService, LibroDiarioService>();
 
 var sessionSettings = new SessionSettings();
 builder.Configuration.GetSection("SessionSettings").Bind(sessionSettings);

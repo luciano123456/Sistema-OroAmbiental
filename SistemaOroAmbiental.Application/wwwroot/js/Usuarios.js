@@ -23,6 +23,11 @@ const columnConfig = [
     { index: 10, filterType: 'text' }
 ];
 
+registrarFiltrosGrilla('grd_Usuarios', columnConfig, {
+    includeActivo: false,
+    maxColumnIndex: 10
+});
+
 $(document).ready(() => {
     listaUsuarios();
     cargarTodasSucursalesParaAsignar();
@@ -380,55 +385,12 @@ async function configurarDataTable(data) {
             },
             initComplete: async function () {
                 const api = this.api();
-                inicializarFilaFiltrosGrilla(api, '#grd_Usuarios');
-                finalizarFiltrosGridLista(api, '#grd_Usuarios');
-
-                for (const config of columnConfig) {
-                    if (config.index > 10) continue;
-
-                    const cell = celdasFiltroGrilla('#grd_Usuarios').eq(config.index);
-
-                    if (config.filterType === 'select') {
-                        const select = $(`<select class="rp-filter-select" id="filter${config.index}">
-                                            <option value="">Todos</option>
-                                          </select>`)
-                            .appendTo(cell.empty())
-                            .on('change', async function () {
-                                const val = $(this).val();
-                                const selectedText = $(this).find('option:selected').text();
-
-                                await api.column(config.index)
-                                    .search(val ? '^' + selectedText + '$' : '', true, false)
-                                    .draw();
-                            });
-
-                        const datos = await config.fetchDataFunc();
-                        (datos || []).forEach(item => {
-                            select.append(`<option value="${item.Id}">${item.Nombre}</option>`);
-                        });
-
-                    } else {
-                        const input = $(`<input class="rp-filter-input" type="text" placeholder="Buscar...">`)
-                            .appendTo(cell.empty())
-                            .off('keyup change')
-                            .on('keyup change', function (e) {
-                                e.stopPropagation();
-                                const cursorPosition = this.selectionStart;
-
-                                api.column(config.index)
-                                    .search(this.value ? this.value : '', true, false)
-                                    .draw();
-
-                                this.setSelectionRange(cursorPosition, cursorPosition);
-                            });
-                    }
-                }
-
-                finalizarFiltrosGridLista(api, '#grd_Usuarios');
+                await armarFiltrosGrillaLista(api, '#grd_Usuarios', columnConfig, {
+                    includeActivo: false,
+                    maxColumnIndex: 10
+                });
                 configurarOpcionesColumnas();
-
                 setTimeout(() => gridUsuarios.columns.adjust(), 10);
-
                 actualizarKpis(data);
             }
         });

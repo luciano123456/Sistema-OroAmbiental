@@ -20,7 +20,7 @@ namespace SistemaOroAmbiental.DAL.Repository
             _db = context;
         }
 
-        public async Task<List<(Producto producto, Inventario? inventario)>> ListarProductos(
+        public async Task<List<(Producto producto, Inventario? inventario, decimal stockRecuperado)>> ListarProductos(
             int idSucursal,
             string? buscar,
             bool soloBajoMinimo,
@@ -45,10 +45,16 @@ namespace SistemaOroAmbiental.DAL.Repository
                 .Where(x => x.IdSucursal == idSucursal)
                 .ToDictionaryAsync(x => x.IdProducto);
 
+            var inventariosRecuperados = await _db.InventarioRecuperados
+                .AsNoTracking()
+                .Where(x => x.IdSucursal == idSucursal)
+                .ToDictionaryAsync(x => x.IdProducto);
+
             var lista = productos
                 .Select(p => (
                     producto: p,
-                    inventario: inventarios.TryGetValue(p.Id, out var inv) ? inv : null
+                    inventario: inventarios.TryGetValue(p.Id, out var inv) ? inv : null,
+                    stockRecuperado: inventariosRecuperados.TryGetValue(p.Id, out var invR) ? invR.Stock : 0m
                 ))
                 .ToList();
 

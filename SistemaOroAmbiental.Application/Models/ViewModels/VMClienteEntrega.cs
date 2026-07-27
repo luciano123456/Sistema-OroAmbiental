@@ -66,6 +66,8 @@ namespace SistemaOroAmbiental.Application.Models.ViewModels
         public string Sucursal { get; set; } = "";
         public int? IdEstado { get; set; }
         public string? Estado { get; set; }
+        public int? IdCamion { get; set; }
+        public string? Camion { get; set; }
         public string? NotaInterna { get; set; }
         public string? NotaCliente { get; set; }
         public decimal Subtotal { get; set; }
@@ -90,6 +92,7 @@ namespace SistemaOroAmbiental.Application.Models.ViewModels
         public int IdCliente { get; set; }
         public int? IdContrato { get; set; }
         public int? IdEstado { get; set; }
+        public int? IdCamion { get; set; }
         public string? NotaInterna { get; set; }
         public string? NotaCliente { get; set; }
         public List<VMClienteEntregaLineaGuardar> Lineas { get; set; } = new();

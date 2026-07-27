@@ -12,6 +12,11 @@ const columnConfigEst = [
     { index: 9, filterType: 'text' }
 ];
 
+registrarFiltrosGrilla('grd_Establecimientos', columnConfigEst, {
+    includeActivo: false,
+    initSelect2: ($el) => inicializarSelect2FiltroEst($el)
+});
+
 function initModalClienteEstablecimientos() {
     if (typeof initClienteModal !== "function") return;
     initClienteModal({
@@ -141,41 +146,10 @@ async function configurarDataTableEst(data) {
             fixedHeader: true,
             initComplete: async function () {
                 const api = this.api();
-                inicializarFilaFiltrosGrilla(api, "#grd_Establecimientos");
-                finalizarFiltrosGridLista(api, "#grd_Establecimientos");
-
-                for (const config of columnConfigEst) {
-                    const cell = celdasFiltroGrilla("#grd_Establecimientos").eq(config.index);
-                    if (!cell.length) continue;
-                    cell.empty();
-
-                    if (config.filterType === "select") {
-                        const $select = $(`<select class="rp-filter-select" style="width:100%"></select>`).appendTo(cell);
-                        const datos = await config.fetchDataFunc();
-                        $select.append(`<option value="">Todos</option>`);
-                        (datos || []).forEach(item => {
-                            $select.append(`<option value="${item.Id}">${item.Nombre}</option>`);
-                        });
-                        inicializarSelect2FiltroEst($select);
-                        $select.on("select2:clear", () => api.column(config.index).search("").draw(false));
-                        $select.on("change", function () {
-                            const value = $(this).val();
-                            if (!value) {
-                                api.column(config.index).search("").draw(false);
-                                return;
-                            }
-                            const text = $(this).find("option:selected").text();
-                            api.column(config.index).search("^" + escapeRegex(text) + "$", true, false).draw(false);
-                        });
-                    } else {
-                        $('<input class="rp-filter-input" type="text" placeholder="Buscar...">')
-                            .appendTo(cell)
-                            .on("keyup change", function () {
-                                api.column(config.index).search(this.value).draw(false);
-                            });
-                    }
-                }
-                finalizarFiltrosGridLista(api, "#grd_Establecimientos");
+                await armarFiltrosGrillaLista(api, "#grd_Establecimientos", columnConfigEst, {
+                    includeActivo: false,
+                    initSelect2: ($el) => inicializarSelect2FiltroEst($el)
+                });
                 configurarOpcionesColumnasEst();
                 actualizarKpisEst(data);
             }

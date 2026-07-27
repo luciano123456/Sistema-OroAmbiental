@@ -1,4 +1,4 @@
-﻿let listaVacia = false;
+let listaVacia = false;
 let vieneDeModalConfiguraciones = false;
 window.esModoAtajo = false;
 
@@ -115,6 +115,161 @@ function urlListaCatalogoConfig(controller) {
     return `/${controller}/Lista`;
 }
 
+function getPerfilConfigGeo(controller) {
+    switch (controller) {
+        case "Provincias":
+            return { codigo: true };
+        case "Partidos":
+            return { codigo: true, provincia: true };
+        case "Localidades":
+            return { codigo: true, provincia: true, partido: true };
+        default:
+            return null;
+    }
+}
+
+let cacheProvinciasConfigGeo = null;
+let cachePartidosConfigGeo = null;
+
+async function ensureCacheProvinciasConfigGeo() {
+    if (cacheProvinciasConfigGeo) return cacheProvinciasConfigGeo;
+
+    const res = await fetch("/Provincias/Lista", {
+        headers: {
+            Authorization: "Bearer " + token,
+            "Content-Type": "application/json"
+        }
+    });
+    if (!res.ok) throw new Error("Error al cargar provincias");
+
+    cacheProvinciasConfigGeo = await res.json();
+    return cacheProvinciasConfigGeo;
+}
+
+async function ensureCachePartidosConfigGeo() {
+    if (cachePartidosConfigGeo) return cachePartidosConfigGeo;
+
+    const res = await fetch("/Partidos/Lista", {
+        headers: {
+            Authorization: "Bearer " + token,
+            "Content-Type": "application/json"
+        }
+    });
+    if (!res.ok) throw new Error("Error al cargar partidos");
+
+    cachePartidosConfigGeo = await res.json();
+    return cachePartidosConfigGeo;
+}
+
+function nombreProvinciaConfigGeo(idProvincia) {
+    if (!idProvincia) return "";
+    const item = (cacheProvinciasConfigGeo || []).find(x => Number(x.Id) === Number(idProvincia));
+    return item?.Nombre || "";
+}
+
+function nombrePartidoConfigGeo(idPartido) {
+    if (!idPartido) return "";
+    const item = (cachePartidosConfigGeo || []).find(x => Number(x.Id) === Number(idPartido));
+    return item?.Nombre || "";
+}
+
+function formatearNombreConfigGeo(configuracion) {
+    let nombreConfig = configuracion.Nombre || "";
+
+    if (configuracion.Codigo) {
+        nombreConfig = `[${configuracion.Codigo}] ${nombreConfig}`;
+    }
+
+    if (configuracion.NombreCombo) {
+        nombreConfig += " — " + configuracion.NombreCombo;
+        return nombreConfig;
+    }
+
+    const perfil = getPerfilConfigGeo(controllerConfiguracion);
+    if (perfil?.partido) {
+        const partido = nombrePartidoConfigGeo(configuracion.IdPartido);
+        const provincia = nombreProvinciaConfigGeo(configuracion.IdProvincia);
+        const extra = [partido, provincia].filter(Boolean).join(" / ");
+        if (extra) nombreConfig += " — " + extra;
+    } else if (perfil?.provincia) {
+        const provincia = nombreProvinciaConfigGeo(configuracion.IdProvincia);
+        if (provincia) nombreConfig += " — " + provincia;
+    }
+
+    return nombreConfig;
+}
+
+function configurarPanelGeo() {
+    const perfil = getPerfilConfigGeo(controllerConfiguracion);
+    const divCodigo = document.getElementById("divConfiguracionCodigo");
+    const divPartido = document.getElementById("divConfiguracionPartido");
+
+    if (!perfil) {
+        divCodigo?.setAttribute("hidden", "hidden");
+        divPartido?.setAttribute("hidden", "hidden");
+        return;
+    }
+
+    divCodigo?.removeAttribute("hidden");
+    if (perfil.partido) {
+        divPartido?.removeAttribute("hidden");
+    } else {
+        divPartido?.setAttribute("hidden", "hidden");
+    }
+}
+
+async function llenarComboPartidoConfiguracion(idProvincia, selectedId) {
+    const sel = document.getElementById("cmbConfiguracionPartido");
+    if (!sel) return;
+
+    sel.innerHTML = "";
+    sel.add(new Option("Seleccionar", ""));
+
+    if (!idProvincia) return;
+
+    const res = await fetch(`/Partidos/ListaPorProvincia?idProvincia=${idProvincia}`, {
+        headers: {
+            Authorization: "Bearer " + token,
+            "Content-Type": "application/json"
+        }
+    });
+    if (!res.ok) throw new Error("Error al cargar partidos");
+
+    const data = await res.json();
+    (data || []).forEach(item => sel.add(new Option(item.Nombre, item.Id)));
+
+    if (selectedId) sel.value = String(selectedId);
+}
+
+function limpiarCamposGeoConfiguracion() {
+    const txtCodigo = document.getElementById("txtCodigoConfiguracion");
+    const cmbPartido = document.getElementById("cmbConfiguracionPartido");
+
+    if (txtCodigo) txtCodigo.value = "";
+    if (cmbPartido) {
+        cmbPartido.innerHTML = "";
+        cmbPartido.add(new Option("Seleccionar", ""));
+    }
+}
+
+function aplicarPrefillGeoAtajo() {
+    if (!window.esModoAtajo) return;
+
+    const perfil = getPerfilConfigGeo(controllerConfiguracion);
+    if (!perfil) return;
+
+    if (perfil.provincia) {
+        const idProvincia = document.getElementById("cgProvincia")?.value || "";
+        const cmbProvincia = document.getElementById("cmbConfiguracion");
+        if (cmbProvincia && idProvincia) {
+            cmbProvincia.value = idProvincia;
+            if (perfil.partido) {
+                llenarComboPartidoConfiguracion(idProvincia, document.getElementById("cgPartido")?.value || null);
+            }
+        }
+    }
+}
+
 async function listaConfiguracion() {
     const url = urlListaCatalogoConfig(controllerConfiguracion);
     const response = await fetch(url, {
@@ -129,7 +284,10 @@ async function listaConfiguracion() {
     return data.map(configuracion => ({
         Id: configuracion.Id,
         Nombre: configuracion.Nombre,
-        NombreCombo: configuracion.NombreCombo
+        Codigo: configuracion.Codigo,
+        NombreCombo: configuracion.NombreCombo,
+        IdProvincia: configuracion.IdProvincia,
+        IdPartido: configuracion.IdPartido
     }));
 }
 
@@ -163,6 +321,14 @@ async function abrirConfiguracion(
         showModalById("modalConfiguracion");
 
         cancelarModificarConfiguracion();
+        configurarPanelGeo();
+
+        if (getPerfilConfigGeo(controllerConfiguracion)) {
+            await ensureCacheProvinciasConfigGeo();
+            if (controllerConfiguracion === "Localidades") {
+                await ensureCachePartidosConfigGeo();
+            }
+        }
 
         // 🔥 MODO ATAJO
         if (esAtajo) {
@@ -174,6 +340,7 @@ async function abrirConfiguracion(
 
             // abrir directamente en "nuevo"
             agregarConfiguracion();
+            aplicarPrefillGeoAtajo();
 
         } else {
 
@@ -184,7 +351,15 @@ async function abrirConfiguracion(
         }
 
         $('#txtNombreConfiguracion').off('input').on('input', validarCamposConfiguracion);
-        $('#cmbConfiguracion').off('change').on('change', validarCamposConfiguracion);
+        $('#txtCodigoConfiguracion').off('input').on('input', validarCamposConfiguracion);
+        $('#cmbConfiguracion').off('change').on('change', async function () {
+            const perfil = getPerfilConfigGeo(controllerConfiguracion);
+            if (perfil?.partido) {
+                await llenarComboPartidoConfiguracion(this.value, null);
+            }
+            validarCamposConfiguracion();
+        });
+        $('#cmbConfiguracionPartido').off('change').on('change', validarCamposConfiguracion);
         $('#txtBuscarConfiguracion').off('input').on('input', filtrarConfiguraciones);
 
         document.getElementById("modalConfiguracionLabel").innerText =
@@ -198,40 +373,48 @@ async function abrirConfiguracion(
     }
 }
 async function editarConfiguracion(id) {
-    fetch("/" + controllerConfiguracion + "/EditarInfo?id=" + id, {
-        method: "GET",
-        headers: {
-            "Content-Type": "application/json",
-            "Authorization": "Bearer " + token // 👈 tu token aquí
-        }
-    })
-        .then(response => {
-            if (!response.ok) throw new Error("Ha ocurrido un error.");
-            return response.json();
-        })
-        .then(dataJson => {
-            if (dataJson !== null) {
-
-                document.getElementById("btnRegistrarModificarConfiguracion").textContent = "Modificar";
-                document.getElementById("agregarConfiguracion").setAttribute("hidden", "hidden");
-                document.getElementById("txtNombreConfiguracion").value = dataJson.Nombre;
-                document.getElementById("txtIdConfiguracion").value = dataJson.Id;
-
-                document.getElementById("contenedorNombreConfiguracion").removeAttribute("hidden");
-
-                if (comboNombre != null) {
-                    document.getElementById("lblConfiguracionCombo").innerText = lblComboNombre;
-                    document.getElementById("cmbConfiguracion").value = dataJson.IdCombo;
-                }
-
-                validarCamposConfiguracion();
-            } else {
-                throw new Error("Ha ocurrido un error.");
+    try {
+        const response = await fetch("/" + controllerConfiguracion + "/EditarInfo?id=" + id, {
+            method: "GET",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": "Bearer " + token
             }
-        })
-        .catch(error => {
-            errorModal("Ha ocurrido un error.");
         });
+
+        if (!response.ok) throw new Error("Ha ocurrido un error.");
+
+        const dataJson = await response.json();
+        if (dataJson == null) throw new Error("Ha ocurrido un error.");
+
+        document.getElementById("btnRegistrarModificarConfiguracion").textContent = "Modificar";
+        document.getElementById("agregarConfiguracion").setAttribute("hidden", "hidden");
+        document.getElementById("txtNombreConfiguracion").value = dataJson.Nombre || "";
+        document.getElementById("txtIdConfiguracion").value = dataJson.Id;
+        document.getElementById("contenedorNombreConfiguracion").removeAttribute("hidden");
+
+        const perfil = getPerfilConfigGeo(controllerConfiguracion);
+        limpiarCamposGeoConfiguracion();
+
+        if (perfil?.codigo) {
+            document.getElementById("txtCodigoConfiguracion").value = dataJson.Codigo || "";
+        }
+
+        if (perfil?.provincia) {
+            document.getElementById("lblConfiguracionCombo").innerText = lblComboNombre || "Provincia";
+            document.getElementById("cmbConfiguracion").value = dataJson.IdProvincia || "";
+            if (perfil.partido) {
+                await llenarComboPartidoConfiguracion(dataJson.IdProvincia, dataJson.IdPartido);
+            }
+        } else if (comboNombre != null) {
+            document.getElementById("lblConfiguracionCombo").innerText = lblComboNombre;
+            document.getElementById("cmbConfiguracion").value = dataJson.IdCombo || "";
+        }
+
+        validarCamposConfiguracion();
+    } catch (error) {
+        errorModal("Ha ocurrido un error.");
+    }
 }
 
 
@@ -249,10 +432,17 @@ async function llenarConfiguraciones() {
         let configuraciones = await listaConfiguracion();
 
         if (comboNombre != null) {
-            llenarComboConfiguracion();
+            await llenarComboConfiguracion();
             document.getElementById("divConfiguracionCombo").removeAttribute("hidden", "");
         } else {
             document.getElementById("divConfiguracionCombo").setAttribute("hidden", "hidden");
+        }
+
+        if (getPerfilConfigGeo(controllerConfiguracion)) {
+            await ensureCacheProvinciasConfigGeo();
+            if (controllerConfiguracion === "Localidades") {
+                await ensureCachePartidosConfigGeo();
+            }
         }
 
 
@@ -273,11 +463,7 @@ async function llenarConfiguraciones() {
             listaVacia = false;
             configuraciones.forEach((configuracion, index) => {
 
-                let nombreConfig = configuracion.Nombre;
-
-                if (configuracion.NombreCombo != null) {
-                    nombreConfig += " - " + configuracion.NombreCombo;
-                }
+                let nombreConfig = formatearNombreConfigGeo(configuracion);
 
                 var indexado = configuracion.Id
                 $("#configuracion-list").append(`
@@ -343,6 +529,11 @@ async function eliminarConfiguracion(id) {
             if (dataJson.valor) {
                 await llenarConfiguraciones();
 
+                if (getPerfilConfigGeo(controllerConfiguracion)) {
+                    cacheProvinciasConfigGeo = null;
+                    cachePartidosConfigGeo = null;
+                }
+
                 exitoModal(dataJson.mensaje || (nombreConfiguracion + " eliminada correctamente"));
 
                 document.dispatchEvent(new CustomEvent("configuracionActualizada", {
@@ -377,104 +568,154 @@ async function llenarComboConfiguracion() {
 }
 
 function validarCamposConfiguracion() {
-    const nombre = $("#txtNombreConfiguracion").val();
+    const perfil = getPerfilConfigGeo(controllerConfiguracion);
+    const nombre = ($("#txtNombreConfiguracion").val() || "").trim();
     const combo = $("#cmbConfiguracion").val();
 
     const camposValidos = nombre !== "";
-    const selectValido = combo !== "";
+    const selectValido = combo !== "" && combo != null;
 
-    // estilos
     $("#lblNombreConfiguracion").css("color", camposValidos ? "" : "red");
     $("#txtNombreConfiguracion").css("border-color", camposValidos ? "" : "red");
-    $("#cmbConfiguracion").css("border-color", selectValido ? "" : "red");
 
-    // lógica de validación
+    if (comboNombre != null || perfil?.provincia) {
+        $("#cmbConfiguracion").css("border-color", selectValido ? "" : "red");
+    } else {
+        $("#cmbConfiguracion").css("border-color", "");
+    }
+
+    if (perfil?.provincia) {
+        return camposValidos && selectValido;
+    }
+
     if (comboNombre != null) {
         return camposValidos && selectValido;
-    } else {
-        return camposValidos;
     }
+
+    return camposValidos;
 }
 
 
 function guardarCambiosConfiguracion() {
-    if (validarCamposConfiguracion()) {
-        const idConfiguracion = $("#txtIdConfiguracion").val();
-        const idCombo = $("#cmbConfiguracion").val();
-        const nuevoModelo = {
-            "Id": idConfiguracion !== "" ? idConfiguracion : 0,
-            "IdCombo": comboNombre != null ? idCombo : 0,
-            "Nombre": $("#txtNombreConfiguracion").val(),
+    if (!validarCamposConfiguracion()) {
+        errorModal("Debes completar los campos requeridos");
+        return;
+    }
+
+    const idConfiguracion = $("#txtIdConfiguracion").val();
+    const idCombo = $("#cmbConfiguracion").val();
+    const perfil = getPerfilConfigGeo(controllerConfiguracion);
+
+    let nuevoModelo;
+
+    if (perfil) {
+        nuevoModelo = {
+            Id: idConfiguracion !== "" ? Number(idConfiguracion) : 0,
+            Nombre: ($("#txtNombreConfiguracion").val() || "").trim(),
+            Codigo: ($("#txtCodigoConfiguracion").val() || "").trim()
         };
 
-        const url = idConfiguracion === "" ? "/" + controllerConfiguracion + "/Insertar" : "/" + controllerConfiguracion + "/Actualizar";
-        const method = idConfiguracion === "" ? "POST" : "PUT";
+        if (perfil.provincia) {
+            nuevoModelo.IdProvincia = Number(idCombo) || 0;
+        }
 
-        fetch(url, {
-            method: method,
-            headers: {
-                'Authorization': 'Bearer ' + token,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(nuevoModelo)
-        })
-            .then(response => {
-                if (!response.ok) throw new Error(response.statusText);
-                return response.json();
-            })
-            .then(async dataJson => {
-
-                if (dataJson?.valor === false) {
-                    errorModal(dataJson?.mensaje || "No se pudo guardar");
-                    return;
-                }
-
-                const esNuevo = idConfiguracion === "";
-
-                const mensaje = dataJson?.mensaje || (esNuevo
-                    ? nombreConfiguracion + " registrado/a correctamente"
-                    : nombreConfiguracion + " modificado/a correctamente");
-
-                cancelarModificarConfiguracion();
-
-                const ok = await llenarConfiguraciones();
-
-                if (!ok) {
-                    errorModal("Error recargando la lista");
-                    return;
-                }
-
-                exitoModal(mensaje);
-
-                const nuevoId = dataJson?.id ?? null;
-
-                document.dispatchEvent(new CustomEvent("configuracionActualizada", {
-                    detail: {
-                        tipo: controllerConfiguracion,
-                        nuevoId: nuevoId,
-                        accion: esNuevo ? "insertar" : "actualizar"
-                    }
-                }));
-
-                // 🔥🔥🔥 CLAVE
-                if (window.esModoAtajo) {
-                    setTimeout(() => {
-                        hideModalById("modalConfiguracion");
-                    }, 300);
-                }
-
-            })
-            .catch(error => {
-                console.error('Error:', error);
-            });
+        if (perfil.partido) {
+            const idPartido = $("#cmbConfiguracionPartido").val();
+            nuevoModelo.IdPartido = idPartido ? Number(idPartido) : null;
+        }
     } else {
-        errorModal('Debes completar los campos requeridos');
+        nuevoModelo = {
+            Id: idConfiguracion !== "" ? idConfiguracion : 0,
+            IdCombo: comboNombre != null ? idCombo : 0,
+            Nombre: $("#txtNombreConfiguracion").val()
+        };
     }
+
+    const url = idConfiguracion === "" ? "/" + controllerConfiguracion + "/Insertar" : "/" + controllerConfiguracion + "/Actualizar";
+    const method = idConfiguracion === "" ? "POST" : "PUT";
+    const $btn = $("#btnRegistrarModificarConfiguracion");
+
+    $btn.prop("disabled", true);
+
+    fetch(url, {
+        method: method,
+        headers: {
+            Authorization: "Bearer " + token,
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify(nuevoModelo)
+    })
+        .then(async response => {
+            let dataJson = null;
+            try {
+                dataJson = await response.json();
+            } catch {
+                dataJson = null;
+            }
+
+            if (!response.ok) {
+                throw new Error(dataJson?.mensaje || dataJson?.title || response.statusText || "Error al guardar");
+            }
+
+            return dataJson;
+        })
+        .then(async dataJson => {
+            if (dataJson?.valor === false) {
+                errorModal(dataJson?.mensaje || "No se pudo guardar");
+                return;
+            }
+
+            const esNuevo = idConfiguracion === "";
+
+            const mensaje = dataJson?.mensaje || (esNuevo
+                ? nombreConfiguracion + " registrado/a correctamente"
+                : nombreConfiguracion + " modificado/a correctamente");
+
+            cancelarModificarConfiguracion();
+
+            const ok = await llenarConfiguraciones();
+
+            if (!ok) {
+                errorModal("Error recargando la lista");
+                return;
+            }
+
+            if (getPerfilConfigGeo(controllerConfiguracion)) {
+                cacheProvinciasConfigGeo = null;
+                cachePartidosConfigGeo = null;
+            }
+
+            exitoModal(mensaje);
+
+            const nuevoId = dataJson?.id ?? null;
+
+            document.dispatchEvent(new CustomEvent("configuracionActualizada", {
+                detail: {
+                    tipo: controllerConfiguracion,
+                    nuevoId: nuevoId,
+                    accion: esNuevo ? "insertar" : "actualizar"
+                }
+            }));
+
+            if (window.esModoAtajo) {
+                setTimeout(() => {
+                    hideModalById("modalConfiguracion");
+                }, 300);
+            }
+        })
+        .catch(error => {
+            console.error("Error:", error);
+            errorModal(error?.message || "Ha ocurrido un error al guardar");
+        })
+        .finally(() => {
+            $btn.prop("disabled", false);
+        });
 }
 
 function cancelarModificarConfiguracion() {
     document.getElementById("txtNombreConfiguracion").value = "";
     document.getElementById("txtIdConfiguracion").value = "";
+    limpiarCamposGeoConfiguracion();
     document.getElementById("contenedorNombreConfiguracion").setAttribute("hidden", "hidden");
     document.getElementById("agregarConfiguracion").removeAttribute("hidden");
 
@@ -488,6 +729,7 @@ function cancelarModificarConfiguracion() {
 function agregarConfiguracion() {
     document.getElementById("txtNombreConfiguracion").value = "";
     document.getElementById("txtIdConfiguracion").value = "";
+    limpiarCamposGeoConfiguracion();
     document.getElementById("contenedorNombreConfiguracion").removeAttribute("hidden");
     document.getElementById("agregarConfiguracion").setAttribute("hidden", "hidden");
     document.getElementById("lblListaVacia").innerText = "";
@@ -497,11 +739,57 @@ function agregarConfiguracion() {
     $('#lblNombreConfiguracion').css('color', 'red');
     $('#txtNombreConfiguracion').css('border-color', 'red');
 
-    if (comboNombre != null) {
-        document.getElementById("lblConfiguracionCombo").innerText = lblComboNombre;
+    const perfil = getPerfilConfigGeo(controllerConfiguracion);
+
+    if (comboNombre != null || perfil?.provincia) {
+        document.getElementById("lblConfiguracionCombo").innerText = lblComboNombre || "Provincia";
         document.getElementById("cmbConfiguracion").value = "";
         $('#cmbConfiguracion').css('border-color', 'red');
     }
+
+    if (perfil?.partido) {
+        document.getElementById("cmbConfiguracionPartido").value = "";
+    }
+}
+
+function obtenerPrefVistaListados() {
+    if (window.RpGridView) return RpGridView.getPref();
+    const pref = localStorage.getItem("rpGridViewPref") || localStorage.getItem("cgViewPref") || "auto";
+    return ["auto", "table", "cards"].includes(pref) ? pref : "auto";
+}
+
+function syncPreferenciasVisualizacionUi(pref) {
+    const val = ["auto", "table", "cards"].includes(pref) ? pref : "auto";
+    $("#rpConfigViewOptions .rp-config-view-card").removeClass("is-active");
+    $(`#rpConfigViewOptions .rp-config-view-card[data-rp-view="${val}"]`).addClass("is-active");
+}
+
+function guardarPrefVistaListados(pref) {
+    const val = ["auto", "table", "cards"].includes(pref) ? pref : "auto";
+    localStorage.setItem("rpGridViewPref", val);
+    localStorage.setItem("cgViewPref", val);
+    syncPreferenciasVisualizacionUi(val);
+
+    if (window.RpGridView) {
+        RpGridView.setPref(val);
+    } else {
+        $(".cg-page, .cl-page, .page-99")
+            .removeClass("rp-view-mode-auto rp-view-mode-table rp-view-mode-cards cg-mode-auto cg-mode-table cg-mode-cards")
+            .addClass(`rp-view-mode-${val} cg-mode-${val}`);
+        $(document).trigger("rpGridViewChanged", [val]);
+    }
+}
+
+function initPreferenciasVisualizacion() {
+    syncPreferenciasVisualizacionUi(obtenerPrefVistaListados());
+
+    $("#rpConfigViewOptions")
+        .off("click.rpViewPref")
+        .on("click.rpViewPref", ".rp-config-view-card", function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            guardarPrefVistaListados($(this).data("rpView") || "auto");
+        });
 }
 
 function abrirConfiguraciones() {
@@ -510,6 +798,8 @@ function abrirConfiguraciones() {
     showModalById("ModalEdicionConfiguraciones");
     $("#btnGuardarConfiguracion").text("Aceptar");
     $("#modalEdicionLabel").text("Configuraciones");
+
+    initPreferenciasVisualizacion();
 
     const buscadorSecciones = document.getElementById("txtBuscarSeccionesConfiguracion");
     if (buscadorSecciones) {

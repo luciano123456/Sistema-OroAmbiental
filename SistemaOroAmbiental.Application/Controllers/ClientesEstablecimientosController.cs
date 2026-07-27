@@ -59,6 +59,7 @@ namespace SistemaOroAmbiental.Application.Controllers
                 IdDiaRecoleccion = e.IdDiaRecoleccion,
                 IdSemanaRecoleccion = e.IdSemanaRecoleccion,
                 IdListaPrecio = e.IdListaPrecio,
+                IdCamion = e.IdCamion,
                 HorarioRecoleccionDesde = FormatearHora(e.HorarioRecoleccionDesde),
                 HorarioRecoleccionHasta = FormatearHora(e.HorarioRecoleccionHasta),
                 Cliente = e.IdClienteNavigation?.Nombre ?? "",
@@ -67,6 +68,7 @@ namespace SistemaOroAmbiental.Application.Controllers
                 DiaRecoleccion = e.IdDiaRecoleccionNavigation?.Nombre ?? "",
                 SemanaRecoleccion = e.IdSemanaRecoleccionNavigation?.Nombre ?? "",
                 ListaPrecio = e.IdListaPrecioNavigation?.Nombre ?? "",
+                Camion = e.IdCamionNavigation?.Nombre ?? "",
                 IdUsuarioRegistra = e.IdUsuarioRegistra,
                 FechaUsuarioRegistra = e.FechaUsuarioRegistra,
                 UsuarioRegistra = e.IdUsuarioRegistraNavigation?.Usuario ?? "",
@@ -176,6 +178,7 @@ namespace SistemaOroAmbiental.Application.Controllers
                 IdDiaRecoleccion = model.IdDiaRecoleccion,
                 IdSemanaRecoleccion = model.IdSemanaRecoleccion,
                 IdListaPrecio = model.IdListaPrecio,
+                IdCamion = model.IdCamion,
                 HorarioRecoleccionDesde = ParseHora(model.HorarioRecoleccionDesde),
                 HorarioRecoleccionHasta = ParseHora(model.HorarioRecoleccionHasta)
             };

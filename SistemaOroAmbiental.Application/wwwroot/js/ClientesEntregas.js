@@ -25,23 +25,28 @@ const authHeaders = () => ({
 });
 
 const columnConfigEntregas = [
-    { index: 2, filterType: "text" },  // Fecha
-    { index: 3, filterType: "text" },  // Cliente
-    { index: 4, filterType: "text" },  // Establecimiento
-    { index: 5, filterType: "text" },  // Estado
-    { index: 6, filterType: "text" },  // Productos
-    { index: 7, filterType: "text" },  // Subtotal
-    { index: 8, filterType: "text" },  // Descuentos
-    { index: 9, filterType: "text" },  // IVA
-    { index: 10, filterType: "text" }, // Total
-    { index: 11, filterType: "text" }, // Pagado
-    { index: 12, filterType: "text" }, // Restante
-    { index: 13, filterType: "text" }  // Nota
+    { index: 2, filterType: "text" },
+    { index: 3, filterType: "text" },
+    { index: 4, filterType: "text" },
+    { index: 5, filterType: "text" },
+    { index: 6, filterType: "text" },
+    { index: 7, filterType: "text" },
+    { index: 8, filterType: "text" },
+    { index: 9, filterType: "text" },
+    { index: 10, filterType: "text" },
+    { index: 11, filterType: "text" },
+    { index: 12, filterType: "text" },
+    { index: 13, filterType: "text" }
 ];
+
+registrarFiltrosGrilla('grd_Entregas', columnConfigEntregas, {
+    includeActivo: false,
+    panelTitle: 'Filtrar resultados cargados'
+});
 
 $(document).ready(async () => {
     if (typeof initPanelFiltrosPersistido === "function") {
-        initPanelFiltrosPersistido("panelFiltrosEntregas");
+        initPanelFiltrosPersistido("panelFiltrosEntregasWrap", "panelFiltrosEntregas");
     }
 
     wireEventosEntregas();
@@ -188,19 +193,10 @@ function configurarGrillaEntregas(data) {
             fixedHeader: true,
             initComplete: async function () {
                 const api = this.api();
-                inicializarFilaFiltrosGrilla(api, "#grd_Entregas");
-                finalizarFiltrosGridLista(api, "#grd_Entregas");
-
-                for (const config of columnConfigEntregas) {
-                    const cell = celdasFiltroGrilla("#grd_Entregas").eq(config.index);
-                    if (!cell.length) continue;
-
-                    $('<input class="rp-filter-input" type="text" placeholder="Buscar..." autocomplete="off">')
-                        .appendTo(cell.empty())
-                        .on("keyup change", function () {
-                            api.column(config.index).search(this.value).draw(false);
-                        });
-                }
+                await armarFiltrosGrillaLista(api, "#grd_Entregas", columnConfigEntregas, {
+                    includeActivo: false,
+                    panelTitle: "Filtrar resultados cargados"
+                });
             },
             columns: [
                 columnaGridAcciones(null, "Entregas", (id, type, row) => renderAccionesEntrega(id, row)),

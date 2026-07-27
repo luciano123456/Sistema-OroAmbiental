@@ -1,7 +1,7 @@
 # Contexto de trabajo — Sistema Oro Ambiental
 
 > Documento para retomar el trabajo con el agente de Cursor.  
-> Última actualización: **21 may 2026**  
+> Última actualización: **28 may 2026**  
 > Repositorio: `C:\Users\Luciano\source\repos\Sistema-OroAmbiental`  
 > Referencia similar: `Sistema-Levels` (mismo patrón MVC + BLL + DAL)
 
@@ -13,6 +13,7 @@
 2. Transcript de la conversación principal (eliminación / cascada / proveedores):  
    [88084e99-d2f8-4769-91f8-1ae2b220282e](88084e99-d2f8-4769-91f8-1ae2b220282e)
 3. Stack: **ASP.NET Core 6**, EF Core, SQL Server, jQuery, DataTables, Bootstrap modals.
+4. **Productos recuperados + entregas:** ver manual dedicado → [`docs/MANUAL_PRODUCTOS_RECUPERADOS_ENTREGAS.md`](MANUAL_PRODUCTOS_RECUPERADOS_ENTREGAS.md)
 
 ---
 
@@ -282,6 +283,7 @@ SistemaOroAmbiental.Application/
 |-------|--------|
 | 2026-05-21 | Creación: resumen eliminación, cascada clientes/proveedores, compras, JS, gastos, pendientes, transcript id |
 | 2026-05-21 | Proveedores: pestaña Contactos (tabla, API, UI como Clientes) |
+| 2026-05-28 | Productos recuperados: tabla `ClientesEntregasProductosRecuperados`, entregas dual (Lineas + LineasRecuperadas), dashboard, nav en Clientes — ver [`MANUAL_PRODUCTOS_RECUPERADOS_ENTREGAS.md`](MANUAL_PRODUCTOS_RECUPERADOS_ENTREGAS.md) |
 
 ---
 

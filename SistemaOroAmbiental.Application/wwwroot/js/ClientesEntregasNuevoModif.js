@@ -32,6 +32,7 @@
         clienteInfo: id => `/Clientes/EditarInfo?id=${id}`,
         productos: "/Productos/Lista",
         estadosEntrega: "/EntregasEstados/Lista",
+        camiones: "/Camiones/Lista?soloActivos=true",
         sucursales: "/Sucursales/Lista",
         cuentas: "/Cuentas/Lista"
     };
@@ -430,12 +431,14 @@
         await Promise.all([
             cargarClientesEntrega(),
             cargarEstadoesEntrega(),
+            cargarCamionesEntrega(),
             cargarSucursalesEntrega(),
             cargarProductosEntrega()
         ]);
 
         initSelectClienteHeader();
         ensureSelect2Cm($("#cEstado"), { placeholder: "Seleccionar estado" });
+        ensureSelect2Cm($("#cCamion"), { placeholder: "Seleccionar camión", allowClear: true });
 
         $("#cCliente").off("change.entregaSuc").on("change.entregaSuc", function () {
             const id = parseInt($(this).val(), 10) || 0;
@@ -524,6 +527,16 @@
         ensureSelect2Cm($("#cEstado"), { placeholder: "Seleccionar estado" });
     }
 
+    async function cargarCamionesEntrega() {
+        const r = await fetch(API.camiones, { headers: authHeaders() });
+        const camiones = r.ok ? await r.json() : [];
+        const $s = $("#cCamion");
+        $s.empty().append(`<option value="">Seleccionar</option>`);
+        (camiones || []).forEach(x => {
+            $s.append(`<option value="${x.Id}">${x.Nombre}</option>`);
+        });
+    }
+
     async function cargarProductosEntrega() {
         const r = await fetch(API.productos, { headers: authHeaders() });
         CM.productos = r.ok ? await r.json() : [];
@@ -577,6 +590,7 @@
         const cli = (CM.clientes || []).find(x => Number(x.Id) === idCliente);
         CM.idSucursalCliente = Number(d.IdSucursal || cli?.IdSucursal || 0);
         if (d.IdEstado) $("#cEstado").val(String(d.IdEstado)).trigger("change.select2");
+        if (d.IdCamion) $("#cCamion").val(String(d.IdCamion)).trigger("change.select2");
 
         const lineasOperacion = (d.Lineas || []).map(l => mapLineaDesdeApi(l, Number(l.TipoMovimiento || TIPO_LINEA_ENTREGA)));
         const lineasRecuperadasApi = (d.LineasRecuperadas || []).map(l => mapLineaDesdeApi(l, TIPO_LINEA_RECUPERADO));
@@ -594,7 +608,7 @@
         $("#btnGuardarEntrega").prop("disabled", true);
         $("#btnAgregarLinea, #btnAgregarRecuperado, #btnCrearProducto, #btnAtajoEstadoEntrega").prop("hidden", true);
         $("#cFecha, #cNota").prop("disabled", true);
-        $("#cCliente, #cEstado").prop("disabled", true);
+        $("#cCliente, #cEstado, #cCamion").prop("disabled", true);
         $("#tbodyLineasEntrega input, #tbodyLineasEntrega select, #tbodyLineasRecuperados input, #tbodyLineasRecuperados select").prop("disabled", true);
         $("#tbodyLineasEntrega .btn-quitar-linea, #tbodyLineasRecuperados .btn-quitar-linea").prop("hidden", true);
         $("#btnAgregarCobroEntrega").prop("hidden", true);
@@ -1248,6 +1262,7 @@
             Fecha: $("#cFecha").val() || null,
             IdCliente: parseInt($("#cCliente").val(), 10) || 0,
             IdEstado: parseInt($("#cEstado").val(), 10) || null,
+            IdCamion: parseInt($("#cCamion").val(), 10) || null,
             NotaInterna: ($("#cNota").val() || "").trim() || null,
             NotaCliente: ($("#cNotaCliente").val() || "").trim() || null,
             Lineas: lineasOperacion.map(l => ({

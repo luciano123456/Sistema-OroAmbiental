@@ -129,6 +129,7 @@ namespace SistemaOroAmbiental.DAL.Repository
                 .Include(x => x.IdDiaRecoleccionNavigation)
                 .Include(x => x.IdSemanaRecoleccionNavigation)
                 .Include(x => x.IdListaPrecioNavigation)
+                .Include(x => x.IdCamionNavigation)
                 .Include(x => x.IdUsuarioRegistraNavigation)
                 .Include(x => x.IdUsuarioModificaNavigation)
                 .FirstOrDefaultAsync(x => x.Id == id);
@@ -144,6 +145,7 @@ namespace SistemaOroAmbiental.DAL.Repository
                 .Include(x => x.IdDiaRecoleccionNavigation)
                 .Include(x => x.IdSemanaRecoleccionNavigation)
                 .Include(x => x.IdListaPrecioNavigation)
+                .Include(x => x.IdCamionNavigation)
                 .OrderBy(x => x.Nombre);
         }
 

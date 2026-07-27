@@ -58,6 +58,12 @@ const columnConfigInv = [
     { index: 7, filterType: 'text' }
 ];
 
+registrarFiltrosGrilla('grd_Inventario', columnConfigInv, {
+    includeActivo: false,
+    panelTitle: 'Filtrar resultados cargados',
+    initSelect2: ($el) => ensureSelect2($el, { dropdownParent: $(document.body), minimumResultsForSearch: 0, allowClear: true })
+});
+
 const authHeaders = () => ({
     'Authorization': 'Bearer ' + token
 });
@@ -488,10 +494,14 @@ function renderProductosInv() {
         const nombre = (p.Nombre || "").trim();
         const inicial = nombre ? nombre.charAt(0).toUpperCase() : "?";
         const stock = Number(p.Stock || 0);
+        const stockRec = Number(p.StockRecuperado || 0);
         const active = ACC.ProductoSel && ACC.ProductoSel.IdProducto === p.IdProducto ? "active" : "";
         const bajoCls = p.BajoMinimo ? "inv-bajo-minimo" : "";
         const stockCls = p.BajoMinimo ? "inv-stock-low" : "inv-stock-ok";
         const meta = [p.Categoria, p.Medida].filter(Boolean).join(" · ");
+        const recHtml = stockRec > 0
+            ? `<span class="lbl ms-2">Recup.</span><span class="val inv-stock-rec">${fmtQty(stockRec)}</span>`
+            : "";
 
         cont.append(`
             <div class="cc-artist-item ${active} ${bajoCls}" onclick="seleccionarProductoInv(${p.IdProducto})">
@@ -503,6 +513,7 @@ function renderProductosInv() {
                         <span class="lbl">Stock</span>
                         <span class="val">${fmtQty(stock)}</span>
                         ${p.StockMinimo > 0 ? `<span class="lbl ms-2">Mín.</span><span class="val">${fmtQty(p.StockMinimo)}</span>` : ""}
+                        ${recHtml}
                     </div>
                 </div>
             </div>
@@ -677,30 +688,11 @@ async function configurarDataTableInv(data) {
             fixedHeader: true,
             initComplete: async function () {
                 const api = this.api();
-                inicializarFilaFiltrosGrilla(api, '#grd_Inventario');
-                finalizarFiltrosGridLista(api, '#grd_Inventario');
-
-                for (const config of columnConfigInv) {
-                    const cell = celdasFiltroGrilla('#grd_Inventario').eq(config.index);
-                    if (!cell.length) continue;
-                    cell.empty();
-                    if (config.filterType === 'select') {
-                        const $select = $(`<select class="rp-filter-select" style="width:100%"><option value="">Todos</option></select>`).appendTo(cell);
-                        const datos = await config.fetchDataFunc();
-                        (datos || []).forEach(item => $select.append(`<option value="${item.Id}">${item.Nombre}</option>`));
-                        ensureSelect2($select, { dropdownParent: $(document.body), minimumResultsForSearch: 0, allowClear: true });
-                        $select.on('change', function () {
-                            const value = $(this).val();
-                            if (!value) { api.column(config.index).search('').draw(false); return; }
-                            const text = $(this).find('option:selected').text();
-                            api.column(config.index).search('^' + escapeRegex(text) + '$', true, false).draw(false);
-                        });
-                    } else {
-                        $(`<input class="rp-filter-input" type="text" placeholder="Buscar...">`).appendTo(cell)
-                            .on('keyup change', function () { api.column(config.index).search(this.value).draw(false); });
-                    }
-                }
-                finalizarFiltrosGridLista(api, '#grd_Inventario');
+                await armarFiltrosGrillaLista(api, '#grd_Inventario', columnConfigInv, {
+                    includeActivo: false,
+                    panelTitle: 'Filtrar resultados cargados',
+                    initSelect2: ($el) => ensureSelect2($el, { dropdownParent: $(document.body), minimumResultsForSearch: 0, allowClear: true })
+                });
                 configurarOpcionesColumnasInv();
                 actualizarKpisInv();
             }

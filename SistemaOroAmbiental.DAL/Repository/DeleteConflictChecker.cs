@@ -151,6 +151,19 @@ namespace SistemaOroAmbiental.DAL.Repository
             return Mensaje("esta cuenta", partes);
         }
 
+        public async Task<string?> CamionAsync(int id)
+        {
+            var partes = new List<string>();
+
+            var est = await _db.ClientesEstablecimientos.CountAsync(x => x.IdCamion == id);
+            if (est > 0) partes.Add($"{est} establecimiento(s)");
+
+            var ent = await _db.ClientesEntregas.CountAsync(x => x.IdCamion == id);
+            if (ent > 0) partes.Add($"{ent} entrega(s)");
+
+            return Mensaje("este camión", partes);
+        }
+
         public async Task<string?> CatalogoAsync<T>(int id) where T : class
         {
             return typeof(T).Name switch
@@ -168,6 +181,11 @@ namespace SistemaOroAmbiental.DAL.Repository
                 nameof(TiposContrato) => await TipoContratoAsync(id),
                 nameof(UsuariosEstado) => await UsuarioEstadoAsync(id),
                 nameof(UsuariosRol) => await UsuarioRolAsync(id),
+                nameof(Partido) => await PartidoAsync(id),
+                nameof(Localidad) => await LocalidadAsync(id),
+                nameof(ClientesEstado) => await ClienteEstadoAsync(id),
+                nameof(ClientesMotivo) => await ClienteMotivoAsync(id),
+                nameof(ClientesCalificacion) => await ClienteCalificacionAsync(id),
                 _ => null
             };
         }
@@ -223,7 +241,57 @@ namespace SistemaOroAmbiental.DAL.Repository
             if (cli > 0) partes.Add($"{cli} cliente(s)");
             var est = await _db.ClientesEstablecimientos.CountAsync(x => x.IdProvincia == id);
             if (est > 0) partes.Add($"{est} establecimiento(s)");
+            var partidos = await _db.Partidos.CountAsync(x => x.IdProvincia == id);
+            if (partidos > 0) partes.Add($"{partidos} partido(s)");
+            var loc = await _db.Localidades.CountAsync(x => x.IdProvincia == id);
+            if (loc > 0) partes.Add($"{loc} localidad(es)");
             return Mensaje("esta provincia", partes);
+        }
+
+        private async Task<string?> PartidoAsync(int id)
+        {
+            var partes = new List<string>();
+            var cli = await _db.Clientes.CountAsync(x => x.IdPartido == id);
+            if (cli > 0) partes.Add($"{cli} cliente(s)");
+            var est = await _db.ClientesEstablecimientos.CountAsync(x => x.IdPartido == id);
+            if (est > 0) partes.Add($"{est} establecimiento(s)");
+            var loc = await _db.Localidades.CountAsync(x => x.IdPartido == id);
+            if (loc > 0) partes.Add($"{loc} localidad(es)");
+            return Mensaje("este partido", partes);
+        }
+
+        private async Task<string?> LocalidadAsync(int id)
+        {
+            var partes = new List<string>();
+            var cli = await _db.Clientes.CountAsync(x => x.IdLocalidad == id);
+            if (cli > 0) partes.Add($"{cli} cliente(s)");
+            var est = await _db.ClientesEstablecimientos.CountAsync(x => x.IdLocalidad == id);
+            if (est > 0) partes.Add($"{est} establecimiento(s)");
+            return Mensaje("esta localidad", partes);
+        }
+
+        private async Task<string?> ClienteEstadoAsync(int id)
+        {
+            var n = await _db.Clientes.CountAsync(x => x.IdEstado == id);
+            return n > 0
+                ? $"No se pudo eliminar este estado de cliente porque tiene {n} cliente(s) asociado(s)."
+                : null;
+        }
+
+        private async Task<string?> ClienteMotivoAsync(int id)
+        {
+            var n = await _db.Clientes.CountAsync(x => x.IdMotivo == id);
+            return n > 0
+                ? $"No se pudo eliminar este motivo porque tiene {n} cliente(s) asociado(s)."
+                : null;
+        }
+
+        private async Task<string?> ClienteCalificacionAsync(int id)
+        {
+            var n = await _db.Clientes.CountAsync(x => x.IdCalificacion == id);
+            return n > 0
+                ? $"No se pudo eliminar esta calificación porque tiene {n} cliente(s) asociado(s)."
+                : null;
         }
 
         private async Task<string?> DiaAsync(int id)

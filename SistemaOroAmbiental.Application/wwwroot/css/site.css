@@ -121,6 +121,31 @@ tbody tr:nth-child(odd) {
     height: 80%;
 }
 
+/* Layout módulos (_LayoutModulo) — logo + aire entre navbar y contenido */
+body.layout-modulo .layout-modulo-logo {
+    margin-top: 0.35rem;
+    margin-bottom: 0.15rem;
+}
+
+body.layout-modulo .layout-modulo-logo .divLogo {
+    padding: 0.35rem 0 0.5rem;
+}
+
+body.layout-modulo .layout-modulo-logo .imageLogo {
+    max-height: 72px;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+}
+
+body.layout-modulo .layout-modulo-content {
+    padding-top: 0.75rem;
+}
+
+body.layout-modulo .layout-modulo-content > main {
+    padding-top: 0.5rem;
+}
+
 tbody tr {
     background-image: url(noise.png);
 }
@@ -967,7 +992,8 @@ table.dt-dark thead tr.filters th.rp-col-id-h .rp-filter-id {
 #exitoModal,
 #errorModal,
 #AdvertenciaModal,
-#modalConfirmar {
+#modalConfirmar,
+#modalGuardadoConSalida {
     z-index: 10000090 !important;
 }
 
@@ -1002,6 +1028,134 @@ table.dt-dark thead tr.filters th.rp-col-id-h .rp-filter-id {
 ::-webkit-scrollbar-thumb {
     background: #5b8cff66;
     border-radius: 10px;
+}
+
+/* =========================
+   MODAL GUARDADO + SALIDA
+   (genérico, reutilizable)
+========================= */
+
+.rp-guardado-modal {
+    position: relative;
+    background: linear-gradient(165deg, #0f172a 0%, #020617 100%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    color: #fff;
+    overflow: hidden;
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.55);
+}
+
+.rp-guardado-modal::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 120px;
+    background: radial-gradient(circle at 50% -20%, rgba(34, 197, 94, 0.35), transparent 70%);
+    pointer-events: none;
+}
+
+.rp-guardado-close {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    z-index: 2;
+    opacity: 0.7;
+}
+
+.rp-guardado-icon-wrap {
+    position: relative;
+    z-index: 1;
+    width: 72px;
+    height: 72px;
+    margin: 28px auto 0;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(34, 197, 94, 0.15);
+    border: 1px solid rgba(34, 197, 94, 0.45);
+    box-shadow: 0 0 24px rgba(34, 197, 94, 0.25);
+}
+
+.rp-guardado-icon-wrap i {
+    font-size: 34px;
+    color: #4ade80;
+}
+
+.rp-guardado-body {
+    position: relative;
+    z-index: 1;
+    padding: 18px 28px 8px;
+}
+
+.rp-guardado-title {
+    margin: 0 0 10px;
+    font-size: 1.35rem;
+    font-weight: 800;
+}
+
+.rp-guardado-message {
+    margin: 0 0 14px;
+    color: rgba(255, 255, 255, 0.88);
+    font-size: 1rem;
+    line-height: 1.45;
+}
+
+.rp-guardado-pregunta {
+    margin: 0;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.78);
+    font-size: 0.95rem;
+}
+
+.rp-guardado-footer {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 16px 24px 24px;
+}
+
+.rp-guardado-footer .rp-guardado-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border-radius: 10px;
+    padding: 10px 18px;
+    font-weight: 600;
+    border: 1px solid transparent;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+
+.rp-guardado-footer .rp-guardado-btn:hover {
+    transform: translateY(-1px);
+}
+
+.rp-guardado-btn-quedarse {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.14);
+    color: #fff;
+}
+
+.rp-guardado-btn-quedarse:hover {
+    background: rgba(255, 255, 255, 0.14);
+    color: #fff;
+}
+
+.rp-guardado-btn-salir {
+    background: linear-gradient(135deg, #22c55e, #16a34a);
+    color: #fff;
+    box-shadow: 0 8px 20px rgba(34, 197, 94, 0.35);
+}
+
+.rp-guardado-btn-salir:hover {
+    background: linear-gradient(135deg, #4ade80, #22c55e);
+    color: #fff;
 }
 
 

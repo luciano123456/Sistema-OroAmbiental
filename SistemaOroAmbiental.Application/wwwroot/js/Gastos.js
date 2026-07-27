@@ -38,6 +38,18 @@ const columnConfig = [
     { index: 13, filterType: "text" }
 ];
 
+registrarFiltrosGrilla('grd_Gastos', columnConfig, {
+    includeActivo: false,
+    panelTitle: 'Filtrar resultados cargados',
+    initSelect2: ($el) => inicializarSelect2FiltroGrilla($el),
+    getSelectSearchText: (config, $select) => {
+        if (config.index === 5) {
+            return $select.find("option:selected").text().split(" (")[0].trim();
+        }
+        return $select.find("option:selected").text();
+    }
+});
+
 let gastoModal;
 
 $(document).ready(() => {
@@ -47,7 +59,7 @@ $(document).ready(() => {
     }
 
     if (typeof initPanelFiltrosPersistido === "function") {
-        initPanelFiltrosPersistido("panelFiltrosGastos");
+        initPanelFiltrosPersistido("panelFiltrosGastosWrap", "panelFiltrosGastos");
     }
 
     $(document)
@@ -320,71 +332,17 @@ async function configurarDataTable(data) {
             fixedHeader: true,
             initComplete: async function () {
                 const api = this.api();
-                inicializarFilaFiltrosGrilla(api, "#grd_Gastos");
-                finalizarFiltrosGridLista(api, "#grd_Gastos");
-
-                for (const config of columnConfig) {
-                    const cell = celdasFiltroGrilla("#grd_Gastos").eq(config.index);
-                    if (!cell.length) continue;
-                    cell.empty();
-
-                    if (config.filterType === "select") {
-                        const $select = $(`<select class="rp-filter-select" style="width:100%"></select>`).appendTo(cell);
-
-                        if (config.sucursalDt && typeof prepararFiltroSucursalDataTable === "function") {
-                            await prepararFiltroSucursalDataTable($select, api, config.index, inicializarSelect2FiltroGrilla);
-                        } else {
-                            const datos = await config.fetchDataFunc();
-                            $select.append(`<option value="">Todos</option>`);
-                            (datos || []).forEach(item => {
-                                const label = config.index === 5
-                                    ? etiquetaCuenta(item, true)
-                                    : (item.Nombre || "");
-                                $select.append(`<option value="${item.Id}">${label}</option>`);
-                            });
-
-                            inicializarSelect2FiltroGrilla($select);
-
-                            $select.on("select2:clear", function () {
-                                api.column(config.index).search("").draw(false);
-                            });
-
-                            $select.on("change", function () {
-                                const value = $(this).val();
-                                if (!value) {
-                                    api.column(config.index).search("").draw(false);
-                                    return;
-                                }
-                                const searchText = config.index === 5
-                                    ? $(this).find("option:selected").text().split(" (")[0].trim()
-                                    : $(this).find("option:selected").text();
-
-                                api.column(config.index)
-                                    .search("^" + escapeRegex(searchText) + "$", true, false)
-                                    .draw(false);
-                            });
+                await armarFiltrosGrillaLista(api, "#grd_Gastos", columnConfig, {
+                    includeActivo: false,
+                    panelTitle: "Filtrar resultados cargados",
+                    initSelect2: ($el) => inicializarSelect2FiltroGrilla($el),
+                    getSelectSearchText: (config, $select) => {
+                        if (config.index === 5) {
+                            return $select.find("option:selected").text().split(" (")[0].trim();
                         }
-                    } else if (config.filterType === "number") {
-                        $(`<input type="number" step="0.01" class="rp-filter-input" placeholder="Buscar..." autocomplete="off">`)
-                            .appendTo(cell)
-                            .on("keyup change", function () {
-                                const val = this.value;
-                                if (!val) {
-                                    api.column(config.index).search("").draw(false);
-                                    return;
-                                }
-                                api.column(config.index).search(val).draw(false);
-                            });
-                    } else {
-                        $(`<input class="rp-filter-input" type="text" placeholder="Buscar..." autocomplete="off">`)
-                            .appendTo(cell)
-                            .on("keyup change", function () {
-                                api.column(config.index).search(this.value).draw(false);
-                            });
+                        return $select.find("option:selected").text();
                     }
-                }
-
-                finalizarFiltrosGridLista(api, "#grd_Gastos");
+                });
                 configurarOpcionesColumnas();
                 actualizarKpis(data);
             }

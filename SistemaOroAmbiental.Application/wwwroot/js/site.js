@@ -295,6 +295,113 @@ function confirmarModal(mensaje) {
 }
 
 /**
+ * Modal genérico post-guardado: muestra éxito y pregunta si volver al listado.
+ * @param {object} opciones
+ * @param {string} [opciones.titulo]
+ * @param {string} [opciones.mensaje]
+ * @param {string} [opciones.pregunta]
+ * @param {string} [opciones.btnSalir]
+ * @param {string} [opciones.btnQuedarse]
+ * @param {string} [opciones.urlSalida] - Si se indica, navega al confirmar salida.
+ * @param {string} [opciones.icono] - Clase FontAwesome (ej. fa-check-circle).
+ * @returns {Promise<{salir: boolean}>}
+ */
+function modalGuardadoConSalida(opciones = {}) {
+    return new Promise((resolve) => {
+        const modalEl = document.getElementById("modalGuardadoConSalida");
+        if (!modalEl) {
+            resolve({ salir: false });
+            return;
+        }
+
+        const cfg = Object.assign({
+            titulo: "Guardado correctamente",
+            mensaje: "Los cambios se guardaron correctamente.",
+            pregunta: "¿Deseás volver al listado?",
+            btnSalir: "Sí, volver al listado",
+            btnQuedarse: "No, seguir acá",
+            urlSalida: null,
+            icono: "fa-check-circle"
+        }, opciones || {});
+
+        const tituloEl = document.getElementById("modalGuardadoConSalidaTitulo");
+        const mensajeEl = document.getElementById("modalGuardadoConSalidaMensaje");
+        const preguntaEl = document.getElementById("modalGuardadoConSalidaPregunta");
+        const iconEl = document.getElementById("modalGuardadoConSalidaIcon");
+        const btnSalir = document.getElementById("btnGuardadoSalir");
+        const btnQuedarse = document.getElementById("btnGuardadoQuedarse");
+
+        if (tituloEl) tituloEl.textContent = cfg.titulo;
+        if (mensajeEl) mensajeEl.textContent = cfg.mensaje;
+        if (preguntaEl) preguntaEl.textContent = cfg.pregunta;
+        if (iconEl) iconEl.className = `fa ${cfg.icono}`;
+
+        if (btnSalir) {
+            btnSalir.innerHTML = `<i class="fa fa-arrow-left"></i><span>${cfg.btnSalir}</span>`;
+        }
+        if (btnQuedarse) {
+            btnQuedarse.innerHTML = `<i class="fa fa-pencil"></i><span>${cfg.btnQuedarse}</span>`;
+        }
+
+        let resuelto = false;
+
+        const finalizar = (salir) => {
+            if (resuelto) return;
+            resuelto = true;
+            resolve({ salir: !!salir });
+        };
+
+        const ocultarModal = () => {
+            if (window.bootstrap?.Modal) {
+                const inst = bootstrap.Modal.getInstance(modalEl);
+                if (inst) inst.hide();
+            } else if (window.jQuery) {
+                window.jQuery(modalEl).modal("hide");
+            }
+        };
+
+        const onSalir = () => {
+            finalizar(true);
+            ocultarModal();
+            if (cfg.urlSalida) {
+                window.location.href = cfg.urlSalida;
+            }
+        };
+
+        const onQuedarse = () => {
+            finalizar(false);
+            ocultarModal();
+        };
+
+        if (btnSalir) {
+            btnSalir.onclick = onSalir;
+        }
+        if (btnQuedarse) {
+            btnQuedarse.onclick = onQuedarse;
+        }
+
+        modalEl.addEventListener("hidden.bs.modal", () => {
+            if (!resuelto) finalizar(false);
+        }, { once: true });
+
+        if (typeof rpElevarModalFeedback === "function") {
+            rpElevarModalFeedback(modalEl);
+        }
+
+        if (window.bootstrap?.Modal) {
+            const inst = bootstrap.Modal.getOrCreateInstance(modalEl, {
+                backdrop: "static",
+                keyboard: false
+            });
+            inst.show();
+        } else if (window.jQuery) {
+            window.jQuery(modalEl).modal({ backdrop: "static", keyboard: false });
+            window.jQuery(modalEl).modal("show");
+        }
+    });
+}
+
+/**
  * Flujo de eliminación con listado de dependencias.
  * @returns {Promise<{accion:'ok'|'cancelar', data?:object}>}
  */
@@ -953,7 +1060,8 @@ function finalizarFiltrosGridLista(api, tableSelector) {
 const RP_URL_CAMBIAR_ACTIVO = {
     Clientes: "/Clientes/CambiarActivo",
     Productos: "/Productos/CambiarActivo",
-    Proveedores: "/Proveedores/CambiarActivo"
+    Proveedores: "/Proveedores/CambiarActivo",
+    Camiones: "/Camiones/CambiarActivo"
 };
 
 /** Última columna: switch activo/inactivo en grillas maestras. */
@@ -995,9 +1103,9 @@ function createdRowEstiloActivoGrilla(row, data) {
     }
 }
 
-function crearFiltroActivoDataTable(tableSelector) {
+function crearFiltroActivoDataTable(tableSelector, initialModo = "activos") {
     const tableId = $(tableSelector).attr("id") || tableSelector;
-    const state = { modo: "activos" };
+    const state = { modo: initialModo || "activos" };
 
     const fn = function (settings, data, dataIndex) {
         const api = new $.fn.dataTable.Api(settings);
@@ -1026,29 +1134,445 @@ function crearFiltroActivoDataTable(tableSelector) {
     };
 }
 
-function inicializarFiltroActivoGrilla(api, tableSelector, colIndex) {
-    const filtro = crearFiltroActivoDataTable(tableSelector);
+function inicializarFiltroActivoGrilla(api, tableSelector, colIndex, defaultModo = "activos") {
+    const modo = defaultModo || "activos";
+    const filtro = crearFiltroActivoDataTable(tableSelector, modo);
     $(tableSelector).data("rpFiltroActivo", filtro);
 
     const $th = celdasFiltroGrilla(tableSelector).eq(colIndex);
     if (!$th.length) return;
 
     const $sel = $(`<select class="rp-filter-select rp-filter-activo">
-        <option value="activos" selected>Activos</option>
+        <option value="activos">Activos</option>
         <option value="inactivos">Inactivos</option>
         <option value="todos">Todos</option>
     </select>`).appendTo($th.empty());
+
+    $sel.val(modo);
 
     $sel.on("change", function () {
         filtro.setModo($(this).val());
         api.draw(false);
     });
+
+    if (modo !== "activos") {
+        api.draw(false);
+    }
 }
 
 function indiceColumnaActivoGrilla(api) {
     return api.columns().indexes().toArray().find(i => {
         const col = api.settings()[0].aoColumns[i];
         return col && (col.name === "grid_activo" || col.sName === "grid_activo");
+    });
+}
+
+/* =========================================================
+   Panel de filtros plegable — todas las grillas grd_*
+========================================================= */
+
+window.RP_GRID_FILTER_REGISTRY = window.RP_GRID_FILTER_REGISTRY || {};
+
+function escapeRegexGrilla(text) {
+    return String(text ?? "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function registrarFiltrosGrilla(tableId, columnConfig, options = {}) {
+    if (!tableId) return;
+    RP_GRID_FILTER_REGISTRY[tableId] = { columnConfig: columnConfig || [], options: options || {} };
+}
+
+function initPanelFiltrosPersistido(panelId, collapseId) {
+    const key = `rpFiltrosCollapse_${panelId || collapseId}`;
+    const $collapse = collapseId ? $(`#${collapseId}`) : null;
+    if (!$collapse?.length) return;
+
+    const saved = localStorage.getItem(key);
+    if (saved === "true") {
+        $collapse.addClass("show");
+        $(`[data-bs-target="#${collapseId}"]`).attr("aria-expanded", "true");
+    } else if (saved === "false") {
+        $collapse.removeClass("show");
+        $(`[data-bs-target="#${collapseId}"]`).attr("aria-expanded", "false");
+    }
+
+    $collapse.off("shown.bs.collapse.rpFiltros hidden.bs.collapse.rpFiltros")
+        .on("shown.bs.collapse.rpFiltros", () => localStorage.setItem(key, "true"))
+        .on("hidden.bs.collapse.rpFiltros", () => localStorage.setItem(key, "false"));
+}
+
+function tituloColumnaGrilla(api, tableSelector, colIndex) {
+    const $table = $(tableSelector);
+    const title = $table.find("thead tr").first().find("th").eq(colIndex).text().trim();
+    if (title) return title;
+    const col = api.settings()[0].aoColumns[colIndex];
+    return col?.sTitle || col?.title || `Columna ${colIndex}`;
+}
+
+function defaultInitSelect2FiltroGrilla($el) {
+    if (!$el?.length || $el.data("select2")) return;
+    if (typeof $.fn.select2 !== "function") {
+        $el.addClass("rp-filter-select-native");
+        return;
+    }
+    $el.select2({
+        width: "100%",
+        allowClear: true,
+        placeholder: "Todos",
+        dropdownParent: $(document.body),
+        minimumResultsForSearch: 0
+    });
+}
+
+function bindClearFiltroSelectGrilla($select, handler) {
+    if (!$select?.length || typeof handler !== "function") return;
+    if ($select.data("select2")) {
+        $select.on("select2:clear", handler);
+    }
+}
+
+function triggerClearFiltroSelectGrilla($select) {
+    if (!$select?.length) return;
+    if ($select.data("select2")) {
+        $select.trigger("change.select2");
+    } else {
+        $select.trigger("change");
+    }
+}
+
+function insertarPanelFiltrosGrilla($table, $panel) {
+    const $wrap = $table.closest(".dt-dark-wrap");
+    const $gridPanel = $wrap.closest(".rp-grid-panel");
+    const $insertBefore = $gridPanel.length ? $gridPanel : $wrap;
+    const $host = $insertBefore.parent();
+    $panel.insertBefore($insertBefore);
+    $host.addClass("rp-grid-has-filtros-panel");
+    return $panel;
+}
+
+function actualizarBadgeFiltrosGrilla($panel, count) {
+    const $badge = $panel.find(".rp-filtros-badge");
+    if (!$badge.length) return;
+    if (count > 0) {
+        $badge.text(`${count} activo${count === 1 ? "" : "s"}`).removeClass("d-none");
+    } else {
+        $badge.addClass("d-none").text("");
+    }
+}
+
+function filtroPanelSelectTieneValor($el) {
+    const val = $el.val();
+    if (val === null || val === undefined) return false;
+    if (Array.isArray(val)) return val.length > 0 && String(val[0] ?? "").trim() !== "";
+    return String(val).trim() !== "";
+}
+
+function contarFiltrosActivosPanel($panel) {
+    let n = 0;
+    $panel.find(".rp-grid-panel-search-global").each(function () {
+        if ($(this).val()?.trim()) n++;
+    });
+    $panel.find(".rp-grid-panel-search-id").each(function () {
+        if ($(this).val()?.trim()) n++;
+    });
+    $panel.find(".rp-grid-panel-field").not(".rp-grid-panel-activo").each(function () {
+        const $el = $(this);
+        if ($el.hasClass("sucursal-unica-lock")) return;
+        if (filtroPanelSelectTieneValor($el)) n++;
+    });
+    $panel.find(".rp-grid-panel-activo").each(function () {
+        const $el = $(this);
+        const val = $el.val();
+        const def = $el.data("defaultModo") || "activos";
+        if (val && val !== def) n++;
+    });
+    return n;
+}
+
+function refrescarBadgeFiltrosPanel($panel) {
+    actualizarBadgeFiltrosGrilla($panel, contarFiltrosActivosPanel($panel));
+}
+
+function limpiarPanelFiltrosGrilla($panel, api, tableSelector) {
+    $panel.find(".rp-grid-panel-search-global").val("");
+    $panel.find(".rp-grid-panel-search-id").val("");
+    $panel.find(".rp-grid-panel-field").not(".rp-grid-panel-activo").each(function () {
+        const $el = $(this);
+        $el.val("");
+        triggerClearFiltroSelectGrilla($el);
+    });
+
+    const $activo = $panel.find(".rp-grid-panel-activo");
+    if ($activo.length) {
+        const def = $activo.data("defaultModo") || "activos";
+        $activo.val(def);
+        triggerClearFiltroSelectGrilla($activo);
+        const filtro = $(tableSelector).data("rpFiltroActivo");
+        if (filtro?.setModo) filtro.setModo(def);
+    }
+
+    if (api?.search) api.search("").columns().search("");
+    if (api?.draw) api.draw(false);
+    refrescarBadgeFiltrosPanel($panel);
+}
+
+async function crearControlFiltroColumnaGrilla(api, tableSelector, config, $container, options = {}) {
+    const initSelect2 = options.initSelect2 || defaultInitSelect2FiltroGrilla;
+    const escapeRegex = options.escapeRegex || escapeRegexGrilla;
+    const colIndex = config.index;
+    const label = config.label || tituloColumnaGrilla(api, tableSelector, colIndex);
+    const inputType = config.filterType === "number" ? "number" : "text";
+    const $col = $(`
+        <div class="col-md-6 col-lg-4 col-xl-3">
+            <div class="rp-filter-label">${label}</div>
+        </div>`);
+    const $fieldWrap = $col.find(".rp-filter-label");
+
+    if (typeof options.beforeFieldBuild === "function") {
+        const skip = await options.beforeFieldBuild(config, $col, api, "panel");
+        if (skip === false) return null;
+    }
+
+    if (config.filterType === "select" || config.filterType === "select_local") {
+        const $select = $(`<select class="rp-filter-select rp-grid-panel-field" data-col="${colIndex}" style="width:100%"></select>`);
+        $fieldWrap.after($select);
+
+        if (config.sucursalDt && typeof prepararFiltroSucursalDataTable === "function") {
+            await prepararFiltroSucursalDataTable($select, api, colIndex, initSelect2);
+        } else if (config.filterType === "select_local") {
+            $select.append(`<option value=""></option>`);
+            const uniques = new Set();
+            api.column(colIndex).data().each(v => {
+                const txt = (v ?? "").toString().trim();
+                if (txt) uniques.add(txt);
+            });
+            [...uniques].sort().forEach(txt => $select.append(`<option value="${txt}">${txt}</option>`));
+            initSelect2($select);
+        } else {
+            $select.append(`<option value="">Todos</option>`);
+            if (config.opcionesEstaticas) {
+                config.opcionesEstaticas.forEach(txt => $select.append(`<option value="${txt}">${txt}</option>`));
+            } else if (config.localOptions) {
+                config.localOptions.forEach(opt => $select.append(`<option value="${opt.value}">${opt.label}</option>`));
+            } else if (config.fetchDataFunc) {
+                const datos = await config.fetchDataFunc();
+                (datos || []).forEach(item => {
+                    const texto = item.NombreCombo
+                        ? (typeof etiquetaCuenta === "function" ? etiquetaCuenta(item) : item.Nombre)
+                        : (item.Nombre || item.Text || "");
+                    $select.append(`<option value="${item.Id ?? item.id ?? texto}">${texto}</option>`);
+                });
+            }
+            initSelect2($select);
+        }
+
+        if (typeof options.afterSelectBuild === "function") {
+            await options.afterSelectBuild(config, $select, api, "panel");
+        }
+
+        const applySelectSearch = () => {
+            const value = $select.val();
+            if (!value) {
+                api.column(colIndex).search("").draw(false);
+                return;
+            }
+            let searchText = $select.find("option:selected").text();
+            if (typeof options.getSelectSearchText === "function") {
+                searchText = options.getSelectSearchText(config, $select) || searchText;
+            } else if (config.filterType === "select_local" || config.opcionesEstaticas) {
+                searchText = value;
+            }
+            api.column(colIndex)
+                .search("^" + escapeRegex(searchText) + "$", true, false)
+                .draw(false);
+        };
+
+        bindClearFiltroSelectGrilla($select, () => {
+            api.column(colIndex).search("").draw(false);
+            refrescarBadgeFiltrosPanel($select.closest(".rp-grid-filtros-wrap"));
+        });
+        $select.on("change", async function () {
+            if (typeof options.onSelectChange === "function") {
+                await options.onSelectChange(config, $select, api, "panel");
+            }
+            applySelectSearch();
+            refrescarBadgeFiltrosPanel($select.closest(".rp-grid-filtros-wrap"));
+        });
+
+        return $col;
+    }
+
+    const $input = $(`<input type="${inputType}" ${inputType === "number" ? 'step="0.01"' : ""} class="rp-filter-input rp-grid-panel-field" data-col="${colIndex}" placeholder="Buscar..." autocomplete="off">`);
+    $fieldWrap.after($input);
+    $input.on("keyup change", function () {
+        api.column(colIndex).search(this.value || "").draw(false);
+        refrescarBadgeFiltrosPanel($input.closest(".rp-grid-filtros-wrap"));
+    });
+    return $col;
+}
+
+async function montarPanelFiltrosGrillaLista(api, tableSelector, columnConfig, options = {}) {
+    const $table = $(tableSelector);
+    if (!$table.length) return null;
+
+    const tableId = $table.attr("id") || tableSelector.replace("#", "");
+    const panelId = `panelFiltrosGrid_${tableId}`;
+    const collapseId = `collapseFiltrosGrid_${tableId}`;
+
+    if ($(`#${panelId}`).length) return $(`#${panelId}`);
+
+    const opts = Object.assign({
+        includeGlobalSearch: true,
+        includeIdFilter: true,
+        defaultActivoModo: "activos",
+        panelTitle: "Filtros de búsqueda",
+        panelExpanded: false,
+        maxColumnIndex: null,
+        initSelect2: defaultInitSelect2FiltroGrilla
+    }, options);
+
+    const idxActivo = typeof indiceColumnaActivoGrilla === "function" ? indiceColumnaActivoGrilla(api) : null;
+
+    const $panel = $(`
+<div class="rp-filtros-wrap rp-grid-filtros-wrap mb-3" id="${panelId}" data-table-id="${tableId}">
+    <div class="rp-filtros-head" data-bs-toggle="collapse" data-bs-target="#${collapseId}" aria-expanded="${opts.panelExpanded ? "true" : "false"}">
+        <div class="title"><i class="fa fa-filter"></i><span>${opts.panelTitle}</span></div>
+        <span class="rp-filtros-badge d-none"></span>
+        <i class="fa fa-chevron-down chev"></i>
+    </div>
+    <div id="${collapseId}" class="collapse${opts.panelExpanded ? " show" : ""}">
+        <div class="rp-filtros-body">
+            <div class="row g-3 rp-grid-filtros-fields"></div>
+            <div class="rp-filtros-actions mt-3">
+                <button type="button" class="btn btn-outline-light btn-sm rp-grid-filtros-limpiar"><i class="fa fa-eraser me-1"></i> Limpiar</button>
+            </div>
+        </div>
+    </div>
+</div>`);
+
+    insertarPanelFiltrosGrilla($table, $panel);
+    initPanelFiltrosPersistido(panelId, collapseId);
+
+    const $fields = $panel.find(".rp-grid-filtros-fields");
+
+    if (opts.includeGlobalSearch) {
+        $fields.append(`
+            <div class="col-12 col-lg-6">
+                <div class="rp-filter-label">Buscar en todo</div>
+                <input type="text" class="rp-filter-input rp-grid-panel-search-global" placeholder="Texto libre en cualquier campo..." autocomplete="off">
+            </div>`);
+        $panel.find(".rp-grid-panel-search-global").on("keyup change", function () {
+            api.search(this.value || "").draw(false);
+            refrescarBadgeFiltrosPanel($panel);
+        });
+    }
+
+    if (opts.includeIdFilter) {
+        $fields.append(`
+            <div class="col-6 col-md-3 col-lg-2">
+                <div class="rp-filter-label">Id</div>
+                <input type="text" class="rp-filter-input rp-grid-panel-search-id" placeholder="Id..." autocomplete="off">
+            </div>`);
+        $panel.find(".rp-grid-panel-search-id").on("keyup change", function () {
+            api.column(1).search($(this).val()?.trim() || "").draw(false);
+            refrescarBadgeFiltrosPanel($panel);
+        });
+    }
+
+    if (idxActivo !== undefined && idxActivo !== null && opts.includeActivo !== false) {
+        const modo = opts.defaultActivoModo || "activos";
+        $fields.append(`
+            <div class="col-6 col-md-3 col-lg-2">
+                <div class="rp-filter-label">Estado</div>
+                <select class="rp-filter-select rp-grid-panel-activo" data-default-modo="${modo}">
+                    <option value="activos">Activos</option>
+                    <option value="inactivos">Inactivos</option>
+                    <option value="todos">Todos</option>
+                </select>
+            </div>`);
+        const $activo = $panel.find(".rp-grid-panel-activo");
+        $activo.val(modo).data("defaultModo", modo);
+        defaultInitSelect2FiltroGrilla($activo);
+        $activo.on("change", function () {
+            const filtro = $(tableSelector).data("rpFiltroActivo");
+            if (filtro?.setModo) filtro.setModo($(this).val());
+            api.draw(false);
+            refrescarBadgeFiltrosPanel($panel);
+        });
+    }
+
+    for (const config of (columnConfig || [])) {
+        if (opts.maxColumnIndex !== null && config.index > opts.maxColumnIndex) continue;
+        if (idxActivo !== undefined && idxActivo !== null && config.index === idxActivo) continue;
+        const $field = await crearControlFiltroColumnaGrilla(api, tableSelector, config, $fields, opts);
+        if ($field) $fields.append($field);
+    }
+
+    $panel.find(".rp-grid-filtros-limpiar").on("click", function () {
+        limpiarPanelFiltrosGrilla($panel, api, tableSelector);
+    });
+
+    refrescarBadgeFiltrosPanel($panel);
+    return $panel;
+}
+
+async function armarFiltrosGrillaLista(api, tableSelector, columnConfig, options = {}) {
+    const $table = $(tableSelector);
+    const tableId = $table.attr("id") || "";
+    if (tableId) registrarFiltrosGrilla(tableId, columnConfig, options);
+
+    const opts = Object.assign({ usarFilaColumnas: false }, options);
+    const idxActivo = typeof indiceColumnaActivoGrilla === "function" ? indiceColumnaActivoGrilla(api) : null;
+
+    if (opts.usarFilaColumnas) {
+        inicializarFilaFiltrosGrilla(api, tableSelector);
+        finalizarFiltrosGridLista(api, tableSelector);
+        for (const config of (columnConfig || [])) {
+            if (opts.maxColumnIndex !== null && config.index > opts.maxColumnIndex) continue;
+            const cell = celdasFiltroGrilla(tableSelector).eq(config.index);
+            if (!cell.length) continue;
+            cell.empty();
+            const $tmp = $('<div class="col-12"></div>');
+            await crearControlFiltroColumnaGrilla(api, tableSelector, config, $tmp, opts);
+            cell.append($tmp.children().not(".rp-filter-label"));
+        }
+        finalizarFiltrosGridLista(api, tableSelector);
+    }
+
+    if (idxActivo !== undefined && idxActivo !== null && opts.includeActivo !== false) {
+        let filtro = $table.data("rpFiltroActivo");
+        if (!filtro && typeof crearFiltroActivoDataTable === "function") {
+            filtro = crearFiltroActivoDataTable(tableSelector, opts.defaultActivoModo || "activos");
+            $table.data("rpFiltroActivo", filtro);
+            if ((opts.defaultActivoModo || "activos") !== "activos") api.draw(false);
+        }
+    }
+
+    await montarPanelFiltrosGrillaLista(api, tableSelector, columnConfig, opts);
+    ajustarColumnasGrillaLista(api, tableSelector);
+}
+
+async function autoMontarPanelFiltrosGrilla(settings) {
+    const table = settings.nTable;
+    const tableId = table?.id;
+    if (!tableId?.startsWith("grd_")) return;
+
+    const reg = RP_GRID_FILTER_REGISTRY[tableId];
+    if (!reg) return;
+
+    const api = new $.fn.dataTable.Api(settings);
+    const tableSelector = `#${tableId}`;
+    if ($(`#panelFiltrosGrid_${tableId}`).length) return;
+
+    await armarFiltrosGrillaLista(api, tableSelector, reg.columnConfig, reg.options);
+}
+
+if (!window._rpGridFiltersAutoBound) {
+    window._rpGridFiltersAutoBound = true;
+    $(function () {
+        $(document).on("init.dt", function (e, settings) {
+            setTimeout(() => autoMontarPanelFiltrosGrilla(settings), 0);
+        });
     });
 }
 
@@ -1116,6 +1640,10 @@ if (!window._rpGridActivoToggleBound) {
                     if (filtro) api.draw(false);
                 }
             }
+
+            if (modulo === "Clientes" && typeof cargarDashboardClientes === "function") {
+                cargarDashboardClientes();
+            }
         } catch {
             $cb.prop("checked", !activo);
             if (typeof errorModal === "function") errorModal("Error de comunicación con el servidor.");
@@ -1138,6 +1666,9 @@ function ajustarColumnasGrillaLista(api, tableSelector) {
             api.columns.adjust();
             if (api.fixedHeader) {
                 api.fixedHeader.adjust();
+            }
+            if (window.RpGridView) {
+                RpGridView.programarAjuste();
             }
         } catch { /* ignore */ }
     }, 60);
@@ -1989,6 +2520,137 @@ async function prepararFiltroSucursalDataTable($select, api, columnIndex, initSe
                 ejecutarDobleClickFila($tr);
             });
     }
+
+    function flashFilaGrilla($tr) {
+        if (!$tr?.length) return;
+        $tr.addClass("dt-row-flash");
+        setTimeout(() => $tr.removeClass("dt-row-flash"), 2400);
+    }
+
+    function buscarIndiceFilaGrillaPorId(api, targetId, scope) {
+        let foundIdx = -1;
+        const collection = scope === "applied" ? api.rows({ search: "applied" }) : api.rows();
+        collection.every(function () {
+            const data = this.data();
+            const rid = Number(data?.Id ?? data?.id ?? data?.ID ?? 0);
+            if (rid === targetId) {
+                foundIdx = this.index();
+                return false;
+            }
+        });
+        return foundIdx;
+    }
+
+    function paginaDeIndiceFila(api, rowIdx) {
+        const info = api.page.info();
+        if (!info.length) return 0;
+        return Math.floor(rowIdx / info.length);
+    }
+
+    function scrollAFilaGrilla($tr, $table) {
+        if (!$tr?.length) return;
+
+        const tr = $tr[0];
+        tr.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
+
+        const scrollBody = $table.closest(".dataTables_wrapper").find(".dataTables_scrollBody")[0];
+        if (!scrollBody) return;
+
+        const trRect = tr.getBoundingClientRect();
+        const bodyRect = scrollBody.getBoundingClientRect();
+        if (trRect.top < bodyRect.top || trRect.bottom > bodyRect.bottom) {
+            const offset = tr.offsetTop - scrollBody.clientHeight / 2 + tr.clientHeight / 2;
+            scrollBody.scrollTo({ top: Math.max(0, offset), behavior: "smooth" });
+        }
+    }
+
+    function deriveGridKeyFromTableId(tableId) {
+        return String(tableId || "")
+            .replace(/^grd_/i, "")
+            .replace(/Cg$/i, "")
+            .replace(/([A-Z])/g, "_$1")
+            .toLowerCase()
+            .replace(/^_/, "")
+            .replace(/_/g, "");
+    }
+
+    function irACardGrilla(tableId, targetId, opts) {
+        const key = deriveGridKeyFromTableId(tableId);
+        const $cards = $(`#rpCards_${key}, #cgCards_${key}`);
+        if (!$cards.length) return false;
+
+        if (window.RpGridView?.renderCards) {
+            window.RpGridView.renderCards(key);
+        }
+
+        const $card = $cards.find(`.rp-data-card[data-row-id="${targetId}"], .cg-data-card[data-row-id="${targetId}"]`).first();
+        if (!$card.length) return false;
+
+        $cards.find(".rp-data-card.is-selected, .cg-data-card.is-selected").removeClass("is-selected");
+        $card.addClass("is-selected");
+        $cards.data("rpSelectedKey", `id:${targetId}`);
+
+        if (opts.scroll !== false) {
+            $card[0].scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
+        }
+
+        if (opts.flash !== false) {
+            $card.addClass("is-flash-target");
+            setTimeout(() => $card.removeClass("is-flash-target"), 2400);
+        }
+
+        return true;
+    }
+
+    window.irAFilaGrilla = function (tableId, id, opts) {
+        opts = Object.assign({ scroll: true, flash: true, limpiarFiltros: true }, opts || {});
+
+        const targetId = Number(id);
+        if (!targetId || !tableId) return false;
+
+        if (window.RpGridView && !window.RpGridView.debeMostrarTabla()) {
+            return irACardGrilla(tableId, targetId, opts);
+        }
+
+        const $table = $(`#${tableId}`);
+        if (!$table.length || !$.fn.dataTable) return false;
+
+        let api;
+        try {
+            api = $table.DataTable();
+        } catch {
+            return false;
+        }
+
+        let foundIdx = buscarIndiceFilaGrillaPorId(api, targetId, "applied");
+
+        if (foundIdx < 0 && opts.limpiarFiltros) {
+            const idxAll = buscarIndiceFilaGrillaPorId(api, targetId, "all");
+            if (idxAll >= 0) {
+                api.search("");
+                api.columns().search("");
+                api.draw(false);
+                foundIdx = buscarIndiceFilaGrillaPorId(api, targetId, "applied");
+                if (foundIdx < 0) foundIdx = idxAll;
+            }
+        }
+
+        if (foundIdx < 0) return false;
+
+        const targetPage = paginaDeIndiceFila(api, foundIdx);
+        if (api.page() !== targetPage) {
+            api.page(targetPage).draw(false);
+        }
+
+        guardarIdSeleccionGrilla($table, targetId, foundIdx);
+        aplicarSeleccionVisualGrilla($table, { id: targetId, rowIdx: foundIdx });
+
+        const $tr = $(api.row(foundIdx).node());
+        if (opts.scroll) scrollAFilaGrilla($tr, $table);
+        if (opts.flash) flashFilaGrilla($tr);
+
+        return $tr.length > 0 || irACardGrilla(tableId, targetId, opts);
+    };
 
     window.registrarGrillaDobleClick = function (tableId, fn) {
         if (tableId && typeof fn === "function") {

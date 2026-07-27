@@ -24,7 +24,7 @@
                     dias: "/Dias/Lista",
                     semanas: "/Semanas/Lista",
                     listasPrecios: "/ListasPrecios/Lista",
-                    productos: "/Productos/Lista",
+                    camiones: "/Camiones/Lista?soloActivos=true",
                     contactosLista: "/ClientesEstablecimientosContactos/ListaPorEstablecimiento?idEstablecimiento={idEstablecimiento}",
                     contactosInsertar: "/ClientesEstablecimientosContactos/Insertar",
                     contactosActualizar: "/ClientesEstablecimientosContactos/Actualizar",
@@ -1001,6 +1001,7 @@
             if (modelo.IdDiaRecoleccion) this._setFieldValue("cmbDiaEst", modelo.IdDiaRecoleccion, true);
             if (modelo.IdSemanaRecoleccion) this._setFieldValue("cmbSemanaEst", modelo.IdSemanaRecoleccion, true);
             if (modelo.IdListaPrecio) this._setFieldValue("cmbListaPrecioEst", modelo.IdListaPrecio, true);
+            if (modelo.IdCamion) this._setFieldValue("cmbCamionEst", modelo.IdCamion, true);
 
             this._setAuditoria(modelo);
 
@@ -1060,7 +1061,7 @@
                 this._llenarCombo("cmbDiaEst", this.options.endpoints.dias),
                 this._llenarCombo("cmbSemanaEst", this.options.endpoints.semanas),
                 this._llenarCombo("cmbListaPrecioEst", this.options.endpoints.listasPrecios),
-                this._llenarCombo("cmbProductoEst", this.options.endpoints.productos)
+                this._llenarCombo("cmbCamionEst", this.options.endpoints.camiones)
             ]);
 
             this.inicializarSelect2Modal();
@@ -1086,6 +1087,7 @@
                 IdDiaRecoleccion: this._getIntOrNull("cmbDiaEst") ?? 0,
                 IdSemanaRecoleccion: this._getIntOrNull("cmbSemanaEst") ?? 0,
                 IdListaPrecio: this._getIntOrNull("cmbListaPrecioEst") ?? 0,
+                IdCamion: this._getIntOrNull("cmbCamionEst"),
                 HorarioRecoleccionDesde: this._parseHorario(this._getFieldValue("txtHorarioDesdeEst")),
                 HorarioRecoleccionHasta: this._parseHorario(this._getFieldValue("txtHorarioHastaEst"))
             };

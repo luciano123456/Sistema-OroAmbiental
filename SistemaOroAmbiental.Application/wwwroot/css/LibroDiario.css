@@ -1,0 +1,182 @@
+/* Libro Diario — tabla estilo Excel, responsive */
+
+.ld-index {
+    color: #eaf1ff;
+    padding-bottom: 2rem;
+}
+
+.ld-tabs {
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(0, 0, 0, 0.2);
+}
+
+.ld-tabs .nav-link {
+    color: rgba(234, 241, 255, 0.75);
+    padding: 0.45rem 0.9rem;
+    font-size: 0.85rem;
+    border-radius: 0;
+}
+
+.ld-tabs .nav-link.active {
+    background: linear-gradient(135deg, rgba(56, 189, 148, 0.35), rgba(16, 185, 129, 0.15));
+    color: #fff;
+}
+
+.ld-kpis {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 12px;
+}
+
+@media (max-width: 1200px) {
+    .ld-kpis {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .ld-kpis {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .ld-tabs {
+        width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+    .ld-kpis {
+        grid-template-columns: 1fr;
+    }
+}
+
+.ld-val-debe {
+    color: #7dffb8 !important;
+}
+
+.ld-val-haber {
+    color: #ff9a9a !important;
+}
+
+.ld-val-saldo {
+    color: #ffd166 !important;
+}
+
+.ld-grid-card .cc-card-body {
+    padding: 0 !important;
+}
+
+.ld-table-wrap {
+    overflow: auto;
+    max-height: calc(100vh - 340px);
+    border-radius: 0 0 16px 16px;
+}
+
+.ld-table {
+    width: 100%;
+    min-width: 1200px;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 0.82rem;
+}
+
+.ld-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: linear-gradient(180deg, #1a2744 0%, #121b30 100%);
+    color: #cfe0ff;
+    font-weight: 700;
+    padding: 10px 8px;
+    border-bottom: 2px solid rgba(255, 255, 255, 0.12);
+    white-space: nowrap;
+}
+
+.ld-table tbody td,
+.ld-table tfoot td {
+    padding: 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    vertical-align: middle;
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.ld-table tbody tr:hover td {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.ld-table .ld-num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.ld-col-acc {
+    width: 72px;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.ld-col-concepto {
+    min-width: 160px;
+    max-width: 220px;
+}
+
+.ld-col-saldo {
+    background: rgba(255, 209, 102, 0.06) !important;
+    font-weight: 700;
+}
+
+.ld-row-saldo-ant td {
+    background: rgba(255, 255, 255, 0.04) !important;
+    font-style: italic;
+    opacity: 0.9;
+}
+
+.ld-empty {
+    text-align: center;
+    padding: 2rem !important;
+    color: rgba(234, 241, 255, 0.55);
+}
+
+/* Autocomplete */
+.ld-ac-wrap {
+    position: relative;
+}
+
+.ld-ac-list {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: calc(100% + 4px);
+    z-index: 1060;
+    max-height: 220px;
+    overflow: auto;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: #1a2332;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+}
+
+.ld-ac-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    border: 0;
+    background: transparent;
+    color: #eaf1ff;
+    text-align: left;
+    padding: 0.55rem 0.75rem;
+    font-size: 0.85rem;
+}
+
+.ld-ac-item:hover {
+    background: rgba(56, 189, 148, 0.15);
+}
+
+.ld-ac-item small {
+    opacity: 0.65;
+    margin-left: 8px;
+}

@@ -4,7 +4,7 @@ namespace SistemaOroAmbiental.DAL.Repository
 {
     public interface IInventarioRepository
     {
-        Task<List<(Producto producto, Inventario? inventario)>> ListarProductos(
+        Task<List<(Producto producto, Inventario? inventario, decimal stockRecuperado)>> ListarProductos(
             int idSucursal,
             string? buscar,
             bool soloBajoMinimo,

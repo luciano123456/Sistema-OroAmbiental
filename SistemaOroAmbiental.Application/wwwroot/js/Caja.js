@@ -40,13 +40,38 @@ const columnConfig = [
     { index: 2, filterType: 'text' },
     { index: 3, filterType: 'select_local' },
     { index: 4, filterType: 'select_local' },
-    { index: 5, filterType: 'select', fetchDataFunc: listaSucursalesFilter },
+    { index: 5, filterType: 'select', sucursalDt: true },
     { index: 6, filterType: 'select', fetchDataFunc: listaCuentasFilter },
     { index: 7, filterType: 'text' },
     { index: 8, filterType: 'number' },
     { index: 9, filterType: 'number' },
     { index: 10, filterType: 'number' }
 ];
+
+registrarFiltrosGrilla('grd_Caja', columnConfig, {
+    includeActivo: false,
+    panelTitle: 'Filtrar resultados cargados',
+    initSelect2: ($el) => inicializarSelect2Filtro($el),
+    onSelectChange: async (config, $select, api) => {
+        if (config.index !== 5) return;
+        const value = $select.val();
+        const $panel = $select.closest('.rp-grid-filtros-wrap');
+        const $cuentaSelect = $panel.find('.rp-grid-panel-field[data-col="6"]');
+        if (!$cuentaSelect.length) return;
+
+        const cuentas = await listaCuentasFilter(value || null);
+        $cuentaSelect.empty().append(`<option value="">Todos</option>`);
+        (cuentas || []).forEach(item => {
+            $cuentaSelect.append(`<option value="${item.Id}">${etiquetaCuenta(item)}</option>`);
+        });
+        inicializarSelect2Filtro($cuentaSelect);
+        $cuentaSelect.val("").trigger("change.select2");
+        api.column(6).search('').draw(false);
+    },
+    afterSelectBuild: async (config, $select) => {
+        if (config.index === 6) $select.addClass("rp-filter-select-cuenta");
+    }
+});
 
 const API = {
     movimientos: "/Cajas/Movimientos",
@@ -753,143 +778,29 @@ async function configurarDataTable(data) {
             fixedHeader: true,
             initComplete: async function () {
                 const api = this.api();
-
-                asegurarFilaFiltrosCaja(api);
-                finalizarFiltrosGridLista(api, '#grd_Caja');
-
-                for (const config of columnConfig) {
-                    const cell = $celdaFiltroColumnaCaja(config.index, api);
-                    if (!cell.length) continue;
-
-                    cell.empty();
-
-                    if (config.filterType === 'select' || config.filterType === 'select_local') {
-
-                        const esFiltroSucursal = config.index === 5 && config.filterType === 'select';
-                        const $select = $(`
-                            <select class="rp-filter-select" style="width:100%" autocomplete="off"></select>
-                        `).appendTo(cell);
-
-                        if (config.index === 5) {
-                            $select.addClass("rp-filter-select-sucursal");
-                        }
-
-                        if (config.index === 6) {
-                            $select.addClass("rp-filter-select-cuenta");
-                        }
-
-                        if (esFiltroSucursal && typeof prepararFiltroSucursalDataTable === "function") {
-                            await prepararFiltroSucursalDataTable($select, api, config.index, inicializarSelect2Filtro);
-
-                            if (typeof usuarioTieneUnicaSucursal === "function" && usuarioTieneUnicaSucursal()) {
-                                const value = $select.val();
-                                const $cuentaSelect = $celdaFiltroColumnaCaja(6, api).find('select.rp-filter-select-cuenta');
-                                if ($cuentaSelect.length) {
-                                    const cuentas = await listaCuentasFilter(value || null);
-                                    $cuentaSelect.empty().append(`<option value="">Todos</option>`);
-                                    (cuentas || []).forEach(item => {
-                                        $cuentaSelect.append(`<option value="${item.Id}">${etiquetaCuenta(item)}</option>`);
-                                    });
-                                    inicializarSelect2Filtro($cuentaSelect);
-                                }
-                            }
-                        } else if (config.filterType === 'select') {
-                            $select.append(`<option value="">Todos</option>`);
-                            const datos = await config.fetchDataFunc();
-                            (datos || []).forEach(item => {
-                                const texto = item.NombreCombo
-                                    ? etiquetaCuenta(item)
-                                    : (item.Nombre || "");
-                                $select.append(`<option value="${item.Id}">${texto}</option>`);
-                            });
-                        } else {
-                            $select.append(`<option value=""></option>`);
-                            const uniques = new Set();
-                            api.column(config.index).data().each(v => {
-                                const txt = (v ?? "").toString().trim();
-                                if (txt) uniques.add(txt);
-                            });
-                            [...uniques].sort().forEach(txt => {
-                                $select.append(`<option value="${txt}">${txt}</option>`);
-                            });
-                            $select.val(null);
-                        }
-
-                        if (!(esFiltroSucursal && typeof prepararFiltroSucursalDataTable === "function")) {
-                            inicializarSelect2Filtro($select);
-                            if (config.filterType === "select_local") {
-                                $select.val(null).trigger("change.select2");
-                            }
-                        }
-
-                        if (esFiltroSucursal && typeof usuarioTieneUnicaSucursal === "function" && usuarioTieneUnicaSucursal()) {
-                            continue;
-                        }
-
-                        $select.on('select2:clear', function () {
-                            api.column(config.index).search('').draw(false);
+                await armarFiltrosGrillaLista(api, '#grd_Caja', columnConfig, {
+                    includeActivo: false,
+                    panelTitle: 'Filtrar resultados cargados',
+                    initSelect2: ($el) => inicializarSelect2Filtro($el),
+                    onSelectChange: async (config, $select, api) => {
+                        if (config.index !== 5) return;
+                        const value = $select.val();
+                        const $panel = $select.closest('.rp-grid-filtros-wrap');
+                        const $cuentaSelect = $panel.find('.rp-grid-panel-field[data-col="6"]');
+                        if (!$cuentaSelect.length) return;
+                        const cuentas = await listaCuentasFilter(value || null);
+                        $cuentaSelect.empty().append(`<option value="">Todos</option>`);
+                        (cuentas || []).forEach(item => {
+                            $cuentaSelect.append(`<option value="${item.Id}">${etiquetaCuenta(item)}</option>`);
                         });
-
-                        $select.on('change', async function () {
-                            const value = $(this).val();
-
-                            if (config.index === 5) {
-                                const $cuentaSelect = $celdaFiltroColumnaCaja(6, api).find('select.rp-filter-select-cuenta');
-
-                                if ($cuentaSelect.length) {
-                                    const cuentas = await listaCuentasFilter(value || null);
-
-                                    $cuentaSelect.empty().append(`<option value="">Todos</option>`);
-                                    (cuentas || []).forEach(item => {
-                                        $cuentaSelect.append(`<option value="${item.Id}">${etiquetaCuenta(item)}</option>`);
-                                    });
-
-                                    inicializarSelect2Filtro($cuentaSelect);
-                                    $cuentaSelect.val("").trigger("change.select2");
-                                    api.column(6).search('').draw(false);
-                                }
-                            }
-
-                            if (!value) {
-                                api.column(config.index).search('').draw(false);
-                                return;
-                            }
-
-                            const text = $(this).find('option:selected').text();
-                            api.column(config.index)
-                                .search('^' + escapeRegex(text) + '$', true, false)
-                                .draw(false);
-                        });
-
-                    } else if (config.filterType === 'number') {
-
-                        $(`
-                            <input type="number"
-                                   step="0.01"
-                                   class="rp-filter-input"
-                                   placeholder="Buscar..."
-                                   autocomplete="off">
-                        `)
-                            .appendTo(cell)
-                            .on('keyup change', function () {
-                                const val = this.value;
-                                if (!val) {
-                                    api.column(config.index).search('').draw(false);
-                                    return;
-                                }
-                                api.column(config.index).search(val).draw(false);
-                            });
-
-                    } else {
-                        $('<input class="rp-filter-input" type="text" placeholder="Buscar..." autocomplete="off">')
-                            .appendTo(cell)
-                            .on('keyup change', function () {
-                                api.column(config.index).search(this.value).draw(false);
-                            });
+                        inicializarSelect2Filtro($cuentaSelect);
+                        $cuentaSelect.val("").trigger("change.select2");
+                        api.column(6).search('').draw(false);
+                    },
+                    afterSelectBuild: async (config, $select) => {
+                        if (config.index === 6) $select.addClass("rp-filter-select-cuenta");
                     }
-                }
-
-                finalizarFiltrosGridLista(api, '#grd_Caja');
+                });
                 configurarOpcionesColumnasCaja();
                 actualizarKpis();
             }

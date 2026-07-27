@@ -13,7 +13,7 @@ namespace SistemaOroAmbiental.BLL.Service
             _repo = repo;
         }
 
-        public Task<List<(Producto producto, Inventario? inventario)>> ListarProductos(
+        public Task<List<(Producto producto, Inventario? inventario, decimal stockRecuperado)>> ListarProductos(
             int idSucursal,
             string? buscar,
             bool soloBajoMinimo,

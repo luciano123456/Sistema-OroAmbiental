@@ -8,11 +8,11 @@
 @section Estilos {
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
-    <link href="~/css/disenopantallas.css?v=5.0" rel="stylesheet" />
-    <link href="~/css/M_Generico.css?v=5.0" rel="stylesheet" />
-    <link href="~/css/VentasNuevoModif.css?v=5.0" rel="stylesheet" />
-    <link href="~/css/ClientesEntregas.css?v=5.0" rel="stylesheet" />
-    <link href="~/css/ContratosModal.css?v=5.0" rel="stylesheet" />
+    <link href="~/css/disenopantallas.css?v=5.1" rel="stylesheet" />
+    <link href="~/css/M_Generico.css?v=5.1" rel="stylesheet" />
+    <link href="~/css/VentasNuevoModif.css?v=5.1" rel="stylesheet" />
+    <link href="~/css/ClientesEntregas.css?v=5.1" rel="stylesheet" />
+    <link href="~/css/ContratosModal.css?v=5.3" rel="stylesheet" />
 }
 
 <div class="ventanew entregas-nuevo">
@@ -126,6 +126,15 @@
                                         title="Agregar estado de entrega"
                                         data-config-nombre="Estados Entregas"
                                         data-config-controller="EntregasEstados">
+                                    <i class="fa fa-plus"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label vn-label">Camión</label>
+                            <div class="vn-select-plus">
+                                <select id="cCamion" class="form-select vn-input"></select>
+                                <button type="button" class="vn-btn-plus" title="Agregar camión" onclick="abrirConfiguracion('Camiones', 'Camiones'); return false;">
                                     <i class="fa fa-plus"></i>
                                 </button>
                             </div>
@@ -355,7 +364,8 @@
         window.CM_INIT = { id: @id, idCliente: @idCliente };
     </script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-    <script src="~/js/Entities/M_Productos.js?v=5.0"></script>
-    <script src="~/js/Entities/M_Contratos.js?v=5.0"></script>
-    <script src="~/js/ClientesEntregasNuevoModif.js?v=5.0"></script>
+    <script src="~/js/Entities/M_Productos.js?v=5.1"></script>
+    <script src="~/js/ContratosDocumentos.js?v=5.2"></script>
+    <script src="~/js/Entities/M_Contratos.js?v=5.3"></script>
+    <script src="~/js/ClientesEntregasNuevoModif.js?v=5.1"></script>
 }

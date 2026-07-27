@@ -77,6 +77,36 @@
     </div>
 </div>
 
+<!-- Modal genérico: guardado OK + opción de volver al listado -->
+<div class="modal fade" id="modalGuardadoConSalida" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered modal-md">
+        <div class="modal-content rp-guardado-modal">
+            <button type="button" class="btn-close btn-close-white rp-guardado-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+
+            <div class="rp-guardado-icon-wrap" id="modalGuardadoConSalidaIconWrap">
+                <i class="fa fa-check-circle" id="modalGuardadoConSalidaIcon"></i>
+            </div>
+
+            <div class="modal-body rp-guardado-body text-center">
+                <h5 class="rp-guardado-title" id="modalGuardadoConSalidaTitulo">Guardado correctamente</h5>
+                <p class="rp-guardado-message" id="modalGuardadoConSalidaMensaje"></p>
+                <p class="rp-guardado-pregunta" id="modalGuardadoConSalidaPregunta">¿Deseás volver al listado?</p>
+            </div>
+
+            <div class="modal-footer rp-guardado-footer border-0">
+                <button type="button" class="rp-guardado-btn rp-guardado-btn-quedarse" id="btnGuardadoQuedarse">
+                    <i class="fa fa-pencil"></i>
+                    <span>No, seguir acá</span>
+                </button>
+                <button type="button" class="rp-guardado-btn rp-guardado-btn-salir" id="btnGuardadoSalir">
+                    <i class="fa fa-arrow-left"></i>
+                    <span>Sí, volver al listado</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Modal sesión por expirar (últimos 5 minutos) -->
 <div class="modal fade" id="modalSessionPorExpirar" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
     <div class="modal-dialog modal-dialog-centered">

@@ -45,13 +45,19 @@ const API = {
 };
 
 const columnConfig = [
-    { index: 2, filterType: 'text' },   // Fecha
-    { index: 3, filterType: 'select', fetchDataFunc: listaTiposMovFilter }, // Tipo
-    { index: 4, filterType: 'text' },   // Concepto
-    { index: 5, filterType: 'text' },   // Debe
-    { index: 6, filterType: 'text' },   // Haber
-    { index: 7, filterType: 'text' }    // Saldo
+    { index: 2, filterType: 'text' },
+    { index: 3, filterType: 'select', fetchDataFunc: listaTiposMovFilter },
+    { index: 4, filterType: 'text' },
+    { index: 5, filterType: 'text' },
+    { index: 6, filterType: 'text' },
+    { index: 7, filterType: 'text' }
 ];
+
+registrarFiltrosGrilla('grd_CuentaCorriente', columnConfig, {
+    includeActivo: false,
+    panelTitle: 'Filtrar resultados cargados',
+    initSelect2: ($el) => ensureSelect2($el, { dropdownParent: $(document.body), minimumResultsForSearch: 0, allowClear: true, placeholder: 'Todos' })
+});
 
 const authHeaders = () => ({
     'Authorization': 'Bearer ' + token
@@ -589,65 +595,11 @@ async function configurarDataTable(data) {
 
             initComplete: async function () {
                 const api = this.api();
-                inicializarFilaFiltrosGrilla(api, '#grd_CuentaCorriente');
-                finalizarFiltrosGridLista(api, '#grd_CuentaCorriente');
-
-                for (const config of columnConfig) {
-
-                    const cell = celdasFiltroGrilla('#grd_CuentaCorriente').eq(config.index);
-                    if (!cell.length) continue;
-
-                    cell.empty();
-
-                    if (config.filterType === 'select') {
-
-                        const $select = $(`
-                            <select class="rp-filter-select" style="width:100%">
-                                <option value="">Todos</option>
-                            </select>
-                        `).appendTo(cell);
-
-                        const datos = await config.fetchDataFunc();
-                        (datos || []).forEach(item => {
-                            $select.append(`<option value="${item.Id}">${item.Nombre}</option>`);
-                        });
-
-                        ensureSelect2($select, {
-                            dropdownParent: $(document.body),
-                            minimumResultsForSearch: 0,
-                            allowClear: true,
-                            placeholder: "Todos"
-                        });
-
-                        $select.on('select2:clear', function () {
-                            api.column(config.index).search('').draw(false);
-                        });
-
-                        $select.on('change', function () {
-                            const value = $(this).val();
-
-                            if (!value) {
-                                api.column(config.index).search('').draw(false);
-                                return;
-                            }
-
-                            const text = $(this).find('option:selected').text();
-
-                            api.column(config.index)
-                                .search('^' + escapeRegex(text) + '$', true, false)
-                                .draw(false);
-                        });
-
-                    } else {
-                        $(`<input class="rp-filter-input" type="text" placeholder="Buscar...">`)
-                            .appendTo(cell)
-                            .on('keyup change', function () {
-                                api.column(config.index).search(this.value).draw(false);
-                            });
-                    }
-                }
-
-                finalizarFiltrosGridLista(api, '#grd_CuentaCorriente');
+                await armarFiltrosGrillaLista(api, '#grd_CuentaCorriente', columnConfig, {
+                    includeActivo: false,
+                    panelTitle: 'Filtrar resultados cargados',
+                    initSelect2: ($el) => ensureSelect2($el, { dropdownParent: $(document.body), minimumResultsForSearch: 0, allowClear: true, placeholder: 'Todos' })
+                });
                 configurarOpcionesColumnasCC();
                 actualizarKpis(data);
 
@@ -658,7 +610,6 @@ async function configurarDataTable(data) {
                         $select.select2("open");
                     }
                 });
-
             }
         });
 

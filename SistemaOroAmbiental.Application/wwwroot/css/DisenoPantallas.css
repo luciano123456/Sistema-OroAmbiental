@@ -1421,6 +1421,22 @@ table.dt-dark tbody tr.dt-row-inactivo.dt-row-selected > td:first-child {
     box-shadow: inset 3px 0 0 #e85d5d, inset 6px 0 0 #6b9fff !important;
 }
 
+@keyframes dt-row-flash-pulse {
+    0%, 100% {
+        box-shadow: inset 2px 0 0 #6b9fff !important;
+    }
+
+    50% {
+        box-shadow: inset 2px 0 0 #6b9fff, 0 0 0 2px rgba(107, 159, 255, 0.35) !important;
+    }
+}
+
+table.dataTable.display.dt-dark tbody tr.dt-row-flash > td:first-child,
+table.dataTable.dt-dark.display tbody tr.dt-row-flash > td:first-child,
+table.dt-dark tbody tr.dt-row-flash > td:first-child {
+    animation: dt-row-flash-pulse 0.55s ease 3;
+}
+
 .rp-col-activo {
     width: 88px;
     min-width: 88px;
@@ -1459,7 +1475,13 @@ table.dt-dark tbody tr.dt-row-inactivo.dt-row-selected > td:first-child {
 }
 
 .rp-switch-slider::after {
+    content: none;
+    display: none;
+}
+
+.rp-switch-input + .rp-switch-slider::after {
     content: "";
+    display: block;
     position: absolute;
     top: 3px;
     left: 3px;

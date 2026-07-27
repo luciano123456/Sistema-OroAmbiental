@@ -95,6 +95,8 @@ namespace SistemaOroAmbiental.Application.Controllers
                 Sucursal = cliente?.IdSucursalNavigation?.Nombre ?? "",
                 IdEstado = e.IdEstado,
                 Estado = e.IdEstadoNavigation?.Nombre,
+                IdCamion = e.IdCamion,
+                Camion = e.IdCamionNavigation?.Nombre,
                 NotaInterna = e.NotaInterna,
                 NotaCliente = e.NotaCliente,
                 Subtotal = e.Subtotal,
@@ -209,6 +211,7 @@ namespace SistemaOroAmbiental.Application.Controllers
                 IdCliente = model.IdCliente,
                 IdContrato = model.IdContrato,
                 IdEstado = model.IdEstado,
+                IdCamion = model.IdCamion,
                 NotaInterna = model.NotaInterna?.Trim(),
                 NotaCliente = model.NotaCliente?.Trim()
             };

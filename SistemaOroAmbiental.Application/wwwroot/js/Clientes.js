@@ -1,10 +1,9 @@
 let gridClientes;
-let clienteModal;
 
 const columnConfig = [
     { index: 2, filterType: 'text' },
     { index: 3, filterType: 'text' },
-    { index: 4, filterType: 'select', fetchDataFunc: listaSucursalesFilter },
+    { index: 4, filterType: 'select', fetchDataFunc: listaSucursalesFilter, sucursalDt: true },
     { index: 5, filterType: 'select', fetchDataFunc: listaProvinciasFilter },
     { index: 6, filterType: 'select', fetchDataFunc: listaProfesionesFilter },
     { index: 7, filterType: 'select', fetchDataFunc: listaCondicionesIvaFilter },
@@ -12,36 +11,170 @@ const columnConfig = [
     { index: 9, filterType: 'text' }
 ];
 
-$(document).ready(() => {
+registrarFiltrosGrilla('grd_Clientes', columnConfig, {
+    defaultActivoModo: 'todos',
+    initSelect2: ($el) => inicializarSelect2Filtro($el)
+});
 
-    const modalEl = document.querySelector("[data-cliente-modal]");
-    if (!modalEl) {
-        console.error("No se encontró [data-cliente-modal]. Verifique que el partial M_Clientes esté en la vista.");
-        return;
+const URL_GESTION_CLIENTE = id => id > 0 ? `/Clientes/Gestion?id=${id}` : "/Clientes/Gestion";
+
+const API_CLIENTES = {
+    lista: "/Clientes/Lista",
+    dashboard: "/ClientesOperativo/Dashboard"
+};
+
+$(document).ready(() => {
+    window.nuevoCliente = () => { window.location.href = URL_GESTION_CLIENTE(0); };
+    window.editarCliente = id => { window.location.href = URL_GESTION_CLIENTE(id); };
+    window.verCliente = id => { window.location.href = URL_GESTION_CLIENTE(id); };
+    window.eliminarCliente = eliminarClienteIndex;
+
+    if (typeof registrarGrillaDobleClick === "function") {
+        registrarGrillaDobleClick("grd_Clientes", id => {
+            window.location.href = URL_GESTION_CLIENTE(id);
+        });
     }
 
-    clienteModal = typeof initClienteModal === "function"
-        ? initClienteModal({
-            token: token,
-            onSaved: async () => { await listaClientes(); },
-            onDeleted: async () => { await listaClientes(); }
-        })
-        : null;
+    cargarDashboardClientes();
+    listaClientes();
 
-    if (!clienteModal) return;
+    $("#listaAlertasLicencia")
+        .off("dblclick.clAlertaNav")
+        .on("dblclick.clAlertaNav", ".cl-alerta-card, .cl-alerta-card .cl-alerta-nombre", function (e) {
+            e.preventDefault();
+            const $card = $(this).closest(".cl-alerta-card");
+            irDesdeAlertaLicencia($card.data("id"));
+        });
+});
 
-    $(document)
-        .off("click.select2fix.clientes")
-        .on("click.select2fix.clientes", ".select2-container--default .select2-selection--single", function () {
-            const $select = $(this).closest(".select2-container").prev("select");
-            if ($select.length) {
-                if ($select.data("select2") && $select.data("select2").isOpen()) return;
-                $select.select2("open");
+async function cargarDashboardClientes() {
+    try {
+        const response = await fetch(API_CLIENTES.dashboard, {
+            method: "GET",
+            headers: {
+                Authorization: "Bearer " + token,
+                "Content-Type": "application/json"
             }
         });
 
-    listaClientes();
-});
+        if (!response.ok) return;
+
+        const d = await response.json();
+        actualizarDashboardKpis(d);
+    } catch (e) {
+        console.warn("No se pudo cargar el dashboard de clientes", e);
+    }
+}
+
+function actualizarDashboardKpis(d) {
+    if (!d) return;
+
+    $("#kpiActivos").text(d.Activos ?? 0);
+    $("#kpiSuspendidos").text(d.Suspendidos ?? 0);
+    $("#kpiBaja").text(d.Baja ?? 0);
+    $("#kpiLicencia").text(d.Licencia ?? 0);
+    $("#kpiAlertasLicencia").text(d.LicenciasPorVencer ?? 0);
+    $("#kpiBajasMes").text(d.BajasMesActual ?? 0);
+
+    const alertas = d.AlertasLicencia || [];
+    const panel = $("#panelAlertasLicencia");
+    const lista = $("#listaAlertasLicencia");
+
+    if (!alertas.length) {
+        panel.addClass("d-none");
+        lista.empty();
+        $("#clAlertasLicenciaCount").text("0");
+        return;
+    }
+
+    panel.removeClass("d-none");
+    $("#clAlertasLicenciaCount").text(String(alertas.length));
+
+    lista.html(alertas.map(a => {
+        const fecha = a.FechaLicenciaHasta
+            ? new Date(a.FechaLicenciaHasta).toLocaleDateString("es-AR")
+            : "";
+        const dias = Number(a.DiasRestantes ?? 0);
+        const urgente = dias <= 7;
+
+        return `<article class="cl-alerta-card${urgente ? " is-urgente" : ""}" data-id="${a.Id}" title="Doble clic para ubicar en el listado">
+            <div class="cl-alerta-card-main">
+                <span class="cl-alerta-card-icon"><i class="fa fa-user"></i></span>
+                <div class="cl-alerta-card-text">
+                    <a href="${URL_GESTION_CLIENTE(a.Id)}" class="cl-alerta-nombre">${escapeHtmlCl(a.Nombre)}</a>
+                    <span class="cl-alerta-fecha">Vence el ${fecha}</span>
+                </div>
+            </div>
+            <span class="cl-alerta-badge">${dias} día${dias === 1 ? "" : "s"}</span>
+        </article>`;
+    }).join(""));
+}
+
+function irDesdeAlertaLicencia(id) {
+    const clienteId = Number(id);
+    if (!clienteId) return;
+
+    $("#listaAlertasLicencia .cl-alerta-card").removeClass("is-target");
+    $(`#listaAlertasLicencia .cl-alerta-card[data-id="${clienteId}"]`).addClass("is-target");
+
+    const intentar = () => navegarAFilaCliente(clienteId);
+
+    if (gridClientes) {
+        intentar();
+        return;
+    }
+
+    let intentos = 0;
+    const timer = setInterval(() => {
+        intentos += 1;
+        if (gridClientes) {
+            clearInterval(timer);
+            intentar();
+        } else if (intentos >= 50) {
+            clearInterval(timer);
+        }
+    }, 100);
+}
+
+function navegarAFilaCliente(id) {
+    const ok = typeof window.irAFilaGrilla === "function"
+        && window.irAFilaGrilla("grd_Clientes", id, { scroll: true, flash: true, limpiarFiltros: true });
+
+    if (!ok && typeof errorModal === "function") {
+        errorModal("No se encontró el cliente en el listado.");
+    }
+}
+
+function escapeHtmlCl(t) {
+    return String(t ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+async function eliminarClienteIndex(id) {
+    if (typeof ejecutarEliminacionEntidad !== "function") {
+        errorModal("No está disponible el asistente de eliminación.");
+        return;
+    }
+
+    const resultado = await ejecutarEliminacionEntidad({
+        entidadLabel: "este cliente",
+        urlDependencias: `/Clientes/DependenciasEliminar?id=${id}`,
+        urlEliminar: cascada => `/Clientes/Eliminar?id=${id}&cascada=${cascada ? "true" : "false"}`,
+        headers: { Authorization: "Bearer " + token },
+        fetchJson: async (url, options) => {
+            const response = await fetch(url, options);
+            if (!response.ok) throw new Error(`Error HTTP ${response.status}`);
+            return await response.json();
+        }
+    });
+
+    if (resultado.accion !== "ok") return;
+
+    if (typeof exitoModal === "function") {
+        exitoModal(resultado.data?.mensaje ?? "Cliente eliminado correctamente");
+    }
+
+    await listaClientes();
+}
 
 function ensureSelect2($el, options) {
     if (!$el || !$el.length) return;
@@ -125,64 +258,10 @@ async function configurarDataTable(data) {
             fixedHeader: true,
             initComplete: async function () {
                 const api = this.api();
-                inicializarFilaFiltrosGrilla(api, '#grd_Clientes');
-                finalizarFiltrosGridLista(api, '#grd_Clientes');
-
-                for (const config of columnConfig) {
-                    const cell = celdasFiltroGrilla('#grd_Clientes').eq(config.index);
-                    if (!cell.length) continue;
-                    cell.empty();
-
-                    if (config.filterType === 'select') {
-                        const $select = $(`
-                            <select class="rp-filter-select" style="width:100%"></select>
-                        `).appendTo(cell);
-
-                        if (config.index === 4 && typeof prepararFiltroSucursalDataTable === "function") {
-                            await prepararFiltroSucursalDataTable($select, api, config.index, inicializarSelect2Filtro);
-                        } else {
-                            const datos = await config.fetchDataFunc();
-                            $select.append(`<option value="">Todos</option>`);
-                            (datos || []).forEach(item => {
-                                $select.append(`<option value="${item.Id}">${item.Nombre}</option>`);
-                            });
-
-                            inicializarSelect2Filtro($select);
-
-                            $select.on('select2:clear', function () {
-                                api.column(config.index).search('').draw(false);
-                            });
-
-                            $select.on('change', function () {
-                                const value = $(this).val();
-                                if (!value) {
-                                    api.column(config.index).search('').draw(false);
-                                    return;
-                                }
-                                const text = $(this).find('option:selected').text();
-                                api.column(config.index)
-                                    .search('^' + escapeRegex(text) + '$', true, false)
-                                    .draw(false);
-                            });
-                        }
-                    } else {
-                        $('<input class="rp-filter-input" type="text" placeholder="Buscar...">')
-                            .appendTo(cell)
-                            .on('keyup change', function () {
-                                api.column(config.index).search(this.value).draw(false);
-                            });
-                    }
-                }
-
-                finalizarFiltrosGridLista(api, '#grd_Clientes');
-
-                const idxActivo = typeof indiceColumnaActivoGrilla === "function"
-                    ? indiceColumnaActivoGrilla(api)
-                    : api.columns().count() - 1;
-                if (typeof inicializarFiltroActivoGrilla === "function") {
-                    inicializarFiltroActivoGrilla(api, '#grd_Clientes', idxActivo);
-                }
-
+                await armarFiltrosGrillaLista(api, '#grd_Clientes', columnConfig, {
+                    defaultActivoModo: 'todos',
+                    initSelect2: ($el) => inicializarSelect2Filtro($el)
+                });
                 configurarOpcionesColumnas();
                 actualizarKpis(data);
                 api.draw(false);
@@ -264,7 +343,8 @@ function configurarOpcionesColumnas() {
 
 function actualizarKpis(data) {
     const cant = Array.isArray(data) ? data.length : 0;
-    $('#kpiCantClientes').text(cant);
+    $("#kpiCantClientes").text(cant);
+    cargarDashboardClientes();
 }
 
 function escapeRegex(text) {

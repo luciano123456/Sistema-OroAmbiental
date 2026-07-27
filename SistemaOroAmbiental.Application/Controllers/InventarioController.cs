@@ -42,6 +42,7 @@ namespace SistemaOroAmbiental.Application.Controllers
                 Categoria = x.producto.IdCategoriaNavigation?.Nombre,
                 Medida = x.producto.IdMedidaNavigation?.Nombre,
                 Stock = x.inventario?.Stock ?? 0,
+                StockRecuperado = x.stockRecuperado,
                 StockMinimo = x.producto.StockMinimo,
                 BajoMinimo = x.producto.StockMinimo > 0 && (x.inventario?.Stock ?? 0) < x.producto.StockMinimo
             });

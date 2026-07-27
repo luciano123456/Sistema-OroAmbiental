@@ -49,5 +49,33 @@ namespace SistemaOroAmbiental.Application.Models.ViewModels
         public string? UsuarioModifica { get; set; }
 
         public bool Activo { get; set; } = true;
+
+        public int? IdEstado { get; set; }
+
+        public int? IdMotivo { get; set; }
+
+        public string? MotivoDetalle { get; set; }
+
+        public int? IdCalificacion { get; set; }
+
+        public int? IdLocalidad { get; set; }
+
+        public int? IdPartido { get; set; }
+
+        public string? Estado { get; set; }
+
+        public string? Motivo { get; set; }
+
+        public string? Calificacion { get; set; }
+
+        public string? Partido { get; set; }
+
+        public int? NumeroCliente { get; set; }
+
+        public DateTime? FechaInicio { get; set; }
+
+        public DateTime? FechaLicenciaDesde { get; set; }
+
+        public DateTime? FechaLicenciaHasta { get; set; }
     }
 }

@@ -21,6 +21,7 @@ namespace SistemaOroAmbiental.Application.Models.ViewModels
         public string? Categoria { get; set; }
         public string? Medida { get; set; }
         public decimal Stock { get; set; }
+        public decimal StockRecuperado { get; set; }
         public int StockMinimo { get; set; }
         public bool BajoMinimo { get; set; }
     }

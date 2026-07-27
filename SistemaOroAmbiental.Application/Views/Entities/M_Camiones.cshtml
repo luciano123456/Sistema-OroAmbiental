@@ -1,0 +1,96 @@
+@* Modal reutilizable de Camiones (Oro Ambiental) *@
+
+<div class="modal fade camion-modal-root"
+     data-camion-modal="camion"
+     tabindex="-1"
+     data-bs-backdrop="static"
+     data-bs-keyboard="false">
+
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+
+        <div class="modal-content">
+
+            <div class="modal-header colorEncabezado">
+
+                <h5 class="modal-title fw-bold" id="modalEdicionLabel">
+                    Nuevo Camión
+                </h5>
+
+                <button type="button"
+                        class="btn-close"
+                        data-bs-dismiss="modal"></button>
+
+            </div>
+
+            <div class="modal-body">
+
+                <div id="errorCampos"
+                     class="rp-error-panel d-none mb-2">
+
+                    <div class="rp-error-icon">
+                        <i class="fa fa-exclamation-triangle"></i>
+                    </div>
+
+                    <div class="rp-error-content">
+                        <div class="rp-error-title">
+                            No se pudo guardar
+                        </div>
+                        <div class="rp-error-message"></div>
+                    </div>
+
+                    <button type="button"
+                            class="rp-error-close"
+                            onclick="cerrarErrorCamposCamion()">
+                        <i class="fa fa-times"></i>
+                    </button>
+                </div>
+
+                <form class="row g-3">
+
+                    <input type="text" id="txtId" hidden />
+
+                    <div class="col-md-8">
+                        <label class="form-label">Nombre</label>
+                        <input id="txtNombre" class="form-control" maxlength="120" required />
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <div class="rp-activo-box">
+                            <div class="rp-activo-box-head">
+                                <span class="rp-activo-box-title">Estado del registro</span>
+                                <span class="rp-activo-box-sub">Camiones inactivos no se listan por defecto.</span>
+                            </div>
+                            <label class="rp-switch mb-0 rp-switch-block">
+                                <input type="checkbox" id="chkActivoCamion" class="rp-switch-input" checked>
+                                <span class="rp-switch-slider"></span>
+                                <span class="rp-activo-estado-text" id="lblActivoCamion">Activo</span>
+                            </label>
+                        </div>
+                    </div>
+
+                </form>
+
+                <div class="rp-auditoria d-none mt-3" id="infoAuditoria">
+                    <div id="infoRegistro"></div>
+                    <div id="infoModificacion"></div>
+                </div>
+
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fa fa-arrow-left"></i>
+                    Volver
+                </button>
+                <button type="button" id="btnGuardar" class="btn btn-primary">
+                    <i class="fa fa-check"></i>
+                    Registrar
+                </button>
+            </div>
+
+        </div>
+
+    </div>
+
+</div>

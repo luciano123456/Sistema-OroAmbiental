@@ -131,29 +131,39 @@
                         <div id="sectionDocContrato" class="rp-sub-page rp-section-disabled">
                             <div class="rp-sub-hero">
                                 <div>
-                                    <div class="text-muted small">Plantilla Word con campos entre corchetes</div>
+                                    <div class="text-muted small">Documentos del contrato</div>
                                     <div class="rp-sub-hero-hint" id="docContratoHint">
                                         <i class="fa fa-info-circle"></i>
-                                        Use <strong>solo llaves</strong> en Word: {NOMBRECLIENTE}, {DOMICILIOCLIENTE}, {CUITCLIENTE},
-                                        {PROFESIONCLIENTE}, {IVACLIENTE}, {DIASCLIENTE}, {EMAILCLIENTE}, {DIA}, {MES}, {ANIO}.
-                                        No use [corchetes] ni {|campos|} — el sistema solo reemplaza {CAMPO}.
-                                        Subí la plantilla .docx en Configuraciones → Plantillas Word.
+                                        Guardá el contrato para generar y adjuntar documentos Word.
                                     </div>
                                 </div>
                             </div>
+
                             <div id="docContratoEstado" class="rp-doc-estado d-none" role="status" aria-live="polite">
                                 <i class="fa fa-spinner fa-spin"></i>
                                 <span id="docContratoEstadoTexto">Generando contrato...</span>
                             </div>
-                            <div class="row g-3 mb-3">
-                                <div class="col-12">
-                                    <button type="button" class="rp-export-tile rp-export-tile--solo" id="btnContratoWord" disabled>
-                                        <i class="fa fa-file-word-o"></i>
-                                        <span>Generar Word</span>
-                                        <small>Genera y adjunta el .docx al contrato</small>
-                                    </button>
-                                </div>
+
+                            <div class="rp-doc-generar-wrap">
+                                <button type="button" class="rp-export-tile" id="btnContratoWord" disabled>
+                                    <span class="rp-export-tile-icon"><i class="fa fa-file-word-o"></i></span>
+                                    <span class="rp-export-tile-body">
+                                        <span class="rp-export-tile-title">Generar Word</span>
+                                        <small>Genera y adjunta el .docx al contrato en el servidor</small>
+                                    </span>
+                                    <span class="rp-export-tile-arrow"><i class="fa fa-chevron-right"></i></span>
+                                </button>
                             </div>
+
+                            <details class="rp-doc-help">
+                                <summary><i class="fa fa-question-circle"></i> Campos de la plantilla Word</summary>
+                                <p>
+                                    Usá <strong>solo llaves</strong> en Word: {NOMBRECLIENTE}, {DOMICILIOCLIENTE}, {CUITCLIENTE},
+                                    {PROFESIONCLIENTE}, {IVACLIENTE}, {DIASCLIENTE}, {EMAILCLIENTE}, {DIA}, {MES}, {ANIO}.
+                                    Subí la plantilla .docx en Configuraciones → Plantillas Word.
+                                </p>
+                            </details>
+
                             <div class="rp-sub-panel">
                                 <div class="rp-sub-panel-head">
                                     <i class="fa fa-paperclip"></i> Archivos adjuntos al contrato
@@ -167,21 +177,21 @@
 
                     <div class="tab-pane fade" id="tabRenovContrato">
                         <div id="sectionRenovContrato" class="rp-sub-page rp-section-disabled">
-                            <div class="rp-sub-hero">
-                                <div>
-                                    <div class="text-muted small">Contrato</div>
+                            <div class="rp-sub-hero rp-renov-hero">
+                                <div class="rp-renov-hero-main">
+                                    <div class="rp-renov-hero-top">
+                                        <span class="rp-renov-hero-label">Renovaciones del contrato</span>
+                                        <span class="rp-renov-count-badge" id="renovContratoCantidad">0</span>
+                                    </div>
                                     <div class="rp-sub-hero-name" id="renovContratoNombre">Nuevo</div>
                                     <div class="rp-sub-hero-hint" id="renovContratoHint">
                                         <i class="fa fa-info-circle"></i> Guardá el contrato para administrar renovaciones.
                                     </div>
                                 </div>
-                                <div class="rp-kpi-card-mini">
-                                    <span>Renovaciones</span>
-                                    <strong id="renovContratoCantidad">0</strong>
-                                </div>
                             </div>
-                            <div class="rp-sub-layout">
-                                <div class="rp-sub-panel">
+
+                            <div class="rp-sub-layout rp-renov-layout">
+                                <div class="rp-sub-panel rp-renov-panel-list">
                                     <div class="rp-sub-panel-head">
                                         <i class="fa fa-list"></i> Historial
                                         <small>Seleccioná para editar</small>
@@ -195,28 +205,29 @@
                                         </div>
                                     </div>
                                 </div>
-                                <div class="rp-sub-panel">
+
+                                <div class="rp-sub-panel rp-renov-panel-form">
                                     <div class="rp-sub-panel-head">
                                         <i class="fa fa-plus-circle"></i>
                                         <span id="renovContratoFormTitulo">Nueva renovación</span>
                                     </div>
                                     <div class="rp-sub-panel-body rp-sub-form">
                                         <input type="hidden" id="txtRenovContratoId" />
-                                        <div class="row g-3">
-                                            <div class="col-md-6">
-                                                <label class="form-label"><i class="fa fa-tag"></i> Tipo</label>
+                                        <div class="row g-3 rp-renov-form-grid">
+                                            <div class="col-md-4">
+                                                <label class="form-label" for="cmbTipoRenovContrato"><i class="fa fa-tag"></i> Tipo</label>
                                                 <select id="cmbTipoRenovContrato" class="form-control">
                                                     <option value="RENOVACION">Renovación</option>
                                                     <option value="AMPLIACION">Ampliación</option>
                                                     <option value="MODIFICACION">Modificación</option>
                                                 </select>
                                             </div>
-                                            <div class="col-md-6">
-                                                <label class="form-label"><i class="fa fa-calendar"></i> Fecha inicio</label>
+                                            <div class="col-md-4">
+                                                <label class="form-label" for="txtRenovInicioContrato"><i class="fa fa-calendar"></i> Fecha inicio</label>
                                                 <input type="date" id="txtRenovInicioContrato" class="form-control" />
                                             </div>
-                                            <div class="col-md-6">
-                                                <label class="form-label"><i class="fa fa-calendar-check-o"></i> Fecha vencimiento</label>
+                                            <div class="col-md-4">
+                                                <label class="form-label" for="txtRenovVencContrato"><i class="fa fa-calendar-check-o"></i> Fecha vencimiento</label>
                                                 <input type="date" id="txtRenovVencContrato" class="form-control" />
                                             </div>
                                         </div>

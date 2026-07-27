@@ -15,6 +15,12 @@ const columnConfigContratos = [
     { index: 10, filterType: "text" }
 ];
 
+registrarFiltrosGrilla('grd_Contratos', columnConfigContratos, {
+    includeActivo: false,
+    initSelect2: ($el) => inicializarSelect2FiltroContratos($el),
+    escapeRegex: escapeRegexContratos
+});
+
 function initModalesAtajosContratos() {
     if (typeof initClienteModal === "function") {
         clienteModalContratos = initClienteModal({
@@ -203,56 +209,11 @@ async function configurarDataTableContratos(data) {
             fixedHeader: true,
             initComplete: async function () {
                 const api = this.api();
-                inicializarFilaFiltrosGrilla(api, "#grd_Contratos");
-                finalizarFiltrosGridLista(api, "#grd_Contratos");
-
-                for (const config of columnConfigContratos) {
-                    const cell = celdasFiltroGrilla("#grd_Contratos").eq(config.index);
-                    if (!cell.length) continue;
-                    cell.empty();
-
-                    if (config.filterType === "select") {
-                        const $select = $(`<select class="rp-filter-select" style="width:100%"></select>`).appendTo(cell);
-                        $select.append(`<option value="">Todos</option>`);
-
-                        if (config.opcionesEstaticas) {
-                            config.opcionesEstaticas.forEach(txt => {
-                                $select.append(`<option value="${txt}">${txt}</option>`);
-                            });
-                        } else if (config.fetchDataFunc) {
-                            const datos = await config.fetchDataFunc();
-                            (datos || []).forEach(item => {
-                                $select.append(`<option value="${item.Id}">${item.Nombre}</option>`);
-                            });
-                        }
-
-                        inicializarSelect2FiltroContratos($select);
-
-                        $select.on("select2:clear", () => {
-                            api.column(config.index).search("").draw(false);
-                        });
-
-                        $select.on("change", function () {
-                            const value = $(this).val();
-                            if (!value) {
-                                api.column(config.index).search("").draw(false);
-                                return;
-                            }
-                            const text = $(this).find("option:selected").text();
-                            api.column(config.index)
-                                .search("^" + escapeRegexContratos(text) + "$", true, false)
-                                .draw(false);
-                        });
-                    } else {
-                        $(`<input class="rp-filter-input" type="text" placeholder="Buscar..." autocomplete="off">`)
-                            .appendTo(cell)
-                            .on("keyup change", function () {
-                                api.column(config.index).search(this.value).draw(false);
-                            });
-                    }
-                }
-
-                finalizarFiltrosGridLista(api, "#grd_Contratos");
+                await armarFiltrosGrillaLista(api, "#grd_Contratos", columnConfigContratos, {
+                    includeActivo: false,
+                    initSelect2: ($el) => inicializarSelect2FiltroContratos($el),
+                    escapeRegex: escapeRegexContratos
+                });
                 actualizarKpisContratos(data);
             }
         });

@@ -23,65 +23,25 @@ namespace SistemaOroAmbiental.Application.Controllers
             return View();
         }
 
+        [AllowAnonymous]
+        public IActionResult Gestion(int? id)
+        {
+            ViewBag.Id = id ?? 0;
+            return View();
+        }
+
         [HttpGet]
         public async Task<IActionResult> Lista(bool soloActivos = false)
         {
             var clientes = (await _service.ObtenerTodos(soloActivos)).ToList();
-
-            var lista = clientes.Select(c => new VMCliente
-            {
-                Id = c.Id,
-                Activo = c.Activo,
-                IdSucursal = c.IdSucursal,
-                Nombre = c.Nombre,
-                Telefono = c.Telefono,
-                TelefonoAlt = c.TelefonoAlt,
-                Cuit = c.Cuit,
-                Domicilio = c.Domicilio,
-                IdProvincia = c.IdProvincia,
-                Localidad = c.Localidad,
-                CodPostal = c.CodPostal,
-                IdCondicionIva = c.IdCondicionIva,
-                Email = c.Email,
-                IdProfesion = c.IdProfesion,
-                Sucursal = c.IdSucursalNavigation != null ? c.IdSucursalNavigation.Nombre : "",
-                Provincia = c.IdProvinciaNavigation != null ? c.IdProvinciaNavigation.Nombre : "",
-                CondicionIva = c.IdCondicionIvaNavigation != null ? c.IdCondicionIvaNavigation.Nombre : "",
-                Profesion = c.IdProfesionNavigation != null ? c.IdProfesionNavigation.Nombre : "",
-                IdUsuarioRegistra = c.IdUsuarioRegistra,
-                FechaUsuarioRegistra = c.FechaUsuarioRegistra,
-                UsuarioRegistra = c.IdUsuarioRegistraNavigation != null ? c.IdUsuarioRegistraNavigation.Usuario : "",
-                IdUsuarioModifica = c.IdUsuarioModifica,
-                FechaUsuarioModifica = c.FechaUsuarioModifica,
-                UsuarioModifica = c.IdUsuarioModificaNavigation != null ? c.IdUsuarioModificaNavigation.Usuario : ""
-            }).ToList();
-
-            return Ok(lista);
+            return Ok(clientes.Select(MapVm).ToList());
         }
 
         [HttpPost]
         public async Task<IActionResult> Insertar([FromBody] VMCliente model)
         {
             int idUsuario = int.Parse(User.FindFirst("Id")!.Value);
-
-            var cliente = new Cliente
-            {
-                IdSucursal = model.IdSucursal,
-                Nombre = model.Nombre,
-                Telefono = model.Telefono,
-                TelefonoAlt = model.TelefonoAlt,
-                Cuit = model.Cuit,
-                Domicilio = model.Domicilio,
-                IdProvincia = model.IdProvincia,
-                Localidad = model.Localidad,
-                CodPostal = model.CodPostal,
-                IdCondicionIva = model.IdCondicionIva,
-                Email = model.Email,
-                IdProfesion = model.IdProfesion,
-                Activo = model.Activo,
-                IdUsuarioRegistra = idUsuario,
-                FechaUsuarioRegistra = DateTime.Now
-            };
+            var cliente = MapEntidad(model, idUsuario, esNuevo: true);
 
             ServiceResult result = await _service.Insertar(cliente);
 
@@ -99,26 +59,7 @@ namespace SistemaOroAmbiental.Application.Controllers
         public async Task<IActionResult> Actualizar([FromBody] VMCliente model)
         {
             int idUsuario = int.Parse(User.FindFirst("Id")!.Value);
-
-            var cliente = new Cliente
-            {
-                Id = model.Id,
-                IdSucursal = model.IdSucursal,
-                Nombre = model.Nombre,
-                Telefono = model.Telefono,
-                TelefonoAlt = model.TelefonoAlt,
-                Cuit = model.Cuit,
-                Domicilio = model.Domicilio,
-                IdProvincia = model.IdProvincia,
-                Localidad = model.Localidad,
-                CodPostal = model.CodPostal,
-                IdCondicionIva = model.IdCondicionIva,
-                Email = model.Email,
-                IdProfesion = model.IdProfesion,
-                Activo = model.Activo,
-                IdUsuarioModifica = idUsuario,
-                FechaUsuarioModifica = DateTime.Now
-            };
+            var cliente = MapEntidad(model, idUsuario, esNuevo: false);
 
             ServiceResult result = await _service.Actualizar(cliente);
 
@@ -174,27 +115,93 @@ namespace SistemaOroAmbiental.Application.Controllers
             if (c == null)
                 return NotFound();
 
-            return Ok(new
+            return Ok(MapVm(c));
+        }
+
+        private static VMCliente MapVm(Cliente c) => new()
+        {
+            Id = c.Id,
+            Activo = c.Activo,
+            IdSucursal = c.IdSucursal,
+            Nombre = c.Nombre,
+            Telefono = c.Telefono,
+            TelefonoAlt = c.TelefonoAlt,
+            Cuit = c.Cuit ?? "",
+            Domicilio = c.Domicilio,
+            IdProvincia = c.IdProvincia,
+            Localidad = c.Localidad,
+            CodPostal = c.CodPostal,
+            IdCondicionIva = c.IdCondicionIva,
+            Email = c.Email,
+            IdProfesion = c.IdProfesion,
+            IdEstado = c.IdEstado,
+            IdMotivo = c.IdMotivo,
+            MotivoDetalle = c.MotivoDetalle,
+            IdCalificacion = c.IdCalificacion,
+            IdLocalidad = c.IdLocalidad,
+            IdPartido = c.IdPartido,
+            Sucursal = c.IdSucursalNavigation?.Nombre ?? "",
+            Provincia = c.IdProvinciaNavigation?.Nombre ?? "",
+            CondicionIva = c.IdCondicionIvaNavigation?.Nombre ?? "",
+            Profesion = c.IdProfesionNavigation?.Nombre ?? "",
+            Estado = c.IdEstadoNavigation?.Nombre,
+            Motivo = c.IdMotivoNavigation?.Nombre,
+            Calificacion = c.IdCalificacionNavigation?.Nombre,
+            Partido = c.IdPartidoNavigation?.Nombre,
+            NumeroCliente = c.NumeroCliente,
+            FechaInicio = c.FechaInicio,
+            FechaLicenciaDesde = c.FechaLicenciaDesde,
+            FechaLicenciaHasta = c.FechaLicenciaHasta,
+            IdUsuarioRegistra = c.IdUsuarioRegistra,
+            FechaUsuarioRegistra = c.FechaUsuarioRegistra,
+            UsuarioRegistra = c.IdUsuarioRegistraNavigation?.Usuario ?? "",
+            IdUsuarioModifica = c.IdUsuarioModifica,
+            FechaUsuarioModifica = c.FechaUsuarioModifica,
+            UsuarioModifica = c.IdUsuarioModificaNavigation?.Usuario ?? ""
+        };
+
+        private static Cliente MapEntidad(VMCliente model, int idUsuario, bool esNuevo)
+        {
+            var entity = new Cliente
             {
-                c.Id,
-                c.IdSucursal,
-                c.Nombre,
-                c.Telefono,
-                c.TelefonoAlt,
-                c.Cuit,
-                c.Domicilio,
-                c.IdProvincia,
-                c.Localidad,
-                c.CodPostal,
-                c.IdCondicionIva,
-                c.Email,
-                c.IdProfesion,
-                c.Activo,
-                c.FechaUsuarioRegistra,
-                UsuarioRegistra = c.IdUsuarioRegistraNavigation?.Usuario,
-                c.FechaUsuarioModifica,
-                UsuarioModifica = c.IdUsuarioModificaNavigation?.Usuario
-            });
+                Id = model.Id,
+                IdSucursal = model.IdSucursal,
+                Nombre = model.Nombre,
+                Telefono = model.Telefono,
+                TelefonoAlt = model.TelefonoAlt,
+                Cuit = model.Cuit,
+                Domicilio = model.Domicilio,
+                IdProvincia = model.IdProvincia,
+                Localidad = model.Localidad,
+                CodPostal = model.CodPostal,
+                IdCondicionIva = model.IdCondicionIva,
+                Email = model.Email,
+                IdProfesion = model.IdProfesion,
+                Activo = model.Activo,
+                IdEstado = model.IdEstado,
+                IdMotivo = model.IdMotivo,
+                MotivoDetalle = model.MotivoDetalle,
+                IdCalificacion = model.IdCalificacion,
+                IdLocalidad = model.IdLocalidad,
+                IdPartido = model.IdPartido,
+                NumeroCliente = model.NumeroCliente,
+                FechaInicio = model.FechaInicio,
+                FechaLicenciaDesde = model.FechaLicenciaDesde,
+                FechaLicenciaHasta = model.FechaLicenciaHasta
+            };
+
+            if (esNuevo)
+            {
+                entity.IdUsuarioRegistra = idUsuario;
+                entity.FechaUsuarioRegistra = DateTime.Now;
+            }
+            else
+            {
+                entity.IdUsuarioModifica = idUsuario;
+                entity.FechaUsuarioModifica = DateTime.Now;
+            }
+
+            return entity;
         }
     }
 }

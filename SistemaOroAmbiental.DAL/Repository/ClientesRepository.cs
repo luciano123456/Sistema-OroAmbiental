@@ -17,6 +17,7 @@ namespace SistemaOroAmbiental.DAL.Repository
         {
             try
             {
+                await AsignarNumeroCliente(model);
                 _db.Clientes.Add(model);
                 await _db.SaveChangesAsync();
                 return true;
@@ -25,6 +26,15 @@ namespace SistemaOroAmbiental.DAL.Repository
             {
                 return false;
             }
+        }
+
+        private async Task AsignarNumeroCliente(Cliente model)
+        {
+            if (model.NumeroCliente.HasValue)
+                return;
+
+            var max = await _db.Clientes.MaxAsync(c => (int?)c.NumeroCliente) ?? 0;
+            model.NumeroCliente = max + 1;
         }
 
         public async Task<bool> Actualizar(Cliente model)
@@ -48,6 +58,16 @@ namespace SistemaOroAmbiental.DAL.Repository
                 entity.Email = model.Email;
                 entity.IdProfesion = model.IdProfesion;
                 entity.Activo = model.Activo;
+                entity.IdEstado = model.IdEstado;
+                entity.IdMotivo = model.IdMotivo;
+                entity.MotivoDetalle = model.MotivoDetalle;
+                entity.IdCalificacion = model.IdCalificacion;
+                entity.IdLocalidad = model.IdLocalidad;
+                entity.IdPartido = model.IdPartido;
+                entity.NumeroCliente = model.NumeroCliente;
+                entity.FechaInicio = model.FechaInicio;
+                entity.FechaLicenciaDesde = model.FechaLicenciaDesde;
+                entity.FechaLicenciaHasta = model.FechaLicenciaHasta;
                 entity.IdUsuarioModifica = model.IdUsuarioModifica;
                 entity.FechaUsuarioModifica = model.FechaUsuarioModifica;
 
@@ -110,6 +130,11 @@ namespace SistemaOroAmbiental.DAL.Repository
                 .Include(x => x.IdProvinciaNavigation)
                 .Include(x => x.IdCondicionIvaNavigation)
                 .Include(x => x.IdProfesionNavigation)
+                .Include(x => x.IdEstadoNavigation)
+                .Include(x => x.IdMotivoNavigation)
+                .Include(x => x.IdCalificacionNavigation)
+                .Include(x => x.IdLocalidadNavigation)
+                .Include(x => x.IdPartidoNavigation)
                 .Include(x => x.IdUsuarioRegistraNavigation)
                 .Include(x => x.IdUsuarioModificaNavigation)
                 .FirstOrDefaultAsync(x => x.Id == id);
@@ -123,6 +148,11 @@ namespace SistemaOroAmbiental.DAL.Repository
                 .Include(x => x.IdProvinciaNavigation)
                 .Include(x => x.IdCondicionIvaNavigation)
                 .Include(x => x.IdProfesionNavigation)
+                .Include(x => x.IdEstadoNavigation)
+                .Include(x => x.IdMotivoNavigation)
+                .Include(x => x.IdCalificacionNavigation)
+                .Include(x => x.IdLocalidadNavigation)
+                .Include(x => x.IdPartidoNavigation)
                 .Include(x => x.IdUsuarioRegistraNavigation)
                 .Include(x => x.IdUsuarioModificaNavigation)
                 .AsQueryable();

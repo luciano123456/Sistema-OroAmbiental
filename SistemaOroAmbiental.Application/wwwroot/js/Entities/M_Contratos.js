@@ -537,7 +537,22 @@
             const t = (tipo || "").toUpperCase();
             if (t === "AMPLIACION") return "tipo-ampliacion";
             if (t === "MODIFICACION") return "tipo-modificacion";
-            return "";
+            return "tipo-renovacion";
+        }
+
+        _labelTipoRenov(tipo) {
+            const t = (tipo || "").toUpperCase();
+            if (t === "AMPLIACION") return "Ampliación";
+            if (t === "MODIFICACION") return "Modificación";
+            if (t === "RENOVACION") return "Renovación";
+            return tipo || "Renovación";
+        }
+
+        _chipClassRenov(tipo) {
+            const t = (tipo || "").toUpperCase();
+            if (t === "AMPLIACION") return "rp-renov-chip--ampliacion";
+            if (t === "MODIFICACION") return "rp-renov-chip--modificacion";
+            return "rp-renov-chip--renovacion";
         }
 
         _fechaInput(d) {
@@ -1061,16 +1076,20 @@
                 const active = r.Id === this._renovSeleccionadaId ? " active" : "";
                 const meta = `${fmt(r.FechaInicio)} → ${fmt(r.FechaVencimiento)}`;
                 const avCls = this._avatarClassRenov(r.Tipo);
+                const label = this._labelTipoRenov(r.Tipo);
+                const chipCls = this._chipClassRenov(r.Tipo);
                 return `
                     <div class="rp-sub-item${active}" data-id="${r.Id}">
                         <div class="rp-sub-item-avatar ${avCls}"><i class="fa fa-refresh"></i></div>
                         <div class="rp-sub-item-body">
-                            <span class="rp-sub-item-title">${this._escapeHtml(r.Tipo || "")}</span>
-                            <div class="rp-sub-item-meta">${this._escapeHtml(meta)}</div>
+                            <div class="rp-sub-item-title-row">
+                                <span class="rp-renov-chip ${chipCls}">${this._escapeHtml(label)}</span>
+                            </div>
+                            <div class="rp-sub-item-meta"><i class="fa fa-calendar-o"></i> ${this._escapeHtml(meta)}</div>
                         </div>
                         <div class="rp-sub-item-actions">
                             ${this.isSoloLectura() ? "" : `
-                            <button type="button" class="btn btn-sm btn-outline-danger btn-eliminar-renov" data-id="${r.Id}" title="Eliminar">
+                            <button type="button" class="rp-sub-item-btn-del btn-eliminar-renov" data-id="${r.Id}" title="Eliminar">
                                 <i class="fa fa-trash"></i>
                             </button>`}
                         </div>

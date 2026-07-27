@@ -413,44 +413,107 @@
     align-items: center;
     gap: 14px;
     width: 100%;
-    max-width: 420px;
-    padding: 14px 16px;
-    border-radius: 12px;
-    border: 1px solid var(--ctr-line);
-    background: rgba(0, 0, 0, 0.2);
+    padding: 16px 18px;
+    border-radius: 14px;
+    border: 1px solid rgba(139, 92, 246, 0.28);
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.12), rgba(0, 0, 0, 0.22));
     color: #e8edf7;
     text-align: left;
     cursor: pointer;
-    transition: border-color 0.15s, background 0.15s;
+    transition: border-color 0.15s, background 0.15s, transform 0.12s, box-shadow 0.15s;
+}
+
+[data-contrato-modal] .rp-doc-generar-wrap {
+    max-width: 520px;
 }
 
 [data-contrato-modal] .rp-export-tile:hover:not(:disabled) {
-    border-color: rgba(139, 92, 246, 0.5);
-    background: var(--ctr-accent-soft);
+    border-color: rgba(139, 92, 246, 0.55);
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(0, 0, 0, 0.18));
+    transform: translateY(-1px);
+    box-shadow: 0 8px 22px rgba(139, 92, 246, 0.18);
 }
 
 [data-contrato-modal] .rp-export-tile:disabled {
     opacity: 0.45;
     cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
 }
 
-[data-contrato-modal] .rp-export-tile i {
-    font-size: 1.4rem;
-    color: var(--ctr-accent);
-    display: block;
-    margin-bottom: 6px;
+[data-contrato-modal] .rp-export-tile-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(139, 92, 246, 0.2);
+    flex-shrink: 0;
 }
 
-[data-contrato-modal] .rp-export-tile span {
+[data-contrato-modal] .rp-export-tile-icon i {
+    font-size: 1.45rem;
+    color: #c4b5fd;
+    margin: 0;
+}
+
+[data-contrato-modal] .rp-export-tile-body {
+    flex: 1;
+    min-width: 0;
+}
+
+[data-contrato-modal] .rp-export-tile-title {
     display: block;
     font-weight: 700;
+    font-size: 0.98rem;
+    color: #f8fafc;
 }
 
-[data-contrato-modal] .rp-export-tile small {
+[data-contrato-modal] .rp-export-tile-body small {
     display: block;
     color: var(--ctr-muted);
-    font-size: 0.75rem;
+    font-size: 0.78rem;
     margin-top: 4px;
+    line-height: 1.35;
+}
+
+[data-contrato-modal] .rp-export-tile-arrow {
+    color: rgba(196, 181, 253, 0.75);
+    font-size: 0.85rem;
+    flex-shrink: 0;
+}
+
+[data-contrato-modal] .rp-doc-help {
+    border: 1px dashed rgba(255, 255, 255, 0.12);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.02);
+    padding: 0.65rem 0.9rem;
+    color: var(--ctr-muted);
+    font-size: 0.82rem;
+    line-height: 1.45;
+}
+
+[data-contrato-modal] .rp-doc-help summary {
+    cursor: pointer;
+    font-weight: 600;
+    color: #c4cad6;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+}
+
+[data-contrato-modal] .rp-doc-help summary::-webkit-details-marker {
+    display: none;
+}
+
+[data-contrato-modal] .rp-doc-help p {
+    margin: 0.65rem 0 0;
+}
+
+[data-contrato-modal] #sectionDocContrato .rp-sub-panel {
+    min-height: 220px;
 }
 
 [data-contrato-modal] .rp-doc-list {
@@ -582,4 +645,162 @@
 
 [data-contrato-modal] .rp-doc-estado .fa-spinner {
     color: var(--ctr-accent);
+}
+
+[data-contrato-modal] .form-control,
+[data-contrato-modal] .form-select {
+    background: rgba(15, 23, 42, 0.88);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: #eaf1ff;
+    border-radius: 10px;
+    min-height: 40px;
+}
+
+[data-contrato-modal] .form-control:focus,
+[data-contrato-modal] .form-select:focus {
+    background: rgba(15, 23, 42, 0.95);
+    border-color: rgba(139, 92, 246, 0.55);
+    color: #fff;
+    box-shadow: 0 0 0 0.2rem rgba(139, 92, 246, 0.18);
+}
+
+[data-contrato-modal] .form-control:disabled,
+[data-contrato-modal] .form-select:disabled {
+    opacity: 0.65;
+}
+
+/* Renovaciones */
+[data-contrato-modal] .rp-renov-hero {
+    align-items: stretch;
+    padding: 14px 16px;
+}
+
+[data-contrato-modal] .rp-renov-hero-main {
+    flex: 1;
+    min-width: 0;
+}
+
+[data-contrato-modal] .rp-renov-hero-top {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    margin-bottom: 0.35rem;
+}
+
+[data-contrato-modal] .rp-renov-hero-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--ctr-muted);
+}
+
+[data-contrato-modal] .rp-renov-count-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.6rem;
+    height: 1.6rem;
+    padding: 0 0.45rem;
+    border-radius: 999px;
+    background: rgba(139, 92, 246, 0.18);
+    border: 1px solid rgba(139, 92, 246, 0.35);
+    color: #ddd6fe;
+    font-size: 0.82rem;
+    font-weight: 800;
+}
+
+[data-contrato-modal] .rp-renov-layout .rp-sub-panel {
+    min-height: 300px;
+}
+
+[data-contrato-modal] .rp-renov-panel-list .rp-sub-list {
+    max-height: none;
+}
+
+[data-contrato-modal] .rp-renov-panel-list .rp-sub-empty {
+    min-height: 140px;
+    padding: 24px 16px;
+}
+
+[data-contrato-modal] .rp-renov-form-grid {
+    margin-bottom: 0.25rem;
+}
+
+[data-contrato-modal] .rp-sub-item-avatar.tipo-renovacion {
+    background: rgba(139, 92, 246, 0.18);
+    color: #c4b5fd;
+}
+
+[data-contrato-modal] .rp-sub-item-title-row {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    min-width: 0;
+}
+
+[data-contrato-modal] .rp-renov-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.18rem 0.55rem;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    border: 1px solid transparent;
+}
+
+[data-contrato-modal] .rp-renov-chip--renovacion {
+    color: #ddd6fe;
+    background: rgba(139, 92, 246, 0.18);
+    border-color: rgba(139, 92, 246, 0.28);
+}
+
+[data-contrato-modal] .rp-renov-chip--ampliacion {
+    color: #bfdbfe;
+    background: rgba(59, 130, 246, 0.16);
+    border-color: rgba(59, 130, 246, 0.28);
+}
+
+[data-contrato-modal] .rp-renov-chip--modificacion {
+    color: #fde68a;
+    background: rgba(251, 191, 36, 0.14);
+    border-color: rgba(251, 191, 36, 0.28);
+}
+
+[data-contrato-modal] .rp-sub-item-meta .fa {
+    margin-right: 0.35rem;
+    opacity: 0.75;
+}
+
+[data-contrato-modal] .rp-sub-item-actions {
+    display: flex;
+    align-items: center;
+    align-self: center;
+}
+
+[data-contrato-modal] .rp-sub-item-btn-del {
+    width: 34px;
+    height: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    border: 1px solid rgba(248, 113, 113, 0.28);
+    background: rgba(248, 113, 113, 0.1);
+    color: #fca5a5;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+[data-contrato-modal] .rp-sub-item-btn-del:hover:not(:disabled) {
+    background: rgba(248, 113, 113, 0.18);
+    border-color: rgba(248, 113, 113, 0.45);
+    color: #fecaca;
+}
+
+[data-contrato-modal] .rp-sub-item-btn-del:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
 }

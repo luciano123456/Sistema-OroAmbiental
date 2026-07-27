@@ -1,5 +1,5 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
-<link href="~/css/NavBarLogin.css?v=5.0" rel="stylesheet" />
+<link href="~/css/NavBarLogin.css?v=5.2" rel="stylesheet" />
 
 <div class="rp-navbar-shell">
 <nav class="navbar navbar-expand-lg rp-navbar sticky-top">
@@ -19,53 +19,29 @@
             <ul class="navbar-nav me-auto mb-2 mb-lg-0 rp-nav-main">
 
                 <li class="nav-item dropdown" id="seccionClientes">
-                    <a class="nav-link dropdown-toggle rp-nav-link" href="#" role="button"
+                    <a class="nav-link dropdown-toggle rp-nav-link" href="@Url.Action("Index", "Clientes")" role="button"
                        data-bs-toggle="dropdown" data-bs-auto-close="outside" data-bs-offset="0,4" aria-expanded="false">
                         <span class="rp-nav-ico teal"><i class="fa fa-users"></i></span>
                         <span>Clientes</span>
                     </a>
                     <ul class="dropdown-menu rp-nav-dropdown">
-                        <li><h6 class="dropdown-header rp-nav-group"><span class="rp-nav-ico xs teal"><i class="fa fa-users"></i></span> Clientes</h6></li>
                         <li>
-                            <a class="dropdown-item rp-nav-item" href="@Url.Action("Index", "Clientes")">
+                            <a class="dropdown-item rp-nav-item rp-nav-item-accent" href="@Url.Action("Index", "Clientes")">
                                 <span class="rp-nav-ico sm teal"><i class="fa fa-list"></i></span>
-                                <span class="rp-nav-item-text"><span class="rp-nav-item-title">Listado</span><span class="rp-nav-item-sub">ABM de clientes</span></span>
+                                <span class="rp-nav-item-text"><span class="rp-nav-item-title">Clientes</span><span class="rp-nav-item-sub">Listado y gestión unificada</span></span>
                             </a>
                         </li>
                         <li>
-                            <a class="dropdown-item rp-nav-item" href="@Url.Action("Index", "ClientesCuentaCorriente")">
-                                <span class="rp-nav-ico sm amber"><i class="fa fa-credit-card"></i></span>
-                                <span class="rp-nav-item-text"><span class="rp-nav-item-title">Cuenta corriente</span><span class="rp-nav-item-sub">Saldos y movimientos</span></span>
-                            </a>
-                        </li>
-                        <li><hr class="dropdown-divider rp-nav-divider" /></li>
-                        <li><h6 class="dropdown-header rp-nav-group"><span class="rp-nav-ico xs blue"><i class="fa fa-building"></i></span> Establecimientos</h6></li>
-                        <li>
-                            <a class="dropdown-item rp-nav-item" href="@Url.Action("Index", "ClientesEstablecimientos")">
-                                <span class="rp-nav-ico sm blue"><i class="fa fa-list"></i></span>
-                                <span class="rp-nav-item-text"><span class="rp-nav-item-title">Listado</span><span class="rp-nav-item-sub">Puntos de recolección</span></span>
+                            <a class="dropdown-item rp-nav-item" href="@Url.Action("Gestion", "Clientes")">
+                                <span class="rp-nav-ico sm teal"><i class="fa fa-user-plus"></i></span>
+                                <span class="rp-nav-item-text"><span class="rp-nav-item-title">Nuevo cliente</span><span class="rp-nav-item-sub">Alta en el hub del cliente</span></span>
                             </a>
                         </li>
                         <li><hr class="dropdown-divider rp-nav-divider" /></li>
-                        <li><h6 class="dropdown-header rp-nav-group"><span class="rp-nav-ico xs purple"><i class="fa fa-file-text-o"></i></span> Contratos</h6></li>
                         <li>
-                            <a class="dropdown-item rp-nav-item" href="@Url.Action("Index", "Contratos")">
-                                <span class="rp-nav-ico sm purple"><i class="fa fa-list"></i></span>
-                                <span class="rp-nav-item-text"><span class="rp-nav-item-title">Listado</span><span class="rp-nav-item-sub">Vigencia y renovaciones</span></span>
-                            </a>
-                        </li>
-                        <li><hr class="dropdown-divider rp-nav-divider" /></li>
-                        <li><h6 class="dropdown-header rp-nav-group"><span class="rp-nav-ico xs green"><i class="fa fa-truck"></i></span> Entregas</h6></li>
-                        <li>
-                            <a class="dropdown-item rp-nav-item" href="@Url.Action("Index", "ClientesEntregas")">
-                                <span class="rp-nav-ico sm green"><i class="fa fa-list"></i></span>
-                                <span class="rp-nav-item-text"><span class="rp-nav-item-title">Listado</span><span class="rp-nav-item-sub">Entregas a clientes</span></span>
-                            </a>
-                        </li>
-                        <li>
-                            <a class="dropdown-item rp-nav-item rp-nav-item-accent" href="@Url.Action("NuevoModif", "ClientesEntregas")">
-                                <span class="rp-nav-ico sm green"><i class="fa fa-pencil-square-o"></i></span>
-                                <span class="rp-nav-item-text"><span class="rp-nav-item-title">Nuevo / Modif</span><span class="rp-nav-item-sub">Alta y edición de entrega</span></span>
+                            <a class="dropdown-item rp-nav-item" href="@Url.Action("Index", "ProductosRecuperados")">
+                                <span class="rp-nav-ico sm green"><i class="fa fa-recycle"></i></span>
+                                <span class="rp-nav-item-text"><span class="rp-nav-item-title">Stock e historial</span><span class="rp-nav-item-sub">Productos recuperados</span></span>
                             </a>
                         </li>
                     </ul>
@@ -76,6 +52,29 @@
                         <span class="rp-nav-ico orange"><i class="fa fa-cubes"></i></span>
                         <span>Productos</span>
                     </a>
+                </li>
+
+                <li class="nav-item dropdown" id="seccionTransporte">
+                    <a class="nav-link dropdown-toggle rp-nav-link" href="#" role="button"
+                       data-bs-toggle="dropdown" data-bs-auto-close="outside" data-bs-offset="0,4" aria-expanded="false">
+                        <span class="rp-nav-ico cyan"><i class="fa fa-truck"></i></span>
+                        <span>Transporte</span>
+                    </a>
+                    <ul class="dropdown-menu rp-nav-dropdown">
+                        <li><h6 class="dropdown-header rp-nav-group"><span class="rp-nav-ico xs cyan"><i class="fa fa-truck"></i></span> Flota</h6></li>
+                        <li>
+                            <a class="dropdown-item rp-nav-item" href="@Url.Action("Index", "Camiones")">
+                                <span class="rp-nav-ico sm cyan"><i class="fa fa-list"></i></span>
+                                <span class="rp-nav-item-text"><span class="rp-nav-item-title">Camiones</span><span class="rp-nav-item-sub">ABM de vehículos</span></span>
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item rp-nav-item" href="@Url.Action("Index", "Recorridos")">
+                                <span class="rp-nav-ico sm cyan"><i class="fa fa-map-signs"></i></span>
+                                <span class="rp-nav-item-text"><span class="rp-nav-item-title">Recorridos</span><span class="rp-nav-item-sub">Matriz semanal por unidad</span></span>
+                            </a>
+                        </li>
+                    </ul>
                 </li>
 
                 <li class="nav-item" id="seccionInventario">
@@ -122,11 +121,35 @@
                     </ul>
                 </li>
 
-                <li class="nav-item" id="seccionCajas">
-                    <a class="nav-link rp-nav-link" href="@Url.Action("Index", "Cajas")">
+                <li class="nav-item dropdown" id="seccionFinanzas">
+                    <a class="nav-link dropdown-toggle rp-nav-link" href="@Url.Action("Index", "LibroDiario")" role="button"
+                       data-bs-toggle="dropdown" data-bs-auto-close="outside" data-bs-offset="0,4" aria-expanded="false">
                         <span class="rp-nav-ico gold"><i class="fa fa-money"></i></span>
-                        <span>Cajas</span>
+                        <span>Finanzas</span>
                     </a>
+                    <ul class="dropdown-menu rp-nav-dropdown">
+                        <li><h6 class="dropdown-header rp-nav-group"><span class="rp-nav-ico xs gold"><i class="fa fa-book"></i></span> Libro diario</h6></li>
+                        <li>
+                            <a class="dropdown-item rp-nav-item rp-nav-item-accent" href="@Url.Action("Index", "LibroDiario")">
+                                <span class="rp-nav-ico sm gold"><i class="fa fa-money"></i></span>
+                                <span class="rp-nav-item-text"><span class="rp-nav-item-title">Caja efectivo</span><span class="rp-nav-item-sub">Libro diario — EsBancario=false</span></span>
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item rp-nav-item" href="@Url.Action("Bancaria", "LibroDiario")">
+                                <span class="rp-nav-ico sm gold"><i class="fa fa-university"></i></span>
+                                <span class="rp-nav-item-text"><span class="rp-nav-item-title">Caja bancaria</span><span class="rp-nav-item-sub">Solo movimientos bancarios</span></span>
+                            </a>
+                        </li>
+                        <li><hr class="dropdown-divider rp-nav-divider" /></li>
+                        <li><h6 class="dropdown-header rp-nav-group"><span class="rp-nav-ico xs gold"><i class="fa fa-bank"></i></span> Tesorería</h6></li>
+                        <li>
+                            <a class="dropdown-item rp-nav-item" href="@Url.Action("Index", "Cajas")">
+                                <span class="rp-nav-ico sm gold"><i class="fa fa-bank"></i></span>
+                                <span class="rp-nav-item-text"><span class="rp-nav-item-title">Cajas</span><span class="rp-nav-item-sub">Movimientos por cuenta</span></span>
+                            </a>
+                        </li>
+                    </ul>
                 </li>
 
                 <li class="nav-item" id="seccionGastos">
@@ -264,7 +287,23 @@
                         <div class="rp-config-icon blue"><i class="fa fa-map"></i></div>
                         <div>
                             <div class="rp-config-title">Provincias</div>
-                            <div class="rp-config-sub">Provincias</div>
+                            <div class="rp-config-sub">Provincias con código AFIP</div>
+                        </div>
+                    </button>
+
+                    <button class="rp-config-card" onclick="abrirConfiguracion('Partidos', 'Partidos', 'Provincias', 'Provincias', 'Provincia')">
+                        <div class="rp-config-icon blue"><i class="fa fa-map-signs"></i></div>
+                        <div>
+                            <div class="rp-config-title">Partidos</div>
+                            <div class="rp-config-sub">Partidos por provincia</div>
+                        </div>
+                    </button>
+
+                    <button class="rp-config-card" onclick="abrirConfiguracion('Localidades', 'Localidades', 'Provincias', 'Provincias', 'Provincia')">
+                        <div class="rp-config-icon blue"><i class="fa fa-map-marker"></i></div>
+                        <div>
+                            <div class="rp-config-title">Localidades</div>
+                            <div class="rp-config-sub">Localidades por partido</div>
                         </div>
                     </button>
 
@@ -364,6 +403,39 @@
                         </div>
                     </button>
 
+                </div>
+
+                <div class="rp-config-view-section">
+                    <div class="rp-config-view-head">
+                        <div class="rp-config-icon teal rp-config-view-head-icon"><i class="fa fa-th-large"></i></div>
+                        <div>
+                            <div class="rp-config-title">Preferencias de visualización</div>
+                            <div class="rp-config-sub">Cómo se muestran los listados en todo el sistema · se guarda en este navegador</div>
+                        </div>
+                    </div>
+                    <div class="rp-config-grid rp-config-view-grid" id="rpConfigViewOptions">
+                        <button type="button" class="rp-config-card rp-config-view-card" data-rp-view="auto">
+                            <div class="rp-config-icon blue"><i class="fa fa-magic"></i></div>
+                            <div>
+                                <div class="rp-config-title">Automático</div>
+                                <div class="rp-config-sub">Tabla en PC · tarjetas en móvil</div>
+                            </div>
+                        </button>
+                        <button type="button" class="rp-config-card rp-config-view-card" data-rp-view="table">
+                            <div class="rp-config-icon purple"><i class="fa fa-table"></i></div>
+                            <div>
+                                <div class="rp-config-title">Siempre tabla</div>
+                                <div class="rp-config-sub">Columnas y filtros clásicos</div>
+                            </div>
+                        </button>
+                        <button type="button" class="rp-config-card rp-config-view-card" data-rp-view="cards">
+                            <div class="rp-config-icon orange"><i class="fa fa-th-large"></i></div>
+                            <div>
+                                <div class="rp-config-title">Siempre tarjetas</div>
+                                <div class="rp-config-sub">Vista compacta tipo cards</div>
+                            </div>
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -485,6 +557,19 @@
                            class="rp-input"
                            id="txtNombreConfiguracion">
 
+                    <div id="divConfiguracionCodigo" style="margin-top:12px;" hidden>
+                        <label id="lblCodigoConfiguracion"
+                               class="rp-label"
+                               for="txtCodigoConfiguracion">
+                            Código
+                        </label>
+
+                        <input type="text"
+                               class="rp-input"
+                               id="txtCodigoConfiguracion"
+                               maxlength="10">
+                    </div>
+
                     <input type="hidden"
                            id="txtIdConfiguracion">
 
@@ -495,6 +580,18 @@
                         </label>
 
                         <select id="cmbConfiguracion"
+                                class="rp-input">
+                        </select>
+                    </div>
+
+                    <div id="divConfiguracionPartido" style="margin-top:12px;" hidden>
+                        <label id="lblConfiguracionPartido"
+                               class="rp-label"
+                               for="cmbConfiguracionPartido">
+                            Partido
+                        </label>
+
+                        <select id="cmbConfiguracionPartido"
                                 class="rp-input">
                         </select>
                     </div>
@@ -546,8 +643,8 @@
 
 <partial name="~/Views/Utils/Modals.cshtml" />
 
-<script src="~/js/Permisos.js?v=5.0"></script>
+<script src="~/js/Permisos.js?v=5.1"></script>
 
 
 
-<script src="~/js/NavBarLogin.js?v=5.0" asp-append-version="true"></script>
+<script src="~/js/NavBarLogin.js?v=5.4" asp-append-version="true"></script>

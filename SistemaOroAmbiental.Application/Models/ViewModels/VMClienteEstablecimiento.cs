@@ -15,6 +15,7 @@ namespace SistemaOroAmbiental.Application.Models.ViewModels
         public int IdDiaRecoleccion { get; set; }
         public int IdSemanaRecoleccion { get; set; }
         public int IdListaPrecio { get; set; }
+        public int? IdCamion { get; set; }
         public string HorarioRecoleccionDesde { get; set; } = "";
         public string HorarioRecoleccionHasta { get; set; } = "";
 
@@ -24,6 +25,7 @@ namespace SistemaOroAmbiental.Application.Models.ViewModels
         public string? DiaRecoleccion { get; set; }
         public string? SemanaRecoleccion { get; set; }
         public string? ListaPrecio { get; set; }
+        public string? Camion { get; set; }
 
         public int IdUsuarioRegistra { get; set; }
         public DateTime FechaUsuarioRegistra { get; set; }
