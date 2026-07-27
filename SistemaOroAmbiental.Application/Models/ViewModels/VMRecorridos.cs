@@ -7,6 +7,7 @@ namespace SistemaOroAmbiental.Application.Models.ViewModels
         public int IdSemana { get; set; }
         public int IdDia { get; set; }
         public string Zona { get; set; } = "";
+        public string? HorarioSalida { get; set; }
     }
 
     public class VMClientesRecorrido
@@ -19,6 +20,7 @@ namespace SistemaOroAmbiental.Application.Models.ViewModels
         public int IdDia { get; set; }
         public int Posicion { get; set; }
         public bool Activo { get; set; } = true;
+        public string? Observacion { get; set; }
     }
 
     public class VMClientesRecorridoBulk

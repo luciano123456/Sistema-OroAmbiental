@@ -9,7 +9,7 @@
     <link href="~/css/Productora.css?v=7.1" rel="stylesheet" />
     <link href="~/css/disenopantallas.css?v=7.1" rel="stylesheet" />
     <link href="~/css/M_Generico.css?v=7.1" rel="stylesheet" />
-    <link href="~/css/Recorridos.css?v=7.6" rel="stylesheet" />
+    <link href="~/css/Recorridos.css?v=7.8" rel="stylesheet" />
 }
 
 <div class="rec-page rec-sin-unidad">
@@ -148,6 +148,7 @@
                 </button>
             </div>
         </div>
+
         <div id="panelSugeridosRecorrido" class="rec-sugeridos-panel d-none">
             <div class="rec-sugeridos-head">
                 <div>
@@ -208,6 +209,11 @@
                         <select id="crEstablecimiento" class="form-control rec-select"></select>
                     </div>
                     <div class="col-md-12">
+                        <label class="form-label" for="crObservacion">Observación para hoja de ruta</label>
+                        <textarea id="crObservacion" class="form-control rec-input" rows="2" maxlength="500"
+                                  placeholder="Notas que se imprimen en la columna Observación de la hoja de ruta"></textarea>
+                    </div>
+                    <div class="col-md-12">
                         <div class="rp-activo-box">
                             <div class="rp-activo-box-head">
                                 <span class="rp-activo-box-title">Estado en el recorrido</span>
@@ -234,5 +240,5 @@
 @section Scripts {
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script src="~/js/Entities/M_Camiones.js?v=7.1"></script>
-    <script src="~/js/Recorridos.js?v=7.9"></script>
+    <script src="~/js/Recorridos.js?v=8.2"></script>
 }

@@ -227,6 +227,8 @@
         const grid = grids[key];
         if (!grid?.api) return;
 
+        if (debeMostrarTabla()) return;
+
         const schema = schemas[key];
         if (schema?.manualRender) return;
 
@@ -407,9 +409,11 @@
         const tableId = table.id;
         if (!tableId || !tableId.startsWith("grd_")) return;
 
+        const $table = $(table);
+        if ($table.is("[data-rp-no-cards]")) return;
+
         const key = deriveGridKey(tableId);
         const api = new $.fn.dataTable.Api(settings);
-        const $table = $(table);
         const $wrap = $table.closest(".dt-dark-wrap, .cg-table-wrap");
         if (!$wrap.length) return;
 

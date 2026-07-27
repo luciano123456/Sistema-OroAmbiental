@@ -96,10 +96,11 @@ $(document).ready(async () => {
     $("#listaRutas").on("click", ".btn-guardar-zona", async function (e) {
         e.stopPropagation();
         const $row = $(this).closest(".rec-ruta-item");
-        await guardarZonaRecorrido(
+        await guardarMetaRecorrido(
             parseInt($row.data("semana"), 10),
             parseInt($row.data("dia"), 10),
-            $row.find(".rec-zona-input").val()
+            $row.find(".rec-zona-input").val(),
+            $row.find(".rec-salida-input").val()
         );
     });
 
@@ -120,11 +121,32 @@ $(document).ready(async () => {
         $(this).trigger("click");
     });
 
-    $("#listaRutas").on("keydown", ".rec-zona-input", function (e) {
+    $("#listaRutas").on("keydown", ".rec-zona-input, .rec-salida-input", function (e) {
         if (e.key === "Enter") {
             e.preventDefault();
             $(this).closest(".rec-ruta-item").find(".btn-guardar-zona").trigger("click");
         }
+    });
+
+    $("#listaRutas").on("blur", ".rec-salida-input", async function () {
+        const $row = $(this).closest(".rec-ruta-item");
+        const idSemana = parseInt($row.data("semana"), 10);
+        const idDia = parseInt($row.data("dia"), 10);
+        const valor = ($(this).val() || "").trim();
+        if (valor === getHorarioSalidaRecorrido(idSemana, idDia)) return;
+
+        await guardarMetaRecorrido(
+            idSemana,
+            idDia,
+            $row.find(".rec-zona-input").val(),
+            valor,
+            { silent: true }
+        );
+    });
+
+    $("#listaClientesRecorrido").on("blur", ".rec-obs-input", function () {
+        const id = parseInt($(this).data("id"), 10);
+        guardarObservacionClienteRecorrido(id, $(this).val());
     });
 
     $("#txtBuscarRecorrido").on("input", function () {
@@ -377,25 +399,35 @@ function renderRutaItemHtml(s, d, mapa) {
     const key = `${s.Id}_${d.Id}`;
     const ruta = mapa[key];
     const zona = (ruta?.Zona || "").trim();
+    const salida = (ruta?.HorarioSalida || "").trim();
     const selected = isRecorridoSeleccionado(s.Id, d.Id);
 
     return `
-        <div class="rec-ruta-item${selected ? " selected" : ""}${zona ? " has-zona" : ""}"
+        <div class="rec-ruta-item${selected ? " selected" : ""}${zona ? " has-zona" : ""}${salida ? " has-salida" : ""}"
              data-semana="${s.Id}" data-dia="${d.Id}" id="ruta-${key}" role="button" tabindex="0">
             <div class="rec-ruta-main">
                 <span class="rec-ruta-badge">${escapeHtml(s.Nombre)}</span>
                 <strong class="rec-ruta-dia">${escapeHtml(d.Nombre)}</strong>
             </div>
-            <div class="rec-ruta-zona">
-                <label class="rec-ruta-zona-label">Zona / barrio</label>
-                <div class="rec-ruta-zona-row">
-                    <input type="text" class="form-control rec-input rec-zona-input"
-                           value="${escapeHtml(zona)}" placeholder="Ej: Lanús, Avellaneda..."
-                           maxlength="120" autocomplete="off" />
-                    <button type="button" class="btn btn-success btn-sm btn-guardar-zona" title="Guardar zona">
-                        <i class="fa fa-check"></i>
-                    </button>
+            <div class="rec-ruta-meta">
+                <div class="rec-ruta-zona">
+                    <label class="rec-ruta-zona-label">Zona / barrio</label>
+                    <div class="rec-ruta-zona-row">
+                        <input type="text" class="form-control rec-input rec-zona-input"
+                               value="${escapeHtml(zona)}" placeholder="Ej: Lanús, Avellaneda..."
+                               maxlength="120" autocomplete="off" />
+                    </div>
                 </div>
+                <div class="rec-ruta-salida">
+                    <label class="rec-ruta-zona-label">Horario de salida</label>
+                    <input type="text" class="form-control rec-input rec-salida-input"
+                           value="${escapeHtml(salida)}" placeholder="Ej: 07:30"
+                           maxlength="20" autocomplete="off"
+                           title="Horario de salida del recorrido (se imprime en la hoja de ruta)" />
+                </div>
+                <button type="button" class="btn btn-success btn-sm btn-guardar-zona" title="Guardar zona y horario de salida">
+                    <i class="fa fa-check"></i>
+                </button>
             </div>
             <div class="rec-ruta-actions">
                 <button type="button" class="btn btn-primary btn-sm btn-ver-clientes">
@@ -599,6 +631,11 @@ function actualizarSelectRecorridoRapido(opciones) {
     if (sel.data("select2")) sel.trigger("change.select2");
 }
 
+function getHorarioSalidaRecorrido(idSemana, idDia) {
+    const ruta = rutasData.find(x => x.IdSemana === idSemana && x.IdDia === idDia);
+    return (ruta?.HorarioSalida || "").trim();
+}
+
 function getRecorridoLabelText(extra) {
     const activo = getRecorridoActivo();
     if (!activo) return "Elegí un recorrido de la lista";
@@ -606,7 +643,9 @@ function getRecorridoLabelText(extra) {
     const camion = camiones.find(c => c.Id === idCamion)?.Nombre || "";
     const semana = semanas.find(s => s.Id === idSemana)?.Nombre || "";
     const dia = dias.find(d => d.Id === idDia)?.Nombre || "";
-    const base = `${camion} · ${semana} · ${dia}${zona ? " · " + zona : ""}`;
+    const salida = getHorarioSalidaRecorrido(idSemana, idDia);
+    let base = `${camion} · ${semana} · ${dia}${zona ? " · " + zona : ""}`;
+    if (salida) base += ` · Salida ${salida}`;
     return extra ? `${base} · ${extra}` : base;
 }
 
@@ -633,24 +672,29 @@ function scrollARuta(idSemana, idDia) {
     if (el) el.scrollIntoView({ behavior: "smooth", block: "nearest" });
 }
 
-async function guardarZonaRecorrido(idSemana, idDia, zona) {
+async function guardarMetaRecorrido(idSemana, idDia, zona, horarioSalida, opciones = {}) {
+    const silent = !!opciones.silent;
     const idCamion = parseInt($("#selCamion").val(), 10);
-    const valor = (zona || "").trim();
+    const valorZona = (zona || "").trim();
+    const valorSalida = (horarioSalida || "").trim();
 
     if (!idCamion) {
-        errorModal("Seleccioná una unidad.");
-        return;
+        if (!silent) errorModal("Seleccioná una unidad.");
+        return false;
     }
 
-    if (!valor) {
-        errorModal("Ingresá el nombre de la zona antes de guardar.");
-        return;
+    if (!valorZona && !valorSalida) {
+        if (!silent) errorModal("Ingresá la zona o el horario de salida antes de guardar.");
+        return false;
     }
 
-    const anterior = (rutasData.find(x => x.IdSemana === idSemana && x.IdDia === idDia)?.Zona || "").trim();
-    if (valor === anterior) {
-        if (typeof exitoModal === "function") exitoModal("La zona ya está guardada.");
-        return;
+    const anterior = rutasData.find(x => x.IdSemana === idSemana && x.IdDia === idDia);
+    const zonaAnterior = (anterior?.Zona || "").trim();
+    const salidaAnterior = (anterior?.HorarioSalida || "").trim();
+
+    if (valorZona === zonaAnterior && valorSalida === salidaAnterior) {
+        if (!silent && typeof exitoModal === "function") exitoModal("Los datos ya están guardados.");
+        return true;
     }
 
     try {
@@ -660,13 +704,14 @@ async function guardarZonaRecorrido(idSemana, idDia, zona) {
                 IdCamion: idCamion,
                 IdSemana: idSemana,
                 IdDia: idDia,
-                Zona: valor
+                Zona: valorZona,
+                HorarioSalida: valorSalida || null
             })
         });
 
         if (!(data?.valor ?? data?.Valor)) {
-            errorModal(data?.mensaje ?? data?.Mensaje ?? "No se pudo guardar la zona.");
-            return;
+            if (!silent) errorModal(data?.mensaje ?? data?.Mensaje ?? "No se pudo guardar.");
+            return false;
         }
 
         const idx = rutasData.findIndex(x => x.IdSemana === idSemana && x.IdDia === idDia);
@@ -682,22 +727,27 @@ async function guardarZonaRecorrido(idSemana, idDia, zona) {
             Semana: semanaNombre,
             IdDia: idDia,
             Dia: diaNombre,
-            Zona: valor
+            Zona: valorZona,
+            HorarioSalida: valorSalida || null
         };
 
         if (idx >= 0) rutasData[idx] = item;
         else rutasData.push(item);
 
         recorridosSeleccionados.forEach(r => {
-            if (r.idSemana === idSemana && r.idDia === idDia) r.zona = valor;
+            if (r.idSemana === idSemana && r.idDia === idDia) r.zona = valorZona;
         });
 
         renderListaRutas();
         if (getRecorridoActivo()) actualizarLabelRecorridoSeleccionado();
-        if (typeof exitoModal === "function") exitoModal(data?.mensaje ?? data?.Mensaje ?? "Zona guardada.");
+        if (!silent && typeof exitoModal === "function") {
+            exitoModal(data?.mensaje ?? data?.Mensaje ?? "Datos guardados.");
+        }
+        return true;
     } catch (e) {
         console.error(e);
-        errorModal("Error al guardar. Verificá tu sesión e intentá de nuevo.");
+        if (!silent) errorModal("Error al guardar. Verificá tu sesión e intentá de nuevo.");
+        return false;
     }
 }
 
@@ -780,6 +830,11 @@ function renderClientesRecorrido(data) {
                     <button type="button" class="rec-cliente-btn rec-cliente-btn--delete" onclick="eliminarClienteRecorrido(${item.Id})" title="Quitar de la ruta">
                         <i class="fa fa-trash"></i>
                     </button>
+                </div>
+                <div class="rec-cliente-obs">
+                    <label class="rec-cliente-obs-label">Observación hoja de ruta</label>
+                    <textarea class="form-control rec-input rec-obs-input" data-id="${item.Id}" rows="2"
+                              maxlength="500" placeholder="Notas para imprimir en la hoja de ruta...">${escapeHtml(item.Observacion || "")}</textarea>
                 </div>
             </article>`;
     }).join("");
@@ -869,6 +924,7 @@ async function abrirModalClienteRecorrido(modelo) {
     $("#crId").val(modelo?.Id || 0);
     sel.val(idCliente ? String(idCliente) : "").trigger("change");
     $("#crPosicion").val(esEdicion ? (modelo?.Posicion ?? 1) : getSiguientePosicionRecorrido());
+    $("#crObservacion").val(modelo?.Observacion || "");
     $("#crActivo").prop("checked", modelo?.Activo !== false);
     $("#lblCrActivo").text(modelo?.Activo === false ? "Inactivo" : "Activo");
     $("#modalClienteRecorridoTitulo").text(esEdicion ? "Editar cliente en recorrido" : "Agregar cliente al recorrido");
@@ -886,7 +942,8 @@ async function editarClienteRecorrido(id) {
             IdCliente: data.IdCliente,
             IdEstablecimiento: data.IdEstablecimiento,
             Posicion: data.Posicion,
-            Activo: data.Activo
+            Activo: data.Activo,
+            Observacion: data.Observacion
         });
     } catch (e) {
         console.error(e);
@@ -909,7 +966,8 @@ async function guardarClienteRecorrido() {
         IdSemana: activo.idSemana,
         IdDia: activo.idDia,
         Posicion: parseInt($("#crPosicion").val(), 10) || 1,
-        Activo: $("#crActivo").is(":checked")
+        Activo: $("#crActivo").is(":checked"),
+        Observacion: ($("#crObservacion").val() || "").trim() || null
     };
 
     if (!payload.IdCliente) {
@@ -960,6 +1018,47 @@ async function eliminarClienteRecorrido(id) {
     }
 }
 
+async function guardarObservacionClienteRecorrido(id, observacion) {
+    const item = clientesRecorridoActual.find(x => Number(x.Id) === Number(id));
+    if (!item) return;
+
+    const activo = getRecorridoActivo();
+    if (!activo) return;
+
+    const valor = (observacion || "").trim();
+    const anterior = (item.Observacion || "").trim();
+    if (valor === anterior) return;
+
+    const payload = {
+        Id: item.Id,
+        IdCliente: item.IdCliente,
+        IdEstablecimiento: item.IdEstablecimiento,
+        IdCamion: activo.idCamion,
+        IdSemana: activo.idSemana,
+        IdDia: activo.idDia,
+        Posicion: item.Posicion,
+        Activo: item.Activo,
+        Observacion: valor || null
+    };
+
+    try {
+        const data = await fetchJson("/Recorridos/ActualizarClienteRecorrido", {
+            method: "PUT",
+            body: JSON.stringify(payload)
+        });
+
+        if (!(data?.valor ?? data?.Valor)) {
+            errorModal(data?.mensaje ?? data?.Mensaje ?? "No se pudo guardar la observación.");
+            return;
+        }
+
+        item.Observacion = valor || null;
+    } catch (e) {
+        console.error(e);
+        errorModal("Error al guardar la observación.");
+    }
+}
+
 async function abrirHojaRutaRecorrido() {
     if (!recorridosSeleccionados.length) {
         errorModal("Seleccioná al menos un recorrido.");
@@ -967,12 +1066,6 @@ async function abrirHojaRutaRecorrido() {
     }
 
     const idCamion = recorridosSeleccionados[0].idCamion;
-    const hoy = new Date();
-    const fecha = [
-        hoy.getFullYear(),
-        String(hoy.getMonth() + 1).padStart(2, "0"),
-        String(hoy.getDate()).padStart(2, "0")
-    ].join("-");
 
     const recorridosParam = recorridosSeleccionados
         .map(r => recorridoKey(r.idSemana, r.idDia))
@@ -980,7 +1073,6 @@ async function abrirHojaRutaRecorrido() {
 
     const params = new URLSearchParams({
         idCamion: String(idCamion),
-        fecha,
         recorridos: recorridosParam
     });
 

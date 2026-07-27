@@ -891,6 +891,11 @@ body {
 }
 
 .rp-switch-slider::after {
+    content: none;
+    display: none;
+}
+
+.rp-switch input:not(.rp-switch-input) + .rp-switch-slider::after {
     content: none !important;
     display: none !important;
 }

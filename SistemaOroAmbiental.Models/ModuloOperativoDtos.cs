@@ -40,6 +40,7 @@ public class RecorridosMatrizDto
     public int IdDia { get; set; }
     public string Dia { get; set; } = "";
     public string Zona { get; set; } = "";
+    public string? HorarioSalida { get; set; }
 }
 
 public class ClientesRecorridoDto
@@ -58,6 +59,7 @@ public class ClientesRecorridoDto
     public string Zona { get; set; } = "";
     public int Posicion { get; set; }
     public bool Activo { get; set; }
+    public string? Observacion { get; set; }
     public string RecorridoTexto { get; set; } = "";
 }
 
@@ -188,7 +190,7 @@ public class HojaRutaDto
     public string Dia { get; set; } = "";
     public string Zona { get; set; } = "";
     public string Titulo { get; set; } = "";
-    public DateTime Fecha { get; set; }
+    public DateTime? FechaReferencia { get; set; }
     public string? Salida { get; set; }
     public decimal PrecioDescartadorGrande { get; set; }
     public decimal PrecioDescartadorChico { get; set; }
@@ -202,6 +204,7 @@ public class HojaRutaSeccionDto
     public string Semana { get; set; } = "";
     public string Dia { get; set; } = "";
     public string Zona { get; set; } = "";
+    public string? Salida { get; set; }
     public List<HojaRutaParadaDto> Paradas { get; set; } = new();
 }
 

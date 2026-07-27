@@ -15,6 +15,8 @@ public partial class RecorridosMatriz
 
     public string Zona { get; set; } = null!;
 
+    public string? HorarioSalida { get; set; }
+
     public int IdUsuarioRegistra { get; set; }
 
     public DateTime FechaUsuarioRegistra { get; set; }

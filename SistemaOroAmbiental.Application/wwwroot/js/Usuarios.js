@@ -19,13 +19,12 @@ const columnConfig = [
     { index: 6, filterType: 'text' },
     { index: 7, filterType: 'text' },
     { index: 8, filterType: 'select', fetchDataFunc: listaRolesFilter },
-    { index: 9, filterType: 'select', fetchDataFunc: listaEstadosFilter },
-    { index: 10, filterType: 'text' }
+    { index: 9, filterType: 'select', fetchDataFunc: listaEstadosFilter }
 ];
 
 registrarFiltrosGrilla('grd_Usuarios', columnConfig, {
     includeActivo: false,
-    maxColumnIndex: 10
+    maxColumnIndex: 9
 });
 
 $(document).ready(() => {
@@ -387,7 +386,7 @@ async function configurarDataTable(data) {
                 const api = this.api();
                 await armarFiltrosGrillaLista(api, '#grd_Usuarios', columnConfig, {
                     includeActivo: false,
-                    maxColumnIndex: 10
+                    maxColumnIndex: 9
                 });
                 configurarOpcionesColumnas();
                 setTimeout(() => gridUsuarios.columns.adjust(), 10);

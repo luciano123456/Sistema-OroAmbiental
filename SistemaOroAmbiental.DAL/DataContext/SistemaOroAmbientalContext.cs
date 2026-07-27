@@ -1510,6 +1510,7 @@ public partial class SistemaOroAmbientalContext : DbContext
         {
             entity.ToTable("RecorridosMatriz");
             entity.Property(e => e.Zona).HasMaxLength(120).IsUnicode(false);
+            entity.Property(e => e.HorarioSalida).HasMaxLength(20).IsUnicode(false);
             entity.Property(e => e.FechaUsuarioModifica).HasColumnType("datetime");
             entity.Property(e => e.FechaUsuarioRegistra).HasColumnType("datetime");
             entity.HasIndex(e => new { e.IdCamion, e.IdSemana, e.IdDia }).IsUnique();
@@ -1543,6 +1544,7 @@ public partial class SistemaOroAmbientalContext : DbContext
         {
             entity.ToTable("ClientesRecorridos");
             entity.Property(e => e.Activo).HasDefaultValueSql("((1))");
+            entity.Property(e => e.Observacion).HasMaxLength(500).IsUnicode(false);
             entity.Property(e => e.FechaUsuarioModifica).HasColumnType("datetime");
             entity.Property(e => e.FechaUsuarioRegistra).HasColumnType("datetime");
 
