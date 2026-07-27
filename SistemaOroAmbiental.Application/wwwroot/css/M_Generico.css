@@ -78,6 +78,21 @@ select.is-valid + .select2 .select2-selection {
     color: #fff;
 }
 
+.rp-caja-modelo-hint {
+    font-size: 12px;
+    color: #9aa8c5;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, .04);
+    border: 1px solid rgba(255, 255, 255, .08);
+    margin-bottom: 12px;
+}
+
+.rp-caja-modelo-hint i {
+    color: #6ea8fe;
+    margin-right: 6px;
+}
+
 .rp-btn-plus:active {
     transform: scale(0.95);
 }
@@ -85,4 +100,300 @@ select.is-valid + .select2 .select2-selection {
 .rp-btn-plus i {
     font-size: 13px;
     pointer-events: none;
+}
+
+/* Validación: mensaje visible en inputs y select2 (rp-select-plus) */
+.modal .invalid-feedback:not(.d-none),
+.modal .rp-invalid-msg:not(.d-none) {
+    display: block;
+    color: #ffb4b4;
+    font-size: 0.875em;
+    margin-top: 0.25rem;
+}
+
+.rp-select-plus + .invalid-feedback:not(.d-none) {
+    display: block;
+}
+
+/* Precios por lista (modal producto) */
+.rp-precios-section {
+    padding: 1rem 1.1rem 1.15rem;
+    border-radius: 14px;
+    background: linear-gradient(145deg, rgba(30, 41, 59, 0.45) 0%, rgba(15, 23, 42, 0.35) 100%);
+    border: 1px solid rgba(148, 163, 184, 0.18);
+}
+
+.rp-precios-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 1rem;
+    padding-bottom: 0.85rem;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+}
+
+.rp-precios-header-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    color: #fff;
+    font-size: 18px;
+    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+}
+
+.rp-precios-title {
+    font-weight: 700;
+    font-size: 1rem;
+    color: #f1f5f9;
+}
+
+.rp-precios-sub {
+    color: #94a3b8;
+    font-size: 0.8rem;
+}
+
+.rp-precios-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 14px;
+}
+
+.rp-precio-card {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    border-radius: 12px;
+    padding: 14px 14px 12px;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
+}
+
+.rp-precio-card:hover {
+    border-color: rgba(59, 130, 246, 0.45);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+    transform: translateY(-1px);
+}
+
+.rp-precio-card-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.rp-precio-card-badge {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: rgba(59, 130, 246, 0.15);
+    color: #60a5fa;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    flex-shrink: 0;
+}
+
+.rp-precio-card-name {
+    font-weight: 600;
+    font-size: 0.92rem;
+    color: #e2e8f0;
+    line-height: 1.25;
+    word-break: break-word;
+}
+
+.rp-precio-card-field {
+    margin-bottom: 10px;
+}
+
+.rp-precio-card-field:last-child {
+    margin-bottom: 0;
+}
+
+.rp-precio-card-field label {
+    display: block;
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #94a3b8;
+    margin-bottom: 4px;
+}
+
+.rp-precio-card-field .form-control {
+    font-size: 0.9rem;
+    background: rgba(15, 23, 42, 0.5);
+    border-color: rgba(148, 163, 184, 0.25);
+    color: #f8fafc;
+}
+
+.rp-precio-card-field .form-control:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 0.15rem rgba(59, 130, 246, 0.25);
+}
+
+.rp-precios-empty {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 16px;
+    border-radius: 10px;
+    background: rgba(239, 68, 68, 0.08);
+    border: 1px dashed rgba(239, 68, 68, 0.35);
+    color: #fca5a5;
+    font-size: 0.88rem;
+}
+
+.rp-precios-empty i {
+    font-size: 1.1rem;
+    opacity: 0.9;
+}
+
+/* =========================================================
+   Contactos (Clientes, Proveedores, etc.)
+========================================================= */
+
+.rp-section-disabled {
+    opacity: .55;
+    pointer-events: none;
+}
+
+.rp-tabs-shell {
+    margin-bottom: 18px;
+}
+
+.rp-contact-page {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.rp-contact-hero {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    padding: 16px 18px;
+    border-radius: 16px;
+    border: 1px solid var(--rp-line-soft, rgba(255, 255, 255, .12));
+    background: rgba(255, 255, 255, .03);
+}
+
+.rp-contact-hero-name {
+    font-size: 1.05rem;
+    font-weight: 700;
+}
+
+.rp-contact-hero-hint {
+    font-size: .85rem;
+    color: var(--rp-text-muted, #9aa4b2);
+    margin-top: 4px;
+}
+
+.rp-contact-hero-hint.success {
+    color: #7dffb0;
+}
+
+.rp-kpi-card-mini {
+    min-width: 96px;
+    padding: 12px 14px;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, .04);
+    border: 1px solid rgba(255, 255, 255, .06);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+.rp-kpi-card-mini span {
+    font-size: 12px;
+    color: var(--rp-text-soft, #9aa4b2);
+}
+
+.rp-kpi-card-mini strong {
+    font-size: 24px;
+    line-height: 1.1;
+    color: #fff;
+}
+
+.rp-contact-layout {
+    display: grid;
+    grid-template-columns: minmax(240px, 1fr) minmax(320px, 1.2fr);
+    gap: 16px;
+}
+
+@media (max-width: 992px) {
+    .rp-contact-layout {
+        grid-template-columns: 1fr;
+    }
+}
+
+.rp-contact-list-panel,
+.rp-contact-form-panel {
+    border: 1px solid var(--rp-line-soft, rgba(255, 255, 255, .12));
+    border-radius: 16px;
+    padding: 14px;
+    background: rgba(255, 255, 255, .02);
+}
+
+.rp-contact-list-panel h6,
+.rp-contact-form-panel h6 {
+    margin-bottom: 12px;
+    font-weight: 700;
+}
+
+.rp-contact-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 360px;
+    overflow-y: auto;
+}
+
+.rp-contact-item {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, .08);
+    background: rgba(0, 0, 0, .15);
+    cursor: pointer;
+    transition: border-color .15s, background .15s;
+}
+
+.rp-contact-item:hover,
+.rp-contact-item.active {
+    border-color: rgba(99, 179, 237, .45);
+    background: rgba(99, 179, 237, .08);
+}
+
+.rp-contact-item-main strong {
+    display: block;
+}
+
+.rp-contact-item-main small {
+    color: var(--rp-text-muted, #9aa4b2);
+}
+
+.rp-contact-item-meta {
+    font-size: .8rem;
+    color: var(--rp-text-muted, #9aa4b2);
+    margin-top: 4px;
+}
+
+.rp-contact-item-actions {
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.rp-contact-empty {
+    padding: 24px 12px;
+    text-align: center;
+    color: var(--rp-text-muted, #9aa4b2);
+    font-size: .9rem;
 }

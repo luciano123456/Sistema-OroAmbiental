@@ -983,7 +983,7 @@ function formatNumber(number) {
 }
 
 async function listaRoles() {
-    const url = `/Roles/Lista`;
+    const url = `/UsuariosRoles/Lista`;
     const response = await fetch(url);
     const data = await response.json();
 
@@ -1001,7 +1001,7 @@ async function listaRoles() {
 }
 
 async function listaEstados() {
-    const url = `/EstadosUsuarios/Lista`;
+    const url = `/UsuariosEstados/Lista`;
     const response = await fetch(url);
     const data = await response.json();
 

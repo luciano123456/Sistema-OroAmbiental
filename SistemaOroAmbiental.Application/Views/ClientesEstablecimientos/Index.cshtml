@@ -1,0 +1,85 @@
+@{
+    ViewData["Title"] = "Establecimientos de Clientes";
+}
+
+@section Estilos {
+    <link href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css" rel="stylesheet" />
+    <link href="https://cdn.datatables.net/buttons/2.2.2/css/buttons.dataTables.min.css" rel="stylesheet" />
+    <link href="https://cdn.datatables.net/fixedheader/3.2.2/css/fixedHeader.dataTables.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link href="~/css/Productora.css?v=5.1" rel="stylesheet" />
+    <link href="~/css/disenopantallas.css?v=5.1" rel="stylesheet" />
+    <link href="~/css/M_Generico.css?v=5.1" rel="stylesheet" />
+    <link href="~/css/ClientesEstablecimientos.css?v=5.3" rel="stylesheet" />
+}
+
+<div class="container-fluid mt-5">
+    <div class="container page-99" style="margin-top:40px">
+        <div class="cc-header shadow-lg rounded-4 p-4 mb-4">
+            <div class="d-flex align-items-center gap-3 flex-wrap">
+                <div class="d-flex align-items-center gap-3">
+                    <span class="cc-badge"><i class="fa fa-building"></i></span>
+                    <div>
+                        <h2 class="m-0 fw-800">Establecimientos</h2>
+                    </div>
+                </div>
+                <div class="ms-auto d-flex gap-4 flex-wrap align-items-center">
+                    <div class="cc-stat">
+                        <div class="label">Registros</div>
+                        <div class="value"><strong id="kpiCantEstablecimientos">0</strong></div>
+                    </div>
+                    <div class="dropdown cc-dd">
+                        <button class="btn btn-secondary dropdown-toggle" type="button" id="dropdownColumnasEst" data-bs-toggle="dropdown" data-bs-display="static" data-bs-auto-close="outside">
+                            <i class="fa fa-cog me-2"></i> Config. Columnas
+                        </button>
+                        <ul class="dropdown-menu cc-dropdown-menu" id="configColumnasMenuEst"></ul>
+                    </div>
+                    <button class="btn btn-success d-flex align-items-center px-3 py-2 btnnuevo" type="button" onclick="nuevoEstablecimiento()">
+                        <i class="fa fa-plus-square me-2"></i> Nuevo
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="card-glass p-3">
+            <div class="dt-dark-wrap">
+                <table class="dt-dark display nowrap compact" id="grd_Establecimientos" style="width:100%">
+                    <thead>
+                        <tr>
+                            <th></th>
+                            <th>Id</th>
+                            <th>Cliente</th>
+                            <th>Nombre</th>
+                            <th>CUIT</th>
+                            <th>Provincia</th>
+                            <th>Día recolección</th>
+                            <th>Semana</th>
+                            <th>Lista precio</th>
+                            <th>Horario</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+@await Html.PartialAsync("~/Views/Entities/M_Clientes.cshtml")
+@await Html.PartialAsync("~/Views/Entities/M_ClientesEstablecimientos.cshtml")
+
+@section Scripts {
+    <script src="~/js/Entities/M_Clientes.js?v=5.1"></script>
+    <script src="~/js/Entities/M_ClientesEstablecimientos.js?v=5.1"></script>
+    <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
+    <script src="https://cdn.datatables.net/fixedheader/3.2.2/js/dataTables.fixedHeader.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script src="~/js/ClientesEstablecimientos.js?v=5.1"></script>
+}

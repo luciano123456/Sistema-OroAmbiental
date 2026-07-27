@@ -21,7 +21,11 @@
                     sucursales: "/Sucursales/Lista",
                     provincias: "/Provincias/Lista",
                     condicionesIva: "/CondicionesIva/Lista",
-                    profesiones: "/ClientesProfesiones/Lista"
+                    profesiones: "/ClientesProfesiones/Lista",
+                    contactosLista: "/ClientesContactos/ListaPorCliente?idCliente={idCliente}",
+                    contactosInsertar: "/ClientesContactos/Insertar",
+                    contactosActualizar: "/ClientesContactos/Actualizar",
+                    contactosEliminar: "/ClientesContactos/Eliminar?id={id}"
                 },
                 onSaved: null,
                 onDeleted: null,
@@ -35,14 +39,29 @@
                 : this.root.querySelector("[data-cliente-modal]");
 
             if (!this.modalEl) {
-                throw new Error("No se encontr� [data-cliente-modal].");
+                throw new Error("No se encontr? [data-cliente-modal].");
             }
 
             this.bsModal = new bootstrap.Modal(this.modalEl);
             this._ultimoModo = "nuevo";
             this._modeloActual = null;
+            this._contactosCache = [];
+            this._contactoSeleccionadoId = 0;
 
             this._camposObligatorios = ["txtNombre", "txtCuit", "cmbSucursal"];
+            this._validacion = new ValidacionModalAbm({
+                modalEl: this.modalEl,
+                getPanel: () => this._id("errorCampos"),
+                campos: [
+                    { id: "txtNombre", nombre: "Nombre" },
+                    { id: "txtCuit", nombre: "CUIT" },
+                    { id: "cmbSucursal", nombre: "Sucursal" }
+                ],
+                esCampoValido: (el) => this._valorCampoValido(el),
+                isSoloLectura: () => this.isSoloLectura(),
+                mostrarError: (msg) => this.mostrarErrorCampos(msg, null, "validacion"),
+                cerrarPanel: () => this.cerrarErrorCampos()
+            });
             this._comboPorController = {
                 Sucursales: { selectId: "cmbSucursal", url: this.options.endpoints.sucursales },
                 Provincias: { selectId: "cmbProvincia", url: this.options.endpoints.provincias },
@@ -53,7 +72,7 @@
             window.clienteModal = this;
             this._bindEvents();
             this._bindModalEvents();
-            this._bindAtajosConfiguracion();
+            this._bindContactosEvents();
             this._bindConfiguracionActualizada();
         }
 
@@ -188,6 +207,316 @@
                     $el.trigger("change.select2");
                 }
             });
+
+            this.bloquearControlesContactos(disabled || !this.getId());
+        }
+
+        _activarTabDatos() {
+            const tabBtn = this._id("tabBtnDatosCliente");
+            if (tabBtn && window.bootstrap?.Tab) {
+                window.bootstrap.Tab.getOrCreateInstance(tabBtn).show();
+            }
+        }
+
+        prepararContactosNuevo() {
+            this._contactosCache = [];
+            this._contactoSeleccionadoId = 0;
+            this.limpiarFormContacto();
+            this.renderListaContactos();
+            this.actualizarBadgeClienteContactos();
+            this.habilitarSeccionContactos(false);
+            this._activarTabDatos();
+        }
+
+        habilitarSeccionContactos(habilitar) {
+            const section = this._id("sectionContactosCliente");
+            const hint = this._id("contactoHint");
+            if (!section || !hint) return;
+
+            if (habilitar) {
+                section.classList.remove("rp-section-disabled");
+                hint.classList.add("success");
+                hint.innerHTML = `<i class="fa fa-check-circle"></i> Ya pod\u00E9s administrar los contactos del cliente.`;
+            } else {
+                section.classList.add("rp-section-disabled");
+                hint.classList.remove("success");
+                hint.innerHTML = `<i class="fa fa-info-circle"></i> Guard\u00E1 el cliente para administrar contactos.`;
+            }
+
+            this.bloquearControlesContactos(this.isSoloLectura() || !habilitar);
+        }
+
+        bloquearControlesContactos(bloquear) {
+            const ids = [
+                "txtContactoNombre", "txtContactoPuesto", "txtContactoTelefono",
+                "txtContactoTelefonoAlt", "txtContactoEmail"
+            ];
+            ids.forEach(id => {
+                const el = this._id(id);
+                if (el) el.disabled = !!bloquear;
+            });
+
+            const btnGuardar = this._id("btnGuardarContacto");
+            const btnNuevo = this._id("btnNuevoContacto");
+            if (btnGuardar) btnGuardar.disabled = !!bloquear;
+            if (btnNuevo) btnNuevo.disabled = !!bloquear;
+
+            const lista = this._id("listaContactosCliente");
+            if (lista) {
+                lista.querySelectorAll(".btn-eliminar-contacto").forEach(btn => {
+                    btn.disabled = !!bloquear;
+                });
+            }
+        }
+
+        actualizarBadgeClienteContactos() {
+            const nombre = (this._getFieldValue("txtNombre") || "").trim();
+            const badge = this._id("contactoClienteNombre");
+            if (badge) badge.textContent = nombre || "Nuevo";
+        }
+
+        limpiarFormContacto() {
+            this._contactoSeleccionadoId = 0;
+            this._setFieldValue("txtContactoId", "");
+            this._setFieldValue("txtContactoNombre", "");
+            this._setFieldValue("txtContactoPuesto", "");
+            this._setFieldValue("txtContactoTelefono", "");
+            this._setFieldValue("txtContactoTelefonoAlt", "");
+            this._setFieldValue("txtContactoEmail", "");
+            const titulo = this._id("contactoFormTitulo");
+            if (titulo) titulo.textContent = "Nuevo contacto";
+            this._id("listaContactosCliente")?.querySelectorAll(".rp-contact-item")
+                .forEach(el => el.classList.remove("active"));
+        }
+
+        renderListaContactos() {
+            const cont = this._id("listaContactosCliente");
+            const cant = this._id("contactoCantidad");
+            if (!cont) return;
+
+            const items = this._contactosCache || [];
+            if (cant) cant.textContent = String(items.length);
+
+            if (!items.length) {
+                const idCliente = this.getId();
+                cont.innerHTML = `<div class="rp-contact-empty">${
+                    idCliente > 0
+                        ? "No hay contactos cargados. Agreg\u00E1 uno desde el formulario."
+                        : "Guard\u00E1 el cliente para ver contactos."
+                }</div>`;
+                return;
+            }
+
+            cont.innerHTML = items.map(c => {
+                const meta = [
+                    c.Telefono,
+                    c.Email
+                ].filter(Boolean).join(" \u00B7 ");
+                const active = c.Id === this._contactoSeleccionadoId ? " active" : "";
+                return `
+                    <div class="rp-contact-item${active}" data-id="${c.Id}">
+                        <div class="flex-grow-1">
+                            <div class="rp-contact-item-main">
+                                <strong>${this._escapeHtml(c.Nombre || "")}</strong>
+                                ${c.Puesto ? `<small>${this._escapeHtml(c.Puesto)}</small>` : ""}
+                            </div>
+                            ${meta ? `<div class="rp-contact-item-meta">${this._escapeHtml(meta)}</div>` : ""}
+                        </div>
+                        <div class="rp-contact-item-actions">
+                            <button type="button"
+                                    class="btn btn-sm btn-outline-danger btn-eliminar-contacto"
+                                    data-id="${c.Id}"
+                                    title="Eliminar">
+                                <i class="fa fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>`;
+            }).join("");
+        }
+
+        _escapeHtml(text) {
+            return String(text ?? "")
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;");
+        }
+
+        seleccionarContacto(id) {
+            const item = (this._contactosCache || []).find(x => x.Id === id);
+            if (!item) return;
+
+            this._contactoSeleccionadoId = id;
+            this._setFieldValue("txtContactoId", item.Id);
+            this._setFieldValue("txtContactoNombre", item.Nombre || "");
+            this._setFieldValue("txtContactoPuesto", item.Puesto || "");
+            this._setFieldValue("txtContactoTelefono", item.Telefono || "");
+            this._setFieldValue("txtContactoTelefonoAlt", item.TelefonoAlt || "");
+            this._setFieldValue("txtContactoEmail", item.Email || "");
+
+            const titulo = this._id("contactoFormTitulo");
+            if (titulo) titulo.textContent = "Editar contacto";
+
+            this.renderListaContactos();
+        }
+
+        nuevoContacto() {
+            if (!this.getId()) return;
+            this.limpiarFormContacto();
+        }
+
+        validarFormContacto() {
+            const nombre = (this._getFieldValue("txtContactoNombre") || "").trim();
+            if (!nombre) {
+                if (typeof errorModal === "function") {
+                    errorModal("El nombre del contacto es obligatorio.");
+                }
+                return false;
+            }
+            return true;
+        }
+
+        async cargarContactos(idCliente) {
+            if (!idCliente || idCliente <= 0) {
+                this.prepararContactosNuevo();
+                return;
+            }
+
+            try {
+                const url = this._replaceUrl(this.options.endpoints.contactosLista, { idCliente });
+                const data = await this._fetchJson(url, {
+                    method: "GET",
+                    headers: this._headers(false)
+                });
+                this._contactosCache = Array.isArray(data) ? data : [];
+                this.limpiarFormContacto();
+                this.renderListaContactos();
+                this.habilitarSeccionContactos(true);
+            } catch (e) {
+                console.error(e);
+                this._contactosCache = [];
+                this.renderListaContactos();
+            }
+        }
+
+        async guardarContacto() {
+            if (this.isSoloLectura()) return;
+            const idCliente = this.getId();
+            if (!idCliente) {
+                if (typeof errorModal === "function") {
+                    errorModal("Guard\u00E1 el cliente antes de agregar contactos.");
+                }
+                return;
+            }
+            if (!this.validarFormContacto()) return;
+
+            const idContacto = this._toInt(this._getFieldValue("txtContactoId")) || 0;
+            const modelo = {
+                Id: idContacto,
+                IdCliente: idCliente,
+                Nombre: (this._getFieldValue("txtContactoNombre") || "").trim(),
+                Puesto: this._getFieldValue("txtContactoPuesto") || null,
+                Telefono: this._getFieldValue("txtContactoTelefono") || null,
+                TelefonoAlt: this._getFieldValue("txtContactoTelefonoAlt") || null,
+                Email: this._getFieldValue("txtContactoEmail") || null
+            };
+
+            const esNuevo = !modelo.Id;
+            const url = esNuevo
+                ? this.options.endpoints.contactosInsertar
+                : this.options.endpoints.contactosActualizar;
+            const method = esNuevo ? "POST" : "PUT";
+
+            try {
+                const data = await this._fetchJson(url, {
+                    method,
+                    headers: this._headers(true),
+                    body: JSON.stringify(modelo)
+                });
+
+                if (!data?.valor) {
+                    if (typeof errorModal === "function") {
+                        errorModal(data?.mensaje || "No se pudo guardar el contacto.");
+                    }
+                    return;
+                }
+
+                if (typeof exitoModal === "function") {
+                    exitoModal(data.mensaje || "Contacto guardado correctamente");
+                }
+
+                await this.cargarContactos(idCliente);
+                if (esNuevo && data.id) {
+                    this.seleccionarContacto(data.id);
+                }
+            } catch (e) {
+                console.error(e);
+                if (typeof errorModal === "function") {
+                    errorModal("Ha ocurrido un error al guardar el contacto.");
+                }
+            }
+        }
+
+        async eliminarContacto(id) {
+            if (this.isSoloLectura()) return;
+
+            const confirmado = typeof confirmarModal === "function"
+                ? await confirmarModal("\u00BFDesea eliminar este contacto?")
+                : window.confirm("\u00BFDesea eliminar este contacto?");
+
+            if (!confirmado) return;
+
+            try {
+                const url = this._replaceUrl(this.options.endpoints.contactosEliminar, { id });
+                const data = await this._fetchJson(url, {
+                    method: "DELETE",
+                    headers: this._headers(false)
+                });
+
+                if (!data?.valor) {
+                    if (typeof errorModal === "function") {
+                        errorModal(data?.mensaje || "No se pudo eliminar el contacto.");
+                    }
+                    return;
+                }
+
+                if (typeof exitoModal === "function") {
+                    exitoModal(data.mensaje || "Contacto eliminado correctamente");
+                }
+
+                await this.cargarContactos(this.getId());
+            } catch (e) {
+                console.error(e);
+                if (typeof errorModal === "function") {
+                    errorModal("Ha ocurrido un error al eliminar el contacto.");
+                }
+            }
+        }
+
+        _bindContactosEvents() {
+            const lista = this._id("listaContactosCliente");
+            if (lista) {
+                lista.addEventListener("click", (e) => {
+                    const btnDel = e.target.closest(".btn-eliminar-contacto");
+                    if (btnDel) {
+                        e.stopPropagation();
+                        const id = parseInt(btnDel.getAttribute("data-id"), 10);
+                        if (id) this.eliminarContacto(id);
+                        return;
+                    }
+
+                    const item = e.target.closest(".rp-contact-item");
+                    if (item) {
+                        const id = parseInt(item.getAttribute("data-id"), 10);
+                        if (id) this.seleccionarContacto(id);
+                    }
+                });
+            }
+
+            const txtNombre = this._id("txtNombre");
+            if (txtNombre) {
+                txtNombre.addEventListener("input", () => this.actualizarBadgeClienteContactos());
+            }
         }
 
         async abrirNuevo() {
@@ -201,8 +530,20 @@
 
                 this.limpiarModal();
                 this.setModalSoloLectura(false);
+                const chkActivo = this._id("chkActivoCliente");
+                const lblActivo = this._id("lblActivoCliente");
+                if (chkActivo) chkActivo.checked = true;
+                if (lblActivo) lblActivo.textContent = "Activo";
+                this.prepararContactosNuevo();
 
                 await this.cargarCombos();
+
+                if (!(typeof usuarioTieneUnicaSucursal === "function" && usuarioTieneUnicaSucursal())) {
+                    const defSuc = typeof getIdSucursalDefaultUsuario === "function"
+                        ? getIdSucursalDefaultUsuario()
+                        : null;
+                    if (defSuc) this._setFieldValue("cmbSucursal", defSuc, true);
+                }
 
                 this._id("modalEdicionLabel").textContent = "Nuevo Cliente";
                 this._id("btnGuardar").innerHTML = `<i class="fa fa-check"></i> Registrar`;
@@ -235,6 +576,7 @@
         }
 
         async abrirVer(id) {
+            this.cerrarErrorCampos();
             try {
                 this._ultimoModo = "ver";
                 const url = this._replaceUrl(this.options.endpoints.editar, { id });
@@ -279,10 +621,23 @@
             if (modelo.IdProfesion) this._setFieldValue("cmbProfesion", modelo.IdProfesion, true);
             if (modelo.IdCondicionIva) this._setFieldValue("cmbCondicionIva", modelo.IdCondicionIva, true);
 
+            const chkActivo = this._id("chkActivoCliente");
+            const lblActivo = this._id("lblActivoCliente");
+            if (chkActivo) chkActivo.checked = modelo.Activo !== false;
+            if (lblActivo) lblActivo.textContent = (chkActivo && chkActivo.checked) ? "Activo" : "Inactivo";
+
             this._setAuditoria(modelo);
 
             this._id("modalEdicionLabel").textContent = soloLectura ? "Ver Cliente" : "Editar Cliente";
             this._id("btnGuardar").innerHTML = `<i class="fa fa-check"></i> Guardar`;
+
+            this.actualizarBadgeClienteContactos();
+            if (modelo?.Id > 0) {
+                await this.cargarContactos(modelo.Id);
+                this.setModalSoloLectura(soloLectura);
+            } else {
+                this.prepararContactosNuevo();
+            }
 
             this.bsModal.show();
             this.setModalSoloLectura(soloLectura);
@@ -307,19 +662,39 @@
         }
 
         async cargarCombos() {
-            this.resetSelect("cmbSucursal", "Seleccionar");
+            const phSuc = (typeof usuarioTieneUnicaSucursal === "function" && usuarioTieneUnicaSucursal())
+                ? ""
+                : "Seleccionar";
+
+            this.resetSelect("cmbSucursal", phSuc);
             this.resetSelect("cmbProvincia", "Seleccionar");
             this.resetSelect("cmbProfesion", "Seleccionar");
             this.resetSelect("cmbCondicionIva", "Seleccionar");
 
+            const dataSuc = await this._fetchJson(this.options.endpoints.sucursales, { headers: this._headers(false) });
+            const $suc = window.jQuery(this._id("cmbSucursal"));
+            if (typeof llenarSelectSucursales === "function") {
+                llenarSelectSucursales($suc, dataSuc, {
+                    primeraOpcion: typeof primeraOpcionSucursal === "function"
+                        ? primeraOpcionSucursal({ value: "", text: "Seleccionar" })
+                        : { value: "", text: "Seleccionar" },
+                    seleccionarPorDefecto: true
+                });
+            } else {
+                (dataSuc || []).forEach(x => this._id("cmbSucursal").append(new Option(x.Nombre, x.Id)));
+            }
+
             await Promise.all([
-                this._llenarCombo("cmbSucursal", this.options.endpoints.sucursales),
                 this._llenarCombo("cmbProvincia", this.options.endpoints.provincias),
                 this._llenarCombo("cmbProfesion", this.options.endpoints.profesiones),
                 this._llenarCombo("cmbCondicionIva", this.options.endpoints.condicionesIva)
             ]);
 
             this.inicializarSelect2Modal();
+
+            if (typeof aplicarBloqueoSucursalUnica === "function") {
+                aplicarBloqueoSucursalUnica($suc, { triggerChange: false });
+            }
         }
 
         async guardar() {
@@ -341,7 +716,8 @@
                 CodPostal: this._getFieldValue("txtCodPostal"),
                 IdProvincia: this._getIntOrNull("cmbProvincia"),
                 IdProfesion: this._getIntOrNull("cmbProfesion"),
-                IdCondicionIva: this._getIntOrNull("cmbCondicionIva")
+                IdCondicionIva: this._getIntOrNull("cmbCondicionIva"),
+                Activo: this._id("chkActivoCliente") ? this._id("chkActivoCliente").checked : true
             };
 
             if (typeof this.options.onGuardarModelo === "function") {
@@ -370,11 +746,15 @@
                 }
 
                 this.cerrarErrorCampos();
-                this.cerrar();
                 exitoModal(data.mensaje || (esNuevo ? "Cliente registrado correctamente" : "Cliente modificado correctamente"));
 
+                this.cerrar();
+
                 if (typeof this.options.onSaved === "function") {
-                    await this.options.onSaved(data, modelo, this);
+                    const modeloGuardado = esNuevo && data.id
+                        ? { ...modelo, Id: data.id }
+                        : modelo;
+                    await this.options.onSaved(data, modeloGuardado, this);
                 }
 
                 return true;
@@ -386,36 +766,31 @@
         }
 
         async eliminar(id) {
-            const confirmado = typeof confirmarModal === "function"
-                ? await confirmarModal("¿Desea eliminar este cliente?")
-                : window.confirm("¿Desea eliminar este cliente?");
-
-            if (!confirmado) return false;
-
-            try {
-                const url = this._replaceUrl(this.options.endpoints.eliminar, { id });
-                const data = await this._fetchJson(url, {
-                    method: "DELETE",
-                    headers: this._headers(false)
-                });
-
-                if (!data.valor) {
-                    this.mostrarErrorCampos(data.mensaje || "No se pudo eliminar.", data.idReferencia ?? null, data.tipo || "error");
-                    return false;
-                }
-
-                exitoModal(data.mensaje || "Cliente eliminado correctamente");
-
-                if (typeof this.options.onDeleted === "function") {
-                    await this.options.onDeleted(data, id, this);
-                }
-
-                return true;
-            } catch (e) {
-                console.error(e);
-                errorModal("Ha ocurrido un error.");
+            if (typeof window.ejecutarEliminacionEntidad !== "function") {
+                errorModal("No está disponible el asistente de eliminación.");
                 return false;
             }
+
+            const resultado = await window.ejecutarEliminacionEntidad({
+                entidadLabel: "este cliente",
+                urlDependencias: `/Clientes/DependenciasEliminar?id=${id}`,
+                urlEliminar: cascada => `/Clientes/Eliminar?id=${id}&cascada=${cascada ? "true" : "false"}`,
+                headers: this._headers(false),
+                fetchJson: (url, options) => this._fetchJson(url, options)
+            });
+
+            if (resultado.accion !== "ok") return false;
+
+            const data = resultado.data;
+            if (typeof exitoModal === "function") {
+                exitoModal(data?.mensaje ?? data?.Mensaje ?? "Cliente eliminado correctamente");
+            }
+
+            if (typeof this.options.onDeleted === "function") {
+                await this.options.onDeleted(data, id, this);
+            }
+
+            return true;
         }
 
         limpiarModal() {
@@ -424,19 +799,13 @@
                 if (el.id === "txtId") { el.value = ""; return; }
                 if (el.tagName === "SELECT") el.selectedIndex = 0;
                 else el.value = "";
-                el.classList.remove("is-invalid", "is-valid");
-
-                if (el.tagName === "SELECT" && window.jQuery?.(el).data("select2")) {
-                    const { $selection, $container } = this.getSelect2Selection(el);
-                    $selection.removeClass("is-invalid is-valid");
-                    $container.removeClass("is-invalid is-valid");
-                }
             });
-            this.cerrarErrorCampos();
+            this._validacion?.reset();
             this._id("infoAuditoria")?.classList.add("d-none");
             if (this._id("infoRegistro")) this._id("infoRegistro").innerHTML = "";
             if (this._id("infoModificacion")) this._id("infoModificacion").innerHTML = "";
             this._refreshAllSelect2();
+            this.prepararContactosNuevo();
         }
 
         _valorCampoValido(el) {
@@ -445,63 +814,11 @@
         }
 
         validarCampoIndividual(el) {
-            if (this.isSoloLectura()) return true;
-            if (!el || !this._camposObligatorios.includes(el.id)) return true;
-
-            const esValido = this._valorCampoValido(el);
-            this.setEstadoCampo(el, esValido);
-            this.verificarErroresGenerales();
-            return esValido;
-        }
-
-        verificarErroresGenerales() {
-            const panel = this._id("errorCampos");
-            if (!panel) return;
-            const hayInvalidos = this.modalEl.querySelectorAll(".is-invalid").length > 0;
-            if (!hayInvalidos) this.cerrarErrorCampos();
+            return this._validacion?.onBlur(el) ?? true;
         }
 
         validarCampos() {
-            const campos = [
-                { id: "txtNombre", nombre: "Nombre" },
-                { id: "txtCuit", nombre: "CUIT" },
-                { id: "cmbSucursal", nombre: "Sucursal" }
-            ];
-
-            const errores = [];
-
-            campos.forEach(c => {
-                const el = this._id(c.id);
-                if (!el) return;
-                const esValido = this._valorCampoValido(el);
-                this.setEstadoCampo(el, esValido);
-                if (!esValido) errores.push(c.nombre);
-            });
-
-            if (errores.length > 0) {
-                this.mostrarErrorCampos(
-                    `Debes completar los campos requeridos:<br><strong>${errores.join(", ")}</strong>`,
-                    null,
-                    "validacion"
-                );
-                return false;
-            }
-
-            this.cerrarErrorCampos();
-            return true;
-        }
-
-        setEstadoCampo(el, esValido) {
-            if (!el) return;
-
-            el.classList.remove("is-invalid", "is-valid");
-            el.classList.add(esValido ? "is-valid" : "is-invalid");
-
-            if (el.tagName === "SELECT" && window.jQuery?.(el).data("select2")) {
-                const { $selection, $container } = this.getSelect2Selection(el);
-                $selection.removeClass("is-invalid is-valid").addClass(esValido ? "is-valid" : "is-invalid");
-                $container.removeClass("is-invalid is-valid").addClass(esValido ? "is-valid" : "is-invalid");
-            }
+            return this._validacion?.validarTodos() ?? true;
         }
 
         async _recargarCombo(selectId, url) {
@@ -531,32 +848,8 @@
             if (detail.nuevoId) {
                 this._setFieldValue(cfg.selectId, detail.nuevoId, true);
                 const el = this._id(cfg.selectId);
-                if (el) this.validarCampoIndividual(el);
+                if (el) this._validacion?.onSelect2Change(el);
             }
-        }
-
-        _bindAtajosConfiguracion() {
-            this.modalEl.querySelectorAll(".rp-btn-plus[data-config-controller]").forEach(btn => {
-                btn.addEventListener("click", async (e) => {
-                    e.preventDefault();
-                    if (this.isSoloLectura()) return;
-
-                    const nombre = btn.getAttribute("data-config-nombre") || "";
-                    const controller = btn.getAttribute("data-config-controller") || "";
-
-                    if (typeof abrirConfiguracion !== "function") {
-                        errorModal("No se pudo abrir la configuración.");
-                        return;
-                    }
-
-                    try {
-                        await abrirConfiguracion(nombre, controller, null, null, null, true);
-                    } catch (err) {
-                        console.error(err);
-                        errorModal("No se pudo abrir la configuración.");
-                    }
-                });
-            });
         }
 
         _bindConfiguracionActualizada() {
@@ -566,7 +859,7 @@
                 try {
                     await this._onConfiguracionActualizada(e.detail || {});
                 } catch (err) {
-                    console.error("Error recargando combo tras configuración", err);
+                    console.error("Error recargando combo tras configuraci?n", err);
                 }
             };
 
@@ -574,36 +867,11 @@
         }
 
         mostrarErrorCampos(mensaje, idReferencia = null, tipo = "validacion") {
+            if (tipo === "validacion") this._validacion?.cancelarPanelExito?.();
             const container = this._id("errorCampos");
-            if (!container) return;
-
-            let titulo = "Campos requeridos";
-            let icono = "fa-exclamation-circle";
-
-            if (tipo === "duplicado") titulo = "Registro duplicado detectado";
-            else if (tipo === "relacion") { titulo = "No se puede eliminar"; icono = "fa-link"; }
-            else if (tipo === "error") { titulo = "No se pudo guardar"; icono = "fa-times-circle"; }
-
-            let botonReferencia = "";
-            if (idReferencia) {
-                botonReferencia = `
-                    <button class="rp-btn-ref" onclick="verFicha(${idReferencia})">
-                        <i class="fa fa-eye me-1"></i> Abrir ficha existente �??
-                    </button>`;
+            if (window.RpVerFicha?.renderErrorCampos) {
+                window.RpVerFicha.renderErrorCampos(container, mensaje, idReferencia, tipo, "verCliente");
             }
-
-            container.innerHTML = `
-                <div class="rp-error-box">
-                    <div class="rp-error-icon"><i class="fa ${icono}"></i></div>
-                    <div class="rp-error-content">
-                        <div class="rp-error-title">${titulo}</div>
-                        <div class="rp-error-text">${mensaje}</div>
-                    </div>
-                    ${botonReferencia}
-                </div>`;
-
-            container.classList.remove("d-none");
-            container.scrollIntoView({ behavior: "smooth", block: "center" });
         }
 
         cerrarErrorCampos() {
@@ -625,20 +893,26 @@
 
             if (!modelo) return;
 
+            const txtUltimaMod = "\u00DAltima modificaci\u00F3n por";
+
             if (modelo.UsuarioModifica && modelo.FechaUsuarioModifica) {
                 mod.innerHTML = `
-                    <i class="fa fa-edit"></i>
-                    �?ltima modificación por <strong>${modelo.UsuarioModifica}</strong>
-                    el <strong>${this.formatearFecha(modelo.FechaUsuarioModifica)}</strong>`;
+                    <div class="rp-auditoria-item">
+                        <i class="fa fa-edit"></i>
+                        ${txtUltimaMod} <strong>${modelo.UsuarioModifica}</strong>
+                        el <strong>${this.formatearFecha(modelo.FechaUsuarioModifica)}</strong>
+                    </div>`;
                 wrap.classList.remove("d-none");
                 return;
             }
 
             if (modelo.UsuarioRegistra && modelo.FechaUsuarioRegistra) {
                 reg.innerHTML = `
-                    <i class="fa fa-user"></i>
-                    Registrado por <strong>${modelo.UsuarioRegistra}</strong>
-                    el <strong>${this.formatearFecha(modelo.FechaUsuarioRegistra)}</strong>`;
+                    <div class="rp-auditoria-item">
+                        <i class="fa fa-user"></i>
+                        Registrado por <strong>${modelo.UsuarioRegistra}</strong>
+                        el <strong>${this.formatearFecha(modelo.FechaUsuarioRegistra)}</strong>
+                    </div>`;
                 wrap.classList.remove("d-none");
             }
         }
@@ -668,39 +942,20 @@
                 cerrarErrorBtn.addEventListener("click", () => this.cerrarErrorCampos());
             }
 
-            this.modalEl.addEventListener("input", (e) => {
-                const target = e.target;
-                if (target?.matches("input, select, textarea")) {
-                    this.validarCampoIndividual(target);
-                }
-            });
+            const chkActivo = this._id("chkActivoCliente");
+            const lblActivo = this._id("lblActivoCliente");
+            if (chkActivo && lblActivo) {
+                chkActivo.addEventListener("change", () => {
+                    lblActivo.textContent = chkActivo.checked ? "Activo" : "Inactivo";
+                });
+            }
 
-            this.modalEl.addEventListener("change", (e) => {
-                const target = e.target;
-                if (target?.matches("input, select, textarea")) {
-                    this.validarCampoIndividual(target);
-                }
-            });
-
-            this.modalEl.addEventListener("blur", (e) => {
-                const target = e.target;
-                if (target?.matches("input, select, textarea")) {
-                    this.validarCampoIndividual(target);
-                }
-            }, true);
+            this._validacion?.attachEvents({ select2Namespace: "mclientes" });
         }
 
         _bindModalEvents() {
             this.modalEl.addEventListener("shown.bs.modal", () => {
                 this.inicializarSelect2Modal();
-
-                if (window.jQuery) {
-                    const $modal = window.jQuery(this.modalEl);
-                    $modal.off("select2:select.mclientes select2:clear.mclientes");
-                    $modal.on("select2:select.mclientes select2:clear.mclientes", "select", (e) => {
-                        if (e.target) this.validarCampoIndividual(e.target);
-                    });
-                }
             });
         }
     }
@@ -709,10 +964,50 @@
         return window.clienteModal?.guardar?.();
     };
 
+    window.guardarContactoCliente = function () {
+        return window.clienteModal?.guardarContacto?.();
+    };
+
+    window.nuevoContactoCliente = function () {
+        return window.clienteModal?.nuevoContacto?.();
+    };
+
     window.cerrarErrorCampos = function () {
         return window.clienteModal?.cerrarErrorCampos?.();
     };
 
     window.ClienteModal = ClienteModal;
+
+    function initClienteModal(options = {}) {
+        const root = document.querySelector("[data-cliente-modal]");
+        if (!root) {
+            console.warn("initClienteModal: incluya el partial M_Clientes en la vista.");
+            return null;
+        }
+
+        const merged = Object.assign({ token: window.token || "" }, options || {});
+
+        if (!window.clienteModal || window.clienteModal.modalEl !== root) {
+            window.clienteModal = new ClienteModal(root, merged);
+        } else {
+            Object.assign(window.clienteModal.options, merged);
+        }
+
+        const abrirVer = (id) => window.clienteModal?.abrirVer?.(id);
+        window.nuevoCliente = () => window.clienteModal?.abrirNuevo?.();
+        window.verCliente = abrirVer;
+        window.editarCliente = (id) => window.clienteModal?.abrirEditar?.(id);
+        window.eliminarCliente = (id) => window.clienteModal?.eliminar?.(id);
+        window.verFicha = abrirVer;
+
+        if (window.RpVerFicha?.registrar) {
+            window.RpVerFicha.registrar("verCliente", abrirVer);
+            window.RpVerFicha.registrar("verFicha", abrirVer);
+        }
+
+        return window.clienteModal;
+    }
+
+    window.initClienteModal = initClienteModal;
 
 })(window);

@@ -1,4 +1,4 @@
-﻿html {
+html {
     font-size: 14px;
 }
 
@@ -113,10 +113,37 @@ tbody tr:nth-child(odd) {
     display: flex;
     justify-content: center;
     align-items: center;
+    position: relative;
+    z-index: 1;
 }
 
 .imageLogo {
     height: 80%;
+}
+
+/* Layout módulos (_LayoutModulo) — logo + aire entre navbar y contenido */
+body.layout-modulo .layout-modulo-logo {
+    margin-top: 0.35rem;
+    margin-bottom: 0.15rem;
+}
+
+body.layout-modulo .layout-modulo-logo .divLogo {
+    padding: 0.35rem 0 0.5rem;
+}
+
+body.layout-modulo .layout-modulo-logo .imageLogo {
+    max-height: 72px;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+}
+
+body.layout-modulo .layout-modulo-content {
+    padding-top: 0.75rem;
+}
+
+body.layout-modulo .layout-modulo-content > main {
+    padding-top: 0.5rem;
 }
 
 tbody tr {
@@ -154,6 +181,15 @@ table.dataTable.display tbody tr:nth-child(even) td {
 /* Cambia el color de fondo de todas las celdas, incluida la primera columna, en filas impares */
 table.dataTable.display tbody tr:nth-child(odd) td {
     background-color: #2a303a !important;
+}
+
+/* Fila seleccionada en grillas dt-dark (pisa zebra de arriba) */
+table.dataTable.display.dt-dark tbody tr.dt-row-selected:nth-child(odd) > td,
+table.dataTable.display.dt-dark tbody tr.dt-row-selected:nth-child(even) > td,
+table.dataTable.dt-dark.display tbody tr.dt-row-selected > td,
+table.dt-dark.display tbody tr.dt-row-selected > td {
+    background-color: #2a4570 !important;
+    color: #e8f0ff !important;
 }
 
 table.dataTable {
@@ -584,6 +620,31 @@ input:disabled {
     border: none !important
 }
 
+/* Sucursal única asignada: combo bloqueado */
+select.sucursal-unica-lock,
+select.sucursal-unica-lock:disabled {
+    opacity: 0.72;
+    cursor: not-allowed !important;
+    background-color: rgba(255, 255, 255, 0.06) !important;
+    color: #b8c5dc !important;
+    border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+.select2-container.sucursal-unica-lock .select2-selection--single {
+    opacity: 0.72;
+    cursor: not-allowed !important;
+    background-color: rgba(255, 255, 255, 0.06) !important;
+    border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+.select2-container.sucursal-unica-lock .select2-selection__rendered {
+    color: #b8c5dc !important;
+}
+
+.select2-container.sucursal-unica-lock .select2-selection__arrow {
+    opacity: 0.35;
+}
+
 
 .card-body,
 .card-header {
@@ -767,14 +828,74 @@ thead tr.filters th {
    ACTION BUTTONS — ARTISTAS PRO
 ================================= */
 
+/* —— Grillas: columna Id + acciones —— */
+table.dt-dark th.rp-col-id,
+table.dt-dark td.rp-col-id,
+table.dt-dark thead tr.filters th.rp-col-id-h {
+    width: 92px !important;
+    min-width: 92px !important;
+    max-width: 92px !important;
+    text-align: center !important;
+    vertical-align: middle !important;
+    white-space: nowrap !important;
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+}
+
+table.dt-dark th.rp-col-acciones,
+table.dt-dark td.rp-col-acciones,
+table.dt-dark thead tr.filters th.rp-col-acciones-h {
+    width: 118px !important;
+    min-width: 118px !important;
+    max-width: 118px !important;
+    text-align: center !important;
+    vertical-align: middle !important;
+    white-space: nowrap !important;
+    padding-left: 4px !important;
+    padding-right: 4px !important;
+}
+
+.rp-grid-id {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1px;
+    min-width: 2.75rem;
+    padding: 5px 11px;
+    font-size: 12px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.03em;
+    line-height: 1;
+    color: #bfdbfe;
+    background: linear-gradient(160deg, rgba(37, 99, 235, 0.35) 0%, rgba(79, 70, 229, 0.2) 100%);
+    border: 1px solid rgba(96, 165, 250, 0.45);
+    border-radius: 999px;
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.12) inset, 0 2px 8px rgba(15, 23, 42, 0.35);
+}
+
+.rp-grid-id-hash {
+    opacity: 0.65;
+    font-size: 10px;
+    font-weight: 600;
+}
+
+table.dt-dark thead tr.filters th.rp-col-id-h .rp-filter-id {
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+}
+
 .rp-row-actions {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    padding: 4px 8px;
-    background: rgba(255,255,255,0.04);
+    justify-content: center;
+    flex-wrap: nowrap;
+    gap: 5px;
+    padding: 3px 6px;
+    margin: 0 auto;
+    background: rgba(15, 23, 42, 0.55);
     border-radius: 10px;
-    border: 1px solid rgba(255,255,255,0.08);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     backdrop-filter: blur(6px);
 }
 
@@ -858,9 +979,46 @@ thead tr.filters th {
     touch-action: pan-y;
 }
 
+/* Todos los modales: centrados en pantalla y por debajo del navbar fijo */
+:root {
+    --rp-navbar-clearance: 76px;
+}
+
+.modal {
+    z-index: 10000055 !important;
+}
+
+/* Éxito, error, advertencia y confirmación siempre por encima de modales de edición */
+#exitoModal,
+#errorModal,
+#AdvertenciaModal,
+#modalConfirmar,
+#modalGuardadoConSalida {
+    z-index: 10000090 !important;
+}
+
+/* z-index por capa lo asigna site.js al abrir cada modal */
+.modal-backdrop {
+    z-index: 10000054;
+}
+
+.modal.show {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    padding: var(--rp-navbar-clearance) 0.75rem 1.25rem !important;
+    overflow-y: auto;
+}
+
+.modal.show .modal-dialog {
+    margin: auto !important;
+    max-height: calc(100vh - var(--rp-navbar-clearance) - 2.5rem);
+    width: calc(100% - 1.5rem);
+}
+
 .modal-dialog-scrollable .modal-body {
     overflow-y: auto;
-    max-height: calc(100vh - header - footer);
+    max-height: calc(100vh - var(--rp-navbar-clearance) - 11rem);
 }
 
 ::-webkit-scrollbar {
@@ -870,6 +1028,134 @@ thead tr.filters th {
 ::-webkit-scrollbar-thumb {
     background: #5b8cff66;
     border-radius: 10px;
+}
+
+/* =========================
+   MODAL GUARDADO + SALIDA
+   (genérico, reutilizable)
+========================= */
+
+.rp-guardado-modal {
+    position: relative;
+    background: linear-gradient(165deg, #0f172a 0%, #020617 100%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    color: #fff;
+    overflow: hidden;
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.55);
+}
+
+.rp-guardado-modal::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 120px;
+    background: radial-gradient(circle at 50% -20%, rgba(34, 197, 94, 0.35), transparent 70%);
+    pointer-events: none;
+}
+
+.rp-guardado-close {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    z-index: 2;
+    opacity: 0.7;
+}
+
+.rp-guardado-icon-wrap {
+    position: relative;
+    z-index: 1;
+    width: 72px;
+    height: 72px;
+    margin: 28px auto 0;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(34, 197, 94, 0.15);
+    border: 1px solid rgba(34, 197, 94, 0.45);
+    box-shadow: 0 0 24px rgba(34, 197, 94, 0.25);
+}
+
+.rp-guardado-icon-wrap i {
+    font-size: 34px;
+    color: #4ade80;
+}
+
+.rp-guardado-body {
+    position: relative;
+    z-index: 1;
+    padding: 18px 28px 8px;
+}
+
+.rp-guardado-title {
+    margin: 0 0 10px;
+    font-size: 1.35rem;
+    font-weight: 800;
+}
+
+.rp-guardado-message {
+    margin: 0 0 14px;
+    color: rgba(255, 255, 255, 0.88);
+    font-size: 1rem;
+    line-height: 1.45;
+}
+
+.rp-guardado-pregunta {
+    margin: 0;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.78);
+    font-size: 0.95rem;
+}
+
+.rp-guardado-footer {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 16px 24px 24px;
+}
+
+.rp-guardado-footer .rp-guardado-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border-radius: 10px;
+    padding: 10px 18px;
+    font-weight: 600;
+    border: 1px solid transparent;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+
+.rp-guardado-footer .rp-guardado-btn:hover {
+    transform: translateY(-1px);
+}
+
+.rp-guardado-btn-quedarse {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.14);
+    color: #fff;
+}
+
+.rp-guardado-btn-quedarse:hover {
+    background: rgba(255, 255, 255, 0.14);
+    color: #fff;
+}
+
+.rp-guardado-btn-salir {
+    background: linear-gradient(135deg, #22c55e, #16a34a);
+    color: #fff;
+    box-shadow: 0 8px 20px rgba(34, 197, 94, 0.35);
+}
+
+.rp-guardado-btn-salir:hover {
+    background: linear-gradient(135deg, #4ade80, #22c55e);
+    color: #fff;
 }
 
 
@@ -989,4 +1275,13 @@ thead tr.filters th {
 /* HOVER */
 .rp-mod-item:hover {
     background: rgba(255,255,255,0.05);
+}
+
+/* =========================
+   GRILLAS DataTables (global)
+   Selección sutil — ver también DisenoPantallas.css
+========================= */
+
+table.dt-dark tbody tr {
+    cursor: pointer;
 }

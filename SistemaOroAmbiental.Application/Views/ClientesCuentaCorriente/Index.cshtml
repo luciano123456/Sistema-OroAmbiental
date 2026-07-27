@@ -1,0 +1,652 @@
+@{
+    ViewData["Title"] = "Cuenta Corriente Clientes";
+}
+
+@section Estilos {
+    <!-- Bootstrap -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+
+    <!-- DataTables -->
+    <link href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css" rel="stylesheet" />
+    <link href="https://cdn.datatables.net/buttons/2.2.2/css/buttons.dataTables.min.css" rel="stylesheet" />
+    <link href="https://cdn.datatables.net/fixedheader/3.2.2/css/fixedHeader.dataTables.min.css" rel="stylesheet" />
+
+    <!-- Select2 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" />
+
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+
+    <!-- Estilos base -->
+
+    <link href="~/css/CuentaCorriente.css?v=5.1" rel="stylesheet" />
+    <link href="~/css/Ventas.css?v=5.1" rel="stylesheet" />
+    <link href="~/css/disenopantallas.css?v=5.1" rel="stylesheet" />
+    <link href="~/css/M_Generico.css?v=5.1" rel="stylesheet" />
+    
+   
+
+}
+
+<div class="container-fluid mt-4 ventas-index">
+
+    <!-- HEADER -->
+    <div class="vi-header cc-header shadow-lg rounded-4 p-3 mb-3">
+        <div class="d-flex align-items-center gap-3 flex-wrap">
+
+            <span class="cc-badge">
+                <i class="fa fa-money"></i>
+            </span>
+
+            <div>
+                <h2 class="m-0 fw-800">Cuenta Corriente Clientes</h2>
+            </div>
+
+            <div class="ms-auto d-flex gap-2 flex-wrap">
+
+                <button id="btnRefreshCC" class="btn btn-outline-light vi-btn" type="button">
+                    <i class="fa fa-refresh me-2"></i> Actualizar
+                </button>
+
+                <button id="btnPago" class="btn btn-success vi-btn" type="button" data-permiso="crear" data-modulo="Clientes CC">
+                    <i class="fa fa-plus me-2"></i> Registrar pago
+                </button>
+
+                <button id="btnAjuste" class="btn btn-warning vi-btn" type="button" data-permiso="crear" data-modulo="Clientes CC">
+                    <i class="fa fa-pencil me-2"></i> Ajuste
+                </button>
+
+            </div>
+        </div>
+    </div>
+
+    <div class="cc-grid">
+
+        <!-- =====================
+             ClienteS
+        ====================== -->
+        <div class="cc-card cc-left">
+
+            <div class="cc-card-head">
+                <div class="t">
+                    <i class="fa fa-users"></i>
+                    Clientes
+                </div>
+
+                <div class="vi-kpi">
+                    <span id="kpiClientes">0</span>
+                </div>
+            </div>
+
+            <div class="cc-card-body">
+
+                <div class="vi-search mb-2">
+                    <i class="fa fa-search"></i>
+                    <input id="txtBuscarCliente"
+                           class="form-control vi-input"
+                           placeholder="Buscar Cliente..." />
+                </div>
+
+                <div class="rp-filtros-body p-0 mb-2">
+                    <div class="row g-2">
+
+                        <div class="col-12">
+                            <div class="vi-switch-wrap">
+
+                                <label class="vi-switch">
+                                    <input type="checkbox" id="fClienteSaldoActivo">
+                                    <span class="slider"></span>
+                                </label>
+
+                                <span class="vi-switch-label">
+                                    Solo con saldo
+                                </span>
+
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <div id="ClientesList" class="cc-artist-list"></div>
+
+            </div>
+        </div>
+
+        <!-- =====================
+             CUENTA CORRIENTE
+        ====================== -->
+        <div class="cc-card cc-right">
+
+            <div class="cc-card-head">
+
+                <div class="t">
+                    <i class="fa fa-folder-open"></i>
+                    Cuenta Corriente
+                </div>
+
+                <div class="vi-filters">
+                    <div id="lblFiltroCliente" class="vi-pill">
+                        Selecciona un Cliente
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="cc-card-body">
+
+                <!-- FILTROS -->
+                <div class="rp-filtros-wrap mb-3">
+
+                    <div class="rp-filtros-head"
+                         data-bs-toggle="collapse"
+                         data-bs-target="#panelFiltrosCC"
+                         aria-expanded="false">
+
+                        <div class="title">
+                            <i class="fa fa-filter"></i>
+                            <span>Filtros</span>
+                            <small class="text-muted-cc"
+                                   id="txtFiltrosEstadoCC"
+                                   style="margin-left:8px;"></small>
+                        </div>
+
+                        <i class="fa fa-chevron-down chev"></i>
+                    </div>
+
+                    <div id="panelFiltrosCC" class="collapse">
+                        <div class="rp-filtros-body">
+
+                            <div class="row g-3">
+
+                                <div class="col-md-3">
+                                    <div class="rp-filter-label">Fecha desde</div>
+                                    <input type="date"
+                                           id="fFechaDesde"
+                                           class="rp-filter-input" />
+                                </div>
+
+                                <div class="col-md-3">
+                                    <div class="rp-filter-label">Fecha hasta</div>
+                                    <input type="date"
+                                           id="fFechaHasta"
+                                           class="rp-filter-input" />
+                                </div>
+
+                                <div class="col-md-3">
+                                    <div class="rp-filter-label">Tipo</div>
+                                    <select id="fTipo"
+                                            class="rp-filter-select select2"
+                                            style="width:100%">
+                                        <option value="">Todos</option>
+                                        <option value="ENTREGA">Entrega</option>
+                                        <option value="PAGO">Cobro</option>
+                                        <option value="AJUSTE">Ajuste</option>
+                                    </select>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <div class="rp-filter-label">Concepto contiene</div>
+                                    <input type="text"
+                                           id="fTexto"
+                                           class="rp-filter-input"
+                                           placeholder="Ej: liquidacion, pago, ajuste..." />
+                                </div>
+
+                            </div>
+
+                            <div class="rp-filtros-actions mt-3">
+
+                                <button class="btn btn-outline-light"
+                                        type="button"
+                                        onclick="limpiarFiltrosCC()">
+                                    <i class="fa fa-eraser"></i> Limpiar
+                                </button>
+
+                                <button class="btn btn-primary"
+                                        type="button"
+                                        onclick="aplicarFiltrosCC()">
+                                    <i class="fa fa-check"></i> Aplicar
+                                </button>
+
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+
+                <!-- KPIS -->
+                <div class="cc-kpis">
+
+                    <div class="cc-kpi">
+                        <div class="lbl">Saldo anterior</div>
+                        <div class="val" id="kpiSaldoAnterior">$ 0</div>
+                    </div>
+
+                    <div class="cc-kpi">
+                        <div class="lbl">Debe</div>
+                        <div class="val" id="kpiDebe">$ 0</div>
+                    </div>
+
+                    <div class="cc-kpi">
+                        <div class="lbl">Haber</div>
+                        <div class="val" id="kpiHaber">$ 0</div>
+                    </div>
+
+                    <div class="cc-kpi">
+                        <div class="lbl">Saldo actual</div>
+                        <div class="val" id="kpiSaldoActual">$ 0</div>
+                    </div>
+
+                    <div class="cc-kpi">
+                        <div class="lbl">Movimientos</div>
+                        <div class="val" id="kpiMovimientos">0</div>
+                    </div>
+
+                </div>
+
+                <!-- TOOLBAR -->
+                <div class="cc-toolbar mb-2">
+
+                    <div class="cc-toolbar-actions">
+                        <div id="chipSaldoEstado" class="cc-balance-chip warn">
+                            <i class="fa fa-line-chart"></i>
+                            Sin Cliente seleccionado
+                        </div>
+                    </div>
+
+                    <div class="dropdown cc-dd">
+                        <button class="btn btn-secondary dropdown-toggle"
+                                type="button"
+                                id="dropdownColumnasCC"
+                                data-bs-toggle="dropdown"
+                                data-bs-display="static"
+                                data-bs-auto-close="outside">
+                            <i class="fa fa-cog me-2"></i> Config. Columnas
+                        </button>
+                        <ul class="dropdown-menu cc-dropdown-menu"
+                            id="configColumnasMenuCC"></ul>
+                    </div>
+
+                </div>
+
+                <!-- TABLA -->
+                <div class="dt-dark-wrap">
+                    <table class="dt-dark display nowrap compact"
+                           id="grd_CuentaCorriente"
+                           style="width:100%">
+                        <thead>
+                            <tr>
+                                <th></th>
+                                <th>Id</th>
+                                <th>Fecha</th>
+                                <th>Tipo</th>
+                                <th>Concepto</th>
+                                <th>Debe</th>
+                                <th>Haber</th>
+                                <th>Saldo</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+
+                <div id="ccEmpty" class="cc-empty mt-3 d-none">
+                    <i class="fa fa-folder-open-o"></i>
+                    Selecciona un Cliente para visualizar su cuenta corriente.
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- =========================
+     MODAL PAGO
+========================= -->
+<div class="modal fade"
+     id="modalPago"
+     tabindex="-1"
+     data-bs-backdrop="static"
+     data-bs-keyboard="false">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+
+            <div class="modal-header colorEncabezado">
+                <h5 class="modal-title fw-bold" id="modalPagoLabel">
+                    Registrar pago
+                </h5>
+                <button type="button" class="btn-close"
+                        data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+
+                <div id="errorCamposPago" class="rp-error-panel d-none mb-2">
+                    <div class="rp-error-icon">
+                        <i class="fa fa-exclamation-triangle"></i>
+                    </div>
+
+                    <div class="rp-error-content">
+                        <div class="rp-error-title">No se pudo guardar</div>
+                        <div class="rp-error-message"></div>
+                    </div>
+
+                    <button type="button"
+                            class="rp-error-close"
+                            onclick="cerrarErrorCamposPago()">
+                        <i class="fa fa-times"></i>
+                    </button>
+                </div>
+
+
+                <form class="row g-3">
+
+                    <div class="col-md-6">
+                        <label class="form-label">Cliente</label>
+                        <input id="pClienteNombre" class="form-control" readonly>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">Fecha</label>
+                        <input id="pFecha" type="date" class="form-control">
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">Sucursal (caja)</label>
+                        <div class="rp-select-plus">
+                            <select id="pSucursal" class="form-control"></select>
+                            <button type="button" class="rp-btn-plus" title="Agregar sucursal"
+                                    data-config-nombre="Sucursales" data-config-controller="Sucursales">
+                                <i class="fa fa-plus"></i>
+                            </button>
+                        </div>
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">Cuenta (caja)</label>
+                        <div class="rp-select-plus">
+                            <select id="pCuenta" class="form-control"></select>
+                            <button type="button" class="rp-btn-plus" title="Agregar cuenta"
+                                    data-config-nombre="Cuentas" data-config-controller="Cuentas"
+                                    data-config-combo-nombre="Sucursales" data-config-combo-controller="Sucursales"
+                                    data-config-combo-label="Sucursal">
+                                <i class="fa fa-plus"></i>
+                            </button>
+                        </div>
+                        <div class="invalid-feedback">Seleccione sucursal y cuenta</div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">Importe</label>
+                        <input id="pImporte" type="text" class="form-control Inputmiles" inputmode="decimal" autocomplete="off" placeholder="0,00" />
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">Concepto</label>
+                        <input id="pConcepto" class="form-control" placeholder="Ej: Pago parcial, liquidacion...">
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+
+                </form>
+
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-secondary"
+                        data-bs-dismiss="modal">
+                    <i class="fa fa-arrow-left"></i> Volver
+                </button>
+
+                <button id="btnGuardarPago"
+                        class="btn btn-primary"
+                        onclick="guardarPago()"
+                        type="button">
+                    <i class="fa fa-check"></i> Guardar
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- =========================
+     MODAL AJUSTE
+========================= -->
+<div class="modal fade"
+     id="modalAjuste"
+     tabindex="-1"
+     data-bs-backdrop="static"
+     data-bs-keyboard="false">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+
+            <div class="modal-header colorEncabezado">
+                <h5 class="modal-title fw-bold" id="modalAjusteLabel">
+                    Registrar ajuste
+                </h5>
+                <button type="button" class="btn-close"
+                        data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+
+
+                <div id="errorCamposAjuste" class="rp-error-panel d-none mb-2">
+                        <div class="rp-error-icon">
+                            <i class="fa fa-exclamation-triangle"></i>
+                        </div>
+
+                        <div class="rp-error-content">
+                            <div class="rp-error-title">No se pudo guardar</div>
+                            <div class="rp-error-message"></div>
+                        </div>
+
+                        <button type="button"
+                                class="rp-error-close"
+                            onclick="cerrarErrorCamposAjuste()">
+                            <i class="fa fa-times"></i>
+                        </button>
+                    </div>
+
+             
+
+                <form class="row g-3">
+
+                    <div class="col-md-6">
+                        <label class="form-label">Cliente</label>
+                        <input id="aClienteNombre" class="form-control" readonly>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">Fecha</label>
+                        <input id="aFecha" type="date" class="form-control">
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">Sucursal (caja)</label>
+                        <div class="rp-select-plus">
+                            <select id="aSucursal" class="form-control"></select>
+                            <button type="button" class="rp-btn-plus" title="Agregar sucursal"
+                                    data-config-nombre="Sucursales" data-config-controller="Sucursales">
+                                <i class="fa fa-plus"></i>
+                            </button>
+                        </div>
+                        <div class="invalid-feedback">Campo obligatorio si impacta caja</div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">Cuenta (caja)</label>
+                        <div class="rp-select-plus">
+                            <select id="aCuenta" class="form-control"></select>
+                            <button type="button" class="rp-btn-plus" title="Agregar cuenta"
+                                    data-config-nombre="Cuentas" data-config-controller="Cuentas"
+                                    data-config-combo-nombre="Sucursales" data-config-combo-controller="Sucursales"
+                                    data-config-combo-label="Sucursal">
+                                <i class="fa fa-plus"></i>
+                            </button>
+                        </div>
+                        <div class="invalid-feedback">Seleccione sucursal y cuenta</div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">Debe</label>
+                        <input id="aDebe" type="text" class="form-control Inputmiles" inputmode="decimal" autocomplete="off" placeholder="0,00" />
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">Haber</label>
+                        <input id="aHaber" type="text" class="form-control Inputmiles" inputmode="decimal" autocomplete="off" placeholder="0,00" />
+                    </div>
+
+                    <div class="col-md-12">
+                        <label class="form-label">Concepto</label>
+                        <input id="aConcepto" class="form-control" placeholder="Ej: Regularizacion, diferencia, correccion...">
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+
+                </form>
+
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-secondary"
+                        data-bs-dismiss="modal">
+                    <i class="fa fa-arrow-left"></i> Volver
+                </button>
+
+                <button id="btnGuardarAjuste"
+                        class="btn btn-primary"
+                        onclick="guardarAjuste()"
+                        type="button">
+                    <i class="fa fa-check"></i> Guardar
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<div class="modal fade"
+     id="modalVerMovimiento"
+     tabindex="-1"
+     data-bs-backdrop="static"
+     data-bs-keyboard="false">
+
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+
+        <div class="modal-content">
+
+            <div class="modal-header colorEncabezado">
+                <h5 class="modal-title fw-bold">
+                    Detalle del movimiento
+                </h5>
+
+                <button type="button"
+                        class="btn-close"
+                        data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+
+                <div class="cc-view-grid">
+
+                    <div class="cc-view-item">
+                        <div class="k">Fecha</div>
+                        <div class="v" id="vmFecha"></div>
+                    </div>
+
+                    <div class="cc-view-item">
+                        <div class="k">Tipo</div>
+                        <div class="v" id="vmTipo"></div>
+                    </div>
+
+                    <div class="cc-view-item">
+                        <div class="k">Concepto</div>
+                        <div class="v" id="vmConcepto"></div>
+                    </div>
+
+                    <div class="cc-view-item" id="divVmSucursal">
+                        <div class="k">Sucursal</div>
+                        <div class="v" id="vmSucursal"></div>
+                    </div>
+
+                    <div class="cc-view-item" id="divVmCuenta">
+                        <div class="k">Cuenta caja</div>
+                        <div class="v" id="vmCuenta"></div>
+                    </div>
+
+                    <div class="cc-view-item">
+                        <div class="k">Debe</div>
+                        <div class="v" id="vmDebe"></div>
+                    </div>
+
+                    <div class="cc-view-item">
+                        <div class="k">Haber</div>
+                        <div class="v" id="vmHaber"></div>
+                    </div>
+
+                    <div class="cc-view-item">
+                        <div class="k">Saldo</div>
+                        <div class="v" id="vmSaldo"></div>
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div class="modal-footer">
+
+                <button class="btn btn-secondary"
+                        data-bs-dismiss="modal">
+                    <i class="fa fa-check"></i> Cerrar
+                </button>
+
+            </div>
+
+        </div>
+    </div>
+</div>
+
+
+
+
+
+@section Scripts {
+    <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+
+    <!-- 3?? DataTables Buttons (DESPUï¿½S del core) -->
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
+
+    <!-- 4?? Dependencias exportacion -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+
+    <!-- Export deps -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+
+    <!-- 5?? Botones HTML5 -->
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
+
+    <!-- fixedHeader -->
+    <script src="https://cdn.datatables.net/fixedheader/3.2.2/js/dataTables.fixedHeader.min.js"></script>
+
+    <!-- select2 -->
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+    <!-- moment -->
+    <script src="~/js/utils/moment.js?v=5.1"></script>
+
+    <script src="~/js/ClientesCuentaCorriente.js?v=5.1"></script>
+}
+
+

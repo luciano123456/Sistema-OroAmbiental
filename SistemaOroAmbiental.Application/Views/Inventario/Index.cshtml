@@ -1,0 +1,504 @@
+@{
+    ViewData["Title"] = "Inventario";
+}
+
+@section Estilos {
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css" rel="stylesheet" />
+    <link href="https://cdn.datatables.net/buttons/2.2.2/css/buttons.dataTables.min.css" rel="stylesheet" />
+    <link href="https://cdn.datatables.net/fixedheader/3.2.2/css/fixedHeader.dataTables.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link href="~/css/CuentaCorriente.css?v=5.1" rel="stylesheet" />
+    <link href="~/css/Ventas.css?v=5.1" rel="stylesheet" />
+    <link href="~/css/disenopantallas.css?v=5.1" rel="stylesheet" />
+    <link href="~/css/Inventario.css?v=5.1" rel="stylesheet" />
+    <link href="~/css/M_Generico.css?v=5.1" rel="stylesheet" />
+}
+
+<div class="container-fluid mt-4 ventas-index">
+
+    <div class="vi-header cc-header shadow-lg rounded-4 p-3 mb-3">
+        <div class="d-flex align-items-center gap-3 flex-wrap">
+            <span class="cc-badge"><i class="fa fa-cubes"></i></span>
+            <div>
+                <h2 class="m-0 fw-800">Inventario</h2>
+            </div>
+            <div class="ms-auto d-flex gap-2 flex-wrap">
+                <button id="btnRefreshInv" class="btn btn-outline-light vi-btn" type="button">
+                    <i class="fa fa-refresh me-2"></i> Actualizar
+                </button>
+                <button id="btnEntrada" class="btn btn-success vi-btn" type="button">
+                    <i class="fa fa-plus me-2"></i> Entrada
+                </button>
+                <button id="btnSalida" class="btn btn-danger vi-btn" type="button">
+                    <i class="fa fa-minus me-2"></i> Salida
+                </button>
+                <button id="btnAjusteInv" class="btn btn-warning vi-btn" type="button">
+                    <i class="fa fa-pencil me-2"></i> Ajuste
+                </button>
+                <button id="btnTransferenciaInv" class="btn btn-info vi-btn text-white" type="button">
+                    <i class="fa fa-exchange me-2"></i> Transferencia
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="cc-grid">
+
+        <div class="cc-card cc-left">
+            <div class="cc-card-head">
+                <div class="t"><i class="fa fa-cube"></i> Productos</div>
+                <div class="vi-kpi"><span id="kpiProductos">0</span></div>
+            </div>
+            <div class="cc-card-body">
+                <div class="rp-filter-label mb-1">Sucursal (depósito)</div>
+                <select id="fSucursalLista" class="rp-filter-select select2 mb-2" style="width:100%"></select>
+
+                <div class="vi-search mb-2">
+                    <i class="fa fa-search"></i>
+                    <input id="txtBuscarProducto" class="form-control vi-input" placeholder="Buscar producto..." />
+                </div>
+
+                <div class="rp-filtros-body p-0 mb-2">
+                    <div class="row g-2">
+                        <div class="col-12">
+                            <div class="rp-filter-label">Categoría</div>
+                            <select id="fCategoriaLista" class="rp-filter-select select2" style="width:100%">
+                                <option value="">Todas</option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <div class="vi-switch-wrap">
+                                <label class="vi-switch">
+                                    <input type="checkbox" id="fSoloBajoMinimo">
+                                    <span class="slider"></span>
+                                </label>
+                                <span class="vi-switch-label">Solo bajo mínimo</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="ProductosList" class="cc-artist-list"></div>
+            </div>
+        </div>
+
+        <div class="cc-card cc-right">
+            <div class="cc-card-head">
+                <div class="t"><i class="fa fa-list-alt"></i> Stock</div>
+                <div class="vi-filters">
+                    <div id="lblFiltroProducto" class="vi-pill">Seleccioná un producto</div>
+                </div>
+            </div>
+
+            <div class="cc-card-body">
+
+                <div class="rp-filtros-wrap mb-3">
+                    <div class="rp-filtros-head" data-bs-toggle="collapse" data-bs-target="#panelFiltrosInv" aria-expanded="false">
+                        <div class="title">
+                            <i class="fa fa-filter"></i>
+                            <span>Filtros</span>
+                            <small class="text-muted-cc" id="txtFiltrosEstadoInv" style="margin-left:8px;"></small>
+                        </div>
+                        <i class="fa fa-chevron-down chev"></i>
+                    </div>
+                    <div id="panelFiltrosInv" class="collapse">
+                        <div class="rp-filtros-body">
+                            <div class="row g-3">
+                                <div class="col-md-3">
+                                    <div class="rp-filter-label">Fecha desde</div>
+                                    <input type="date" id="fFechaDesde" class="rp-filter-input" />
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="rp-filter-label">Fecha hasta</div>
+                                    <input type="date" id="fFechaHasta" class="rp-filter-input" />
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="rp-filter-label">Tipo</div>
+                                    <select id="fTipo" class="rp-filter-select select2" style="width:100%">
+                                        <option value="">Todos</option>
+                                        <option value="ENTRADA">Entradas</option>
+                                        <option value="SALIDA">Salidas</option>
+                                        <option value="AJUSTE">Ajuste</option>
+                                        <option value="TRANSFERENCIA">Transferencia</option>
+                                        <option value="COMPRA">Compra</option>
+                                        <option value="ENTREGA">Entrega</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="rp-filter-label">Concepto contiene</div>
+                                    <input type="text" id="fTexto" class="rp-filter-input" placeholder="Buscar por concepto..." />
+                                </div>
+                            </div>
+                            <div class="rp-filtros-actions mt-3">
+                                <button class="btn btn-outline-light" type="button" onclick="limpiarFiltrosInv()">
+                                    <i class="fa fa-eraser"></i> Limpiar
+                                </button>
+                                <button class="btn btn-primary" type="button" onclick="aplicarFiltrosInv()">
+                                    <i class="fa fa-check"></i> Aplicar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="cc-kpis">
+                    <div class="cc-kpi">
+                        <div class="lbl">Stock anterior</div>
+                        <div class="val" id="kpiStockAnterior">0</div>
+                    </div>
+                    <div class="cc-kpi">
+                        <div class="lbl">Entradas</div>
+                        <div class="val inv-qty-entrada" id="kpiEntradas">0</div>
+                    </div>
+                    <div class="cc-kpi">
+                        <div class="lbl">Salidas</div>
+                        <div class="val inv-qty-salida" id="kpiSalidas">0</div>
+                    </div>
+                    <div class="cc-kpi">
+                        <div class="lbl">Stock actual</div>
+                        <div class="val" id="kpiStockActual">0</div>
+                    </div>
+                    <div class="cc-kpi">
+                        <div class="lbl">Movimientos</div>
+                        <div class="val" id="kpiMovimientos">0</div>
+                    </div>
+                </div>
+
+                <div class="cc-toolbar mb-2">
+                    <div class="cc-toolbar-actions">
+                        <div id="chipStockEstado" class="cc-balance-chip warn">
+                            <i class="fa fa-cubes"></i> Sin producto seleccionado
+                        </div>
+                    </div>
+                    <div class="dropdown cc-dd">
+                        <button class="btn btn-secondary dropdown-toggle" type="button" id="dropdownColumnasInv"
+                                data-bs-toggle="dropdown" data-bs-display="static" data-bs-auto-close="outside">
+                            <i class="fa fa-cog me-2"></i> Config. Columnas
+                        </button>
+                        <ul class="dropdown-menu cc-dropdown-menu" id="configColumnasMenuInv"></ul>
+                    </div>
+                </div>
+
+                <div class="dt-dark-wrap">
+                    <table class="dt-dark display nowrap compact" id="grd_Inventario" style="width:100%">
+                        <thead>
+                            <tr>
+                                <th></th>
+                                <th>Id</th>
+                                <th>Fecha</th>
+                                <th>Tipo</th>
+                                <th>Concepto</th>
+                                <th>Entrada</th>
+                                <th>Salida</th>
+                                <th>Stock</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+
+                <div id="invEmpty" class="cc-empty mt-3 d-none">
+                    <i class="fa fa-cube"></i>
+                    Seleccioná un producto para ver su Stock.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL ENTRADA -->
+<div class="modal fade" id="modalEntrada" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header colorEncabezado">
+                <h5 class="modal-title fw-bold"><i class="fa fa-plus text-success"></i> Entrada manual</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="errorCamposEntrada" class="rp-error-panel d-none mb-2">
+                    <div class="rp-error-icon"><i class="fa fa-exclamation-triangle"></i></div>
+                    <div class="rp-error-content">
+                        <div class="rp-error-title">No se pudo guardar</div>
+                        <div class="rp-error-message"></div>
+                    </div>
+                    <button type="button" class="rp-error-close" onclick="cerrarErrorCamposEntrada()"><i class="fa fa-times"></i></button>
+                </div>
+                <form class="row g-3">
+                    <div class="col-md-8">
+                        <label class="form-label">Producto</label>
+                        <input type="text" id="eProductoNombre" class="form-control" readonly />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Fecha</label>
+                        <input type="date" id="eFecha" class="form-control" />
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Cantidad</label>
+                        <input type="text" id="eCantidad" class="form-control Inputmiles" inputmode="decimal" autocomplete="off" placeholder="0,00" />
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+                    <div class="col-md-9">
+                        <label class="form-label">Concepto</label>
+                        <input type="text" id="eConcepto" class="form-control" maxlength="500" placeholder="Ej: ingreso inicial, devolución..." />
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal"><i class="fa fa-arrow-left"></i> Volver</button>
+                <button class="btn btn-success" type="button" onclick="guardarEntrada()"><i class="fa fa-check"></i> Registrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL SALIDA -->
+<div class="modal fade" id="modalSalida" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header colorEncabezado">
+                <h5 class="modal-title fw-bold"><i class="fa fa-minus text-danger"></i> Salida manual</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="errorCamposSalida" class="rp-error-panel d-none mb-2">
+                    <div class="rp-error-icon"><i class="fa fa-exclamation-triangle"></i></div>
+                    <div class="rp-error-content">
+                        <div class="rp-error-title">No se pudo guardar</div>
+                        <div class="rp-error-message"></div>
+                    </div>
+                    <button type="button" class="rp-error-close" onclick="cerrarErrorCamposSalida()"><i class="fa fa-times"></i></button>
+                </div>
+                <form class="row g-3">
+                    <div class="col-md-8">
+                        <label class="form-label">Producto</label>
+                        <input type="text" id="sProductoNombre" class="form-control" readonly />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Fecha</label>
+                        <input type="date" id="sFecha" class="form-control" />
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Cantidad</label>
+                        <input type="text" id="sCantidad" class="form-control Inputmiles" inputmode="decimal" autocomplete="off" placeholder="0,00" />
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+                    <div class="col-md-9">
+                        <label class="form-label">Concepto</label>
+                        <input type="text" id="sConcepto" class="form-control" maxlength="500" placeholder="Ej: consumo, merma..." />
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal"><i class="fa fa-arrow-left"></i> Volver</button>
+                <button class="btn btn-danger" type="button" onclick="guardarSalida()"><i class="fa fa-check"></i> Registrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL AJUSTE -->
+<div class="modal fade" id="modalAjusteInv" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header colorEncabezado">
+                <h5 class="modal-title fw-bold"><i class="fa fa-pencil text-warning"></i> Ajuste de stock</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="errorCamposAjusteInv" class="rp-error-panel d-none mb-2">
+                    <div class="rp-error-icon"><i class="fa fa-exclamation-triangle"></i></div>
+                    <div class="rp-error-content">
+                        <div class="rp-error-title">No se pudo guardar</div>
+                        <div class="rp-error-message"></div>
+                    </div>
+                    <button type="button" class="rp-error-close" onclick="cerrarErrorCamposAjusteInv()"><i class="fa fa-times"></i></button>
+                </div>
+                <form class="row g-3">
+                    <div class="col-md-8">
+                        <label class="form-label">Producto</label>
+                        <input type="text" id="ajProductoNombre" class="form-control" readonly />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Fecha</label>
+                        <input type="date" id="ajFecha" class="form-control" />
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Entrada (+)</label>
+                        <input type="text" id="ajEntrada" class="form-control Inputmiles" inputmode="decimal" autocomplete="off" placeholder="0,00" />
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Salida (�^')</label>
+                        <input type="text" id="ajSalida" class="form-control Inputmiles" inputmode="decimal" autocomplete="off" placeholder="0,00" />
+                    </div>
+                    <div class="col-md-8">
+                        <label class="form-label">Concepto</label>
+                        <input type="text" id="ajConcepto" class="form-control" maxlength="500" placeholder="Ej: regularización, conteo..." />
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal"><i class="fa fa-arrow-left"></i> Volver</button>
+                <button class="btn btn-warning" type="button" onclick="guardarAjusteInv()"><i class="fa fa-check"></i> Registrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL TRANSFERENCIA -->
+<div class="modal fade" id="modalTransferenciaInv" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header colorEncabezado">
+                <h5 class="modal-title fw-bold"><i class="fa fa-exchange"></i> Transferencia entre sucursales</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="errorCamposTransferenciaInv" class="rp-error-panel d-none mb-2">
+                    <div class="rp-error-icon"><i class="fa fa-exclamation-triangle"></i></div>
+                    <div class="rp-error-content">
+                        <div class="rp-error-title">No se pudo guardar</div>
+                        <div class="rp-error-message"></div>
+                    </div>
+                    <button type="button" class="rp-error-close" onclick="cerrarErrorCamposTransferenciaInv()"><i class="fa fa-times"></i></button>
+                </div>
+                <form class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Fecha</label>
+                        <input type="date" id="tFecha" class="form-control" />
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Sucursal origen</label>
+                        <select id="tSucursalOrigen" class="form-control select2" style="width:100%"></select>
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Sucursal destino</label>
+                        <select id="tSucursalDestino" class="form-control select2" style="width:100%"></select>
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+                    <div class="col-md-12">
+                        <label class="form-label">Producto</label>
+                        <select id="tProducto" class="form-control select2" style="width:100%"></select>
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Cantidad</label>
+                        <input type="text" id="tCantidad" class="form-control Inputmiles" inputmode="decimal" autocomplete="off" placeholder="0,00" />
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+                    <div class="col-md-9">
+                        <label class="form-label">Nota / concepto</label>
+                        <input type="text" id="tNota" class="form-control" maxlength="500" placeholder="Ej: traslado a depósito central..." />
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal"><i class="fa fa-arrow-left"></i> Volver</button>
+                <button class="btn btn-primary" type="button" onclick="guardarTransferenciaInv()"><i class="fa fa-check"></i> Registrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL VER -->
+<div class="modal fade" id="modalVerMovimientoInv" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header colorEncabezado">
+                <h5 class="modal-title fw-bold">
+                    <i class="fa fa-exchange me-2"></i> Detalle del movimiento
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+
+                <div class="inv-detalle-hero">
+                    <div class="inv-detalle-hero-main">
+                        <div id="vmInvTipoBadge" class="mb-2"></div>
+                        <div class="inv-detalle-hero-concepto" id="vmInvConceptoHero">�?"</div>
+                        <div class="inv-detalle-hero-meta">
+                            <i class="fa fa-calendar-o"></i>
+                            <span id="vmInvFechaHero">�?"</span>
+                        </div>
+                    </div>
+                    <div class="inv-detalle-hero-stock">
+                        <div class="k">Stock resultante</div>
+                        <div class="v" id="vmInvStockHero">0</div>
+                    </div>
+                </div>
+
+                <div class="inv-detalle-section">
+                    <div class="inv-detalle-section-title">
+                        <i class="fa fa-map-marker"></i> Ubicación
+                    </div>
+                    <div class="cc-view-grid">
+                        <div class="cc-view-item" id="divVmInvProducto">
+                            <div class="k"><i class="fa fa-cube me-1"></i> Producto</div>
+                            <div class="v" id="vmInvProducto">�?"</div>
+                        </div>
+                        <div class="cc-view-item" id="divVmInvSucursal">
+                            <div class="k"><i class="fa fa-building-o me-1"></i> Sucursal</div>
+                            <div class="v" id="vmInvSucursal">�?"</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="inv-detalle-section">
+                    <div class="inv-detalle-section-title">
+                        <i class="fa fa-file-text-o"></i> Concepto
+                    </div>
+                    <div class="inv-detalle-concepto-box" id="vmInvConcepto">�?"</div>
+                </div>
+
+                <div class="inv-detalle-section mb-0">
+                    <div class="inv-detalle-section-title">
+                        <i class="fa fa-balance-scale"></i> Cantidades
+                    </div>
+                    <div class="inv-detalle-qty-row">
+                        <div class="inv-detalle-qty inv-detalle-qty--entrada">
+                            <div class="k"><i class="fa fa-arrow-down"></i> Entrada</div>
+                            <div class="v" id="vmInvEntrada">0</div>
+                        </div>
+                        <div class="inv-detalle-qty inv-detalle-qty--salida">
+                            <div class="k"><i class="fa fa-arrow-up"></i> Salida</div>
+                            <div class="v" id="vmInvSalida">0</div>
+                        </div>
+                        <div class="inv-detalle-qty inv-detalle-qty--stock">
+                            <div class="k"><i class="fa fa-cubes"></i> Stock</div>
+                            <div class="v" id="vmInvStock">0</div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fa fa-check"></i> Cerrar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
+    <script src="https://cdn.datatables.net/fixedheader/3.2.2/js/dataTables.fixedHeader.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script src="~/js/utils/moment.js?v=5.1"></script>
+    <script src="~/js/Inventario.js?v=5.1"></script>
+}

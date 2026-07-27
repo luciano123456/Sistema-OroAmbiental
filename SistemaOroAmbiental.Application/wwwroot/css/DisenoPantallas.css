@@ -1,4 +1,4 @@
-﻿/* =========================================================
+/* =========================================================
    Pedidos.css — Skin oscuro + UI (mismo estilo que Ventas)
    Cargar DESPUÉS de usuarios.css
    ========================================================= */
@@ -231,6 +231,14 @@ body {
 
 .dt-dark tbody tr:hover {
     background: var(--dt-row-hover) !important;
+}
+
+/* Que el hover genérico del tr no tape la selección en celdas */
+table.dataTable.dt-dark tbody > tr.dt-row-selected,
+table.dataTable.dt-dark tbody > tr.dt-row-selected:hover,
+table.dt-dark tbody > tr.dt-row-selected,
+table.dt-dark tbody > tr.dt-row-selected:hover {
+    background: transparent !important;
 }
 
 
@@ -1370,6 +1378,266 @@ table.dataTable.display tbody tr:nth-child(even) td {
     background-color: var(--dt-row-zebra2) !important;
 }
 
+/* Fila seleccionada — DEBE ir después del zebra (si no, solo se ve con :hover) */
+table.dataTable.display.dt-dark tbody tr.dt-row-selected:nth-child(odd) > td,
+table.dataTable.display.dt-dark tbody tr.dt-row-selected:nth-child(even) > td,
+table.dataTable.display.dt-dark tbody tr.dt-row-selected > td,
+table.dataTable.dt-dark.display tbody tr.dt-row-selected:nth-child(odd) > td,
+table.dataTable.dt-dark.display tbody tr.dt-row-selected:nth-child(even) > td,
+table.dataTable.dt-dark.display tbody tr.dt-row-selected > td,
+table.dt-dark.display tbody tr.dt-row-selected > td,
+table.dt-dark tbody tr.dt-row-selected > td,
+table.dt-dark tbody tr[data-dt-selected="1"] > td {
+    background-color: #2a4570 !important;
+    background-image: none !important;
+    color: #e8f0ff !important;
+}
+
+table.dataTable.display.dt-dark tbody tr.dt-row-selected:nth-child(odd):hover > td,
+table.dataTable.display.dt-dark tbody tr.dt-row-selected:nth-child(even):hover > td,
+table.dataTable.display.dt-dark tbody tr.dt-row-selected:hover > td,
+table.dataTable.dt-dark.display tbody tr.dt-row-selected:hover > td,
+table.dt-dark.display tbody tr.dt-row-selected:hover > td,
+table.dt-dark tbody tr.dt-row-selected:hover > td {
+    background-color: #32527f !important;
+}
+
+table.dataTable.display.dt-dark tbody tr.dt-row-selected > td:first-child,
+table.dataTable.dt-dark.display tbody tr.dt-row-selected > td:first-child,
+table.dt-dark tbody tr.dt-row-selected > td:first-child {
+    box-shadow: inset 2px 0 0 #6b9fff !important;
+}
+
+/* Fila inactiva: línea roja al inicio (complementa la azul de selección) */
+table.dataTable.display.dt-dark tbody tr.dt-row-inactivo > td:first-child,
+table.dataTable.dt-dark.display tbody tr.dt-row-inactivo > td:first-child,
+table.dt-dark tbody tr.dt-row-inactivo > td:first-child {
+    box-shadow: inset 3px 0 0 #e85d5d !important;
+}
+
+table.dataTable.display.dt-dark tbody tr.dt-row-inactivo.dt-row-selected > td:first-child,
+table.dataTable.dt-dark.display tbody tr.dt-row-inactivo.dt-row-selected > td:first-child,
+table.dt-dark tbody tr.dt-row-inactivo.dt-row-selected > td:first-child {
+    box-shadow: inset 3px 0 0 #e85d5d, inset 6px 0 0 #6b9fff !important;
+}
+
+@keyframes dt-row-flash-pulse {
+    0%, 100% {
+        box-shadow: inset 2px 0 0 #6b9fff !important;
+    }
+
+    50% {
+        box-shadow: inset 2px 0 0 #6b9fff, 0 0 0 2px rgba(107, 159, 255, 0.35) !important;
+    }
+}
+
+table.dataTable.display.dt-dark tbody tr.dt-row-flash > td:first-child,
+table.dataTable.dt-dark.display tbody tr.dt-row-flash > td:first-child,
+table.dt-dark tbody tr.dt-row-flash > td:first-child {
+    animation: dt-row-flash-pulse 0.55s ease 3;
+}
+
+.rp-col-activo {
+    width: 88px;
+    min-width: 88px;
+}
+
+.rp-switch-grid {
+    display: inline-flex;
+    margin: 0;
+    vertical-align: middle;
+}
+
+.rp-switch {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    cursor: pointer;
+    user-select: none;
+    margin: 0;
+}
+
+.rp-switch-input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.rp-switch-slider {
+    width: 44px;
+    height: 24px;
+    border-radius: 999px;
+    background: linear-gradient(180deg, #4a5568 0%, #2d3748 100%);
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.35);
+    transition: background 0.2s ease, box-shadow 0.2s ease;
+    position: relative;
+}
+
+.rp-switch-slider::after {
+    content: none;
+    display: none;
+}
+
+.rp-switch-input + .rp-switch-slider::after {
+    content: "";
+    display: block;
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+    transition: transform 0.2s ease;
+}
+
+.rp-switch-input:checked + .rp-switch-slider {
+    background: linear-gradient(180deg, #3ecf8e 0%, #22a06b 100%);
+    box-shadow: 0 0 0 1px rgba(34, 160, 107, 0.35), inset 0 1px 2px rgba(255, 255, 255, 0.15);
+}
+
+.rp-switch-input:checked + .rp-switch-slider::after {
+    transform: translateX(20px);
+}
+
+.rp-switch-input:focus-visible + .rp-switch-slider {
+    outline: 2px solid #6b9fff;
+    outline-offset: 2px;
+}
+
+.rp-filter-activo {
+    min-width: 100px;
+    font-size: 0.8rem;
+}
+
+.rp-activo-box {
+    border: 1px solid rgba(140, 165, 210, 0.28);
+    border-radius: 12px;
+    padding: 0.75rem 0.85rem;
+    background: linear-gradient(180deg, rgba(23, 36, 68, 0.55), rgba(18, 28, 52, 0.35));
+    min-height: 86px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+
+.rp-activo-box-head {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+}
+
+.rp-activo-box-title {
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: #dbe9ff;
+}
+
+.rp-activo-box-sub {
+    font-size: 0.72rem;
+    color: #9eb2d9;
+    line-height: 1.2;
+}
+
+.rp-switch-block {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+}
+
+.rp-activo-estado-text {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #d7e6ff;
+}
+
+/* Modal "Estado del registro": evita choque con Productora.css / Usuarios.css (.rp-switch fijo 54–58px) */
+.rp-activo-box label.rp-switch,
+.rp-activo-box .rp-switch.rp-switch-block {
+    display: inline-flex !important;
+    align-items: center;
+    width: auto !important;
+    height: auto !important;
+    max-width: 100%;
+    gap: 0.55rem;
+    cursor: pointer;
+}
+
+.rp-activo-box .rp-switch-input {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    margin: -1px !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+    opacity: 0 !important;
+}
+
+.rp-activo-box .rp-switch-slider {
+    position: relative !important;
+    display: inline-block !important;
+    flex: 0 0 44px;
+    width: 44px !important;
+    height: 24px !important;
+    inset: auto !important;
+    top: auto !important;
+    left: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+    margin: 0;
+    border-radius: 999px;
+    background: linear-gradient(180deg, #4a5568 0%, #2d3748 100%);
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.35);
+    transition: background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.rp-activo-box .rp-switch-slider::before {
+    content: none !important;
+    display: none !important;
+}
+
+.rp-activo-box .rp-switch-slider::after {
+    content: "";
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+    transition: transform 0.2s ease;
+}
+
+.rp-activo-box .rp-switch-input:checked + .rp-switch-slider {
+    background: linear-gradient(180deg, #3ecf8e 0%, #22a06b 100%);
+    box-shadow: 0 0 0 1px rgba(34, 160, 107, 0.35), inset 0 1px 2px rgba(255, 255, 255, 0.15);
+}
+
+.rp-activo-box .rp-switch-input:checked + .rp-switch-slider::after {
+    transform: translateX(20px);
+}
+
+.rp-activo-box .rp-switch-input:focus-visible + .rp-switch-slider {
+    outline: 2px solid #6b9fff;
+    outline-offset: 2px;
+}
+
+.rp-activo-box .rp-activo-estado-text {
+    position: relative;
+    z-index: 1;
+    flex: 0 0 auto;
+    white-space: nowrap;
+}
+
 table.dataTable tbody tr.selected {
     background-color: #292946 !important;
 }
@@ -2021,6 +2289,207 @@ table.dataTable.display tbody tr.selected td {
     font-size: 14px;
     color: #e6e6e6;
     opacity: .9;
+}
+
+/* Panel éxito — campos requeridos completados */
+.rp-success-box,
+.rp-error-panel.rp-panel-exito,
+#modalEdicion #errorCampos.rp-panel-exito,
+[data-producto-modal] #errorCampos.rp-panel-exito,
+[data-cliente-modal] #errorCampos.rp-panel-exito,
+[data-proveedor-modal] #errorCampos.rp-panel-exito,
+[data-gasto-modal] #errorCampos.rp-panel-exito,
+[data-contrato-modal] #errorCamposContrato.rp-panel-exito {
+    position: relative;
+    overflow: hidden;
+}
+
+.rp-success-box {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding: 18px 22px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, rgba(46, 204, 113, 0.14), rgba(46, 204, 113, 0.06));
+    border: 1px solid rgba(72, 220, 130, 0.45);
+    backdrop-filter: blur(8px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+/* Destellos al aparecer */
+.rp-success-box::before,
+.rp-error-panel.rp-panel-exito::before,
+#modalEdicion #errorCampos.rp-panel-exito::before,
+[data-producto-modal] #errorCampos.rp-panel-exito::before,
+[data-cliente-modal] #errorCampos.rp-panel-exito::before,
+[data-proveedor-modal] #errorCampos.rp-panel-exito::before,
+[data-gasto-modal] #errorCampos.rp-panel-exito::before,
+[data-contrato-modal] #errorCamposContrato.rp-panel-exito::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        105deg,
+        transparent 38%,
+        rgba(255, 255, 255, 0.06) 42%,
+        rgba(93, 255, 176, 0.22) 50%,
+        rgba(255, 255, 255, 0.08) 58%,
+        transparent 62%
+    );
+    background-size: 220% 100%;
+    animation: rpSuccessShimmer 1.4s ease-in-out 2;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.rp-success-box::after,
+.rp-error-panel.rp-panel-exito::after,
+#modalEdicion #errorCampos.rp-panel-exito::after,
+[data-producto-modal] #errorCampos.rp-panel-exito::after,
+[data-cliente-modal] #errorCampos.rp-panel-exito::after,
+[data-proveedor-modal] #errorCampos.rp-panel-exito::after,
+[data-gasto-modal] #errorCampos.rp-panel-exito::after,
+[data-contrato-modal] #errorCamposContrato.rp-panel-exito::after {
+    content: "";
+    position: absolute;
+    width: 5px;
+    height: 5px;
+    top: 22%;
+    left: 12%;
+    border-radius: 50%;
+    background: rgba(180, 255, 220, 0.95);
+    box-shadow:
+        85px 6px 0 0 rgba(157, 255, 200, 0.85),
+        170px 20px 0 0 rgba(255, 255, 255, 0.55),
+        255px 10px 0 0 rgba(157, 255, 200, 0.7),
+        40px 36px 0 0 rgba(200, 255, 230, 0.6),
+        310px 28px 0 0 rgba(157, 255, 200, 0.75);
+    animation: rpSuccessSparkle 1.6s ease-out 0.15s forwards;
+    pointer-events: none;
+    z-index: 2;
+    opacity: 0;
+}
+
+@keyframes rpSuccessShimmer {
+    0% {
+        background-position: 200% 0;
+    }
+
+    100% {
+        background-position: -200% 0;
+    }
+}
+
+@keyframes rpSuccessSparkle {
+    0% {
+        opacity: 0;
+        transform: scale(0);
+    }
+
+    25% {
+        opacity: 1;
+        transform: scale(1.35);
+    }
+
+    55% {
+        opacity: 0.9;
+        transform: scale(1);
+    }
+
+    100% {
+        opacity: 0;
+        transform: scale(0.4);
+    }
+}
+
+/* Entrada con brillo */
+.rp-panel-exito-enter,
+.rp-success-box.rp-panel-exito-enter {
+    animation: rpSuccessEnter 0.6s cubic-bezier(0.34, 1.35, 0.64, 1) forwards;
+}
+
+@keyframes rpSuccessEnter {
+    0% {
+        opacity: 0;
+        transform: translateY(-10px) scale(0.96);
+        box-shadow: 0 0 0 rgba(72, 220, 130, 0);
+    }
+
+    45% {
+        box-shadow: 0 0 32px rgba(72, 220, 130, 0.4), 0 8px 24px rgba(0, 0, 0, 0.3);
+    }
+
+    100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+    }
+}
+
+/* Salida: va perdiendo opacidad hasta desaparecer */
+.rp-panel-exito-out,
+#modalEdicion #errorCampos.rp-panel-exito-out,
+[data-producto-modal] #errorCampos.rp-panel-exito-out,
+[data-cliente-modal] #errorCampos.rp-panel-exito-out,
+[data-proveedor-modal] #errorCampos.rp-panel-exito-out,
+[data-gasto-modal] #errorCampos.rp-panel-exito-out,
+[data-contrato-modal] #errorCamposContrato.rp-panel-exito-out,
+.rp-error-panel.rp-panel-exito-out {
+    animation: rpSuccessExit 0.7s ease forwards !important;
+    pointer-events: none;
+}
+
+@keyframes rpSuccessExit {
+    0% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+        filter: blur(0);
+    }
+
+    100% {
+        opacity: 0;
+        transform: translateY(-6px) scale(0.97);
+        filter: blur(2px);
+    }
+}
+
+.rp-success-icon {
+    font-size: 26px;
+    color: #5dffb0;
+    position: relative;
+    z-index: 3;
+}
+
+.rp-success-content {
+    flex: 1;
+    position: relative;
+    z-index: 3;
+}
+
+.rp-success-title {
+    font-weight: 700;
+    font-size: 15px;
+    color: #9ef5c8;
+}
+
+.rp-error-panel.rp-panel-exito {
+    background: linear-gradient(135deg, rgba(46, 204, 113, 0.14), rgba(46, 204, 113, 0.06));
+    border-color: rgba(72, 220, 130, 0.45);
+}
+
+.rp-error-panel.rp-panel-exito .rp-error-icon,
+.rp-error-panel.rp-panel-exito .rp-error-content,
+.rp-error-panel.rp-panel-exito .rp-error-title {
+    position: relative;
+    z-index: 3;
+}
+
+.rp-error-panel.rp-panel-exito .rp-error-icon {
+    color: #5dffb0;
+}
+
+.rp-error-panel.rp-panel-exito .rp-error-title {
+    color: #9ef5c8;
 }
 
 /* BOTON VER FICHA */

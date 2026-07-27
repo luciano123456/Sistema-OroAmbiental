@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using SistemaOroAmbiental.Application.Models.ViewModels;
 using SistemaOroAmbiental.BLL.Service;
+using SistemaOroAmbiental.DAL.Repository;
 
 namespace SistemaOroAmbiental.Application.Controllers
 {
@@ -57,10 +59,28 @@ namespace SistemaOroAmbiental.Application.Controllers
         }
 
         [HttpDelete]
-        public virtual async Task<IActionResult> Eliminar(int id)
+        public virtual async Task<IActionResult> Eliminar(int id, [FromServices] IDeleteConflictChecker deleteChecker)
         {
-            bool respuesta = await Service.Eliminar(id);
-            return Ok(new { valor = respuesta });
+            var bloqueo = await deleteChecker.CatalogoAsync<TEntity>(id);
+            if (!string.IsNullOrWhiteSpace(bloqueo))
+                return Ok(new { valor = false, mensaje = bloqueo, tipo = "relacion" });
+
+            try
+            {
+                bool respuesta = await Service.Eliminar(id);
+                return Ok(new
+                {
+                    valor = respuesta,
+                    mensaje = respuesta ? "Eliminado correctamente" : "No se encontró el registro.",
+                    tipo = respuesta ? "success" : "validacion"
+                });
+            }
+            catch (DbUpdateException)
+            {
+                var msg = await deleteChecker.CatalogoAsync<TEntity>(id)
+                    ?? "No se pudo eliminar porque tiene registros relacionados.";
+                return Ok(new { valor = false, mensaje = msg, tipo = "relacion" });
+            }
         }
 
         [HttpGet]

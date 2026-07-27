@@ -13,7 +13,7 @@
     <title>@ViewData["Title"]</title>
 
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
-    <link rel="stylesheet" href="~/css/Login.css" />
+    <link rel="stylesheet" href="~/css/Login.css?v=5.1" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
 </head>
@@ -109,9 +109,14 @@
                 <!-- BOTON -->
 
                 <button type="submit"
+                        id="btnLogin"
                         class="btn btn-login w-100">
 
-                    Ingresar
+                    <span class="btn-login-text">Ingresar</span>
+                    <span class="btn-login-loading d-none">
+                        <i class="fa fa-spinner fa-spin" aria-hidden="true"></i>
+                        Ingresando...
+                    </span>
 
                 </button>
 
@@ -128,7 +133,9 @@
     </script>
 
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
-    <script src="~/js/login.js?v=1.1"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/SessionManager.js?v=5.1" asp-append-version="true"></script>
+    <script src="~/js/login.js?v=5.1"></script>
 
 </body>
 </html>

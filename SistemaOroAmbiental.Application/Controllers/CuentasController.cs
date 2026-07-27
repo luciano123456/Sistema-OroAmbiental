@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SistemaOroAmbiental.Application.Models.ViewModels;
 using SistemaOroAmbiental.DAL.DataContext;
+using SistemaOroAmbiental.DAL.Repository;
 using SistemaOroAmbiental.Models;
 
 namespace SistemaOroAmbiental.Application.Controllers
@@ -11,10 +12,12 @@ namespace SistemaOroAmbiental.Application.Controllers
     public class CuentasController : Controller
     {
         private readonly SistemaOroAmbientalContext _db;
+        private readonly IDeleteConflictChecker _deleteChecker;
 
-        public CuentasController(SistemaOroAmbientalContext db)
+        public CuentasController(SistemaOroAmbientalContext db, IDeleteConflictChecker deleteChecker)
         {
             _db = db;
+            _deleteChecker = deleteChecker;
         }
 
         [AllowAnonymous]
@@ -68,13 +71,26 @@ namespace SistemaOroAmbiental.Application.Controllers
         [HttpDelete]
         public async Task<IActionResult> Eliminar(int id)
         {
+            var bloqueo = await _deleteChecker.CuentaAsync(id);
+            if (!string.IsNullOrWhiteSpace(bloqueo))
+                return Ok(new { valor = false, mensaje = bloqueo, tipo = "relacion" });
+
             var entity = await _db.Cuentas.FirstOrDefaultAsync(x => x.Id == id);
             if (entity == null)
-                return Ok(new { valor = false });
+                return Ok(new { valor = false, mensaje = "No se encontró la cuenta.", tipo = "validacion" });
 
-            _db.Cuentas.Remove(entity);
-            await _db.SaveChangesAsync();
-            return Ok(new { valor = true });
+            try
+            {
+                _db.Cuentas.Remove(entity);
+                await _db.SaveChangesAsync();
+                return Ok(new { valor = true, mensaje = "Cuenta eliminada correctamente.", tipo = "success" });
+            }
+            catch (DbUpdateException)
+            {
+                var msg = await _deleteChecker.CuentaAsync(id)
+                    ?? "No se pudo eliminar la cuenta porque tiene registros relacionados.";
+                return Ok(new { valor = false, mensaje = msg, tipo = "relacion" });
+            }
         }
 
         [HttpGet]

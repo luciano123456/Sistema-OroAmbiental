@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using SistemaOroAmbiental.Application.Models;
@@ -13,11 +13,14 @@ namespace SistemaOroAmbiental.Application.Controllers
     public class UsuariosController : Controller
     {
         private readonly IUsuariosService _Usuarioservice;
-        private readonly SessionHelper _sessionHelper;  // Inyección de SessionHelper
+        private readonly IUsuariosSucursalesService _usuariosSucursales;
 
-        public UsuariosController(IUsuariosService Usuarioservice)
+        public UsuariosController(
+            IUsuariosService Usuarioservice,
+            IUsuariosSucursalesService usuariosSucursales)
         {
             _Usuarioservice = Usuarioservice;
+            _usuariosSucursales = usuariosSucursales;
         }
 
         [AllowAnonymous]
@@ -52,13 +55,14 @@ namespace SistemaOroAmbiental.Application.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> Lista()
+        public async Task<IActionResult> Lista(bool soloActivos = false)
         {
-            var Usuarios = await _Usuarioservice.ObtenerTodos();
+            var Usuarios = await _Usuarioservice.ObtenerTodos(soloActivos);
 
             var lista = Usuarios.Select(c => new VMUser
             {
                 Id = c.Id,
+                Activo = c.Activo,
                 Usuario = c.Usuario,
                 Nombre = c.Nombre,
                 Apellido = c.Apellido,
@@ -92,12 +96,17 @@ namespace SistemaOroAmbiental.Application.Controllers
                 Direccion = model.Direccion,
                 IdRol = model.IdRol,
                 IdEstado = model.IdEstado,
+                Activo = EsUsuarioActivo(model.IdEstado),
                 Contrasena = passwordHasher.HashPassword(null, model.Contrasena)
             };
 
             bool respuesta = await _Usuarioservice.Insertar(Usuario);
 
-            return Ok(new { valor = respuesta });
+            if (!respuesta)
+                return Ok(new { valor = false });
+
+            var creado = await _Usuarioservice.ObtenerUsuario(model.Usuario);
+            return Ok(new { valor = true, id = creado?.Id ?? 0 });
         }
 
         [HttpPut]
@@ -138,6 +147,7 @@ namespace SistemaOroAmbiental.Application.Controllers
             userbase.Direccion = model.Direccion;
             userbase.IdRol = model.IdRol;
             userbase.IdEstado = model.IdEstado;
+            userbase.Activo = EsUsuarioActivo(model.IdEstado);
             userbase.Contrasena = passnueva; // Asigna la nueva contraseña hasheada
 
             // Realiza la actualización en la base de datos
@@ -146,8 +156,18 @@ namespace SistemaOroAmbiental.Application.Controllers
             return Ok(new { valor = respuesta ? "OK" : "Error" });
         }
 
-
-
+        [HttpPost]
+        public async Task<IActionResult> CambiarActivo([FromBody] VMActivoToggle model)
+        {
+            var ok = await _Usuarioservice.CambiarActivo(model.Id, model.Activo);
+            return Ok(new
+            {
+                valor = ok,
+                mensaje = ok
+                    ? (model.Activo ? "Usuario activado." : "Usuario desactivado.")
+                    : "No se pudo actualizar el estado."
+            });
+        }
 
         [HttpDelete]
         public async Task<IActionResult> Eliminar(int id)
@@ -172,6 +192,23 @@ namespace SistemaOroAmbiental.Application.Controllers
             }
         }
 
+        [HttpGet]
+        public async Task<IActionResult> SucursalesAsignadas(int idUsuario)
+        {
+            var ids = await _usuariosSucursales.ObtenerIdsSucursales(idUsuario);
+            return Ok(new { IdsSucursales = ids });
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> SucursalesActualizar([FromBody] VMUsuarioSucursalesUpdate model)
+        {
+            if (model == null || model.IdUsuario <= 0)
+                return BadRequest();
+
+            var ok = await _usuariosSucursales.ActualizarMasivo(model.IdUsuario, model.IdsSucursales ?? new List<int>());
+            return Ok(new { valor = ok });
+        }
+
 
 
 
@@ -185,5 +222,8 @@ namespace SistemaOroAmbiental.Application.Controllers
         {
             return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
         }
+
+        /// <summary>IdEstado 2 = inactivo/bloqueado (convención del sistema y login).</summary>
+        private static bool EsUsuarioActivo(int idEstado) => idEstado != 2;
     }
 }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace SistemaOroAmbiental.Models;
@@ -39,7 +39,35 @@ public partial class Cliente
 
     public DateTime? FechaUsuarioModifica { get; set; }
 
+    public bool Activo { get; set; } = true;
+
+    public int? IdEstado { get; set; }
+
+    public int? IdMotivo { get; set; }
+
+    public string? MotivoDetalle { get; set; }
+
+    public int? IdCalificacion { get; set; }
+
+    public int? IdLocalidad { get; set; }
+
+    public int? IdPartido { get; set; }
+
+    public int? NumeroCliente { get; set; }
+
+    public DateTime? FechaInicio { get; set; }
+
+    public DateTime? FechaLicenciaDesde { get; set; }
+
+    public DateTime? FechaLicenciaHasta { get; set; }
+
     public virtual ICollection<ClientesCobro> ClientesCobros { get; set; } = new List<ClientesCobro>();
+
+    public virtual ICollection<ClientesRecorrido> ClientesRecorridos { get; set; } = new List<ClientesRecorrido>();
+
+    public virtual ICollection<ClientesControlMensual> ClientesControlMensuales { get; set; } = new List<ClientesControlMensual>();
+
+    public virtual ICollection<ClientesEntrega> ClientesEntregas { get; set; } = new List<ClientesEntrega>();
 
     public virtual ICollection<ClientesContacto> ClientesContactos { get; set; } = new List<ClientesContacto>();
 
@@ -54,6 +82,16 @@ public partial class Cliente
     public virtual ClientesProfesion? IdProfesionNavigation { get; set; }
 
     public virtual Provincia? IdProvinciaNavigation { get; set; }
+
+    public virtual ClientesEstado? IdEstadoNavigation { get; set; }
+
+    public virtual ClientesMotivo? IdMotivoNavigation { get; set; }
+
+    public virtual ClientesCalificacion? IdCalificacionNavigation { get; set; }
+
+    public virtual Localidad? IdLocalidadNavigation { get; set; }
+
+    public virtual Partido? IdPartidoNavigation { get; set; }
 
     public virtual Sucursal IdSucursalNavigation { get; set; } = null!;
 

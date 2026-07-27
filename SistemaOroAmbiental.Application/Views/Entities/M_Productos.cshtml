@@ -1,0 +1,200 @@
+@* Modal reutilizable de Productos (Oro Ambiental) *@
+
+<div class="modal fade producto-modal-root"
+     data-producto-modal="producto"
+     tabindex="-1"
+     data-bs-backdrop="static"
+     data-bs-keyboard="false">
+
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+
+        <div class="modal-content">
+
+            <div class="modal-header colorEncabezado">
+
+                <h5 class="modal-title fw-bold" id="modalEdicionLabel">
+                    Nuevo Producto
+                </h5>
+
+                <button type="button"
+                        class="btn-close"
+                        data-bs-dismiss="modal"></button>
+
+            </div>
+
+            <div class="modal-body">
+
+                <div id="errorCampos"
+                     class="rp-error-panel d-none mb-2">
+
+                    <div class="rp-error-icon">
+                        <i class="fa fa-exclamation-triangle"></i>
+                    </div>
+
+                    <div class="rp-error-content">
+                        <div class="rp-error-title">
+                            No se pudo guardar
+                        </div>
+                        <div class="rp-error-message"></div>
+                    </div>
+
+                    <button type="button"
+                            class="rp-error-close"
+                            onclick="cerrarErrorCampos()">
+                        <i class="fa fa-times"></i>
+                    </button>
+                </div>
+
+                <form class="row g-3">
+
+                    <input type="text" id="txtId" hidden />
+
+                    <div class="col-md-6">
+                        <label class="form-label">Nombre</label>
+                        <input id="txtNombre" class="form-control" required />
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label">Categoría</label>
+                        <div class="rp-select-plus">
+                            <select id="cmbCategoria" class="form-control"></select>
+                            <button type="button"
+                                    id="btnAtajoCategoria"
+                                    class="rp-btn-plus"
+                                    title="Agregar categoría"
+                                    data-config-nombre="Productos Categorías"
+                                    data-config-controller="ProductosCategorias">
+                                <i class="fa fa-plus"></i>
+                            </button>
+                        </div>
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label">Unidad de medida</label>
+                        <div class="rp-select-plus">
+                            <select id="cmbMedida" class="form-control"></select>
+                            <button type="button"
+                                    id="btnAtajoMedida"
+                                    class="rp-btn-plus"
+                                    title="Agregar unidad de medida"
+                                    data-config-nombre="Unidades de Medida"
+                                    data-config-controller="UnidadesMedida">
+                                <i class="fa fa-plus"></i>
+                            </button>
+                        </div>
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label prod-costo-label">
+                            <span>Costo unitario</span>
+                            <button type="button"
+                                    id="btnHistorialCosto"
+                                    class="btn btn-sm prod-btn-historial-costo"
+                                    title="Ver historial de costo unitario"
+                                    disabled>
+                                <i class="fa fa-eye"></i>
+                                <span class="prod-btn-historial-text">Historial</span>
+                            </button>
+                        </label>
+                        <input id="txtCostoUnitario" type="text" inputmode="decimal" autocomplete="off" class="form-control Inputmiles" required />
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">Stock mínimo</label>
+                        <input id="txtStockMinimo" type="text" min="0" class="form-control Inputmiles" inputmode="numeric" autocomplete="off" value="0" />
+                        <div class="invalid-feedback">Valor inválido</div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <div class="rp-activo-box">
+                            <div class="rp-activo-box-head">
+                                <span class="rp-activo-box-title">Estado del registro</span>
+                                <span class="rp-activo-box-sub">Productos inactivos no se listan por defecto.</span>
+                            </div>
+                            <label class="rp-switch mb-0 rp-switch-block">
+                                <input type="checkbox" id="chkActivoProducto" class="rp-switch-input" checked>
+                                <span class="rp-switch-slider"></span>
+                                <span class="rp-activo-estado-text" id="lblActivoProducto">Activo</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="col-12 rp-precios-section mt-3">
+                        <div class="rp-precios-header">
+                            <div class="rp-precios-header-icon">
+                                <i class="fa fa-tags"></i>
+                            </div>
+                            <div>
+                                <h6 class="rp-precios-title mb-0">Precios por lista</h6>
+                                <small class="rp-precios-sub">Definí el precio de venta y rentabilidad para cada lista</small>
+                            </div>
+                        </div>
+
+                        <div id="lblPreciosSinListas" class="rp-precios-empty d-none">
+                            <i class="fa fa-info-circle"></i>
+                            <span>No hay listas de precio. Creá una en <strong>Configuraciones → Listas de Precio</strong>.</span>
+                        </div>
+
+                        <div id="gridPreciosLista" class="rp-precios-grid"></div>
+                    </div>
+
+                </form>
+
+                <div class="rp-auditoria d-none mt-3" id="infoAuditoria">
+                    <div id="infoRegistro"></div>
+                    <div id="infoModificacion"></div>
+                </div>
+
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fa fa-arrow-left"></i>
+                    Volver
+                </button>
+                <button type="button" id="btnGuardar" class="btn btn-primary" onclick="guardarProducto()">
+                    <i class="fa fa-check"></i>
+                    Registrar
+                </button>
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+@* Historial de costo unitario *@
+<div class="modal fade" id="modalHistorialCosto" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header colorEncabezado">
+                <div>
+                    <h5 class="modal-title fw-bold mb-0" id="histCostoTitulo">Historial de costo</h5>
+                    <small class="text-muted-cc d-block" id="histCostoSub"></small>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="histCostoLoading" class="prod-hist-loading">
+                    <i class="fa fa-spinner fa-spin"></i> Cargando historial�?�
+                </div>
+                <div id="histCostoEmpty" class="prod-hist-empty d-none">
+                    <i class="fa fa-info-circle"></i>
+                    <span>No hay movimientos de costo registrados para este producto.</span>
+                </div>
+                <div id="histCostoActual" class="prod-hist-actual d-none"></div>
+                <div id="histCostoTimeline" class="prod-hist-timeline d-none"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fa fa-times"></i> Cerrar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

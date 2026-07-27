@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace SistemaOroAmbiental.Models;
@@ -9,9 +9,13 @@ public partial class ClientesEntrega
 
     public int? IdCuentaCorriente { get; set; }
 
-    public int IdContrato { get; set; }
+    public int IdCliente { get; set; }
+
+    public int? IdContrato { get; set; }
 
     public int? IdEstado { get; set; }
+
+    public int? IdCamion { get; set; }
 
     public DateTime Fecha { get; set; }
 
@@ -43,9 +47,15 @@ public partial class ClientesEntrega
 
     public virtual ICollection<ClientesEntregasProducto> ClientesEntregasProductos { get; set; } = new List<ClientesEntregasProducto>();
 
-    public virtual Contrato IdContratoNavigation { get; set; } = null!;
+    public virtual ICollection<ClientesEntregasProductosRecuperado> ClientesEntregasProductosRecuperados { get; set; } = new List<ClientesEntregasProductosRecuperado>();
+
+    public virtual Cliente IdClienteNavigation { get; set; } = null!;
+
+    public virtual Contrato? IdContratoNavigation { get; set; }
 
     public virtual EntregasEstado? IdEstadoNavigation { get; set; }
+
+    public virtual Camion? IdCamionNavigation { get; set; }
 
     public virtual User? IdUsuarioModificaNavigation { get; set; }
 

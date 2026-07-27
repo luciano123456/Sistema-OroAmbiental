@@ -31,6 +31,8 @@ public partial class Proveedore
 
     public DateTime? FechaUsuarioModifica { get; set; }
 
+    public bool Activo { get; set; } = true;
+
     public virtual ICollection<Compra> Compras { get; set; } = new List<Compra>();
 
     public virtual Banco? IdBancoNavigation { get; set; }
@@ -40,6 +42,8 @@ public partial class Proveedore
     public virtual User? IdUsuarioModificaNavigation { get; set; }
 
     public virtual User IdUsuarioRegistraNavigation { get; set; } = null!;
+
+    public virtual ICollection<ProveedoresContacto> ProveedoresContactos { get; set; } = new List<ProveedoresContacto>();
 
     public virtual ICollection<ProveedoresCuentaCorriente> ProveedoresCuentaCorrientes { get; set; } = new List<ProveedoresCuentaCorriente>();
 

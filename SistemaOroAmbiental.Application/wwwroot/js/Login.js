@@ -1,5 +1,10 @@
 ﻿$(document).ready(function () {
 
+    if (window.SessionManager?.consumeExpiredMessageOnLogin?.()) {
+        $("#errorMessage").text("La sesión ha expirado. Iniciá sesión nuevamente.");
+        $("#diverrorMessage").show();
+    }
+
     /* =============================
        OJO VER PASSWORD
     ============================== */
@@ -41,6 +46,18 @@
        LOGIN
     ============================== */
 
+    function setLoginLoading(loading) {
+        const $btn = $("#btnLogin");
+        const $form = $("#loginForm");
+
+        $btn.prop("disabled", loading);
+        $form.find("input:not([type='hidden'])").prop("disabled", loading);
+        $("#togglePassword").css("pointer-events", loading ? "none" : "");
+
+        $btn.find(".btn-login-text").toggleClass("d-none", loading);
+        $btn.find(".btn-login-loading").toggleClass("d-none", !loading);
+    }
+
     $("#loginForm").on("submit", function (e) {
 
         e.preventDefault();
@@ -51,6 +68,9 @@
         const token = $('input[name="__RequestVerificationToken"]').val();
 
         const rememberMe = $("#rememberMe").prop("checked");
+
+        setLoginLoading(true);
+        $("#diverrorMessage").hide();
 
         fetch(loginUrl, {
 
@@ -82,8 +102,17 @@
                 if (!data.success)
                     throw data;
 
-                localStorage.setItem("JwtToken", data.token);
-                localStorage.setItem("userSession", JSON.stringify(data.user));
+                const expiresMs = data.expiresAtUnixMs
+                    ?? (data.expiresAt ? Date.parse(data.expiresAt) : null)
+                    ?? (window.SessionManager?.decodeJwtExpMs?.(data.token) ?? null);
+
+                if (window.SessionManager?.setSession) {
+                    window.SessionManager.setSession(data.token, data.user, expiresMs);
+                } else {
+                    localStorage.setItem("JwtToken", data.token);
+                    localStorage.setItem("userSession", JSON.stringify(data.user));
+                    if (expiresMs) localStorage.setItem("sessionExpiresAt", String(expiresMs));
+                }
 
                 if (rememberMe) {
 
@@ -104,6 +133,8 @@
 
             })
             .catch(err => {
+
+                setLoginLoading(false);
 
                 const mensaje =
                     err?.message ||

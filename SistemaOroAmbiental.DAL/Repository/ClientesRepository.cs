@@ -17,6 +17,7 @@ namespace SistemaOroAmbiental.DAL.Repository
         {
             try
             {
+                await AsignarNumeroCliente(model);
                 _db.Clientes.Add(model);
                 await _db.SaveChangesAsync();
                 return true;
@@ -25,6 +26,15 @@ namespace SistemaOroAmbiental.DAL.Repository
             {
                 return false;
             }
+        }
+
+        private async Task AsignarNumeroCliente(Cliente model)
+        {
+            if (model.NumeroCliente.HasValue)
+                return;
+
+            var max = await _db.Clientes.MaxAsync(c => (int?)c.NumeroCliente) ?? 0;
+            model.NumeroCliente = max + 1;
         }
 
         public async Task<bool> Actualizar(Cliente model)
@@ -47,6 +57,17 @@ namespace SistemaOroAmbiental.DAL.Repository
                 entity.IdCondicionIva = model.IdCondicionIva;
                 entity.Email = model.Email;
                 entity.IdProfesion = model.IdProfesion;
+                entity.Activo = model.Activo;
+                entity.IdEstado = model.IdEstado;
+                entity.IdMotivo = model.IdMotivo;
+                entity.MotivoDetalle = model.MotivoDetalle;
+                entity.IdCalificacion = model.IdCalificacion;
+                entity.IdLocalidad = model.IdLocalidad;
+                entity.IdPartido = model.IdPartido;
+                entity.NumeroCliente = model.NumeroCliente;
+                entity.FechaInicio = model.FechaInicio;
+                entity.FechaLicenciaDesde = model.FechaLicenciaDesde;
+                entity.FechaLicenciaHasta = model.FechaLicenciaHasta;
                 entity.IdUsuarioModifica = model.IdUsuarioModifica;
                 entity.FechaUsuarioModifica = model.FechaUsuarioModifica;
 
@@ -95,9 +116,9 @@ namespace SistemaOroAmbiental.DAL.Repository
                 await _db.SaveChangesAsync();
                 return true;
             }
-            catch
+            catch (DbUpdateException)
             {
-                return false;
+                throw;
             }
         }
 
@@ -109,12 +130,17 @@ namespace SistemaOroAmbiental.DAL.Repository
                 .Include(x => x.IdProvinciaNavigation)
                 .Include(x => x.IdCondicionIvaNavigation)
                 .Include(x => x.IdProfesionNavigation)
+                .Include(x => x.IdEstadoNavigation)
+                .Include(x => x.IdMotivoNavigation)
+                .Include(x => x.IdCalificacionNavigation)
+                .Include(x => x.IdLocalidadNavigation)
+                .Include(x => x.IdPartidoNavigation)
                 .Include(x => x.IdUsuarioRegistraNavigation)
                 .Include(x => x.IdUsuarioModificaNavigation)
                 .FirstOrDefaultAsync(x => x.Id == id);
         }
 
-        public async Task<IQueryable<Cliente>> ObtenerTodos()
+        public async Task<IQueryable<Cliente>> ObtenerTodos(bool soloActivos = false)
         {
             var query = _db.Clientes
                 .AsNoTracking()
@@ -122,10 +148,30 @@ namespace SistemaOroAmbiental.DAL.Repository
                 .Include(x => x.IdProvinciaNavigation)
                 .Include(x => x.IdCondicionIvaNavigation)
                 .Include(x => x.IdProfesionNavigation)
+                .Include(x => x.IdEstadoNavigation)
+                .Include(x => x.IdMotivoNavigation)
+                .Include(x => x.IdCalificacionNavigation)
+                .Include(x => x.IdLocalidadNavigation)
+                .Include(x => x.IdPartidoNavigation)
                 .Include(x => x.IdUsuarioRegistraNavigation)
-                .Include(x => x.IdUsuarioModificaNavigation);
+                .Include(x => x.IdUsuarioModificaNavigation)
+                .AsQueryable();
+
+            if (soloActivos)
+                query = query.Where(x => x.Activo);
 
             return await Task.FromResult(query);
+        }
+
+        public async Task<bool> CambiarActivo(int id, bool activo)
+        {
+            var entity = await _db.Clientes.FirstOrDefaultAsync(x => x.Id == id);
+            if (entity == null)
+                return false;
+
+            entity.Activo = activo;
+            await _db.SaveChangesAsync();
+            return true;
         }
     }
 }

@@ -1,35 +1,54 @@
-﻿let gridUsuarios;
-let personalSelectorData = [];
-let personalSeleccionado = null;
+let gridUsuarios;
 
 let permisosUsuarioCache = [];
 let permisosUsuarioOriginal = [];
 let usuarioPermisosModo = "nuevo"; // nuevo | editar | ver
 let moduloPermisoSeleccionadoId = 0;
 
+let sucursalesTodasCache = [];
+let sucursalesUsuarioIds = [];
+let validacionUsuarioModal = null;
+
 const PERMISOS_COLUMNAS = ["VER", "CREAR", "EDITAR", "ELIMINAR", "EXPORTAR"];
 
 const columnConfig = [
-    { index: 1, filterType: 'text' },
     { index: 2, filterType: 'text' },
     { index: 3, filterType: 'text' },
     { index: 4, filterType: 'text' },
     { index: 5, filterType: 'text' },
     { index: 6, filterType: 'text' },
-    { index: 7, filterType: 'select', fetchDataFunc: listaRolesFilter },
-    { index: 8, filterType: 'select', fetchDataFunc: listaEstadosFilter },
-    { index: 9, filterType: 'text' }
+    { index: 7, filterType: 'text' },
+    { index: 8, filterType: 'select', fetchDataFunc: listaRolesFilter },
+    { index: 9, filterType: 'select', fetchDataFunc: listaEstadosFilter },
+    { index: 10, filterType: 'text' }
 ];
+
+registrarFiltrosGrilla('grd_Usuarios', columnConfig, {
+    includeActivo: false,
+    maxColumnIndex: 10
+});
 
 $(document).ready(() => {
     listaUsuarios();
+    cargarTodasSucursalesParaAsignar();
+
+    document.addEventListener("configuracionActualizada", async (e) => {
+        const d = e.detail || {};
+        if (d.tipo === "Roles") {
+            await listaRoles();
+            if (d.nuevoId) $("#Roles").val(d.nuevoId).trigger("change");
+        }
+        if (d.tipo === "UsuariosEstados") {
+            await listaEstados();
+            if (d.nuevoId) $("#Estados").val(d.nuevoId).trigger("change");
+        }
+    });
 
     document.querySelectorAll("#modalEdicion input, #modalEdicion select, #modalEdicion textarea").forEach(el => {
         el.setAttribute("autocomplete", "off");
-        el.addEventListener("input", () => validarCampoIndividual(el));
-        el.addEventListener("change", () => validarCampoIndividual(el));
-        el.addEventListener("blur", () => validarCampoIndividual(el));
     });
+
+    initValidacionUsuarioModal();
 
     $("#Roles").on("change", function () {
         actualizarBadgeUsuarioPermisos();
@@ -37,17 +56,7 @@ $(document).ready(() => {
 
     $("#txtUsuario, #txtNombre, #txtApellido").on("input", function () {
         actualizarBadgeUsuarioPermisos();
-    });
-
-    $("#buscarPersonalSelector").on("keyup", function () {
-        const txt = ($(this).val() || "").toLowerCase();
-
-        const filtrado = personalSelectorData.filter(p =>
-            (p.Nombre || "").toLowerCase().includes(txt) ||
-            String(p.Dni || p.NumeroDocumento || "").toLowerCase().includes(txt)
-        );
-
-        renderPersonalSelector(filtrado);
+        actualizarBadgeUsuarioSucursales();
     });
 
     $(document).on("input", "#txtBuscarModuloPermiso", function () {
@@ -160,12 +169,14 @@ async function guardarCambios() {
             });
         }
 
+        await guardarSucursalesUsuario(idFinal);
+
         // 🔥 4. FIN
         $('#modalEdicion').modal('hide');
 
         exitoModal(idUsuario === ""
-            ? "Usuario creado con permisos correctamente"
-            : "Usuario actualizado con permisos correctamente");
+            ? "Usuario guardado correctamente"
+            : "Usuario actualizado correctamente");
 
         await listaUsuarios();
 
@@ -190,6 +201,7 @@ function nuevoUsuario() {
     document.getElementById("divContrasenaNueva").setAttribute("hidden", "hidden");
 
     prepararPermisosEnModalNuevo();
+    prepararSucursalesEnModalNuevo();
 }
 
 async function mostrarModal(modelo) {
@@ -221,9 +233,10 @@ async function mostrarModal(modelo) {
     actualizarBadgeUsuarioPermisos();
     habilitarSeccionPermisos(true);
     await cargarPermisosUsuario(modelo.Id);
+    await cargarSucursalesUsuario(modelo.Id);
 }
 
-const editarUsuario = id => {
+window.editarUsuario = function editarUsuario(id) {
     $('.rp-actions-dropdown').hide();
 
     fetch("/Usuarios/EditarInfo?id=" + id, {
@@ -308,31 +321,23 @@ async function configurarDataTable(data) {
 
     if (!gridUsuarios) {
 
-        $('#grd_Usuarios thead tr').clone(true).addClass('filters').appendTo('#grd_Usuarios thead');
-
         gridUsuarios = $('#grd_Usuarios').DataTable({
             data: data,
             language: {
                 sLengthMenu: "Mostrar MENU registros",
                 url: "//cdn.datatables.net/plug-ins/2.0.7/i18n/es-MX.json"
             },
+            autoWidth: false,
+            columnDefs: typeof columnDefsGridLista === "function" ? columnDefsGridLista() : [],
             scrollX: true,
             scrollCollapse: true,
             columns: [
-                {
-                    data: "Id",
-                    title: '',
-                    width: "1%",
-                    render: function (data) {
-                        return renderAccionesGrid(data, {
-                            ver: "verUsuario",
-                            editar: "editarUsuario",
-                            eliminar: "eliminarUsuario"
-                        }, "Usuarios");
-                    },
-                    orderable: false,
-                    searchable: false,
-                },
+                columnaGridAcciones({
+                    ver: "verUsuario",
+                    editar: "editarUsuario",
+                    eliminar: "eliminarUsuario"
+                }, "Usuarios"),
+                columnaGridId(),
                 { data: 'Usuario' },
                 { data: 'Nombre' },
                 { data: 'Apellido' },
@@ -373,56 +378,19 @@ async function configurarDataTable(data) {
             ],
             orderCellsTop: true,
             fixedHeader: true,
+            drawCallback: function () {
+                if (typeof ajustarColumnasGrillaLista === "function") {
+                    ajustarColumnasGrillaLista(this.api(), "#grd_Usuarios");
+                }
+            },
             initComplete: async function () {
                 const api = this.api();
-
-                for (const config of columnConfig) {
-                    if (config.index > 8) continue;
-
-                    const cell = $('.filters th').eq(config.index);
-
-                    if (config.filterType === 'select') {
-                        const select = $(`<select class="rp-filter-select" id="filter${config.index}">
-                                            <option value="">Todos</option>
-                                          </select>`)
-                            .appendTo(cell.empty())
-                            .on('change', async function () {
-                                const val = $(this).val();
-                                const selectedText = $(this).find('option:selected').text();
-
-                                await api.column(config.index)
-                                    .search(val ? '^' + selectedText + '$' : '', true, false)
-                                    .draw();
-                            });
-
-                        const datos = await config.fetchDataFunc();
-                        (datos || []).forEach(item => {
-                            select.append(`<option value="${item.Id}">${item.Nombre}</option>`);
-                        });
-
-                    } else {
-                        const input = $(`<input class="rp-filter-input" type="text" placeholder="Buscar...">`)
-                            .appendTo(cell.empty())
-                            .off('keyup change')
-                            .on('keyup change', function (e) {
-                                e.stopPropagation();
-                                const cursorPosition = this.selectionStart;
-
-                                api.column(config.index)
-                                    .search(this.value ? this.value : '', true, false)
-                                    .draw();
-
-                                this.setSelectionRange(cursorPosition, cursorPosition);
-                            });
-                    }
-                }
-
-                $('.filters th').eq(0).html('');
-
+                await armarFiltrosGrillaLista(api, '#grd_Usuarios', columnConfig, {
+                    includeActivo: false,
+                    maxColumnIndex: 10
+                });
                 configurarOpcionesColumnas();
-
                 setTimeout(() => gridUsuarios.columns.adjust(), 10);
-
                 actualizarKpis(data);
             }
         });
@@ -438,7 +406,7 @@ async function configurarDataTable(data) {
 ========================= */
 
 async function listaRoles() {
-    const response = await fetch(`/Roles/Lista`);
+    const response = await fetch(`/UsuariosRoles/Lista`);
     const data = await response.json();
 
     $('#Roles option').remove();
@@ -458,7 +426,7 @@ async function listaRoles() {
 }
 
 async function listaEstados() {
-    const response = await fetch(`/EstadosUsuarios/Lista`);
+    const response = await fetch(`/UsuariosEstados/Lista`);
     const data = await response.json();
 
     $('#Estados option').remove();
@@ -478,13 +446,13 @@ async function listaEstados() {
 }
 
 async function listaEstadosFilter() {
-    const response = await fetch(`/EstadosUsuarios/Lista`);
+    const response = await fetch(`/UsuariosEstados/Lista`);
     const data = await response.json();
     return (data || []).map(x => ({ Id: x.Id, Nombre: x.Nombre }));
 }
 
 async function listaRolesFilter() {
-    const response = await fetch(`/Roles/Lista`);
+    const response = await fetch(`/UsuariosRoles/Lista`);
     const data = await response.json();
     return (data || []).map(x => ({ Id: x.Id, Nombre: x.Nombre }));
 }
@@ -504,7 +472,7 @@ function configurarOpcionesColumnas() {
     container.empty();
 
     columnas.forEach((col, index) => {
-        if (col.data && col.data !== "Id") {
+        if (typeof esColumnaMenuGrilla === "function" ? esColumnaMenuGrilla(col) : (col.data && col.data !== "Id")) {
             const isChecked = savedConfig[`col_${index}`] !== undefined ? savedConfig[`col_${index}`] : true;
             grid.column(index).visible(isChecked);
 
@@ -576,11 +544,8 @@ function limpiarModal() {
         el.removeAttribute("readonly");
     });
 
-    const errorMsg = document.getElementById("errorCampos");
-    if (errorMsg) errorMsg.classList.add("d-none");
+    validacionUsuarioModal?.reset();
 
-    personalSeleccionado = null;
-    personalSelectorData = [];
     permisosUsuarioCache = [];
     permisosUsuarioOriginal = [];
     moduloPermisoSeleccionadoId = 0;
@@ -589,97 +554,68 @@ function limpiarModal() {
     renderPermisosPlaceholder("Guardá el usuario para administrar permisos.");
     habilitarSeccionPermisos(false);
     actualizarResumenPermisos();
+
+    sucursalesUsuarioIds = [];
+    renderSucursalesUsuarioPlaceholder("Guardá el usuario para asignar sucursales.");
+    habilitarSeccionSucursales(false);
+    actualizarResumenSucursalesUsuario();
+}
+
+function getCamposObligatoriosUsuario() {
+    const campos = [
+        { id: "txtNombre", nombre: "Nombre" },
+        { id: "txtUsuario", nombre: "Usuario" },
+        { id: "txtApellido", nombre: "Apellido" },
+        { id: "txtDni", nombre: "DNI" },
+        { id: "Roles", nombre: "Rol" },
+        { id: "Estados", nombre: "Estado" }
+    ];
+
+    if (($("#txtId").val() || "") === "") {
+        campos.push({ id: "txtContrasena", nombre: "Contraseña" });
+    }
+
+    return campos;
+}
+
+function valorCampoValidoUsuario(el) {
+    const valor = (el?.value ?? "").toString().trim();
+    return valor !== "" && valor !== "Seleccionar";
+}
+
+function initValidacionUsuarioModal() {
+    const modal = document.getElementById("modalEdicion");
+    if (!modal || typeof ValidacionModalAbm !== "function") return;
+
+    validacionUsuarioModal = new ValidacionModalAbm({
+        modalEl: modal,
+        getPanel: () => document.getElementById("errorCampos"),
+        getCampos: getCamposObligatoriosUsuario,
+        esCampoValido: valorCampoValidoUsuario,
+        mostrarError: (msg) => {
+            if (typeof mostrarErrorCampos === "function") {
+                mostrarErrorCampos(msg, null, "validacion");
+            }
+        },
+        cerrarPanel: cerrarErrorCampos
+    });
+
+    validacionUsuarioModal.attachEvents({ select2Namespace: "usuarios-abm" });
 }
 
 function validarCampoIndividual(el) {
-    const obligatorios = [
-        "txtNombre",
-        "txtUsuario",
-        "txtApellido",
-        "txtDni",
-        "txtContrasena",
-        "Roles",
-        "Estados"
-    ];
-
-    if (!obligatorios.includes(el.id)) return;
-
-    const valor = el.value ? el.value.trim() : "";
-    const feedback = el.nextElementSibling;
-
-    if (feedback && feedback.classList.contains("invalid-feedback")) {
-        feedback.textContent = "Campo obligatorio";
-    }
-
-    if (valor === "" || valor === "Seleccionar" || valor === null) {
-        el.classList.remove("is-valid");
-        el.classList.add("is-invalid");
-    } else {
-        el.classList.remove("is-invalid");
-        el.classList.add("is-valid");
-    }
-
-    verificarErroresGenerales();
-}
-
-function verificarErroresGenerales() {
-    const errorMsg = document.getElementById("errorCampos");
-    const hayInvalidos = document.querySelectorAll("#modalEdicion .is-invalid").length > 0;
-    if (!errorMsg) return;
-
-    if (!hayInvalidos) {
-        errorMsg.classList.add("d-none");
-    }
+    return validacionUsuarioModal?.onBlur(el);
 }
 
 function validarCampos() {
-    const idUsuario = $("#txtId").val();
-
-    const campos = [
-        "#txtNombre",
-        "#txtUsuario",
-        "#txtApellido",
-        "#txtDni",
-        "#Roles",
-        "#Estados"
-    ];
-
-    if (idUsuario === "") {
-        campos.push("#txtContrasena");
-    }
-
-    let valido = true;
-
-    campos.forEach(selector => {
-        const campo = document.querySelector(selector);
-        if (!campo) return;
-
-        const valor = campo.value ? campo.value.trim() : "";
-        const feedback = campo.nextElementSibling;
-
-        if (!valor || valor === "Seleccionar") {
-            campo.classList.add("is-invalid");
-            campo.classList.remove("is-valid");
-
-            if (feedback && feedback.classList.contains("invalid-feedback")) {
-                feedback.textContent = "Campo obligatorio";
-            }
-
-            valido = false;
-        } else {
-            campo.classList.remove("is-invalid");
-            campo.classList.add("is-valid");
-        }
-    });
-
-    const panel = document.getElementById("errorCampos");
-    if (panel) panel.classList.toggle("d-none", valido);
-
-    return valido;
+    return validacionUsuarioModal?.validarTodos() ?? false;
 }
 
 function cerrarErrorCampos() {
-    $("#errorCampos").addClass("d-none");
+    const panel = document.getElementById("errorCampos");
+    if (!panel) return;
+    panel.classList.add("d-none");
+    panel.innerHTML = "";
 }
 
 function actualizarKpis(data) {
@@ -696,7 +632,7 @@ function setModalSoloLectura(soloLectura) {
         if (el.id === "txtBuscarModuloPermiso") return;
 
         if (soloLectura) {
-            if (el.tagName === "SELECT") {
+            if (el.tagName === "SELECT" || el.type === "checkbox") {
                 el.setAttribute("disabled", "disabled");
             } else {
                 el.setAttribute("readonly", "readonly");
@@ -738,82 +674,158 @@ const verUsuario = id => {
 };
 
 /* =========================
-   SELECTOR PERSONAL
+   SUCURSALES
 ========================= */
 
-async function abrirSelectorPersonal() {
-    $('#modalSelectorPersonal').modal('show');
-
-    const r = await fetch('/Personal/Lista', {
-        headers: { 'Authorization': 'Bearer ' + token }
-    });
-
-    personalSelectorData = await r.json();
-    renderPersonalSelector(personalSelectorData);
+async function cargarTodasSucursalesParaAsignar() {
+    try {
+        const response = await fetch("/Sucursales/ListaTodas", {
+            headers: {
+                Authorization: "Bearer " + token,
+                "Content-Type": "application/json"
+            }
+        });
+        sucursalesTodasCache = response.ok ? await response.json() : [];
+    } catch {
+        sucursalesTodasCache = [];
+    }
 }
 
-function renderPersonalSelector(data) {
-    const container = $("#listaPersonalSelector");
-    container.empty();
-
-    data.forEach(p => {
-        container.append(`
-            <div class="rp-personal-card" data-id="${p.Id}">
-                <div class="rp-personal-name">${escapeHtml(p.Nombre || "")}</div>
-
-                <div class="rp-personal-info">
-                    <i class="fa fa-id-card"></i>
-                    ${escapeHtml(p.Dni ?? p.NumeroDocumento ?? "-")}
-                </div>
-
-                <div class="rp-personal-info">
-                    <i class="fa fa-phone"></i>
-                    ${escapeHtml(p.Telefono ?? "-")}
-                </div>
-
-                <div class="rp-personal-info">
-                    <i class="fa fa-envelope"></i>
-                    ${escapeHtml(p.Email ?? "-")}
-                </div>
-            </div>
-        `);
-    });
-
-    $(".rp-personal-card").off("click").on("click", function () {
-        $(".rp-personal-card").removeClass("selected");
-        $(this).addClass("selected");
-
-        const id = $(this).data("id");
-        personalSeleccionado = personalSelectorData.find(x => x.Id === id);
-    });
-
-    $(".rp-personal-card").off("dblclick").on("dblclick", function () {
-        $(".rp-personal-card").removeClass("selected");
-        $(this).addClass("selected");
-
-        const id = $(this).data("id");
-        personalSeleccionado = personalSelectorData.find(x => x.Id === id);
-
-        aplicarPersonalSeleccionado();
-    });
+function prepararSucursalesEnModalNuevo() {
+    sucursalesUsuarioIds = [];
+    renderSucursalesUsuarioPlaceholder("Guardá el usuario para asignar sucursales.");
+    habilitarSeccionSucursales(false);
+    actualizarBadgeUsuarioSucursales();
+    actualizarResumenSucursalesUsuario();
 }
 
-function aplicarPersonalSeleccionado() {
-    if (!personalSeleccionado) {
-        errorModal("Seleccione un personal.");
+function habilitarSeccionSucursales(habilitar) {
+    const section = document.getElementById("sectionSucursalesUsuario");
+    const hint = document.getElementById("sucursalHint");
+    if (!section || !hint) return;
+
+    if (habilitar) {
+        section.classList.remove("rp-section-disabled");
+        hint.classList.add("success");
+        hint.innerHTML = `<i class="fa fa-check-circle"></i> Marcá las sucursales a las que puede acceder.`;
+    } else {
+        section.classList.add("rp-section-disabled");
+        hint.classList.remove("success");
+        hint.innerHTML = `<i class="fa fa-info-circle"></i> Guardá el usuario para asignar sucursales.`;
+    }
+
+    $("#listaSucursalesUsuario").find("input[type=checkbox]").prop("disabled", !habilitar || usuarioPermisosModo === "ver");
+}
+
+function actualizarBadgeUsuarioSucursales() {
+    const usuario = ($("#txtUsuario").val() || "").trim();
+    const nombre = ($("#txtNombre").val() || "").trim();
+    const apellido = ($("#txtApellido").val() || "").trim();
+
+    let texto = "Nuevo";
+    if (usuario || nombre || apellido) {
+        texto = [usuario, nombre, apellido].filter(Boolean).join(" · ");
+    }
+
+    $("#sucUsuarioNombre").text(texto);
+}
+
+function renderSucursalesUsuarioPlaceholder(texto) {
+    $("#listaSucursalesUsuario").html(`<div class="rp-perm-empty-state">${texto}</div>`);
+}
+
+function renderSucursalesUsuarioUI() {
+    const $lista = $("#listaSucursalesUsuario");
+    $lista.empty();
+
+    if (!sucursalesTodasCache.length) {
+        renderSucursalesUsuarioPlaceholder("No hay sucursales cargadas en el sistema.");
         return;
     }
 
-    const p = personalSeleccionado;
+    sucursalesTodasCache.forEach(s => {
+        const id = Number(s.Id);
+        const checked = sucursalesUsuarioIds.includes(id);
+        $lista.append(`
+            <label class="rp-suc-card ${checked ? "is-checked" : ""}" data-id="${id}">
+                <input type="checkbox" value="${id}" ${checked ? "checked" : ""} />
+                <span class="rp-suc-name">${s.Nombre}</span>
+            </label>
+        `);
+    });
 
-    $("#txtNombre").val(p.Nombre ?? "");
-    $("#txtDni").val(p.Dni || p.NumeroDocumento || "");
-    $("#txtTelefono").val(p.Telefono ?? "");
-    $("#txtDireccion").val(p.Direccion ?? "");
-    $("#txtCorreo").val(p.Email ?? "");
+    $lista.off("change.suc").on("change.suc", "input[type=checkbox]", function () {
+        const id = Number($(this).val());
+        const checked = $(this).is(":checked");
+        $(this).closest(".rp-suc-card").toggleClass("is-checked", checked);
 
-    $('#modalSelectorPersonal').modal('hide');
-    actualizarBadgeUsuarioPermisos();
+        if (checked) {
+            if (!sucursalesUsuarioIds.includes(id)) sucursalesUsuarioIds.push(id);
+        } else {
+            sucursalesUsuarioIds = sucursalesUsuarioIds.filter(x => x !== id);
+        }
+        actualizarResumenSucursalesUsuario();
+    });
+
+    actualizarResumenSucursalesUsuario();
+}
+
+function actualizarResumenSucursalesUsuario() {
+    $("#sucCantAsignadas").text(sucursalesUsuarioIds.length);
+}
+
+function marcarTodasSucursalesUsuario(valor) {
+    if (usuarioPermisosModo === "ver") return;
+    sucursalesUsuarioIds = valor
+        ? (sucursalesTodasCache || []).map(s => Number(s.Id)).filter(x => x > 0)
+        : [];
+    renderSucursalesUsuarioUI();
+    habilitarSeccionSucursales(true);
+}
+
+async function cargarSucursalesUsuario(idUsuario) {
+    await cargarTodasSucursalesParaAsignar();
+
+    if (!idUsuario || Number(idUsuario) <= 0) {
+        prepararSucursalesEnModalNuevo();
+        return;
+    }
+
+    try {
+        const response = await fetch(`/Usuarios/SucursalesAsignadas?idUsuario=${idUsuario}`, {
+            headers: {
+                Authorization: "Bearer " + token,
+                "Content-Type": "application/json"
+            }
+        });
+
+        if (!response.ok) throw new Error();
+
+        const data = await response.json();
+        sucursalesUsuarioIds = (data.IdsSucursales || []).map(x => Number(x)).filter(x => x > 0);
+    } catch {
+        sucursalesUsuarioIds = [];
+    }
+
+    renderSucursalesUsuarioUI();
+    habilitarSeccionSucursales(true);
+    actualizarBadgeUsuarioSucursales();
+}
+
+async function guardarSucursalesUsuario(idUsuario) {
+    const ids = (sucursalesUsuarioIds || []).map(x => Number(x)).filter(x => x > 0);
+
+    await fetch("/Usuarios/SucursalesActualizar", {
+        method: "POST",
+        headers: {
+            Authorization: "Bearer " + token,
+            "Content-Type": "application/json;charset=utf-8"
+        },
+        body: JSON.stringify({
+            IdUsuario: idUsuario,
+            IdsSucursales: ids
+        })
+    });
 }
 
 /* =========================
@@ -871,6 +883,7 @@ function actualizarBadgeUsuarioPermisos() {
     }
 
     $("#permUsuarioNombre").text(texto);
+    $("#sucUsuarioNombre").text(texto);
 }
 
 function normalizarIdUsuarioGuardado(valor) {

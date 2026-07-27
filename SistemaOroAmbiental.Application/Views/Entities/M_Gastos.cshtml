@@ -1,0 +1,123 @@
+@* Modal reutilizable de Gastos (Oro Ambiental) *@
+
+<div class="modal fade gasto-modal-root"
+     data-gasto-modal="gasto"
+     id="modalEdicion"
+     tabindex="-1"
+     data-bs-backdrop="static"
+     data-bs-keyboard="false">
+
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header colorEncabezado">
+                <h5 class="modal-title fw-bold" id="modalEdicionLabel">Nuevo gasto</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="errorCampos" class="rp-error-panel d-none mb-2">
+                    <div class="rp-error-icon">
+                        <i class="fa fa-exclamation-triangle"></i>
+                    </div>
+                    <div class="rp-error-content">
+                        <div class="rp-error-title">No se pudo guardar</div>
+                        <div class="rp-error-message"></div>
+                    </div>
+                    <button type="button" class="rp-error-close" onclick="cerrarErrorCamposGasto()">
+                        <i class="fa fa-times"></i>
+                    </button>
+                </div>
+
+                <form class="row g-3" id="formGasto" autocomplete="off">
+                    <input type="hidden" id="txtId" />
+
+                    <div class="col-md-4">
+                        <label class="form-label" for="txtFecha">Fecha</label>
+                        <input type="date" id="txtFecha" class="form-control" />
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label" for="cmbCategoria">Categoría</label>
+                        <div class="rp-select-plus">
+                            <select id="cmbCategoria" class="form-control"></select>
+                            <button type="button"
+                                    id="btnAtajoCategoriaGasto"
+                                    class="rp-btn-plus"
+                                    title="Agregar categoría"
+                                    data-config-nombre="Gastos Categorías"
+                                    data-config-controller="GastosCategorias">
+                                <i class="fa fa-plus"></i>
+                            </button>
+                        </div>
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label" for="cmbCuenta">Cuenta (caja)</label>
+                        <div class="rp-select-plus">
+                            <select id="cmbCuenta" class="form-control"></select>
+                            <button type="button"
+                                    id="btnAtajoCuentaGasto"
+                                    class="rp-btn-plus"
+                                    title="Agregar cuenta"
+                                    data-config-nombre="Cuentas"
+                                    data-config-controller="Cuentas"
+                                    data-config-combo-nombre="Sucursales"
+                                    data-config-combo-controller="Sucursales"
+                                    data-config-combo-label="Sucursal">
+                                <i class="fa fa-plus"></i>
+                            </button>
+                        </div>
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="txtNumReferencia">Nº referencia</label>
+                        <input type="text" id="txtNumReferencia" class="form-control" maxlength="50" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="txtConcepto">Concepto</label>
+                        <input type="text" id="txtConcepto" class="form-control" maxlength="200" />
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label" for="txtImporteNeto">Importe neto</label>
+                        <input type="text" inputmode="decimal" id="txtImporteNeto" class="form-control Inputmiles text-end" autocomplete="off" />
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label" for="txtPorcIva">IVA %</label>
+                        <input type="text" inputmode="decimal" id="txtPorcIva" class="form-control Inputmiles text-end" autocomplete="off" />
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label" for="txtTotalIva">Total IVA</label>
+                        <input type="text" id="txtTotalIva" class="form-control text-end" readonly tabindex="-1" />
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label" for="txtOtrosImp">Otros imp.</label>
+                        <input type="text" inputmode="decimal" id="txtOtrosImp" class="form-control Inputmiles text-end" autocomplete="off" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label" for="txtImporteTotal">Total</label>
+                        <input type="text" id="txtImporteTotal" class="form-control text-end fw-bold gastos-total-input" readonly tabindex="-1" />
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label" for="txtNotaInterna">Nota interna</label>
+                        <textarea id="txtNotaInterna" class="form-control" rows="2"></textarea>
+                    </div>
+                    <div class="col-12">
+                        <div class="rp-auditoria d-none" id="infoAuditoria">
+                            <div class="rp-auditoria-item" id="infoRegistro"></div>
+                            <div class="rp-auditoria-item" id="infoModificacion"></div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fa fa-arrow-left"></i> Volver
+                </button>
+                <button type="button" id="btnGuardar" class="btn btn-primary">
+                    <i class="fa fa-check"></i> Guardar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

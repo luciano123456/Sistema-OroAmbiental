@@ -9,10 +9,14 @@ namespace SistemaOroAmbiental.BLL.Service
 
         Task<ServiceResult> Actualizar(Cliente model);
 
-        Task<ServiceResult> Eliminar(int id);
+        Task<DependenciasEliminacionInfo> ObtenerDependenciasEliminar(int id);
+
+        Task<ServiceResult> Eliminar(int id, bool cascada = false);
 
         Task<Cliente?> Obtener(int id);
 
-        Task<IQueryable<Cliente>> ObtenerTodos();
+        Task<IQueryable<Cliente>> ObtenerTodos(bool soloActivos = false);
+
+        Task<ServiceResult> CambiarActivo(int id, bool activo);
     }
 }

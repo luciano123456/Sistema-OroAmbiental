@@ -1,15 +1,25 @@
-﻿let timerError; // Mover la variable fuera del evento para que sea accesible globalmente
+let timerError;
 
-document.querySelector('#formularioActualizar').addEventListener('submit', async function (e) {
+document.addEventListener("DOMContentLoaded", function () {
+    if (window.RpGridView) {
+        RpGridView.initConfigPanel();
+    }
+});
+
+document.querySelector('#formularioActualizar')?.addEventListener('submit', async function (e) {
     e.preventDefault();
     const formData = new FormData(this);
     const data = Object.fromEntries(formData.entries());
 
-    console.log(data);
+    if (window.RpGridView) {
+        const pref = document.getElementById("rpConfigViewMode")?.value;
+        if (pref) {
+            RpGridView.setPref(pref, { skipAdjust: true });
+        }
+    }
 
-    // Realiza la solicitud PUT
     const response = await fetch('/Usuarios/Actualizar', {
-        method: 'PUT',  // Aquí es donde usamos el método PUT
+        method: 'PUT',
         headers: {
             'Content-Type': 'application/json'
         },
@@ -22,12 +32,10 @@ document.querySelector('#formularioActualizar').addEventListener('submit', async
     const btnGuardar = $('#btnGuardar');
     msjError.attr("hidden", false);
 
-    // Limpiar cualquier temporizador previo
     if (timerError) {
         clearTimeout(timerError);
     }
 
-    // Procesar la respuesta
     if (result.valor === "Contrasena") {
         msjError.html('<i class="fa fa-exclamation-circle"></i> Contraseña incorrecta <i class="fa fa-exclamation-circle"></i>');
         msjError.css('color', 'red');
@@ -57,6 +65,10 @@ document.querySelector('#formularioActualizar').addEventListener('submit', async
             msjError.attr("hidden", true);
         }, 6000);
     }
+});
 
-    console.log(result);
+document.getElementById("rpConfigViewMode")?.addEventListener("change", function () {
+    if (window.RpGridView) {
+        RpGridView.setPref(this.value, { skipAdjust: true });
+    }
 });

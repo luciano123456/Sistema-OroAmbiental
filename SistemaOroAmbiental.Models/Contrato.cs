@@ -11,6 +11,8 @@ public partial class Contrato
 
     public int IdEstablecimiento { get; set; }
 
+    public int? IdTipoContrato { get; set; }
+
     public DateTime FechaContrato { get; set; }
 
     public DateTime FechaInicio { get; set; }
@@ -29,7 +31,11 @@ public partial class Contrato
 
     public virtual ICollection<ContratosRenovacion> ContratosRenovaciones { get; set; } = new List<ContratosRenovacion>();
 
+    public virtual ICollection<ContratosDocumento> ContratosDocumentos { get; set; } = new List<ContratosDocumento>();
+
     public virtual Cliente IdClienteNavigation { get; set; } = null!;
+
+    public virtual TiposContrato? IdTipoContratoNavigation { get; set; }
 
     public virtual ClientesEstablecimiento IdEstablecimientoNavigation { get; set; } = null!;
 

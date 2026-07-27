@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using System.Diagnostics;
 using System.IdentityModel.Tokens.Jwt;
@@ -7,6 +7,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using SistemaOroAmbiental.Application.Models.ViewModels;
 using SistemaOroAmbiental.Application.Models;
+using SistemaOroAmbiental.Application.Configuration;
 using SistemaOroAmbiental.BLL.Service;
 using SistemaOroAmbiental.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -17,14 +18,23 @@ namespace SistemaBronx.Application.Controllers
     {
 
         private readonly ILoginService _loginService;
+        private readonly IUsuariosService _usuariosService;
+        private readonly IUsuariosSucursalesService _usuariosSucursales;
         private readonly IConfiguration _config;
+        private readonly SessionSettings _sessionSettings;
 
         public LoginController(
             ILoginService loginService,
-            IConfiguration config)
+            IUsuariosService usuariosService,
+            IUsuariosSucursalesService usuariosSucursales,
+            IConfiguration config,
+            SessionSettings sessionSettings)
         {
             _loginService = loginService;
+            _usuariosService = usuariosService;
+            _usuariosSucursales = usuariosSucursales;
             _config = config;
+            _sessionSettings = sessionSettings;
         }
 
 
@@ -48,9 +58,9 @@ namespace SistemaBronx.Application.Controllers
                     return Unauthorized(new { success = false, message = "Usuario o contraseña incorrectos." });
                 }
 
-                if (user.IdEstado == 2)
+                if (!user.Activo || user.IdEstado == 2)
                 {
-                    return Unauthorized(new { success = false, message = "Tu usuario se encuentra bloqueado." });
+                    return Unauthorized(new { success = false, message = "Tu usuario se encuentra bloqueado o inactivo." });
                 }
 
                 var passwordHasher = new PasswordHasher<User>();
@@ -59,11 +69,20 @@ namespace SistemaBronx.Application.Controllers
                 if (result == PasswordVerificationResult.Success)
                 {
                     var token = GenerarToken(user);
+                    var sucursales = await _usuariosSucursales.ListaParaUsuario(user.Id);
+                    var sucursalesDto = sucursales
+                        .Select(s => new { s.Id, s.Nombre })
+                        .ToList();
+                    int? idSucursalDefault = sucursales.Count == 1 ? sucursales[0].Id : null;
+
+                    var expiresAt = DateTime.UtcNow.Add(_sessionSettings.GetDuration());
 
                     return Ok(new
                     {
                         success = true,
                         token,
+                        expiresAt = expiresAt.ToString("o"),
+                        expiresAtUnixMs = new DateTimeOffset(expiresAt).ToUnixTimeMilliseconds(),
                         user = new
                         {
                             user.Id,
@@ -73,7 +92,9 @@ namespace SistemaBronx.Application.Controllers
                             user.Apellido,
                             user.Direccion,
                             user.Dni,
-                            user.Telefono
+                            user.Telefono,
+                            Sucursales = sucursalesDto,
+                            IdSucursalDefault = idSucursalDefault
                         }
                     });
                 }
@@ -105,7 +126,7 @@ namespace SistemaBronx.Application.Controllers
                     _config["JwtSettings:Issuer"],
                     _config["JwtSettings:Audience"],
                     claims,
-                    expires: DateTime.UtcNow.AddHours(2),
+                    expires: DateTime.UtcNow.Add(_sessionSettings.GetDuration()),
                     signingCredentials: creds);
 
                 return new JwtSecurityTokenHandler().WriteToken(token);
@@ -113,6 +134,52 @@ namespace SistemaBronx.Application.Controllers
             catch (Exception ex)
             {
                 return null;
+            }
+        }
+
+        /// <summary>Extiende la sesión JWT del usuario autenticado (renovar sin volver a loguearse).</summary>
+        [Authorize]
+        [HttpPost]
+        public async Task<IActionResult> RenovarSesion()
+        {
+            try
+            {
+                var idClaim = User.FindFirst("Id")?.Value;
+                if (!int.TryParse(idClaim, out var userId))
+                {
+                    return Unauthorized(new { success = false, message = "Sesión no válida." });
+                }
+
+                var user = await _usuariosService.Obtener(userId);
+                if (user == null)
+                {
+                    return Unauthorized(new { success = false, message = "Usuario no encontrado." });
+                }
+
+                if (!user.Activo || user.IdEstado == 2)
+                {
+                    return Unauthorized(new { success = false, message = "Tu usuario se encuentra bloqueado o inactivo." });
+                }
+
+                var token = GenerarToken(user);
+                if (string.IsNullOrEmpty(token))
+                {
+                    return StatusCode(500, new { success = false, message = "No se pudo generar el token." });
+                }
+
+                var expiresAt = DateTime.UtcNow.Add(_sessionSettings.GetDuration());
+
+                return Ok(new
+                {
+                    success = true,
+                    token,
+                    expiresAt = expiresAt.ToString("o"),
+                    expiresAtUnixMs = new DateTimeOffset(expiresAt).ToUnixTimeMilliseconds()
+                });
+            }
+            catch (Exception)
+            {
+                return StatusCode(500, new { success = false, message = "No se pudo renovar la sesión." });
             }
         }
 

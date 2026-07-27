@@ -25,7 +25,11 @@ public partial class Producto
 
     public DateTime? FechaUsuarioModifica { get; set; }
 
+    public bool Activo { get; set; } = true;
+
     public virtual ICollection<ClientesEntregasProducto> ClientesEntregasProductos { get; set; } = new List<ClientesEntregasProducto>();
+
+    public virtual ICollection<ClientesEntregasProductosRecuperado> ClientesEntregasProductosRecuperados { get; set; } = new List<ClientesEntregasProductosRecuperado>();
 
     public virtual ICollection<ClientesEstablecimientosProducto> ClientesEstablecimientosProductos { get; set; } = new List<ClientesEstablecimientosProducto>();
 
@@ -40,6 +44,8 @@ public partial class Producto
     public virtual User IdUsuarioRegistraNavigation { get; set; } = null!;
 
     public virtual ICollection<Inventario> Inventarios { get; set; } = new List<Inventario>();
+
+    public virtual ICollection<InventarioRecuperado> InventarioRecuperados { get; set; } = new List<InventarioRecuperado>();
 
     public virtual ICollection<ProductosPrecio> ProductosPrecios { get; set; } = new List<ProductosPrecio>();
 }

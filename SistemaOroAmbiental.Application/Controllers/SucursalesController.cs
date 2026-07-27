@@ -2,7 +2,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SistemaOroAmbiental.Application.Models.ViewModels;
+using SistemaOroAmbiental.BLL.Service;
 using SistemaOroAmbiental.DAL.DataContext;
+using SistemaOroAmbiental.DAL.Repository;
 using SistemaOroAmbiental.Models;
 
 namespace SistemaOroAmbiental.Application.Controllers
@@ -11,15 +13,35 @@ namespace SistemaOroAmbiental.Application.Controllers
     public class SucursalesController : Controller
     {
         private readonly SistemaOroAmbientalContext _db;
+        private readonly IUsuariosSucursalesService _usuariosSucursales;
+        private readonly IDeleteConflictChecker _deleteChecker;
 
-        public SucursalesController(SistemaOroAmbientalContext db)
+        public SucursalesController(
+            SistemaOroAmbientalContext db,
+            IUsuariosSucursalesService usuariosSucursales,
+            IDeleteConflictChecker deleteChecker)
         {
             _db = db;
+            _usuariosSucursales = usuariosSucursales;
+            _deleteChecker = deleteChecker;
         }
 
-        [AllowAnonymous]
+        /// <summary>Sucursales permitidas para el usuario logueado (asignadas en Usuarios_Sucursales).</summary>
         [HttpGet]
         public async Task<IActionResult> Lista()
+        {
+            var idUsuario = ObtenerIdUsuarioActual();
+            if (!idUsuario.HasValue)
+                return Unauthorized();
+
+            var items = await _usuariosSucursales.ListaParaUsuario(idUsuario.Value);
+            var lista = items.Select(x => new VMGenericModel { Id = x.Id, Nombre = x.Nombre }).ToList();
+            return Ok(lista);
+        }
+
+        /// <summary>Todas las sucursales (asignación en módulo Usuarios).</summary>
+        [HttpGet]
+        public async Task<IActionResult> ListaTodas()
         {
             var lista = await _db.Sucursales.AsNoTracking()
                 .OrderBy(x => x.Nombre)
@@ -67,13 +89,26 @@ namespace SistemaOroAmbiental.Application.Controllers
         [HttpDelete]
         public async Task<IActionResult> Eliminar(int id)
         {
+            var bloqueo = await _deleteChecker.SucursalAsync(id);
+            if (!string.IsNullOrWhiteSpace(bloqueo))
+                return Ok(new { valor = false, mensaje = bloqueo, tipo = "relacion" });
+
             var entity = await _db.Sucursales.FirstOrDefaultAsync(x => x.Id == id);
             if (entity == null)
-                return Ok(new { valor = false });
+                return Ok(new { valor = false, mensaje = "No se encontró la sucursal.", tipo = "validacion" });
 
-            _db.Sucursales.Remove(entity);
-            await _db.SaveChangesAsync();
-            return Ok(new { valor = true });
+            try
+            {
+                _db.Sucursales.Remove(entity);
+                await _db.SaveChangesAsync();
+                return Ok(new { valor = true, mensaje = "Sucursal eliminada correctamente.", tipo = "success" });
+            }
+            catch (DbUpdateException)
+            {
+                var msg = await _deleteChecker.SucursalAsync(id)
+                    ?? "No se pudo eliminar la sucursal porque tiene registros relacionados.";
+                return Ok(new { valor = false, mensaje = msg, tipo = "relacion" });
+            }
         }
 
         [HttpGet]
@@ -84,6 +119,12 @@ namespace SistemaOroAmbiental.Application.Controllers
                 return NotFound();
 
             return Ok(new VMGenericModel { Id = entity.Id, Nombre = entity.Nombre });
+        }
+
+        private int? ObtenerIdUsuarioActual()
+        {
+            var claim = User.FindFirst("Id")?.Value;
+            return int.TryParse(claim, out var id) ? id : null;
         }
     }
 }

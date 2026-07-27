@@ -1,0 +1,371 @@
+@{
+    Layout = "_LayoutModulo";
+    ViewData["Title"] = "Entregas - Nuevo / Modificar";
+    var id = (int)(ViewBag.Id ?? 0);
+    var idCliente = (int)(ViewBag.IdCliente ?? 0);
+}
+
+@section Estilos {
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link href="~/css/disenopantallas.css?v=5.1" rel="stylesheet" />
+    <link href="~/css/M_Generico.css?v=5.1" rel="stylesheet" />
+    <link href="~/css/VentasNuevoModif.css?v=5.1" rel="stylesheet" />
+    <link href="~/css/ClientesEntregas.css?v=5.1" rel="stylesheet" />
+    <link href="~/css/ContratosModal.css?v=5.3" rel="stylesheet" />
+}
+
+<div class="ventanew entregas-nuevo">
+
+    <div class="vn-actions-pro">
+        <div class="vn-actions-header">
+            <a href="@Url.Action("Index", "ClientesEntregas")" class="vn-btn-soft text-decoration-none" title="Volver al listado">
+                <i class="fa fa-arrow-left"></i>
+            </a>
+            <div class="icon">
+                <i class="fa fa-truck"></i>
+            </div>
+            <div class="title" id="tituloPaginaEntrega">Nueva entrega</div>
+        </div>
+
+        <div class="vn-actions-right">
+            <button class="vn-btn-main-pro" id="btnGuardarEntrega" type="button">
+                <i class="fa fa-check"></i>
+                <span id="lblGuardarEntrega">Registrar entrega</span>
+            </button>
+            <button id="btnEliminarEntrega" class="vn-btn-soft-danger" type="button" hidden>
+                <i class="fa fa-trash"></i> Eliminar
+            </button>
+        </div>
+    </div>
+
+    <div class="vn-grid">
+
+        <div class="vn-card">
+            <div class="vn-card-head vn-head-tabs">
+                <ul class="vn-head-nav">
+                    <li>
+                        <button class="vn-head-btn active" data-sec="datos" type="button">
+                            <i class="fa fa-info-circle"></i>
+                            Datos de la entrega
+                        </button>
+                    </li>
+                    <li>
+                        <button class="vn-head-btn" data-sec="productos" type="button">
+                            <i class="fa fa-cubes"></i>
+                            Productos <span id="cntProductos">(0)</span>
+                        </button>
+                    </li>
+                    <li>
+                        <button class="vn-head-btn" data-sec="recuperados" type="button">
+                            <i class="fa fa-recycle"></i>
+                            Productos recuperados <span id="cntRecuperados">(0)</span>
+                        </button>
+                    </li>
+                    <li>
+                        <button class="vn-head-btn" data-sec="cobros" type="button" id="tabBtnCobros">
+                            <i class="fa fa-money"></i>
+                            Cobros <span id="cntCobros">(0)</span>
+                        </button>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="p-3">
+
+                <div id="errorCamposEntrega" class="rp-error-panel d-none mb-3">
+                    <div class="rp-error-icon"><i class="fa fa-exclamation-triangle"></i></div>
+                    <div class="rp-error-content">
+                        <div class="rp-error-title">No se pudo guardar</div>
+                        <div class="rp-error-message"></div>
+                    </div>
+                    <button type="button" class="rp-error-close" onclick="cerrarErrorEntrega()">
+                        <i class="fa fa-times"></i>
+                    </button>
+                </div>
+
+                <div id="alertEntregaCobros" class="vn-alert-warning mb-3" hidden>
+                    <i class="fa fa-info-circle"></i>
+                    Esta entrega tiene cobros. Podés editarlos en la pestaña Cobros; los cambios se aplican al guardar (caja y cuenta corriente).
+                </div>
+
+                <div id="alertProductoEntregaRecuperado" class="vn-alert-warning mb-3" hidden>
+                    <i class="fa fa-exclamation-triangle"></i>
+                    Algunos productos figuran en <strong>Productos</strong> (entrega/retiro) y en <strong>Productos recuperados</strong>. Podés guardar igual; revisá que las cantidades sean las correctas.
+                </div>
+
+                <input type="hidden" id="Entrega_Id" value="@id" />
+
+                <!-- DATOS -->
+                <div class="vn-section active" id="sec-datos">
+
+                    <div class="vn-subtitle">
+                        <div class="i"><i class="fa fa-truck"></i></div>
+                        <div class="txt">
+                            <div class="t1">Datos generales</div>
+                            <div class="t2">Cliente, estado de la entrega y fecha</div>
+                        </div>
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label vn-label">Cliente</label>
+                            <select id="cCliente" class="form-select vn-input"></select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label vn-label">Fecha</label>
+                            <input type="date" id="cFecha" class="form-control vn-input" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label vn-label">Estado entrega</label>
+                            <div class="vn-select-plus">
+                                <select id="cEstado" class="form-select vn-input"></select>
+                                <button type="button"
+                                        id="btnAtajoEstadoEntrega"
+                                        class="vn-btn-plus"
+                                        title="Agregar estado de entrega"
+                                        data-config-nombre="Estados Entregas"
+                                        data-config-controller="EntregasEstados">
+                                    <i class="fa fa-plus"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label vn-label">Camión</label>
+                            <div class="vn-select-plus">
+                                <select id="cCamion" class="form-select vn-input"></select>
+                                <button type="button" class="vn-btn-plus" title="Agregar camión" onclick="abrirConfiguracion('Camiones', 'Camiones'); return false;">
+                                    <i class="fa fa-plus"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label vn-label">Nota al cliente</label>
+                            <textarea id="cNotaCliente" class="form-control vn-input" rows="2" placeholder="Visible para el cliente..."></textarea>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label vn-label">Nota interna</label>
+                            <textarea id="cNota" class="form-control vn-input" rows="3" placeholder="Observaciones internas..."></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PRODUCTOS -->
+                <div class="vn-section" id="sec-productos">
+
+                    <div class="vn-subtitle">
+                        <div class="i"><i class="fa fa-cubes"></i></div>
+                        <div class="txt">
+                            <div class="t1">Productos</div>
+                            <div class="t2">Entrega o retiro — afectan el inventario vendible</div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2 flex-wrap align-items-center mb-3">
+                        <div class="vn-agregar-wrap" id="wrapAgregarLinea">
+                            <span class="vn-agregar-arrow" aria-hidden="true">
+                                <i class="fa fa-long-arrow-down"></i> Agregá productos acá
+                            </span>
+                            <button class="btn btn-outline-light vn-btn vn-btn-agregar-hint" id="btnAgregarLinea" type="button">
+                                <i class="fa fa-plus"></i> Agregar producto
+                            </button>
+                        </div>
+                        <button class="btn btn-success" id="btnCrearProducto" type="button">
+                            <i class="fa fa-cube"></i> Crear producto
+                        </button>
+                    </div>
+
+                    <div class="vn-gridtable">
+                        <table class="table vn-table" id="tblLineasEntrega">
+                            <thead>
+                                <tr>
+                                    <th style="min-width:220px">Producto</th>
+                                    <th style="min-width:120px">Tipo</th>
+                                    <th>Cant.</th>
+                                    <th>Precio venta</th>
+                                    <th>% Desc</th>
+                                    <th>% IVA</th>
+                                    <th class="text-end">Subtotal</th>
+                                    <th style="width:48px"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbodyLineasEntrega"></tbody>
+                        </table>
+                    </div>
+
+                    <div id="lblSinLineas" class="vn-empty vn-empty-entrega">
+                        <i class="fa fa-inbox"></i>
+                        Sin productos cargados
+                        <small class="d-block">Usá «Agregar producto» para comenzar</small>
+                    </div>
+                </div>
+
+                <!-- PRODUCTOS RECUPERADOS -->
+                <div class="vn-section" id="sec-recuperados">
+
+                    <div class="vn-subtitle">
+                        <div class="i text-success"><i class="fa fa-recycle"></i></div>
+                        <div class="txt">
+                            <div class="t1">Productos recuperados</div>
+                            <div class="t2">Ingresan al inventario de recuperados (no al stock vendible)</div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2 flex-wrap align-items-center mb-3">
+                        <div class="vn-agregar-wrap" id="wrapAgregarRecuperado">
+                            <span class="vn-agregar-arrow" aria-hidden="true">
+                                <i class="fa fa-long-arrow-down"></i> Agregá recuperados acá
+                            </span>
+                            <button class="btn btn-outline-success vn-btn vn-btn-agregar-hint" id="btnAgregarRecuperado" type="button">
+                                <i class="fa fa-plus"></i> Agregar recuperado
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="vn-gridtable">
+                        <table class="table vn-table" id="tblLineasRecuperados">
+                            <thead>
+                                <tr>
+                                    <th style="min-width:220px">Producto</th>
+                                    <th>Cant.</th>
+                                    <th>Precio ref.</th>
+                                    <th>% Desc</th>
+                                    <th>% IVA</th>
+                                    <th class="text-end">Subtotal</th>
+                                    <th style="width:48px"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbodyLineasRecuperados"></tbody>
+                        </table>
+                    </div>
+
+                    <div id="lblSinRecuperados" class="vn-empty vn-empty-entrega">
+                        <i class="fa fa-recycle"></i>
+                        Sin productos recuperados
+                        <small class="d-block">Usá «Agregar recuperado» si el cliente devolvió material</small>
+                    </div>
+                </div>
+
+                <!-- COBROS -->
+                <div class="vn-section" id="sec-cobros">
+
+                    <div class="vn-subtitle">
+                        <div class="i"><i class="fa fa-money"></i></div>
+                        <div class="txt">
+                            <div class="t1">Cobros al contrato</div>
+                            
+                        </div>
+                    </div>
+
+                    <div id="lblCobrosHint" class="cm-cobros-hint mb-3">
+                        <i class="fa fa-info-circle"></i>
+                        <span id="lblCobrosHintText">Agregá filas de cobro como en productos. Nada se registra hasta guardar la entrega.</span>
+                    </div>
+
+                    <div id="panelCobrosEntrega">
+                        <div class="cm-cobros-kpis">
+                            <div class="cm-cobros-kpi">
+                                <div class="lbl">Total entrega</div>
+                                <div class="val" id="cobroTotEntrega">$ 0,00</div>
+                            </div>
+                            <div class="cm-cobros-kpi">
+                                <div class="lbl">Total pagado</div>
+                                <div class="val cm-cobros-kpi--ok" id="cobroTotPagado">$ 0,00</div>
+                            </div>
+                            <div class="cm-cobros-kpi cm-cobros-kpi--pend">
+                                <div class="lbl">Saldo pendiente</div>
+                                <div class="val" id="cobroSaldoPend">$ 0,00</div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex gap-2 flex-wrap mb-3">
+                            <div class="vn-agregar-wrap vn-agregar-wrap--cobros" id="wrapAgregarCobro">
+                                <span class="vn-agregar-arrow" aria-hidden="true">
+                                    <i class="fa fa-long-arrow-down"></i> Agregá cobros acá
+                                </span>
+                                <button type="button" class="btn btn-outline-light vn-btn vn-btn-agregar-hint" id="btnAgregarCobroEntrega">
+                                    <i class="fa fa-plus"></i> Agregar cobro
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="vn-gridtable">
+                            <table class="table vn-table" id="tblCobrosEntrega">
+                                <thead>
+                                    <tr>
+                                        <th>Fecha</th>
+                                        <th>Sucursal</th>
+                                        <th>Cuenta</th>
+                                        <th>Concepto</th>
+                                        <th class="text-end">Importe</th>
+                                        <th style="width:48px"></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbodyCobrosEntrega"></tbody>
+                            </table>
+                        </div>
+
+                        <div id="lblSinCobros" class="vn-empty vn-empty-entrega mt-2">
+                            <i class="fa fa-credit-card"></i>
+                            Sin cobros cargados
+                            <small class="d-block">Usá «Agregar cobro» para comenzar</small>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- PANEL RESUMEN -->
+        <div class="vn-card">
+            <div class="vn-card-head">
+                <div class="t">
+                    <i class="fa fa-line-chart"></i>
+                    Resumen de entrega
+                </div>
+            </div>
+
+            <div class="p-3 vn-summary">
+                <div class="vn-stat">
+                    <div class="lbl">Subtotal</div>
+                    <div class="val" id="totSubtotal">$ 0,00</div>
+                </div>
+                <div class="vn-stat">
+                    <div class="lbl">Descuentos</div>
+                    <div class="val" id="totDescuentos">$ 0,00</div>
+                </div>
+                <div class="vn-stat">
+                    <div class="lbl">IVA</div>
+                    <div class="val" id="totIva">$ 0,00</div>
+                </div>
+                <div class="vn-stat vn-stat-total">
+                    <div class="lbl">Total entrega</div>
+                    <div class="val" id="totImporte">$ 0,00</div>
+                </div>
+                <div class="vn-stat">
+                    <div class="lbl">Pagado contrato</div>
+                    <div class="val cm-resumen-pagado" id="totPagadoResumen">$ 0,00</div>
+                </div>
+                <div class="vn-stat">
+                    <div class="lbl">Saldo pendiente</div>
+                    <div class="val cm-resumen-saldo" id="totSaldoResumen">$ 0,00</div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<partial name="~/Views/Entities/M_Productos.cshtml" />
+<partial name="~/Views/Entities/M_Contratos.cshtml" />
+
+@section Scripts {
+    <script>
+        window.CM_INIT = { id: @id, idCliente: @idCliente };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script src="~/js/Entities/M_Productos.js?v=5.1"></script>
+    <script src="~/js/ContratosDocumentos.js?v=5.2"></script>
+    <script src="~/js/Entities/M_Contratos.js?v=5.3"></script>
+    <script src="~/js/ClientesEntregasNuevoModif.js?v=5.1"></script>
+}

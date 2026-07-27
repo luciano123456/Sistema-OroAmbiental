@@ -45,131 +45,255 @@
                     </button>
                 </div>
 
-                <form class="row g-3">
-
-                    <input type="text" id="txtId" hidden />
-
-                    <div class="col-md-4">
-                        <label class="form-label">Nombre</label>
-                        <input id="txtNombre" class="form-control" required />
-                        <div class="invalid-feedback">Campo obligatorio</div>
-                    </div>
-
-                    <div class="col-md-4">
-                        <label class="form-label">CUIT</label>
-                        <input id="txtCuit" class="form-control" required />
-                        <div class="invalid-feedback">Campo obligatorio</div>
-                    </div>
-
-                    <div class="col-md-4">
-                        <label class="form-label">Sucursal</label>
-                        <div class="rp-select-plus">
-                            <select id="cmbSucursal" class="form-control"></select>
-                            <button type="button"
-                                    id="btnAtajoSucursal"
-                                    class="rp-btn-plus"
-                                    title="Agregar sucursal"
-                                    data-config-nombre="Sucursales"
-                                    data-config-controller="Sucursales">
-                                <i class="fa fa-plus"></i>
+                <div class="rp-tabs-shell">
+                    <ul class="nav rp-tabs-modern">
+                        <li class="nav-item">
+                            <button class="nav-link active"
+                                    id="tabBtnDatosCliente"
+                                    data-bs-toggle="tab"
+                                    data-bs-target="#tabDatosCliente"
+                                    type="button">
+                                <i class="fa fa-building"></i>
+                                <span>Datos del Cliente</span>
                             </button>
-                        </div>
-                        <div class="invalid-feedback">Campo obligatorio</div>
-                    </div>
-
-                    <div class="col-md-4">
-                        <label class="form-label">Provincia</label>
-                        <div class="rp-select-plus">
-                            <select id="cmbProvincia" class="form-control"></select>
-                            <button type="button"
-                                    id="btnAtajoProvincia"
-                                    class="rp-btn-plus"
-                                    title="Agregar provincia"
-                                    data-config-nombre="Provincias"
-                                    data-config-controller="Provincias">
-                                <i class="fa fa-plus"></i>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link"
+                                    id="tabBtnContactosCliente"
+                                    data-bs-toggle="tab"
+                                    data-bs-target="#tabContactosCliente"
+                                    type="button">
+                                <i class="fa fa-address-book"></i>
+                                <span>Contactos</span>
                             </button>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="tab-content mt-3">
+
+                    <div class="tab-pane fade show active" id="tabDatosCliente">
+
+                        <form class="row g-3">
+
+                            <input type="text" id="txtId" hidden />
+
+                            <div class="col-md-4">
+                                <label class="form-label">Nombre</label>
+                                <input id="txtNombre" class="form-control" required />
+                                <div class="invalid-feedback">Campo obligatorio</div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">CUIT</label>
+                                <input id="txtCuit" class="form-control" required />
+                                <div class="invalid-feedback">Campo obligatorio</div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Sucursal</label>
+                                <div class="rp-select-plus">
+                                    <select id="cmbSucursal" class="form-control"></select>
+                                    <button type="button"
+                                            id="btnAtajoSucursal"
+                                            class="rp-btn-plus"
+                                            title="Agregar sucursal"
+                                            data-config-nombre="Sucursales"
+                                            data-config-controller="Sucursales">
+                                        <i class="fa fa-plus"></i>
+                                    </button>
+                                </div>
+                                <div class="invalid-feedback">Campo obligatorio</div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Provincia</label>
+                                <div class="rp-select-plus">
+                                    <select id="cmbProvincia" class="form-control"></select>
+                                    <button type="button"
+                                            id="btnAtajoProvincia"
+                                            class="rp-btn-plus"
+                                            title="Agregar provincia"
+                                            data-config-nombre="Provincias"
+                                            data-config-controller="Provincias">
+                                        <i class="fa fa-plus"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Localidad</label>
+                                <input id="txtLocalidad" class="form-control" />
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Profesión</label>
+                                <div class="rp-select-plus">
+                                    <select id="cmbProfesion" class="form-control"></select>
+                                    <button type="button"
+                                            id="btnAtajoProfesion"
+                                            class="rp-btn-plus"
+                                            title="Agregar profesión"
+                                            data-config-nombre="Profesiones de Clientes"
+                                            data-config-controller="ClientesProfesiones">
+                                        <i class="fa fa-plus"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Condición IVA</label>
+                                <div class="rp-select-plus">
+                                    <select id="cmbCondicionIva" class="form-control"></select>
+                                    <button type="button"
+                                            id="btnAtajoCondicionIva"
+                                            class="rp-btn-plus"
+                                            title="Agregar condición IVA"
+                                            data-config-nombre="Condiciones IVA"
+                                            data-config-controller="CondicionesIva">
+                                        <i class="fa fa-plus"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Teléfono</label>
+                                <input id="txtTelefono" class="form-control" />
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Teléfono alternativo</label>
+                                <input id="txtTelefonoAlt" class="form-control" />
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Email</label>
+                                <input id="txtEmail" class="form-control" type="email" />
+                            </div>
+
+                            <div class="col-md-4">
+                                <div class="rp-activo-box">
+                                    <div class="rp-activo-box-head">
+                                        <span class="rp-activo-box-title">Estado del registro</span>
+                                        <span class="rp-activo-box-sub">Controla visibilidad en listados.</span>
+                                    </div>
+                                    <label class="rp-switch mb-0 rp-switch-block">
+                                        <input type="checkbox" id="chkActivoCliente" class="rp-switch-input" checked>
+                                        <span class="rp-switch-slider"></span>
+                                        <span class="rp-activo-estado-text" id="lblActivoCliente">Activo</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Domicilio</label>
+                                <input id="txtDomicilio" class="form-control" />
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label">Código postal</label>
+                                <input id="txtCodPostal" class="form-control" />
+                            </div>
+
+                        </form>
+
+                        <div class="rp-auditoria d-none mt-3" id="infoAuditoria">
+                            <div id="infoRegistro"></div>
+                            <div id="infoModificacion"></div>
                         </div>
+
                     </div>
 
-                    <div class="col-md-4">
-                        <label class="form-label">Localidad</label>
-                        <input id="txtLocalidad" class="form-control" />
-                    </div>
+                    <div class="tab-pane fade" id="tabContactosCliente">
 
-                    <div class="col-md-4">
-                        <label class="form-label">Profesión</label>
-                        <div class="rp-select-plus">
-                            <select id="cmbProfesion" class="form-control"></select>
-                            <button type="button"
-                                    id="btnAtajoProfesion"
-                                    class="rp-btn-plus"
-                                    title="Agregar profesión"
-                                    data-config-nombre="Profesiones de Clientes"
-                                    data-config-controller="ClientesProfesiones">
-                                <i class="fa fa-plus"></i>
-                            </button>
+                        <div id="sectionContactosCliente" class="rp-contact-page rp-section-disabled">
+
+                            <div class="rp-contact-hero">
+                                <div>
+                                    <div class="text-muted small">Cliente</div>
+                                    <div class="rp-contact-hero-name" id="contactoClienteNombre">Nuevo</div>
+                                    <div class="rp-contact-hero-hint" id="contactoHint">
+                                        <i class="fa fa-info-circle"></i>
+                                        Guardá el cliente para administrar contactos.
+                                    </div>
+                                </div>
+                                <div class="rp-kpi-card-mini">
+                                    <span>Contactos</span>
+                                    <strong id="contactoCantidad">0</strong>
+                                </div>
+                            </div>
+
+                            <div class="rp-contact-layout">
+
+                                <div class="rp-contact-list-panel">
+                                    <h6><i class="fa fa-list"></i> Listado</h6>
+                                    <div id="listaContactosCliente" class="rp-contact-list">
+                                        <div class="rp-contact-empty">
+                                            Guardá el cliente para ver contactos.
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="rp-contact-form-panel">
+                                    <h6><i class="fa fa-user-plus"></i> <span id="contactoFormTitulo">Nuevo contacto</span></h6>
+
+                                    <input type="hidden" id="txtContactoId" />
+
+                                    <div class="row g-2">
+                                        <div class="col-md-12">
+                                            <label class="form-label">Nombre</label>
+                                            <input id="txtContactoNombre" class="form-control" maxlength="100" />
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Puesto</label>
+                                            <input id="txtContactoPuesto" class="form-control" maxlength="100" />
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Teléfono</label>
+                                            <input id="txtContactoTelefono" class="form-control" maxlength="50" />
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Teléfono alternativo</label>
+                                            <input id="txtContactoTelefonoAlt" class="form-control" maxlength="50" />
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Email</label>
+                                            <input id="txtContactoEmail" class="form-control" type="email" maxlength="100" />
+                                        </div>
+                                    </div>
+
+                                    <div class="d-flex flex-wrap gap-2 mt-3">
+                                        <button type="button"
+                                                id="btnGuardarContacto"
+                                                class="btn btn-primary btn-sm"
+                                                onclick="guardarContactoCliente()">
+                                            <i class="fa fa-check"></i> Guardar contacto
+                                        </button>
+                                        <button type="button"
+                                                id="btnNuevoContacto"
+                                                class="btn btn-outline-secondary btn-sm"
+                                                onclick="nuevoContactoCliente()">
+                                            <i class="fa fa-plus"></i> Nuevo
+                                        </button>
+                                    </div>
+                                </div>
+
+                            </div>
+
                         </div>
+
                     </div>
 
-                    <div class="col-md-4">
-                        <label class="form-label">Condición IVA</label>
-                        <div class="rp-select-plus">
-                            <select id="cmbCondicionIva" class="form-control"></select>
-                            <button type="button"
-                                    id="btnAtajoCondicionIva"
-                                    class="rp-btn-plus"
-                                    title="Agregar condición IVA"
-                                    data-config-nombre="Condiciones IVA"
-                                    data-config-controller="CondicionesIva">
-                                <i class="fa fa-plus"></i>
-                            </button>
-                        </div>
-                    </div>
-
-                    <div class="col-md-4">
-                        <label class="form-label">Teléfono</label>
-                        <input id="txtTelefono" class="form-control" />
-                    </div>
-
-                    <div class="col-md-4">
-                        <label class="form-label">Teléfono alternativo</label>
-                        <input id="txtTelefonoAlt" class="form-control" />
-                    </div>
-
-                    <div class="col-md-4">
-                        <label class="form-label">Email</label>
-                        <input id="txtEmail" class="form-control" type="email" />
-                    </div>
-
-                    <div class="col-md-6">
-                        <label class="form-label">Domicilio</label>
-                        <input id="txtDomicilio" class="form-control" />
-                    </div>
-
-                    <div class="col-md-3">
-                        <label class="form-label">Código postal</label>
-                        <input id="txtCodPostal" class="form-control" />
-                    </div>
-
-                </form>
-
-                <div class="rp-auditoria d-none mt-3" id="infoAuditoria">
-                    <div id="infoRegistro"></div>
-                    <div id="infoModificacion"></div>
                 </div>
 
             </div>
 
             <div class="modal-footer">
-                <button class="btn btn-secondary" data-bs-dismiss="modal">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                     <i class="fa fa-arrow-left"></i>
                     Volver
                 </button>
-
-                <button id="btnGuardar"
-                        class="btn btn-primary"
-                        onclick="guardarCliente()">
+                <button type="button" id="btnGuardar" class="btn btn-primary" onclick="guardarCliente()">
                     <i class="fa fa-check"></i>
                     Registrar
                 </button>

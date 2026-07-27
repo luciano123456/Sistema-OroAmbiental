@@ -1,4 +1,4 @@
-﻿const Permisos = (() => {
+const Permisos = (() => {
 
     function init() { }
 

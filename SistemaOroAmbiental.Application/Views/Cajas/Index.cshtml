@@ -1,0 +1,417 @@
+@{
+    ViewData["Title"] = "Cajas";
+}
+
+@section Estilos {
+    <link href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css" rel="stylesheet" />
+    <link href="https://cdn.datatables.net/buttons/2.2.2/css/buttons.dataTables.min.css" rel="stylesheet" />
+    <link href="https://cdn.datatables.net/fixedheader/3.2.2/css/fixedHeader.dataTables.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link href="~/css/Productora.css?v=5.1" rel="stylesheet" />
+    <link href="~/css/disenopantallas.css?v=5.1" rel="stylesheet" />
+    <link href="~/css/Caja.css?v=5.1" rel="stylesheet" />
+}
+
+<div class="container-fluid mt-4 ventas-index">
+
+    <div class="vi-header cc-header shadow-lg rounded-4 p-3 mb-3">
+        <div class="d-flex align-items-center gap-3 flex-wrap">
+            <span class="cc-badge"><i class="fa fa-bank"></i></span>
+            <div>
+                <h2 class="m-0 fw-800">Cajas</h2>
+            </div>
+            <div class="ms-auto d-flex gap-2 flex-wrap">
+                <button id="btnRefreshCaja" class="btn btn-outline-light vi-btn" type="button">
+                    <i class="fa fa-refresh me-2"></i> Actualizar
+                </button>
+                <button id="btnIngreso" class="btn btn-success vi-btn" type="button">
+                    <i class="fa fa-plus me-2"></i> Ingreso
+                </button>
+                <button id="btnEgreso" class="btn btn-danger vi-btn" type="button">
+                    <i class="fa fa-minus me-2"></i> Egreso
+                </button>
+                <button id="btnTransferencia" class="btn btn-warning vi-btn" type="button">
+                    <i class="fa fa-exchange me-2"></i> Transferencia
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="cc-card">
+        <div class="cc-card-body">
+
+            <div class="rp-filtros-wrap mb-3">
+                <div class="rp-filtros-head" data-bs-toggle="collapse" data-bs-target="#panelFiltrosCaja" aria-expanded="false">
+                    <div class="title">
+                        <i class="fa fa-filter"></i>
+                        <span>Filtros</span>
+                        <small class="text-muted-cc" id="txtFiltrosEstadoCaja" style="margin-left:8px;"></small>
+                    </div>
+                    <i class="fa fa-chevron-down chev"></i>
+                </div>
+                <div id="panelFiltrosCaja" class="collapse">
+                    <div class="rp-filtros-body">
+                        <div class="rp-caja-modelo-hint">
+                            <i class="fa fa-info-circle"></i>
+                            Cada movimiento se registra en una <strong>cuenta</strong> (vía <em>CajasSaldos</em>).
+                            La <strong>sucursal</strong> no va en el movimiento: se obtiene de la cuenta.
+                            El saldo actual se guarda en <em>CajasSaldos</em> y se actualiza con cada ingreso/egreso.
+                        </div>
+                        <div class="row g-3">
+                            <div class="col-md-2">
+                                <div class="rp-filter-label">Fecha desde</div>
+                                <input type="date" id="fFechaDesde" class="rp-filter-input" />
+                            </div>
+                            <div class="col-md-2">
+                                <div class="rp-filter-label">Fecha hasta</div>
+                                <input type="date" id="fFechaHasta" class="rp-filter-input" />
+                            </div>
+                            <div class="col-md-3">
+                                <div class="rp-filter-label">Sucursal</div>
+                                <select id="fSucursal" class="rp-filter-select select2" style="width:100%"></select>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="rp-filter-label">Cuenta</div>
+                                <select id="fCuenta" class="rp-filter-select select2" style="width:100%"></select>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="rp-filter-label">Tipo</div>
+                                <select id="fTipo" class="rp-filter-select select2" style="width:100%">
+                                    <option value="">Todos</option>
+                                    <option value="INGRESO MANUAL">Ingreso manual</option>
+                                    <option value="EGRESO MANUAL">Egreso manual</option>
+                                    <option value="TRANSFERENCIA">Transferencia</option>
+                                    <option value="COBRO CLIENTE">Cobro cliente</option>
+                                    <option value="PAGO PROVEEDOR">Pago proveedor</option>
+                                    <option value="GASTO">Gasto</option>
+                                </select>
+                            </div>
+                            <div class="col-md-12">
+                                <div class="rp-filter-label">Concepto contiene</div>
+                                <input type="text" id="fTexto" class="rp-filter-input" placeholder="Buscar por concepto..." />
+                            </div>
+                        </div>
+                        <div class="rp-filtros-actions mt-3">
+                            <button class="btn btn-outline-light" type="button" onclick="limpiarFiltrosCaja()">
+                                <i class="fa fa-eraser"></i> Limpiar
+                            </button>
+                            <button class="btn btn-primary" type="button" onclick="aplicarFiltrosCaja()">
+                                <i class="fa fa-check"></i> Aplicar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="cc-kpis">
+                <div class="cc-kpi"><div class="lbl">Saldo anterior</div><div class="val" id="kpiSaldoAnterior">$ 0</div></div>
+                <div class="cc-kpi"><div class="lbl">Ingresos</div><div class="val" id="kpiIngresos">$ 0</div></div>
+                <div class="cc-kpi"><div class="lbl">Egresos</div><div class="val" id="kpiEgresos">$ 0</div></div>
+                <div class="cc-kpi"><div class="lbl">Saldo actual</div><div class="val" id="kpiSaldoActual">$ 0</div></div>
+                <div class="cc-kpi"><div class="lbl">Movimientos</div><div class="val" id="kpiMovimientos">0</div></div>
+            </div>
+
+            <div class="cc-toolbar mb-2">
+                <div class="cc-toolbar-actions">
+                    <div id="chipCajaEstado" class="cc-balance-chip warn">
+                        <i class="fa fa-line-chart"></i> Sin datos
+                    </div>
+                </div>
+                <div class="dropdown cc-dd">
+                    <button class="btn btn-secondary dropdown-toggle" type="button" id="dropdownColumnasCaja"
+                            data-bs-toggle="dropdown" data-bs-display="static" data-bs-auto-close="outside">
+                        <i class="fa fa-cog me-2"></i> Config. Columnas
+                    </button>
+                    <ul class="dropdown-menu cc-dropdown-menu" id="configColumnasMenuCaja"></ul>
+                </div>
+            </div>
+
+            <div class="dt-dark-wrap">
+                <table class="dt-dark display nowrap compact" id="grd_Caja" style="width:100%">
+                    <thead>
+                        <tr>
+                            <th></th>
+                            <th>Id</th>
+                            <th>Fecha</th>
+                            <th>Tipo</th>
+                            <th>Origen</th>
+                            <th>Sucursal</th>
+                            <th>Cuenta</th>
+                            <th>Concepto</th>
+                            <th>Ingreso</th>
+                            <th>Egreso</th>
+                            <th>Saldo</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- MODAL INGRESO -->
+<div class="modal fade" id="modalIngreso" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header colorEncabezado">
+                <h5 class="modal-title fw-bold" id="modalIngresoLabel">Ingreso manual</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="iId" />
+                <div id="errorCamposIngreso" class="rp-error-panel d-none mb-2">
+                    <div class="rp-error-icon"><i class="fa fa-exclamation-triangle"></i></div>
+                    <div class="rp-error-content">
+                        <div class="rp-error-title">No se pudo guardar</div>
+                        <div class="rp-error-message"></div>
+                    </div>
+                    <button type="button" class="rp-error-close" onclick="cerrarErrorCamposIngreso()"><i class="fa fa-times"></i></button>
+                </div>
+                <form class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Fecha</label>
+                        <input id="iFecha" type="date" class="form-control" />
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Sucursal</label>
+                        <div class="rp-select-plus">
+                            <select id="iSucursal" class="form-control"></select>
+                            <button type="button" class="rp-btn-plus" title="Agregar sucursal"
+                                    data-config-nombre="Sucursales" data-config-controller="Sucursales">
+                                <i class="fa fa-plus"></i>
+                            </button>
+                        </div>
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Importe</label>
+                        <input id="iImporte" type="text" class="form-control Inputmiles" />
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+                    <div class="col-md-8">
+                        <label class="form-label">Cuenta</label>
+                        <div class="rp-select-plus">
+                            <select id="iCuenta" class="form-control"></select>
+                            <button type="button" class="rp-btn-plus" title="Agregar cuenta"
+                                    data-config-nombre="Cuentas" data-config-controller="Cuentas"
+                                    data-config-combo-nombre="Sucursales" data-config-combo-controller="Sucursales"
+                                    data-config-combo-label="Sucursal">
+                                <i class="fa fa-plus"></i>
+                            </button>
+                        </div>
+                        <div class="invalid-feedback">Seleccione sucursal y cuenta</div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Concepto</label>
+                        <input id="iConcepto" class="form-control" maxlength="200" />
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><i class="fa fa-arrow-left"></i> Volver</button>
+                <button type="button" id="btnGuardarIngreso" class="btn btn-primary" onclick="guardarIngreso()"><i class="fa fa-check"></i> Registrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL EGRESO -->
+<div class="modal fade" id="modalEgreso" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header colorEncabezado">
+                <h5 class="modal-title fw-bold" id="modalEgresoLabel">Egreso manual</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="eId" />
+                <div id="errorCamposEgreso" class="rp-error-panel d-none mb-2">
+                    <div class="rp-error-icon"><i class="fa fa-exclamation-triangle"></i></div>
+                    <div class="rp-error-content">
+                        <div class="rp-error-title">No se pudo guardar</div>
+                        <div class="rp-error-message"></div>
+                    </div>
+                    <button type="button" class="rp-error-close" onclick="cerrarErrorCamposEgreso()"><i class="fa fa-times"></i></button>
+                </div>
+                <form class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Fecha</label>
+                        <input id="eFecha" type="date" class="form-control" />
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Sucursal</label>
+                        <div class="rp-select-plus">
+                            <select id="eSucursal" class="form-control"></select>
+                            <button type="button" class="rp-btn-plus" title="Agregar sucursal"
+                                    data-config-nombre="Sucursales" data-config-controller="Sucursales">
+                                <i class="fa fa-plus"></i>
+                            </button>
+                        </div>
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Importe</label>
+                        <input id="eImporte" type="text" class="form-control Inputmiles" />
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+                    <div class="col-md-8">
+                        <label class="form-label">Cuenta</label>
+                        <div class="rp-select-plus">
+                            <select id="eCuenta" class="form-control"></select>
+                            <button type="button" class="rp-btn-plus" title="Agregar cuenta"
+                                    data-config-nombre="Cuentas" data-config-controller="Cuentas"
+                                    data-config-combo-nombre="Sucursales" data-config-combo-controller="Sucursales"
+                                    data-config-combo-label="Sucursal">
+                                <i class="fa fa-plus"></i>
+                            </button>
+                        </div>
+                        <div class="invalid-feedback">Seleccione sucursal y cuenta</div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Concepto</label>
+                        <input id="eConcepto" class="form-control" maxlength="200" />
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><i class="fa fa-arrow-left"></i> Volver</button>
+                <button type="button" id="btnGuardarEgreso" class="btn btn-primary" onclick="guardarEgreso()"><i class="fa fa-check"></i> Registrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL TRANSFERENCIA -->
+<div class="modal fade" id="modalTransferencia" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header colorEncabezado">
+                <h5 class="modal-title fw-bold" id="modalTransferenciaLabel">Transferencia entre cuentas</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="tIdMovimientoGrupo" />
+                <div id="errorCamposTransferencia" class="rp-error-panel d-none mb-2">
+                    <div class="rp-error-icon"><i class="fa fa-exclamation-triangle"></i></div>
+                    <div class="rp-error-content">
+                        <div class="rp-error-title">No se pudo guardar</div>
+                        <div class="rp-error-message"></div>
+                    </div>
+                    <button type="button" class="rp-error-close" onclick="cerrarErrorCamposTransferencia()"><i class="fa fa-times"></i></button>
+                </div>
+                <form class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Fecha</label>
+                        <input id="tFecha" type="date" class="form-control" />
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+                    <div class="col-md-8">
+                        <label class="form-label">Nota / concepto</label>
+                        <input id="tNota" class="form-control" maxlength="200" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Sucursal origen</label>
+                        <div class="rp-select-plus mb-2">
+                            <select id="tSucursalOrigen" class="form-control"></select>
+                            <button type="button" class="rp-btn-plus" title="Agregar sucursal"
+                                    data-config-nombre="Sucursales" data-config-controller="Sucursales">
+                                <i class="fa fa-plus"></i>
+                            </button>
+                        </div>
+                        <label class="form-label">Cuenta origen</label>
+                        <div class="rp-select-plus">
+                            <select id="tCuentaOrigen" class="form-control"></select>
+                            <button type="button" class="rp-btn-plus" title="Agregar cuenta"
+                                    data-config-nombre="Cuentas" data-config-controller="Cuentas"
+                                    data-config-combo-nombre="Sucursales" data-config-combo-controller="Sucursales"
+                                    data-config-combo-label="Sucursal">
+                                <i class="fa fa-plus"></i>
+                            </button>
+                        </div>
+                        <div class="invalid-feedback">Seleccione sucursal y cuenta origen</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Sucursal destino</label>
+                        <div class="rp-select-plus mb-2">
+                            <select id="tSucursalDestino" class="form-control"></select>
+                            <button type="button" class="rp-btn-plus" title="Agregar sucursal"
+                                    data-config-nombre="Sucursales" data-config-controller="Sucursales">
+                                <i class="fa fa-plus"></i>
+                            </button>
+                        </div>
+                        <label class="form-label">Cuenta destino</label>
+                        <div class="rp-select-plus">
+                            <select id="tCuentaDestino" class="form-control"></select>
+                            <button type="button" class="rp-btn-plus" title="Agregar cuenta"
+                                    data-config-nombre="Cuentas" data-config-controller="Cuentas"
+                                    data-config-combo-nombre="Sucursales" data-config-combo-controller="Sucursales"
+                                    data-config-combo-label="Sucursal">
+                                <i class="fa fa-plus"></i>
+                            </button>
+                        </div>
+                        <div class="invalid-feedback">Seleccione sucursal y cuenta destino</div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Importe</label>
+                        <input id="tImporte" type="text" class="form-control Inputmiles" />
+                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><i class="fa fa-arrow-left"></i> Volver</button>
+                <button type="button" id="btnGuardarTransferencia" class="btn btn-primary" onclick="guardarTransferencia()"><i class="fa fa-check"></i> Registrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL VER -->
+<div class="modal fade" id="modalVerMovimiento" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header colorEncabezado">
+                <h5 class="modal-title fw-bold">Detalle del movimiento</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="cc-view-grid">
+                    <div class="cc-view-item"><div class="k">Fecha</div><div class="v" id="vmFecha"></div></div>
+                    <div class="cc-view-item"><div class="k">Tipo</div><div class="v" id="vmTipo"></div></div>
+                    <div class="cc-view-item"><div class="k">Origen</div><div class="v" id="vmOrigen"></div></div>
+                    <div class="cc-view-item"><div class="k">Sucursal</div><div class="v" id="vmSucursal"></div></div>
+                    <div class="cc-view-item"><div class="k">Cuenta</div><div class="v" id="vmCuenta"></div></div>
+                    <div class="cc-view-item"><div class="k">Concepto</div><div class="v" id="vmConcepto"></div></div>
+                    <div class="cc-view-item"><div class="k">Ingreso</div><div class="v" id="vmIngreso"></div></div>
+                    <div class="cc-view-item"><div class="k">Egreso</div><div class="v" id="vmEgreso"></div></div>
+                    <div class="cc-view-item"><div class="k">Saldo</div><div class="v" id="vmSaldo"></div></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><i class="fa fa-check"></i> Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
+    <script src="https://cdn.datatables.net/fixedheader/3.2.2/js/dataTables.fixedHeader.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script src="~/js/Utils/moment.js?v=5.1"></script>
+    <link href="~/css/M_Generico.css?v=5.1" rel="stylesheet" />
+    <script src="~/js/Caja.js?v=5.1"></script>
+}

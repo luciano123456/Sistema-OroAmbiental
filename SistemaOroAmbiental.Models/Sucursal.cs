@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace SistemaOroAmbiental.Models;
@@ -28,6 +28,8 @@ public partial class Sucursal
     public virtual User IdUsuarioRegistraNavigation { get; set; } = null!;
 
     public virtual ICollection<Inventario> Inventarios { get; set; } = new List<Inventario>();
+
+    public virtual ICollection<InventarioRecuperado> InventarioRecuperados { get; set; } = new List<InventarioRecuperado>();
 
     public virtual ICollection<UsuariosSucursal> UsuariosSucursales { get; set; } = new List<UsuariosSucursal>();
 }

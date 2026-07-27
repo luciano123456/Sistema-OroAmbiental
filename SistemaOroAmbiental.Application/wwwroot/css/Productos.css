@@ -1,0 +1,370 @@
+/* Estado de stock en grilla de productos */
+
+.prod-stock-estado {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    border-radius: 8px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.05);
+    white-space: nowrap;
+}
+
+.prod-stock-estado i {
+    font-size: 0.85em;
+    opacity: 0.95;
+}
+
+.prod-stock-estado--sin_stock {
+    color: #ff8a96;
+    border-color: rgba(255, 90, 106, 0.35);
+    background: rgba(255, 90, 106, 0.12);
+    box-shadow: 0 0 0 1px rgba(255, 90, 106, 0.08);
+}
+
+.prod-stock-estado--bajo {
+    color: #ffd37a;
+    border-color: rgba(255, 211, 122, 0.35);
+    background: rgba(255, 211, 122, 0.1);
+    box-shadow: 0 0 0 1px rgba(255, 211, 122, 0.08);
+}
+
+.prod-stock-estado--ok {
+    color: #6ee7b7;
+    border-color: rgba(30, 207, 147, 0.35);
+    background: rgba(30, 207, 147, 0.1);
+    box-shadow: 0 0 0 1px rgba(30, 207, 147, 0.08);
+}
+
+.prod-stock-estado--normal {
+    color: #9dd4ff;
+    border-color: rgba(124, 194, 255, 0.35);
+    background: rgba(124, 194, 255, 0.1);
+    box-shadow: 0 0 0 1px rgba(124, 194, 255, 0.08);
+}
+
+.prod-stock-cantidad--bajo {
+    color: #ffd37a;
+    font-weight: 700;
+}
+
+.prod-stock-cantidad--sin {
+    color: #ff8a96;
+    font-weight: 700;
+}
+
+/* Costo unitario — botón historial (modal + grilla) */
+.prod-costo-label {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    width: 100%;
+}
+
+.prod-btn-historial-costo,
+.prod-btn-historial-grid {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+    border: 1px solid rgba(107, 159, 255, 0.55) !important;
+    color: #cfe4ff !important;
+    background: rgba(42, 69, 112, 0.65) !important;
+    border-radius: 8px !important;
+    font-weight: 600;
+    line-height: 1.2;
+    box-shadow: 0 0 0 1px rgba(107, 159, 255, 0.15);
+}
+
+.prod-btn-historial-costo {
+    padding: 4px 10px !important;
+    font-size: 0.78rem;
+}
+
+.prod-btn-historial-grid {
+    padding: 2px 8px !important;
+    font-size: 0.75rem;
+    margin-left: 6px;
+    vertical-align: middle;
+}
+
+.prod-btn-historial-costo .fa,
+.prod-btn-historial-grid .fa {
+    font-size: 1em;
+    opacity: 1;
+}
+
+.prod-btn-historial-costo:hover:not(:disabled),
+.prod-btn-historial-grid:hover {
+    color: #fff !important;
+    background: rgba(107, 159, 255, 0.45) !important;
+    border-color: #6b9fff !important;
+}
+
+.prod-btn-historial-costo:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    filter: grayscale(0.2);
+}
+
+.prod-btn-historial-text {
+    white-space: nowrap;
+}
+
+.prod-costo-cell {
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+/* Modal historial de costo */
+.prod-hist-loading {
+    text-align: center;
+    padding: 2rem;
+    color: rgba(255, 255, 255, 0.65);
+}
+
+.prod-hist-empty {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 1.25rem;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.05);
+    color: rgba(255, 255, 255, 0.75);
+    font-size: 0.92rem;
+}
+
+.prod-hist-actual {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 14px 16px;
+    margin-bottom: 1.25rem;
+    border-radius: 12px;
+    border: 1px solid rgba(107, 159, 255, 0.35);
+    background: linear-gradient(135deg, rgba(42, 69, 112, 0.55), rgba(30, 45, 75, 0.4));
+}
+
+.prod-hist-actual .lbl {
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: rgba(255, 255, 255, 0.55);
+}
+
+.prod-hist-actual .val {
+    font-size: 1.35rem;
+    font-weight: 800;
+    color: #e8f2ff;
+}
+
+.prod-hist-timeline {
+    position: relative;
+    padding-left: 28px;
+}
+
+.prod-hist-timeline::before {
+    content: "";
+    position: absolute;
+    left: 9px;
+    top: 8px;
+    bottom: 8px;
+    width: 2px;
+    background: linear-gradient(180deg, rgba(107, 159, 255, 0.5), rgba(107, 159, 255, 0.08));
+    border-radius: 2px;
+}
+
+.prod-hist-item {
+    position: relative;
+    margin-bottom: 14px;
+    padding: 12px 14px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.prod-hist-item::before {
+    content: "";
+    position: absolute;
+    left: -22px;
+    top: 18px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #6b9fff;
+    box-shadow: 0 0 0 3px rgba(107, 159, 255, 0.2);
+}
+
+.prod-hist-item--subio::before {
+    background: #6ee7b7;
+    box-shadow: 0 0 0 3px rgba(110, 231, 183, 0.2);
+}
+
+.prod-hist-item--bajo::before {
+    background: #ff8a96;
+    box-shadow: 0 0 0 3px rgba(255, 138, 150, 0.2);
+}
+
+.prod-hist-item-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+}
+
+.prod-hist-fecha {
+    font-size: 0.82rem;
+    color: rgba(255, 255, 255, 0.55);
+}
+
+.prod-hist-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+}
+
+.prod-hist-badge--subio {
+    color: #6ee7b7;
+    background: rgba(110, 231, 183, 0.12);
+    border: 1px solid rgba(110, 231, 183, 0.3);
+}
+
+.prod-hist-badge--bajo {
+    color: #ff8a96;
+    background: rgba(255, 138, 150, 0.12);
+    border: 1px solid rgba(255, 138, 150, 0.3);
+}
+
+.prod-hist-badge--igual {
+    color: #9dd4ff;
+    background: rgba(157, 212, 255, 0.1);
+    border: 1px solid rgba(157, 212, 255, 0.25);
+}
+
+.prod-hist-origen {
+    font-weight: 700;
+    color: #e8f2ff;
+    font-size: 0.9rem;
+}
+
+.prod-hist-detalle {
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.5);
+    margin-top: 2px;
+}
+
+.prod-hist-proveedor {
+    font-size: 0.82rem;
+    color: rgba(255, 255, 255, 0.72);
+    margin-top: 4px;
+}
+
+.prod-hist-proveedor .fa {
+    margin-right: 5px;
+    color: #9dd4ff;
+}
+
+.prod-hist-proveedor strong {
+    color: #e8f2ff;
+    font-weight: 700;
+}
+
+.prod-hist-pct {
+    font-size: 0.88rem;
+    font-weight: 800;
+    padding: 2px 8px;
+    border-radius: 6px;
+}
+
+.prod-hist-pct--subio {
+    color: #6ee7b7;
+    background: rgba(110, 231, 183, 0.12);
+}
+
+.prod-hist-pct--bajo {
+    color: #ff8a96;
+    background: rgba(255, 138, 150, 0.12);
+}
+
+.prod-hist-var-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px 14px;
+    margin-top: 8px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.18);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.prod-hist-var-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: rgba(255, 255, 255, 0.45);
+    font-weight: 600;
+}
+
+.prod-hist-pct-large {
+    font-size: 1.15rem;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+}
+
+.prod-hist-pct-large--subio {
+    color: #6ee7b7;
+}
+
+.prod-hist-pct-large--bajo {
+    color: #ff8a96;
+}
+
+.prod-hist-monto-diff {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.75);
+}
+
+.prod-hist-precios {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px 12px;
+    font-size: 0.95rem;
+}
+
+.prod-hist-precio-ant {
+    color: rgba(255, 255, 255, 0.55);
+    text-decoration: line-through;
+}
+
+.prod-hist-arrow {
+    color: rgba(255, 255, 255, 0.35);
+}
+
+.prod-hist-precio-nuevo {
+    font-weight: 800;
+    color: #fff;
+}
+
+.prod-hist-link-compra {
+    font-size: 0.78rem;
+    margin-left: 6px;
+}

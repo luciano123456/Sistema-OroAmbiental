@@ -1,0 +1,172 @@
+@{
+    Layout = "_LayoutModulo";
+    ViewData["Title"] = "Entregas";
+}
+
+@section Estilos {
+    <link href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css" rel="stylesheet" />
+    <link href="https://cdn.datatables.net/buttons/2.2.2/css/buttons.dataTables.min.css" rel="stylesheet" />
+    <link href="https://cdn.datatables.net/fixedheader/3.2.2/css/fixedHeader.dataTables.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link href="~/css/disenopantallas.css?v=5.1" rel="stylesheet" />
+    <link href="~/css/Ventas.css?v=5.1" rel="stylesheet" />
+    <link href="~/css/ClientesEntregas.css?v=5.1" rel="stylesheet" />
+}
+
+<div class="ventas-index entregas-index mt-3">
+
+    <div class="vi-header cc-header shadow-lg rounded-4 p-3 mb-3">
+        <div class="d-flex align-items-center gap-3 flex-wrap">
+            <span class="cc-badge"><i class="fa fa-truck"></i></span>
+            <div>
+                <h2 class="m-0 fw-800">Entregas</h2>
+            </div>
+            <div class="ms-auto d-flex gap-2 flex-wrap">
+                <button id="btnNuevaEntrega" class="btn btn-success vi-btn" type="button">
+                    <i class="fa fa-plus me-2"></i> Nueva entrega
+                </button>
+                <button id="btnRefreshEntregas" class="btn btn-outline-light vi-btn" type="button">
+                    <i class="fa fa-refresh me-2"></i> Actualizar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="vi-card">
+        <div class="vi-card-body">
+
+            <div class="rp-filtros-wrap mb-3">
+                <div class="rp-filtros-head" data-bs-toggle="collapse" data-bs-target="#panelFiltrosEntregas" aria-expanded="false">
+                    <div class="title">
+                        <i class="fa fa-filter"></i>
+                        <span>Filtros</span>
+                    </div>
+                    <i class="fa fa-chevron-down chev"></i>
+                </div>
+                <div id="panelFiltrosEntregas" class="collapse">
+                    <div class="rp-filtros-body">
+                        <div class="row g-3">
+                            <div class="col-md-2">
+                                <div class="rp-filter-label">Fecha desde</div>
+                                <input type="date" id="fFechaDesde" class="rp-filter-input" />
+                            </div>
+                            <div class="col-md-2">
+                                <div class="rp-filter-label">Fecha hasta</div>
+                                <input type="date" id="fFechaHasta" class="rp-filter-input" />
+                            </div>
+                            <div class="col-md-3">
+                                <div class="rp-filter-label">Contrato</div>
+                                <select id="fCliente" class="rp-filter-select select2" style="width:100%"></select>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="rp-filter-label">Estado</div>
+                                <select id="fEstado" class="rp-filter-select select2" style="width:100%"></select>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="rp-filter-label">Texto</div>
+                                <input type="text" id="fTexto" class="rp-filter-input" placeholder="Nota..." />
+                            </div>
+                        </div>
+                        <div class="rp-filtros-actions mt-3">
+                            <button class="btn btn-outline-light vi-btn" type="button" onclick="limpiarFiltrosEntregas()">
+                                <i class="fa fa-eraser"></i> Limpiar
+                            </button>
+                            <button class="btn btn-primary vi-btn" type="button" onclick="aplicarFiltrosEntregas()">
+                                <i class="fa fa-check"></i> Aplicar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="vi-kpis entregas-kpis mb-3">
+                <div class="vi-kpiCard">
+                    <div class="lbl">Entregas</div>
+                    <div class="val" id="kpiCantidad">0</div>
+                </div>
+                <div class="vi-kpiCard">
+                    <div class="lbl">Total entregado</div>
+                    <div class="val" id="kpiTotal">$ 0,00</div>
+                </div>
+                <div class="vi-kpiCard">
+                    <div class="lbl">Ítems</div>
+                    <div class="val" id="kpiItems">0</div>
+                </div>
+            </div>
+
+            <div class="dt-dark-wrap">
+                <table class="dt-dark display nowrap compact" id="grd_Entregas" style="width:100%">
+                    <thead>
+                        <tr>
+                            <th></th>
+                            <th>Id</th>
+                            <th>Fecha</th>
+                            <th>Cliente</th>
+                            <th>Establecimiento</th>
+                            <th>Estado</th>
+                            <th>Productos</th>
+                            <th class="text-end">Subtotal</th>
+                            <th class="text-end">Descuentos</th>
+                            <th class="text-end">IVA</th>
+                            <th class="text-end">Total</th>
+                            <th class="text-end">Pagado</th>
+                            <th class="text-end">Restante</th>
+                            <th>Nota</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- Modal detalle productos de una entrega -->
+<div class="modal fade" id="modalEntregaProductos" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content cm-prod-modal">
+            <div class="modal-header colorEncabezado border-0">
+                <div>
+                    <h5 class="modal-title fw-bold mb-0" id="cmProdModalTitle">Productos de la entrega</h5>
+                    <small class="text-white-50" id="cmProdModalSub"></small>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <div id="cmProdResumen" class="cm-prod-resumen"></div>
+                <div id="cmProdLoading" class="cm-prod-loading">
+                    <i class="fa fa-spinner fa-spin"></i> Cargando productos...
+                </div>
+                <div id="cmProdEmpty" class="cm-prod-empty d-none">
+                    <i class="fa fa-inbox"></i>
+                    <span>Esta entrega no tiene productos cargados.</span>
+                </div>
+                <div id="cmProdGrid" class="cm-prod-grid"></div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fa fa-times"></i> Cerrar
+                </button>
+                <button type="button" class="btn btn-primary" id="cmProdBtnEditar" hidden>
+                    <i class="fa fa-pencil"></i> Editar entrega
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
+    <script src="https://cdn.datatables.net/fixedheader/3.2.2/js/dataTables.fixedHeader.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script src="~/js/Utils/moment.js?v=5.1"></script>
+    <script src="~/js/ClientesEntregas.js?v=5.1"></script>
+}

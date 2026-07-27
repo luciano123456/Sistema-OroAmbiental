@@ -1,4 +1,4 @@
-﻿@{
+@{
     ViewData["Title"] = "Usuarios";
 }
 
@@ -10,7 +10,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
 
     <link href="~/css/usuarios.css?v=5.1" rel="stylesheet" />
-    <link href="~/css/disenopantallas.css?v=1.0" rel="stylesheet" />
+    <link href="~/css/disenopantallas.css?v=5.1" rel="stylesheet" />
+    <link href="~/css/M_Generico.css?v=5.1" rel="stylesheet" />
 }
 
 <div class="container-fluid mt-5">
@@ -21,7 +22,6 @@
                     <span class="cc-badge"><i class="fa fa-user-circle"></i></span>
                     <div>
                         <h2 class="m-0 fw-800">Usuarios</h2>
-                        <small class="text-muted-cc">Gestión y listado de usuarios</small>
                     </div>
                 </div>
 
@@ -60,6 +60,7 @@
                                 <thead>
                                     <tr>
                                         <th></th>
+                                        <th>Id</th>
                                         <th>Usuario</th>
                                         <th>Nombre</th>
                                         <th>Apellido</th>
@@ -86,13 +87,12 @@
      data-bs-backdrop="static"
      data-bs-keyboard="false">
 
-    <div class="modal-dialog modal-usuarios modal-dialog-scrollable">
+    <div class="modal-dialog modal-usuarios modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content rp-modal-shell">
 
             <div class="modal-header colorEncabezado rp-modal-header">
                 <div class="rp-modal-title-wrap">
                     <h5 class="modal-title fw-bold" id="modalEdicionLabel">Usuario</h5>
-                    <small class="rp-modal-subtitle">Gestión integral de datos, acceso y permisos por módulo</small>
                 </div>
 
                 <button type="button"
@@ -134,6 +134,16 @@
                         <li class="nav-item">
                             <button class="nav-link"
                                     data-bs-toggle="tab"
+                                    data-bs-target="#tabSucursalesUsuario"
+                                    type="button">
+                                <i class="fa fa-building-o"></i>
+                                <span>Sucursales</span>
+                            </button>
+                        </li>
+
+                        <li class="nav-item">
+                            <button class="nav-link"
+                                    data-bs-toggle="tab"
                                     data-bs-target="#tabPermisosUsuario"
                                     type="button">
                                 <i class="fa fa-lock"></i>
@@ -156,13 +166,6 @@
                                         <h6 class="mb-1">Información general</h6>
                                         <small>Completá los datos del usuario, sus datos de acceso y configuración base.</small>
                                     </div>
-
-                                    <button type="button"
-                                            class="btn btn-outline-primary btn-sm"
-                                            onclick="abrirSelectorPersonal()">
-                                        <i class="fa fa-users"></i>
-                                        Traer desde Personal
-                                    </button>
                                 </div>
 
                                 <form class="row g-3 mt-1">
@@ -209,13 +212,26 @@
 
                                     <div class="col-md-4">
                                         <label class="form-label">Rol</label>
-                                        <select id="Roles" class="form-control"></select>
+                                        <div class="rp-select-plus">
+                                            <select id="Roles" class="form-control"></select>
+                                            <button type="button" class="rp-btn-plus" title="Agregar rol"
+                                                    data-config-nombre="Roles" data-config-controller="UsuariosRoles">
+                                                <i class="fa fa-plus"></i>
+                                            </button>
+                                        </div>
                                         <div class="invalid-feedback">Campo obligatorio</div>
                                     </div>
 
                                     <div class="col-md-4">
                                         <label class="form-label">Estado</label>
-                                        <select id="Estados" class="form-control"></select>
+                                        <div class="rp-select-plus">
+                                            <select id="Estados" class="form-control"></select>
+                                            <button type="button" class="rp-btn-plus" title="Agregar estado"
+                                                    data-config-nombre="Estados de usuarios" data-config-controller="UsuariosEstados">
+                                                <i class="fa fa-plus"></i>
+                                            </button>
+                                        </div>
+                                        <small class="text-muted d-block mt-1">El estado define si el usuario puede iniciar sesión.</small>
                                         <div class="invalid-feedback">Campo obligatorio</div>
                                     </div>
 
@@ -230,6 +246,54 @@
                                         <input id="txtContrasenaNueva" class="form-control" type="password" autocomplete="new-password">
                                     </div>
                                 </form>
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    <!-- TAB SUCURSALES -->
+                    <div class="tab-pane fade" id="tabSucursalesUsuario">
+
+                        <div id="sectionSucursalesUsuario" class="rp-perm-page rp-section-disabled">
+
+                            <div class="rp-perm-hero">
+                                <div class="rp-perm-hero-left">
+                                    <div class="rp-perm-hero-avatar">
+                                        <i class="fa fa-building-o"></i>
+                                    </div>
+                                    <div class="rp-perm-hero-text">
+                                        <div class="rp-perm-hero-label">Acceso por sucursal</div>
+                                        <div class="rp-perm-hero-name" id="sucUsuarioNombre">Nuevo</div>
+                                        <div class="rp-perm-hero-hint" id="sucursalHint">
+                                            <i class="fa fa-info-circle"></i>
+                                            Guarda el usuario para asignar sucursales.
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="rp-perm-hero-right">
+                                    <div class="rp-kpi-card-mini">
+                                        <span>Asignadas</span>
+                                        <strong id="sucCantAsignadas">0</strong>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="rp-perm-toolbar">
+                                <div class="rp-perm-toolbar-right">
+                                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="marcarTodasSucursalesUsuario(true)">
+                                        <i class="fa fa-check-square-o"></i> Todas
+                                    </button>
+                                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="marcarTodasSucursalesUsuario(false)">
+                                        <i class="fa fa-square-o"></i> Ninguna
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div id="listaSucursalesUsuario" class="rp-suc-grid">
+                                <div class="rp-perm-empty-state">
+                                    Guarda el usuario para asignar sucursales.
+                                </div>
                             </div>
 
                         </div>
@@ -252,14 +316,14 @@
                                         <div class="rp-perm-hero-name" id="permUsuarioNombre">Nuevo</div>
                                         <div class="rp-perm-hero-hint" id="permisoHint">
                                             <i class="fa fa-info-circle"></i>
-                                            Guardá el usuario para administrar permisos.
+                                            Guarda el usuario para administrar permisos.
                                         </div>
                                     </div>
                                 </div>
 
                                 <div class="rp-perm-hero-right">
                                     <div class="rp-kpi-card-mini">
-                                        <span>Módulos</span>
+                                        <span>Modulos</span>
                                         <strong id="permCantModulos">0</strong>
                                     </div>
 
@@ -292,8 +356,8 @@
                                 <aside class="rp-mod-sidebar">
                                     <div class="rp-mod-sidebar-header">
                                         <div>
-                                            <h6 class="mb-1">Módulos</h6>
-                                            <small>Elegí un módulo para configurar sus permisos</small>
+                                            <h6 class="mb-1">Modulos</h6>
+                                            <small>Elegi un modulo para configurar sus permisos</small>
                                         </div>
                                     </div>
 
@@ -302,12 +366,12 @@
                                         <input id="txtBuscarModuloPermiso"
                                                type="text"
                                                class="form-control"
-                                               placeholder="Buscar módulo...">
+                                               placeholder="Buscar modulo...">
                                     </div>
 
                                     <div id="listaModulosPermisos" class="rp-mod-list">
                                         <div class="rp-perm-empty-state">
-                                            Guardá el usuario para administrar permisos.
+                                            Guarda el usuario para administrar permisos.
                                         </div>
                                     </div>
                                 </aside>
@@ -316,9 +380,9 @@
                                 <section class="rp-perm-detail">
                                     <div class="rp-perm-detail-top">
                                         <div class="rp-perm-detail-titlebox">
-                                            <div class="rp-chip-soft">Módulo</div>
-                                            <h3 id="permModuloNombre">Seleccioná un módulo</h3>
-                                            <p id="permModuloDesc">Acá vas a poder activar o desactivar cada permiso de forma individual.</p>
+                                            <div class="rp-chip-soft">Modulo</div>
+                                            <h3 id="permModuloNombre">Selecciona un modulo</h3>
+                                            <p id="permModuloDesc">Aca vas a poder activar o desactivar cada permiso de forma individual.</p>
                                         </div>
 
                                         <div class="rp-perm-detail-actions">
@@ -326,21 +390,21 @@
                                                     class="btn btn-outline-success btn-sm"
                                                     onclick="marcarPermisosModuloActual(true)">
                                                 <i class="fa fa-check"></i>
-                                                Activar módulo
+                                                Activar modulo
                                             </button>
 
                                             <button type="button"
                                                     class="btn btn-outline-danger btn-sm"
                                                     onclick="marcarPermisosModuloActual(false)">
                                                 <i class="fa fa-times"></i>
-                                                Limpiar módulo
+                                                Limpiar modulo
                                             </button>
                                         </div>
                                     </div>
 
                                     <div id="permDetalleContainer" class="rp-perm-cards-wrap">
                                         <div class="rp-perm-empty-state">
-                                            Seleccioná un módulo para ver sus permisos.
+                                            Selecciona un modulo para ver sus permisos.
                                         </div>
                                     </div>
                                 </section>
@@ -356,15 +420,11 @@
             </div>
 
             <div class="modal-footer rp-modal-footer">
-                <button class="btn btn-secondary"
-                        data-bs-dismiss="modal">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                     <i class="fa fa-arrow-left"></i>
                     Volver
                 </button>
-
-                <button id="btnGuardar"
-                        class="btn btn-primary"
-                        onclick="guardarCambios()">
+                <button type="button" id="btnGuardar" class="btn btn-primary" onclick="guardarCambios()">
                     <i class="fa fa-check"></i>
                     Guardar
                 </button>
@@ -374,47 +434,10 @@
     </div>
 </div>
 
-<div class="modal fade" id="modalSelectorPersonal">
-    <div class="modal-dialog modal-xl modal-dialog-centered">
-        <div class="modal-content rp-modal-dark">
-
-            <div class="modal-header">
-                <h5 class="modal-title">
-                    <i class="fa fa-users"></i>
-                    Seleccionar Personal existente
-                </h5>
-                <button class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-
-            <div class="modal-body">
-                <input id="buscarPersonalSelector"
-                       class="form-control mb-3"
-                       placeholder="Buscar por nombre o DNI..." />
-
-                <div id="listaPersonalSelector" class="rp-personal-grid"></div>
-            </div>
-
-            <div class="modal-footer">
-                <button class="btn btn-secondary" data-bs-dismiss="modal">
-                    Cancelar
-                </button>
-
-                <button class="btn btn-success" onclick="aplicarPersonalSeleccionado()">
-                    <i class="fa fa-check"></i>
-                    Aplicar datos
-                </button>
-            </div>
-
-        </div>
-    </div>
-</div>
-
-
-
 @section Scripts {
     <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/buttons/2.2.2/js/dataTables.buttons.min.js"></script>
-    <script src="~/js/site.js"></script>
+    <script src="~/js/site.js?v=5.1" asp-append-version="true"></script>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.3/jszip.min.js"></script>
     <script src="https://cdn.datatables.net/buttons/2.2.2/js/buttons.html5.min.js"></script>

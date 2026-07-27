@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace SistemaOroAmbiental.Models;
@@ -35,6 +35,12 @@ public partial class ClientesEstablecimiento
 
     public TimeSpan HorarioRecoleccionHasta { get; set; }
 
+    public int? IdCamion { get; set; }
+
+    public int? IdLocalidad { get; set; }
+
+    public int? IdPartido { get; set; }
+
     public int IdUsuarioRegistra { get; set; }
 
     public DateTime FechaUsuarioRegistra { get; set; }
@@ -62,6 +68,12 @@ public partial class ClientesEstablecimiento
     public virtual ListasPrecio IdListaPrecioNavigation { get; set; } = null!;
 
     public virtual Provincia? IdProvinciaNavigation { get; set; }
+
+    public virtual Camion? IdCamionNavigation { get; set; }
+
+    public virtual Localidad? IdLocalidadNavigation { get; set; }
+
+    public virtual Partido? IdPartidoNavigation { get; set; }
 
     public virtual Semana IdSemanaRecoleccionNavigation { get; set; } = null!;
 

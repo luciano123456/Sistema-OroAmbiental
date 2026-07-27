@@ -1,4 +1,4 @@
-﻿<!-- Modal Error -->
+<!-- Modal Error -->
 <div class="modal fade w-100" id="errorModal" tabindex="-1" aria-labelledby="errorModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content text-white" style="background: #323844">
@@ -36,15 +36,13 @@
     </div>
 </div>
 
-
-
-<!-- Modal Éxito -->
+<!-- Modal Exito -->
 <div class="modal fade w-100" id="exitoModal" tabindex="-1" aria-labelledby="exitoModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content text-white" style="background: #323844">
             <div class="modal-header border-0 bg-success bg-opacity-10 colorEncabezado">
                 <i class="fa fa-check-circle text-success fs-2 me-2"></i>
-                <h5 class="modal-title text-white fw-bold">Éxito</h5>
+                <h5 class="modal-title text-white fw-bold" id="exitoModalLabel">&#201;xito</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
             </div>
             <div class="modal-body text-center">
@@ -57,29 +55,132 @@
     </div>
 </div>
 
-
 <!-- Modal Confirmar -->
 <div class="modal fade w-100" id="modalConfirmar" tabindex="-1" aria-labelledby="modalConfirmarLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content text-white" style="background: #323844">
             <div class="modal-header border-0 bg-warning bg-opacity-10 colorEncabezado">
                 <i class="fa fa-question-circle text-warning fs-2 me-2"></i>
-                <h5 class="modal-title text-white fw-bold" id="modalConfirmarLabel">Confirmación</h5>
+                <h5 class="modal-title text-white fw-bold" id="modalConfirmarLabel">Confirmaci&#243;n</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
             </div>
             <div class="modal-body text-center">
                 <p id="modalConfirmarMensaje" class="fs-4 fw-semibold m-0 text-white text-wrap">
-                    ¿Estás seguro que deseas continuar?
+                    &#191;Est&#225;s seguro que deseas continuar?
                 </p>
             </div>
             <div class="modal-footer border-0 justify-content-center">
                 <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-primary px-4" id="btnModalConfirmarAceptar">Sí, continuar</button>
+                <button type="button" class="btn btn-primary px-4" id="btnModalConfirmarAceptar">S&#237;, continuar</button>
             </div>
         </div>
     </div>
 </div>
 
+<!-- Modal genérico: guardado OK + opción de volver al listado -->
+<div class="modal fade" id="modalGuardadoConSalida" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered modal-md">
+        <div class="modal-content rp-guardado-modal">
+            <button type="button" class="btn-close btn-close-white rp-guardado-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+
+            <div class="rp-guardado-icon-wrap" id="modalGuardadoConSalidaIconWrap">
+                <i class="fa fa-check-circle" id="modalGuardadoConSalidaIcon"></i>
+            </div>
+
+            <div class="modal-body rp-guardado-body text-center">
+                <h5 class="rp-guardado-title" id="modalGuardadoConSalidaTitulo">Guardado correctamente</h5>
+                <p class="rp-guardado-message" id="modalGuardadoConSalidaMensaje"></p>
+                <p class="rp-guardado-pregunta" id="modalGuardadoConSalidaPregunta">¿Deseás volver al listado?</p>
+            </div>
+
+            <div class="modal-footer rp-guardado-footer border-0">
+                <button type="button" class="rp-guardado-btn rp-guardado-btn-quedarse" id="btnGuardadoQuedarse">
+                    <i class="fa fa-pencil"></i>
+                    <span>No, seguir acá</span>
+                </button>
+                <button type="button" class="rp-guardado-btn rp-guardado-btn-salir" id="btnGuardadoSalir">
+                    <i class="fa fa-arrow-left"></i>
+                    <span>Sí, volver al listado</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal sesión por expirar (últimos 5 minutos) -->
+<div class="modal fade" id="modalSessionPorExpirar" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content text-white rp-session-renew-modal" style="background: #323844">
+            <div class="modal-header border-0 bg-warning bg-opacity-10 colorEncabezado">
+                <i class="fa fa-hourglass-half text-warning fs-2 me-2"></i>
+                <h5 class="modal-title text-white fw-bold">Sesión por expirar</h5>
+            </div>
+            <div class="modal-body text-center">
+                <p class="fs-5 fw-semibold m-0 text-white">Tu sesión está por finalizar</p>
+                <p class="text-muted small mt-2 mb-3">Quedan menos de 5 minutos. Podés renovarla para seguir trabajando sin interrupciones.</p>
+                <div class="rp-session-renew-countdown">
+                    <span class="rp-session-renew-countdown-label">Tiempo restante</span>
+                    <strong id="modalSessionPorExpirarCountdown">--:--</strong>
+                </div>
+            </div>
+            <div class="modal-footer border-0 justify-content-center flex-wrap gap-2">
+                <button type="button" class="btn btn-outline-light px-3" id="btnSessionPorExpirarContinuar" data-bs-dismiss="modal">
+                    Continuar
+                </button>
+                <button type="button" class="btn btn-warning px-4" id="btnSessionRenovar">
+                    <i class="fa fa-refresh me-1"></i> Renovar sesión
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal sesión expirada -->
+<div class="modal fade" id="modalSessionExpirada" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content text-white" style="background: #323844">
+            <div class="modal-header border-0 bg-danger bg-opacity-10 colorEncabezado">
+                <i class="fa fa-clock-o text-danger fs-2 me-2"></i>
+                <h5 class="modal-title text-white fw-bold">Sesión expirada</h5>
+            </div>
+            <div class="modal-body text-center">
+                <p class="fs-5 fw-semibold m-0 text-white">La sesión ha expirado</p>
+                <p class="text-muted small mt-2 mb-0">Volvé a iniciar sesión para continuar.</p>
+            </div>
+            <div class="modal-footer border-0 justify-content-center">
+                <button type="button" class="btn btn-danger px-4" id="btnSessionExpiradaAceptar">Aceptar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal eliminar con dependencias (cascada / manual) -->
+<div class="modal fade" id="modalEliminarCascada" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content text-white" style="background: #323844">
+            <div class="modal-header border-0 bg-danger bg-opacity-10 colorEncabezado">
+                <i class="fa fa-exclamation-triangle text-danger fs-2 me-2"></i>
+                <h5 class="modal-title text-white fw-bold" id="modalEliminarCascadaTitulo">No se puede eliminar</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <p id="modalEliminarCascadaIntro" class="mb-3"></p>
+                <ul id="modalEliminarCascadaLista" class="list-group list-group-flush mb-3"></ul>
+                <p class="small text-muted mb-0">
+                    <strong>Eliminar en cascada:</strong> borra el registro y todo lo listado arriba.<br />
+                    <strong>Hacerlo manualmente:</strong> le muestra los pasos para ir quitando cada cosa por separado.
+                </p>
+            </div>
+            <div class="modal-footer border-0 flex-wrap justify-content-center gap-2">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-outline-light" id="btnEliminarCascadaManual">Hacerlo manualmente</button>
+                <button type="button" class="btn btn-danger" id="btnEliminarCascadaConfirmar">
+                    <i class="fa fa-trash-o"></i> Eliminar todo en cascada
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <div class="modal fade" id="modalExportar" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered modal-md">

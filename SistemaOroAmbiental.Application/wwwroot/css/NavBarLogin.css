@@ -1,3 +1,306 @@
+/* =============================
+   NAVBAR PRINCIPAL
+============================= */
+
+.rp-navbar-shell {
+    position: sticky;
+    top: 0;
+    z-index: 10000060 !important;
+    isolation: isolate;
+    width: 100%;
+}
+
+.rp-navbar {
+    background: linear-gradient(135deg, rgba(15, 23, 42, 0.97) 0%, rgba(30, 41, 59, 0.95) 50%, rgba(15, 23, 42, 0.97) 100%);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35);
+    padding: 0.45rem 0.75rem;
+    backdrop-filter: blur(12px);
+    position: relative;
+    z-index: 1;
+}
+
+.rp-navbar .container-fluid,
+.rp-navbar .navbar-collapse {
+    overflow: visible !important;
+}
+
+.rp-navbar .nav-item.dropdown {
+    position: relative;
+}
+
+.rp-navbar .dropdown-menu {
+    z-index: 10000061 !important;
+    pointer-events: auto !important;
+}
+
+.rp-navbar .dropdown-menu.show {
+    display: block;
+}
+
+/* Puente entre el bot?n y el men? (evita perder foco al mover el mouse) */
+.rp-navbar .nav-item.dropdown > .dropdown-menu::before {
+    content: "";
+    position: absolute;
+    top: -8px;
+    left: 0;
+    right: 0;
+    height: 8px;
+}
+
+.rp-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0.25rem 0.5rem 0.25rem 0;
+    text-decoration: none !important;
+}
+
+.rp-brand:hover .rp-brand-icon {
+    transform: scale(1.05);
+    box-shadow: 0 6px 20px rgba(34, 197, 94, 0.35);
+}
+
+.rp-brand-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    color: #052e16;
+    background: linear-gradient(135deg, #4ade80, #22c55e);
+    box-shadow: 0 4px 14px rgba(34, 197, 94, 0.25);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    flex-shrink: 0;
+}
+
+.rp-brand-text {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.15;
+}
+
+.rp-brand-title {
+    font-weight: 800;
+    font-size: 1.05rem;
+    color: #f8fafc;
+    letter-spacing: 0.02em;
+}
+
+.rp-brand-sub {
+    font-size: 0.7rem;
+    color: rgba(248, 250, 252, 0.55);
+    font-weight: 500;
+}
+
+.rp-nav-toggler {
+    border-color: rgba(255, 255, 255, 0.2);
+    padding: 0.35rem 0.55rem;
+}
+
+.rp-nav-toggler .navbar-toggler-icon {
+    filter: invert(1);
+}
+
+.rp-nav-link {
+    display: inline-flex !important;
+    align-items: center;
+    gap: 8px;
+    color: rgba(248, 250, 252, 0.88) !important;
+    font-weight: 600;
+    font-size: 0.9rem;
+    padding: 0.5rem 0.85rem !important;
+    border-radius: 10px;
+    transition: background 0.2s ease, color 0.2s ease;
+}
+
+.rp-nav-link:hover,
+.rp-nav-link:focus,
+.rp-nav-link.active,
+.rp-nav-link.show {
+    color: #fff !important;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.rp-nav-ico {
+    width: 30px;
+    height: 30px;
+    border-radius: 9px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    flex-shrink: 0;
+    color: #fff;
+}
+
+.rp-nav-ico.xs {
+    width: 22px;
+    height: 22px;
+    font-size: 11px;
+    border-radius: 6px;
+}
+
+.rp-nav-ico.sm {
+    width: 28px;
+    height: 28px;
+    font-size: 13px;
+    border-radius: 8px;
+}
+
+.rp-nav-ico.teal { background: linear-gradient(135deg, #2dd4bf, #14b8a6); color: #042f2e; }
+.rp-nav-ico.blue { background: linear-gradient(135deg, #60a5fa, #3b82f6); }
+.rp-nav-ico.purple { background: linear-gradient(135deg, #c084fc, #a855f7); }
+.rp-nav-ico.green { background: linear-gradient(135deg, #4ade80, #22c55e); color: #052e16; }
+.rp-nav-ico.orange { background: linear-gradient(135deg, #fb923c, #f97316); }
+.rp-nav-ico.cyan { background: linear-gradient(135deg, #22d3ee, #06b6d4); color: #042f2e; }
+.rp-nav-ico.indigo { background: linear-gradient(135deg, #818cf8, #6366f1); }
+.rp-nav-ico.rose { background: linear-gradient(135deg, #fb7185, #f43f5e); }
+.rp-nav-ico.amber { background: linear-gradient(135deg, #fbbf24, #f59e0b); color: #422006; }
+.rp-nav-ico.gold { background: linear-gradient(135deg, #fde047, #eab308); color: #422006; }
+.rp-nav-ico.red { background: linear-gradient(135deg, #f87171, #ef4444); }
+.rp-nav-ico.slate { background: linear-gradient(135deg, #94a3b8, #64748b); }
+.rp-nav-ico.gray { background: linear-gradient(135deg, #9ca3af, #6b7280); }
+
+.rp-nav-dropdown {
+    background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 14px;
+    padding: 8px;
+    min-width: 280px;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+    margin-top: 2px !important;
+}
+
+.rp-nav-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: rgba(248, 250, 252, 0.55) !important;
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 6px 10px 4px;
+    margin-bottom: 2px;
+}
+
+.rp-nav-divider {
+    border-color: rgba(255, 255, 255, 0.08);
+    margin: 6px 4px;
+}
+
+.rp-nav-item {
+    display: flex !important;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px !important;
+    border-radius: 10px;
+    color: rgba(248, 250, 252, 0.92) !important;
+    transition: background 0.15s ease;
+}
+
+.rp-nav-item:hover,
+.rp-nav-item:focus,
+.rp-nav-item.active {
+    background: rgba(255, 255, 255, 0.1) !important;
+    color: #fff !important;
+}
+
+.rp-nav-item-accent {
+    border-left: 3px solid rgba(74, 222, 128, 0.6);
+    padding-left: 8px !important;
+    margin-left: 4px;
+}
+
+.rp-nav-item-text {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.2;
+    min-width: 0;
+}
+
+.rp-nav-item-title {
+    font-weight: 600;
+    font-size: 0.88rem;
+}
+
+.rp-nav-item-sub {
+    font-size: 0.72rem;
+    color: rgba(248, 250, 252, 0.5);
+    margin-top: 1px;
+}
+
+.rp-nav-user-link {
+    display: inline-flex !important;
+    align-items: center;
+    gap: 10px;
+    padding: 0.35rem 0.65rem 0.35rem 0.35rem !important;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.rp-nav-user-link:hover {
+    background: rgba(255, 255, 255, 0.12) !important;
+}
+
+.rp-user-avatar {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #60a5fa, #3b82f6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 15px;
+    flex-shrink: 0;
+}
+
+.rp-user-name {
+    font-weight: 600;
+    font-size: 0.88rem;
+    color: #f8fafc;
+    max-width: 160px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.rp-user-chev {
+    font-size: 10px;
+    opacity: 0.6;
+    color: #f8fafc;
+}
+
+.rp-nav-user-menu {
+    min-width: 220px;
+}
+
+.rp-nav-logout:hover {
+    background: rgba(239, 68, 68, 0.15) !important;
+}
+
+@media (max-width: 991.98px) {
+    .rp-nav-dropdown {
+        border: none;
+        box-shadow: none;
+        background: rgba(0, 0, 0, 0.2);
+        margin-left: 8px;
+    }
+
+    .rp-brand-sub {
+        display: none;
+    }
+
+    .rp-nav-main .nav-item {
+        margin-bottom: 2px;
+    }
+}
+
 .menuUsuario {
     position: relative;
     left: 10px !important;
@@ -97,17 +400,17 @@
 
 .btnModificarConfiguracion-container {
     display: flex;
-    justify-content: center; /* Centra el bot漬 horizontalmente */
-    align-items: center; /* Centra el bot漬 verticalmente (si es necesario) */
-    width: 100%; /* Aseg漴ate de que el contenedor tome el ancho completo del modal */
+    justify-content: center; /* Centra el bot?n horizontalmente */
+    align-items: center; /* Centra el bot?n verticalmente (si es necesario) */
+    width: 100%; /* Aseg?rate de que el contenedor tome el ancho completo del modal */
     margin-bottom: 10px;
 }
 
 .btnAgregarConfiguracion-container {
     display: flex;
-    justify-content: right; /* Centra el bot漬 horizontalmente */
-    align-items: center; /* Centra el bot漬 verticalmente (si es necesario) */
-    width: 100%; /* Aseg漴ate de que el contenedor tome el ancho completo del modal */
+    justify-content: right; /* Centra el bot?n horizontalmente */
+    align-items: center; /* Centra el bot?n verticalmente (si es necesario) */
+    width: 100%; /* Aseg?rate de que el contenedor tome el ancho completo del modal */
     margin-bottom: 10px;
     margin-top: 30px;
 }
@@ -225,6 +528,14 @@
 
 #ModalEdicionConfiguraciones .modal-body {
     padding: 14px 18px 16px;
+}
+
+#ModalEdicionConfiguraciones .rp-config-secciones-search {
+    margin-bottom: 12px;
+}
+
+#ModalEdicionConfiguraciones .rp-config-secciones-empty {
+    margin-bottom: 10px;
 }
 
 #ModalEdicionConfiguraciones .modal-footer {
@@ -506,6 +817,74 @@
     font-size: 11px !important;
 }
 
+/* Preferencias de visualizaci贸n (listados) */
+#ModalEdicionConfiguraciones .rp-config-view-section {
+    margin-top: 18px;
+    padding-top: 18px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+#ModalEdicionConfiguraciones .rp-config-view-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+#ModalEdicionConfiguraciones .rp-config-view-head-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    font-size: 15px;
+    flex-shrink: 0;
+}
+
+#ModalEdicionConfiguraciones .rp-config-view-grid {
+    margin-top: 0;
+}
+
+#ModalEdicionConfiguraciones .rp-config-view-card {
+    position: relative;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.04);
+    color: #fff;
+    appearance: none;
+    -webkit-appearance: none;
+}
+
+#ModalEdicionConfiguraciones .rp-config-view-card:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.16);
+    transform: translateY(-2px);
+}
+
+#ModalEdicionConfiguraciones .rp-config-view-card.is-active {
+    border-color: rgba(52, 211, 153, 0.7);
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.18), rgba(255, 255, 255, 0.06));
+    box-shadow:
+        inset 0 0 0 1px rgba(52, 211, 153, 0.35),
+        0 8px 22px rgba(16, 185, 129, 0.12);
+}
+
+#ModalEdicionConfiguraciones .rp-config-view-card.is-active .rp-config-title {
+    color: #ecfdf5;
+}
+
+#ModalEdicionConfiguraciones .rp-config-view-card.is-active::after {
+    content: "\f00c";
+    font-family: FontAwesome;
+    position: absolute;
+    top: 8px;
+    right: 10px;
+    color: #6ee7b7;
+    font-size: 13px;
+}
+
+.rp-config-icon.teal {
+    background: linear-gradient(135deg, #2dd4bf, #14b8a6);
+    color: #fff;
+}
+
 
 
 .rp-modal-title {
@@ -519,7 +898,7 @@
 
 
 
-/* Si us漵 clase personalizada */
+/* Si us?s clase personalizada */
 .rp-input select,
 .rp-input option {
     color: #000 !important;
@@ -596,4 +975,174 @@
 
 .rp-search-input {
     padding-left: 38px !important;
+}
+
+/* =============================
+   CONTADOR DE SESI脫N
+============================= */
+
+.rp-session-timer {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.04);
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.85);
+    white-space: nowrap;
+}
+
+.rp-session-timer i {
+    opacity: 0.85;
+}
+
+.rp-session-timer-label {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    opacity: 0.7;
+}
+
+.rp-session-timer strong,
+#sessionCountdownText {
+    font-variant-numeric: tabular-nums;
+    font-size: 0.95rem;
+    letter-spacing: 0.03em;
+}
+
+.rp-session-timer.rp-session-warning {
+    border-color: rgba(251, 191, 36, 0.45);
+    background: rgba(251, 191, 36, 0.08);
+    color: #fde68a;
+}
+
+.rp-session-timer.rp-session-expired {
+    border-color: rgba(248, 113, 113, 0.45);
+    background: rgba(248, 113, 113, 0.1);
+    color: #fecaca;
+}
+
+@media (max-width: 768px) {
+    .rp-session-timer-label {
+        display: none;
+    }
+}
+
+/* Modal renovar sesi贸n (煤ltimos 5 min) */
+.rp-session-renew-modal .rp-session-renew-countdown {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 14px 28px;
+    border-radius: 14px;
+    border: 1px solid rgba(251, 191, 36, 0.35);
+    background: rgba(251, 191, 36, 0.08);
+}
+
+.rp-session-renew-countdown-label {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    opacity: 0.75;
+}
+
+#modalSessionPorExpirarCountdown {
+    font-size: 1.75rem;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.05em;
+    color: #fde68a;
+}
+
+#btnSessionRenovar .fa-refresh {
+    transition: transform 0.35s ease;
+}
+
+#btnSessionRenovar:not(:disabled):hover .fa-refresh {
+    transform: rotate(-180deg);
+}
+
+#btnSessionRenovar:disabled {
+    opacity: 0.65;
+    cursor: wait;
+}
+
+/* Modal renovar sesi贸n (煤ltimos 5 min) */
+.rp-session-renew-modal .rp-session-renew-countdown {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 14px 28px;
+    border-radius: 14px;
+    border: 1px solid rgba(251, 191, 36, 0.35);
+    background: rgba(251, 191, 36, 0.08);
+}
+
+.rp-session-renew-countdown-label {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    opacity: 0.75;
+}
+
+#modalSessionPorExpirarCountdown {
+    font-size: 1.75rem;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.05em;
+    color: #fde68a;
+}
+
+#btnSessionRenovar .fa-refresh {
+    transition: transform 0.35s ease;
+}
+
+#btnSessionRenovar:not(:disabled):hover .fa-refresh {
+    transform: rotate(-180deg);
+}
+
+#btnSessionRenovar:disabled {
+    opacity: 0.65;
+    cursor: wait;
+}
+
+/* Modal renovar sesi贸n (煤ltimos 5 min) */
+.rp-session-renew-modal .rp-session-renew-countdown {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 14px 28px;
+    border-radius: 14px;
+    border: 1px solid rgba(251, 191, 36, 0.35);
+    background: rgba(251, 191, 36, 0.08);
+}
+
+.rp-session-renew-countdown-label {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    opacity: 0.75;
+}
+
+#modalSessionPorExpirarCountdown {
+    font-size: 1.75rem;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.05em;
+    color: #fde68a;
+}
+
+#btnSessionRenovar .fa-refresh {
+    transition: transform 0.35s ease;
+}
+
+#btnSessionRenovar:not(:disabled):hover .fa-refresh {
+    transform: rotate(-180deg);
+}
+
+#btnSessionRenovar:disabled {
+    opacity: 0.65;
+    cursor: wait;
 }

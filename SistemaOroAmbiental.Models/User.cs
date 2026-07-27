@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace SistemaOroAmbiental.Models;
@@ -30,6 +30,8 @@ public partial class User
     public string? Correo { get; set; }
 
     public string? CodigoRecuperacion { get; set; }
+
+    public bool Activo { get; set; } = true;
 
     public virtual ICollection<CajasMovimiento> CajasMovimientoIdUsuarioModificaNavigations { get; set; } = new List<CajasMovimiento>();
 
@@ -107,13 +109,17 @@ public partial class User
 
     public virtual ICollection<Gasto> GastoIdUsuarioRegistraNavigations { get; set; } = new List<Gasto>();
 
-    public virtual EstadosUsuario IdEstadoNavigation { get; set; } = null!;
+    public virtual UsuariosEstado IdEstadoNavigation { get; set; } = null!;
 
-    public virtual Rol IdRolNavigation { get; set; } = null!;
+    public virtual UsuariosRol IdRolNavigation { get; set; } = null!;
 
     public virtual ICollection<InventarioMovimiento> InventarioMovimientoIdUsuarioModificaNavigations { get; set; } = new List<InventarioMovimiento>();
 
     public virtual ICollection<InventarioMovimiento> InventarioMovimientoIdUsuarioRegistraNavigations { get; set; } = new List<InventarioMovimiento>();
+
+    public virtual ICollection<InventarioRecuperadoMovimiento> InventarioRecuperadoMovimientoIdUsuarioModificaNavigations { get; set; } = new List<InventarioRecuperadoMovimiento>();
+
+    public virtual ICollection<InventarioRecuperadoMovimiento> InventarioRecuperadoMovimientoIdUsuarioRegistraNavigations { get; set; } = new List<InventarioRecuperadoMovimiento>();
 
     public virtual ICollection<ListasPrecio> ListasPrecioIdUsuarioModificaNavigations { get; set; } = new List<ListasPrecio>();
 
@@ -130,6 +136,10 @@ public partial class User
     public virtual ICollection<Proveedore> ProveedoreIdUsuarioModificaNavigations { get; set; } = new List<Proveedore>();
 
     public virtual ICollection<Proveedore> ProveedoreIdUsuarioRegistraNavigations { get; set; } = new List<Proveedore>();
+
+    public virtual ICollection<ProveedoresContacto> ProveedoresContactoIdUsuarioModificaNavigations { get; set; } = new List<ProveedoresContacto>();
+
+    public virtual ICollection<ProveedoresContacto> ProveedoresContactoIdUsuarioRegistraNavigations { get; set; } = new List<ProveedoresContacto>();
 
     public virtual ICollection<ProveedoresCuentaCorrienteMovimiento> ProveedoresCuentaCorrienteMovimientoIdUsuarioModificaNavigations { get; set; } = new List<ProveedoresCuentaCorrienteMovimiento>();
 

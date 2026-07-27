@@ -1,0 +1,404 @@
+@{
+
+    Layout = "_LayoutModulo";
+
+    ViewData["Title"] = "Productos recuperados";
+
+}
+
+
+
+@section Estilos {
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" />
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+
+    <link href="~/css/disenopantallas.css?v=5.1" rel="stylesheet" />
+
+    <link href="~/css/Ventas.css?v=5.1" rel="stylesheet" />
+
+    <link href="~/css/ProductosRecuperados.css?v=5.1" rel="stylesheet" />
+
+}
+
+
+
+<div class="container-fluid mt-4 ventas-index pr-recuperados-index">
+
+
+
+    <div class="vi-header cc-header shadow-lg rounded-4 p-3 mb-3">
+
+        <div class="d-flex align-items-center gap-3 flex-wrap">
+
+            <span class="cc-badge"><i class="fa fa-recycle"></i></span>
+
+            <div>
+
+                <h2 class="m-0 fw-800">Productos recuperados</h2>
+
+            </div>
+
+            <div class="ms-auto d-flex gap-2 flex-wrap">
+
+                <button id="btnNuevoRecuperado" class="btn btn-success vi-btn" type="button">
+
+                    <i class="fa fa-plus me-2"></i> Registrar recupero
+
+                </button>
+
+                <button id="btnRefreshRecuperados" class="btn btn-outline-light vi-btn" type="button">
+
+                    <i class="fa fa-refresh me-2"></i> Actualizar
+
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+
+    <div class="cc-card mb-3">
+
+        <div class="cc-card-body p-0">
+
+            <div class="rp-filtros-wrap mb-0">
+
+                <div class="rp-filtros-head"
+
+                     data-bs-toggle="collapse"
+
+                     data-bs-target="#panelFiltrosRecuperados"
+
+                     aria-expanded="true"
+
+                     aria-controls="panelFiltrosRecuperados">
+
+                    <div class="title">
+
+                        <i class="fa fa-filter"></i>
+
+                        <span>Filtros</span>
+
+                    </div>
+
+                    <i class="fa fa-chevron-down chev"></i>
+
+                </div>
+
+                <div id="panelFiltrosRecuperados" class="collapse show">
+
+                    <div class="rp-filtros-body">
+
+                        <div class="row g-3">
+
+                            <div class="col-md-3">
+
+                                <div class="rp-filter-label">Sucursal</div>
+
+                                <select id="fSucursalRec" class="rp-filter-select select2" style="width:100%"></select>
+
+                            </div>
+
+                            <div class="col-md-2">
+
+                                <div class="rp-filter-label">Fecha desde</div>
+
+                                <input type="date" id="fDesdeRec" class="rp-filter-input" />
+
+                            </div>
+
+                            <div class="col-md-2">
+
+                                <div class="rp-filter-label">Fecha hasta</div>
+
+                                <input type="date" id="fHastaRec" class="rp-filter-input" />
+
+                            </div>
+
+                            <div class="col-md-3">
+
+                                <div class="rp-filter-label">Buscar</div>
+
+                                <input type="text" id="fTextoRec" class="rp-filter-input" placeholder="Producto o concepto..." />
+
+                            </div>
+
+                            <div class="col-md-2">
+
+                                <div class="rp-filter-label">Origen</div>
+
+                                <select id="fOrigenRec" class="rp-filter-select" style="width:100%">
+
+                                    <option value="">Todos</option>
+
+                                    <option value="Entrega">Entrega</option>
+
+                                    <option value="Manual">Manual</option>
+
+                                </select>
+
+                            </div>
+
+                        </div>
+
+                        <div class="rp-filtros-actions mt-3">
+
+                            <button class="btn btn-outline-light vi-btn" type="button" id="btnLimpiarRec">
+
+                                <i class="fa fa-eraser"></i> Limpiar
+
+                            </button>
+
+                            <button class="btn btn-primary vi-btn" type="button" id="btnFiltrarRec">
+
+                                <i class="fa fa-check"></i> Aplicar
+
+                            </button>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+
+    <div class="vi-kpis mb-3">
+
+        <div class="vi-kpiCard pr-kpi-rec">
+
+            <div class="lbl"><i class="fa fa-recycle me-1"></i> Total recuperado</div>
+
+            <div class="val" id="kpiTotalRecuperado">0</div>
+
+            <div class="sub">En el período filtrado</div>
+
+        </div>
+
+        <div class="vi-kpiCard pr-kpi-rec">
+
+            <div class="lbl"><i class="fa fa-exchange me-1"></i> Movimientos</div>
+
+            <div class="val" id="kpiMovimientosRec">0</div>
+
+            <div class="sub">Registros en historial</div>
+
+        </div>
+
+        <div class="vi-kpiCard pr-kpi-rec">
+
+            <div class="lbl"><i class="fa fa-cubes me-1"></i> Productos</div>
+
+            <div class="val" id="kpiProductosRec">0</div>
+
+            <div class="sub">Distintos en período</div>
+
+        </div>
+
+        <div class="vi-kpiCard pr-kpi-rec pr-kpi-stock">
+
+            <div class="lbl"><i class="fa fa-archive me-1"></i> Stock actual</div>
+
+            <div class="val" id="kpiStockActualRec">0</div>
+
+            <div class="sub">Unidades recuperadas hoy</div>
+
+        </div>
+
+    </div>
+
+
+
+    <div class="vi-card mb-3">
+
+        <div class="vi-card-head">
+
+            <div class="t"><i class="fa fa-cubes"></i> Stock recuperado actual</div>
+
+            <div class="vi-kpi"><span id="badgeStockRec">0</span></div>
+
+        </div>
+
+        <div class="vi-card-body">
+
+            <div id="stockRecuperadoGrid" class="pr-stock-grid"></div>
+
+        </div>
+
+    </div>
+
+
+
+    <div class="cc-card mb-3 pr-rec-acc-wrap">
+        <div class="cc-card-body p-0">
+            <div class="accordion rp-acc pr-rec-acc" id="accordionRecuperadosDetalle">
+
+                <div class="accordion-item">
+                    <h2 class="accordion-header" id="headMasRecuperados">
+                        <button class="accordion-button collapsed" type="button"
+                                data-bs-toggle="collapse" data-bs-target="#bodyMasRecuperados"
+                                aria-expanded="false" aria-controls="bodyMasRecuperados">
+                            <i class="fa fa-arrow-up text-success me-2"></i>
+                            Más recuperados
+                            <span class="pr-acc-badge ms-2" id="badgeMasRec">0</span>
+                        </button>
+                    </h2>
+                    <div id="bodyMasRecuperados" class="accordion-collapse collapse"
+                         aria-labelledby="headMasRecuperados">
+                        <div class="accordion-body">
+                            <div id="listaMasRecuperados" class="pr-rank-list"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="accordion-item">
+                    <h2 class="accordion-header" id="headMenosRecuperados">
+                        <button class="accordion-button collapsed" type="button"
+                                data-bs-toggle="collapse" data-bs-target="#bodyMenosRecuperados"
+                                aria-expanded="false" aria-controls="bodyMenosRecuperados">
+                            <i class="fa fa-arrow-down text-warning me-2"></i>
+                            Menos recuperados
+                            <span class="pr-acc-badge ms-2" id="badgeMenosRec">0</span>
+                        </button>
+                    </h2>
+                    <div id="bodyMenosRecuperados" class="accordion-collapse collapse"
+                         aria-labelledby="headMenosRecuperados">
+                        <div class="accordion-body">
+                            <div id="listaMenosRecuperados" class="pr-rank-list"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="accordion-item">
+                    <h2 class="accordion-header" id="headHistorialRec">
+                        <button class="accordion-button" type="button"
+                                data-bs-toggle="collapse" data-bs-target="#bodyHistorialRec"
+                                aria-expanded="true" aria-controls="bodyHistorialRec">
+                            <i class="fa fa-history me-2"></i>
+                            Historial de recuperaciones
+                            <span class="pr-acc-badge ms-2" id="badgeHistorialRec">0</span>
+                        </button>
+                    </h2>
+                    <div id="bodyHistorialRec" class="accordion-collapse collapse show"
+                         aria-labelledby="headHistorialRec">
+                        <div class="accordion-body">
+                            <div class="vi-search mb-3">
+                                <i class="fa fa-search"></i>
+                                <input type="text" id="txtBuscarHistorialRec" class="form-control vi-input"
+                                       placeholder="Buscar en el listado (producto, cliente, concepto)..." />
+                            </div>
+                            <div id="listaHistorialRec" class="vi-salesList pr-historial-list"></div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+</div>
+
+
+
+<div class="modal fade" id="modalRecuperadoManual" tabindex="-1" data-bs-backdrop="static">
+
+    <div class="modal-dialog modal-dialog-centered">
+
+        <div class="modal-content rp-modal-shell">
+
+            <div class="modal-header colorEncabezado">
+
+                <h5 class="modal-title">Registrar recupero manual</h5>
+
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+
+            </div>
+
+            <div class="modal-body">
+
+                <div class="row g-3">
+
+                    <div class="col-12">
+
+                        <label class="form-label">Sucursal</label>
+
+                        <select id="mSucursalRec" class="form-select"></select>
+
+                    </div>
+
+                    <div class="col-12">
+
+                        <label class="form-label">Producto</label>
+
+                        <select id="mProductoRec" class="form-select"></select>
+
+                    </div>
+
+                    <div class="col-md-6">
+
+                        <label class="form-label">Cantidad</label>
+
+                        <input type="text" id="mCantidadRec" class="form-control Inputmiles" />
+
+                    </div>
+
+                    <div class="col-md-6">
+
+                        <label class="form-label">Fecha</label>
+
+                        <input type="date" id="mFechaRec" class="form-control" />
+
+                    </div>
+
+                    <div class="col-12">
+
+                        <label class="form-label">Concepto</label>
+
+                        <input type="text" id="mConceptoRec" class="form-control" placeholder="Opcional" />
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div class="modal-footer">
+
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+
+                <button type="button" class="btn btn-success" id="btnGuardarRecuperadoManual">
+
+                    <i class="fa fa-check"></i> Guardar
+
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+@section Scripts {
+
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+    <script src="~/js/ProductosRecuperados.js?v=5.1"></script>
+
+}
+
+

@@ -1,4 +1,4 @@
-﻿
+
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.6.33815.320
@@ -10,6 +10,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SistemaOroAmbiental.DAL", "SistemaOroAmbiental.DAL\SistemaOroAmbiental.DAL.csproj", "{56A77583-2171-D65B-0EED-567870BC268F}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SistemaOroAmbiental.Models", "SistemaOroAmbiental.Models\SistemaOroAmbiental.Models.csproj", "{AD34D6E1-4F73-960F-8587-146371F114B1}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SistemaOroAmbiental.DataBaseScripts", "SistemaOroAmbiental.DataBaseScripts\SistemaOroAmbiental.DataBaseScripts.csproj", "{B8E2F4A1-3C5D-4E7F-9A1B-2D3C4E5F6A7B}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -33,6 +35,10 @@ Global
 		{AD34D6E1-4F73-960F-8587-146371F114B1}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{AD34D6E1-4F73-960F-8587-146371F114B1}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{AD34D6E1-4F73-960F-8587-146371F114B1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B8E2F4A1-3C5D-4E7F-9A1B-2D3C4E5F6A7B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B8E2F4A1-3C5D-4E7F-9A1B-2D3C4E5F6A7B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B8E2F4A1-3C5D-4E7F-9A1B-2D3C4E5F6A7B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B8E2F4A1-3C5D-4E7F-9A1B-2D3C4E5F6A7B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

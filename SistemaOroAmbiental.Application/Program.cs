@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using SistemaOroAmbiental.Application.Configuration;
 using SistemaOroAmbiental.BLL.Service;
 using SistemaOroAmbiental.DAL.DataContext;
 using SistemaOroAmbiental.DAL.Repository;
@@ -9,6 +10,8 @@ using SistemaOroAmbiental.Models;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
+
+Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
 
 builder.Services.AddControllersWithViews()
     .AddJsonOptions(o =>
@@ -24,9 +27,14 @@ builder.Services.AddDbContext<SistemaOroAmbientalContext>(options =>
 
 builder.Services.AddScoped(typeof(IConfiguracionNombreRepository<>), typeof(ConfiguracionNombreRepository<>));
 builder.Services.AddScoped(typeof(IConfiguracionNombreService<>), typeof(ConfiguracionNombreService<>));
+builder.Services.AddScoped<IDeleteConflictChecker, DeleteConflictChecker>();
+builder.Services.AddScoped<IEntidadCascadeRepository, EntidadCascadeRepository>();
 
 builder.Services.AddScoped<IUsuariosRepository<User>, UsuariosRepository>();
 builder.Services.AddScoped<IUsuariosService, UsuariosService>();
+
+builder.Services.AddScoped<IUsuariosSucursalesRepository, UsuariosSucursalesRepository>();
+builder.Services.AddScoped<IUsuariosSucursalesService, UsuariosSucursalesService>();
 
 builder.Services.AddScoped<ILoginRepository<User>, LoginRepository>();
 builder.Services.AddScoped<ILoginService, LoginService>();
@@ -34,11 +42,23 @@ builder.Services.AddScoped<ILoginService, LoginService>();
 builder.Services.AddScoped<IUsuariosPermisosRepository, UsuariosPermisosRepository>();
 builder.Services.AddScoped<IUsuariosPermisosService, UsuariosPermisosService>();
 
-builder.Services.AddScoped<IRolesRepository<UsuariosRol>, RolesRepository>();
-builder.Services.AddScoped<IRolesService, RolesService>();
-
 builder.Services.AddScoped<IClientesRepository, ClientesRepository>();
 builder.Services.AddScoped<IClientesService, ClientesService>();
+
+builder.Services.AddScoped<IClientesOperativoRepository, ClientesOperativoRepository>();
+builder.Services.AddScoped<IClientesOperativoService, ClientesOperativoService>();
+
+builder.Services.AddScoped<IClientesContactosRepository, ClientesContactosRepository>();
+builder.Services.AddScoped<IClientesContactosService, ClientesContactosService>();
+
+builder.Services.AddScoped<IClientesEstablecimientosRepository, ClientesEstablecimientosRepository>();
+builder.Services.AddScoped<IClientesEstablecimientosService, ClientesEstablecimientosService>();
+
+builder.Services.AddScoped<IClientesEstablecimientosContactosRepository, ClientesEstablecimientosContactosRepository>();
+builder.Services.AddScoped<IClientesEstablecimientosContactosService, ClientesEstablecimientosContactosService>();
+
+builder.Services.AddScoped<IClientesEstablecimientosProductosRepository, ClientesEstablecimientosProductosRepository>();
+builder.Services.AddScoped<IClientesEstablecimientosProductosService, ClientesEstablecimientosProductosService>();
 
 builder.Services.AddScoped<IClientesProfesionesRepository, ClientesProfesionesRepository>();
 builder.Services.AddScoped<IClientesProfesionesService, ClientesProfesionesService>();
@@ -55,14 +75,20 @@ builder.Services.AddScoped<IDiasService, DiasService>();
 builder.Services.AddScoped<IEntregasEstadosRepository, EntregasEstadosRepository>();
 builder.Services.AddScoped<IEntregasEstadosService, EntregasEstadosService>();
 
-builder.Services.AddScoped<IEstadosUsuariosRepository, EstadosUsuariosRepository>();
-builder.Services.AddScoped<IEstadosUsuariosService, EstadosUsuariosService>();
+builder.Services.AddScoped<IUsuariosEstadosRepository, UsuariosEstadosRepository>();
+builder.Services.AddScoped<IUsuariosEstadosService, UsuariosEstadosService>();
 
 builder.Services.AddScoped<IProductosCategoriasRepository, ProductosCategoriasRepository>();
 builder.Services.AddScoped<IProductosCategoriasService, ProductosCategoriasService>();
 
 builder.Services.AddScoped<IProvinciasRepository, ProvinciasRepository>();
 builder.Services.AddScoped<IProvinciasService, ProvinciasService>();
+
+builder.Services.AddScoped<IPartidosRepository, PartidosRepository>();
+builder.Services.AddScoped<IPartidosService, PartidosService>();
+
+builder.Services.AddScoped<ILocalidadesRepository, LocalidadesRepository>();
+builder.Services.AddScoped<ILocalidadesService, LocalidadesService>();
 
 builder.Services.AddScoped<ICondicionesIvaRepository, CondicionesIvaRepository>();
 builder.Services.AddScoped<ICondicionesIvaService, CondicionesIvaService>();
@@ -75,9 +101,6 @@ builder.Services.AddScoped<IUnidadesMedidaService, UnidadesMedidaService>();
 
 builder.Services.AddScoped<IUsuariosRolesRepository, UsuariosRolesRepository>();
 builder.Services.AddScoped<IUsuariosRolesService, UsuariosRolesService>();
-
-builder.Services.AddScoped<IRolRepository, RolRepository>();
-builder.Services.AddScoped<IRolService, RolService>();
 
 builder.Services.AddScoped<IGastosCategoriasRepository, GastosCategoriasRepository>();
 builder.Services.AddScoped<IGastosCategoriasService, GastosCategoriasService>();
@@ -97,6 +120,63 @@ builder.Services.AddScoped<IProductosPreciosService, ProductosPreciosService>();
 builder.Services.AddScoped<IProductosRepository, ProductosRepository>();
 builder.Services.AddScoped<IProductosService, ProductosService>();
 
+builder.Services.AddScoped<ICamionesRepository, CamionesRepository>();
+builder.Services.AddScoped<ICamionesService, CamionesService>();
+
+builder.Services.AddScoped<IRecorridosRepository, RecorridosRepository>();
+builder.Services.AddScoped<IRecorridosService, RecorridosService>();
+
+builder.Services.AddScoped<IProveedoresRepository, ProveedoresRepository>();
+builder.Services.AddScoped<IProveedoresService, ProveedoresService>();
+
+builder.Services.AddScoped<IProveedoresContactosRepository, ProveedoresContactosRepository>();
+builder.Services.AddScoped<IProveedoresContactosService, ProveedoresContactosService>();
+
+builder.Services.AddScoped<ICajasRepository, CajasRepository>();
+builder.Services.AddScoped<ICajasService, CajasService>();
+
+builder.Services.AddScoped<IClientesCuentaCorrienteRepository, ClientesCuentaCorrienteRepository>();
+builder.Services.AddScoped<IClientesCuentaCorrienteService, ClientesCuentaCorrienteService>();
+
+builder.Services.AddScoped<IProveedoresCuentaCorrienteRepository, ProveedoresCuentaCorrienteRepository>();
+builder.Services.AddScoped<IProveedoresCuentaCorrienteService, ProveedoresCuentaCorrienteService>();
+
+builder.Services.AddScoped<IInventarioRepository, InventarioRepository>();
+builder.Services.AddScoped<IInventarioService, InventarioService>();
+
+builder.Services.AddScoped<IComprasRepository, ComprasRepository>();
+builder.Services.AddScoped<IComprasService, ComprasService>();
+
+builder.Services.AddScoped<IContratosRepository, ContratosRepository>();
+builder.Services.AddScoped<IContratosService, ContratosService>();
+
+builder.Services.AddScoped<IContratosRenovacionesRepository, ContratosRenovacionesRepository>();
+builder.Services.AddScoped<IContratosRenovacionesService, ContratosRenovacionesService>();
+
+builder.Services.AddScoped<IContratosDocumentosRepository, ContratosDocumentosRepository>();
+
+builder.Services.AddScoped<IClientesEntregasRepository, ClientesEntregasRepository>();
+builder.Services.AddScoped<IClientesEntregasService, ClientesEntregasService>();
+
+builder.Services.AddScoped<IInventarioRecuperadoRepository, InventarioRecuperadoRepository>();
+builder.Services.AddScoped<IProductosRecuperadosRepository, ProductosRecuperadosRepository>();
+builder.Services.AddScoped<IProductosRecuperadosService, ProductosRecuperadosService>();
+
+builder.Services.AddScoped<IGastosRepository, GastosRepository>();
+builder.Services.AddScoped<IGastosService, GastosService>();
+
+builder.Services.AddScoped<ILibroDiarioRepository, LibroDiarioRepository>();
+builder.Services.AddScoped<ILibroDiarioService, LibroDiarioService>();
+
+var sessionSettings = new SessionSettings();
+builder.Configuration.GetSection("SessionSettings").Bind(sessionSettings);
+if (sessionSettings.GetDuration() <= TimeSpan.Zero)
+{
+    throw new InvalidOperationException(
+        "Configure SessionSettings:DurationHours y/o SessionSettings:DurationMinutes en appsettings.json");
+}
+builder.Services.AddSingleton(sessionSettings);
+
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
@@ -109,7 +189,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidIssuer = builder.Configuration["JwtSettings:Issuer"],
             ValidAudience = builder.Configuration["JwtSettings:Audience"],
             IssuerSigningKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(builder.Configuration["JwtSettings:SecretKey"]!))
+                Encoding.UTF8.GetBytes(builder.Configuration["JwtSettings:SecretKey"]!)),
+            ClockSkew = TimeSpan.FromSeconds(30)
         };
     });
 
@@ -131,6 +212,18 @@ if (!app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
+
+app.Use(async (context, next) =>
+{
+    await next();
+    var ct = context.Response.ContentType;
+    if (!string.IsNullOrEmpty(ct)
+        && ct.StartsWith("text/html", StringComparison.OrdinalIgnoreCase)
+        && !ct.Contains("charset", StringComparison.OrdinalIgnoreCase))
+    {
+        context.Response.ContentType = ct + "; charset=utf-8";
+    }
+});
 
 app.UseRouting();
 
