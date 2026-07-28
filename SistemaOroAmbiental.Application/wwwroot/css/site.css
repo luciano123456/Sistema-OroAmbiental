@@ -115,27 +115,20 @@ table {
     align-items: center;
     position: relative;
     z-index: 1;
-}
-
-.imageLogo {
-    height: 80%;
-}
-
-/* Layout módulos (_LayoutModulo) — logo + aire entre navbar y contenido */
-body.layout-modulo .layout-modulo-logo {
-    margin-top: 0.35rem;
-    margin-bottom: 0.15rem;
-}
-
-body.layout-modulo .layout-modulo-logo .divLogo {
     padding: 0.35rem 0 0.5rem;
 }
 
-body.layout-modulo .layout-modulo-logo .imageLogo {
-    max-height: 72px;
+.imageLogo {
+    max-height: clamp(96px, 11vw, 150px);
     width: auto;
     height: auto;
     object-fit: contain;
+}
+
+/* Layout modulos (_LayoutModulo) — aire entre navbar y contenido */
+body.layout-modulo .layout-modulo-logo {
+    margin-top: 0.35rem;
+    margin-bottom: 0.15rem;
 }
 
 body.layout-modulo .layout-modulo-content {

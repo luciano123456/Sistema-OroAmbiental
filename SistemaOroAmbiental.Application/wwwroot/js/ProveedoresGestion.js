@@ -14,7 +14,10 @@ const PG = {
     sucursales: [],
     cuentas: [],
     modalPago: null,
-    modalAjuste: null
+    modalAjuste: null,
+    controlFiltros: { anios: [], meses: [] },
+    controlFiltrado: null,
+    modalControlMensual: null
 };
 
 const API_PG = {
@@ -41,14 +44,22 @@ const API_PG = {
         let url = `/Compras/NuevoModif?id=${id || 0}`;
         if (idProveedor) url += `&idProveedor=${idProveedor}`;
         return url;
-    }
+    },
+    controlMensual: (id, anios, meses) => {
+        const p = new URLSearchParams({ idProveedor: String(id) });
+        if (anios?.length) p.set("anios", anios.join(","));
+        if (meses?.length) p.set("meses", meses.join(","));
+        return `/ProveedoresOperativo/ControlMensual?${p.toString()}`;
+    },
+    guardarControlMensual: "/ProveedoresOperativo/GuardarControlMensual"
 };
 
 const PG_TAB_LABELS = {
     contactos: "Contactos",
     cuentaCorriente: "Cuenta corriente",
     compras: "Compras",
-    pagos: "Pagos"
+    pagos: "Pagos",
+    controlMensual: "Control mensual"
 };
 
 const PG_CARD_SCHEMAS = {
@@ -111,6 +122,7 @@ $(document).ready(async () => {
     initModalesPg();
     initViewModePg();
     initFechasCcPg();
+    initControlMensualPg();
 
     await cargarCombosDatosPg();
 
@@ -266,13 +278,18 @@ async function cargarSucursalesPg() {
     filtrarCuentasPorSucursalPg();
 }
 
+function cuentasPorSucursalPg(idSucursal) {
+    if (!idSucursal) return PG.cuentas || [];
+    return (PG.cuentas || []).filter(x => String(x.IdCombo ?? x.IdSucursal) === String(idSucursal));
+}
+
 function filtrarCuentasPorSucursalPg() {
     const idSuc = parseInt($("#pgPagoSucursal").val(), 10) || 0;
     const $c = $("#pgPagoCuenta").empty().append(new Option("Seleccionar", ""));
-    (PG.cuentas || []).filter(x => !idSuc || x.IdSucursal === idSuc).forEach(x => {
+    cuentasPorSucursalPg(idSuc).forEach(x => {
         $c.append(new Option(x.Nombre, x.Id));
     });
-    ensureSelect2Pg($c, { placeholder: "Seleccionar" });
+    ensureSelect2Pg($c, { placeholder: "Seleccionar", dropdownParent: $("#modalPagoPg") });
 }
 
 async function cargarProveedorPg(id) {
@@ -319,7 +336,7 @@ function actualizarEnlacesAccionPg() {
 }
 
 function habilitarTabsRelacionadosPg(habilitar) {
-    ["contactos", "cuentaCorriente", "compras", "pagos"].forEach(t => {
+    ["contactos", "cuentaCorriente", "compras", "pagos", "controlMensual"].forEach(t => {
         $(`button[data-pg-tab="${t}"]`).prop("disabled", !habilitar);
     });
 }
@@ -438,7 +455,7 @@ function cerrarErrorPg() {
 
 async function cargarTabPg(tab) {
     if (PG.id <= 0) return;
-    if (PG.tabsLoaded[tab] && tab !== "cuentaCorriente" && tab !== "compras") return;
+    if (PG.tabsLoaded[tab] && tab !== "cuentaCorriente" && tab !== "compras" && tab !== "controlMensual") return;
 
     try {
         switch (tab) {
@@ -446,6 +463,7 @@ async function cargarTabPg(tab) {
             case "cuentaCorriente": await cargarTabCuentaCorriente(); break;
             case "compras": await cargarTabCompras(); break;
             case "pagos": await cargarTabPagos(); break;
+            case "controlMensual": await cargarTabControlMensualPg(true); break;
         }
     } catch (e) {
         console.error(`Error cargando tab ${tab}:`, e);

@@ -110,6 +110,20 @@ body.hr-page {
     border-bottom: 0;
 }
 
+.hr-meta-item--salida {
+    justify-content: center;
+}
+
+.hr-meta-salida {
+    font-size: 0.82rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    color: #111;
+    line-height: 1.25;
+    white-space: nowrap;
+}
+
 .hr-meta-label {
     font-size: 0.72rem;
     text-transform: uppercase;

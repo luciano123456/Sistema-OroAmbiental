@@ -130,11 +130,11 @@ function initModalesCg() {
             },
             onSaved: async () => {
                 CG.tabsLoaded.establecimientos = false;
-                if ($("#tabEstablecimientos").hasClass("active")) await cargarTabEstablecimientos();
+                await cargarTabEstablecimientos();
             },
             onDeleted: async () => {
                 CG.tabsLoaded.establecimientos = false;
-                if ($("#tabEstablecimientos").hasClass("active")) await cargarTabEstablecimientos();
+                await cargarTabEstablecimientos();
             }
         });
     }
@@ -819,7 +819,10 @@ async function cargarTabEstablecimientos() {
     const all = await fetchJsonCg(API_CG.establecimientosLista, { headers: authCg() }) || [];
     const data = all.filter(x => x.IdCliente === CG.id);
     configurarGrillaCg("establecimientos", "#grd_EstablecimientosCg", data, [
-        columnaGridAcciones({ editar: "editarEstablecimientoCg" }, "Establecimientos"),
+        columnaGridAcciones({
+            editar: "editarEstablecimientoCg",
+            eliminar: "eliminarEstablecimientoCg"
+        }, "Establecimientos"),
         columnaGridId(),
         { data: "Nombre" },
         { data: "Domicilio" },
@@ -836,6 +839,11 @@ function editarEstablecimientoCg(id) {
     if (CG.establecimientoModal) CG.establecimientoModal.abrirEditar(id);
 }
 window.editarEstablecimientoCg = editarEstablecimientoCg;
+
+async function eliminarEstablecimientoCg(id) {
+    if (CG.establecimientoModal) await CG.establecimientoModal.eliminar(id);
+}
+window.eliminarEstablecimientoCg = eliminarEstablecimientoCg;
 
 async function abrirNuevoEstablecimientoCg() {
     if (!CG.establecimientoModal) return;
@@ -1405,7 +1413,9 @@ const CG_CARD_SCHEMAS = {
             { label: "Semana", value: r => r.SemanaRecoleccion },
             { label: "Lista precio", value: r => r.ListaPrecio, full: true }
         ],
-        actions: r => `<button type="button" class="cg-card-btn" onclick="editarEstablecimientoCg(${r.Id})"><i class="fa fa-pencil"></i> Editar</button>`
+        actions: r => `
+            <button type="button" class="cg-card-btn" onclick="editarEstablecimientoCg(${r.Id})"><i class="fa fa-pencil"></i> Editar</button>
+            <button type="button" class="cg-card-btn cg-card-btn--danger" onclick="eliminarEstablecimientoCg(${r.Id})"><i class="fa fa-trash"></i> Eliminar</button>`
     },
     contratos: {
         title: r => r.Establecimiento || "Contrato",

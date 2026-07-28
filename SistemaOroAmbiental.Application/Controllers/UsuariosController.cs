@@ -30,28 +30,77 @@ namespace SistemaOroAmbiental.Application.Controllers
         }
 
 
-        public async Task<IActionResult> Configuracion()
+        [AllowAnonymous]
+        public IActionResult Configuracion()
         {
-            // Obtener el usuario actual desde la sesión usando el helper inyectado
-            var userSession = await SessionHelper.GetUsuarioSesion(HttpContext);
+            return View();
+        }
 
-            // Si no se pudo obtener el usuario de la sesión
-            if (userSession == null)
-            {
-                return RedirectToAction("Login", "Index");
-            }
+        [HttpGet]
+        public async Task<IActionResult> MiPerfil()
+        {
+            if (!int.TryParse(User.FindFirst("Id")?.Value, out var userId))
+                return Unauthorized();
 
-            // Obtener los detalles del usuario desde la base de datos
-            var user = await _Usuarioservice.Obtener(userSession.Id);
-
-            // Si el usuario no existe, redirigir al login
+            var user = await _Usuarioservice.Obtener(userId);
             if (user == null)
-            {
-                return RedirectToAction("Login", "Index");
-            }
+                return NotFound();
 
-            // Pasar los datos del usuario a la vista
-            return View(user);
+            return Ok(new
+            {
+                user.Id,
+                user.Usuario,
+                user.Nombre,
+                user.Apellido,
+                user.Dni,
+                user.Telefono,
+                user.Direccion,
+                user.Correo
+            });
+        }
+
+        [HttpPut]
+        public async Task<IActionResult> ActualizarPerfil([FromBody] VMUserPerfil model)
+        {
+            if (!int.TryParse(User.FindFirst("Id")?.Value, out var userId))
+                return Unauthorized();
+
+            if (model.Id != userId)
+                return Ok(new { valor = "Error", mensaje = "No puede modificar otro usuario." });
+
+            if (string.IsNullOrWhiteSpace(model.Nombre) || string.IsNullOrWhiteSpace(model.Apellido))
+                return Ok(new { valor = "Validacion", mensaje = "Nombre y apellido son obligatorios." });
+
+            var userbase = await _Usuarioservice.Obtener(userId);
+            if (userbase == null)
+                return NotFound();
+
+            var passwordHasher = new PasswordHasher<User>();
+            var verify = passwordHasher.VerifyHashedPassword(null, userbase.Contrasena, model.Contrasena ?? "");
+            if (verify != PasswordVerificationResult.Success)
+                return Ok(new { valor = "Contrasena" });
+
+            userbase.Nombre = model.Nombre.Trim();
+            userbase.Apellido = model.Apellido.Trim();
+            userbase.Dni = string.IsNullOrWhiteSpace(model.Dni) ? null : model.Dni.Trim();
+            userbase.Telefono = string.IsNullOrWhiteSpace(model.Telefono) ? "" : model.Telefono.Trim();
+            userbase.Direccion = string.IsNullOrWhiteSpace(model.Direccion) ? "" : model.Direccion.Trim();
+            userbase.Correo = string.IsNullOrWhiteSpace(model.Correo) ? null : model.Correo.Trim();
+
+            if (!string.IsNullOrWhiteSpace(model.ContrasenaNueva))
+                userbase.Contrasena = passwordHasher.HashPassword(null, model.ContrasenaNueva);
+
+            var ok = await _Usuarioservice.Actualizar(userbase);
+            if (!ok)
+                return Ok(new { valor = "Error" });
+
+            return Ok(new
+            {
+                valor = "OK",
+                userbase.Nombre,
+                userbase.Apellido,
+                userbase.Correo
+            });
         }
 
         [HttpGet]

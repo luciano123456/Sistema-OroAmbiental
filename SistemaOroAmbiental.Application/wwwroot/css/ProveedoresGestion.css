@@ -73,3 +73,15 @@
 .pg-page.cg-mode-cards .cg-cards-grid {
     display: grid;
 }
+
+.pg-page .pg-cm-card {
+    border-color: rgba(129, 140, 248, 0.22) !important;
+}
+
+.pg-page .pg-cm-card.is-warn {
+    border-color: rgba(251, 191, 36, 0.35) !important;
+}
+
+.pg-page .cg-cm-kpis {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+}

@@ -1,0 +1,19 @@
+/* Subnav unificado: Catalogo | Inventario | Stock e historial */
+.ph-hub-card {
+    overflow: hidden;
+}
+
+.ph-hub-tabs-shell {
+    padding: 0.35rem 0.75rem 0;
+}
+
+.ph-hub-tabs .nav-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    text-decoration: none;
+}
+
+.ph-hub-tabs .nav-link i {
+    opacity: 0.85;
+}

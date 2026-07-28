@@ -1,5 +1,5 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
-<link href="~/css/NavBarLogin.css?v=5.2" rel="stylesheet" />
+<link href="~/css/NavBarLogin.css?v=5.4" rel="stylesheet" />
 
 <div class="rp-navbar-shell">
 <nav class="navbar navbar-expand-lg rp-navbar sticky-top">
@@ -37,7 +37,28 @@
                                 <span class="rp-nav-item-text"><span class="rp-nav-item-title">Nuevo cliente</span><span class="rp-nav-item-sub">Alta en el hub del cliente</span></span>
                             </a>
                         </li>
-                        <li><hr class="dropdown-divider rp-nav-divider" /></li>
+                    </ul>
+                </li>
+
+                <li class="nav-item dropdown" id="seccionProductos">
+                    <a class="nav-link dropdown-toggle rp-nav-link" href="@Url.Action("Index", "Productos")" role="button"
+                       data-bs-toggle="dropdown" data-bs-auto-close="outside" data-bs-offset="0,4" aria-expanded="false">
+                        <span class="rp-nav-ico orange"><i class="fa fa-cubes"></i></span>
+                        <span>Productos</span>
+                    </a>
+                    <ul class="dropdown-menu rp-nav-dropdown">
+                        <li>
+                            <a class="dropdown-item rp-nav-item rp-nav-item-accent" href="@Url.Action("Index", "Productos")">
+                                <span class="rp-nav-ico sm orange"><i class="fa fa-cubes"></i></span>
+                                <span class="rp-nav-item-text"><span class="rp-nav-item-title">Catalogo</span><span class="rp-nav-item-sub">ABM de productos y precios</span></span>
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item rp-nav-item" href="@Url.Action("Index", "Inventario")">
+                                <span class="rp-nav-ico sm cyan"><i class="fa fa-archive"></i></span>
+                                <span class="rp-nav-item-text"><span class="rp-nav-item-title">Inventario</span><span class="rp-nav-item-sub">Stock vendible y movimientos</span></span>
+                            </a>
+                        </li>
                         <li>
                             <a class="dropdown-item rp-nav-item" href="@Url.Action("Index", "ProductosRecuperados")">
                                 <span class="rp-nav-ico sm green"><i class="fa fa-recycle"></i></span>
@@ -45,13 +66,6 @@
                             </a>
                         </li>
                     </ul>
-                </li>
-
-                <li class="nav-item" id="seccionProductos">
-                    <a class="nav-link rp-nav-link" href="@Url.Action("Index", "Productos")">
-                        <span class="rp-nav-ico orange"><i class="fa fa-cubes"></i></span>
-                        <span>Productos</span>
-                    </a>
                 </li>
 
                 <li class="nav-item dropdown" id="seccionTransporte">
@@ -75,13 +89,6 @@
                             </a>
                         </li>
                     </ul>
-                </li>
-
-                <li class="nav-item" id="seccionInventario">
-                    <a class="nav-link rp-nav-link" href="@Url.Action("Index", "Inventario")">
-                        <span class="rp-nav-ico cyan"><i class="fa fa-archive"></i></span>
-                        <span>Inventario</span>
-                    </a>
                 </li>
 
                 <li class="nav-item dropdown" id="seccionProveedores">
@@ -189,6 +196,13 @@
                         <i class="fa fa-chevron-down rp-user-chev"></i>
                     </a>
                     <ul class="dropdown-menu dropdown-menu-end rp-nav-dropdown rp-nav-user-menu">
+                        <li>
+                            <a class="dropdown-item rp-nav-item" href="/Usuarios/Configuracion">
+                                <span class="rp-nav-ico sm blue"><i class="fa fa-cog"></i></span>
+                                <span class="rp-nav-item-text"><span class="rp-nav-item-title">Configuraciones</span></span>
+                            </a>
+                        </li>
+                        <li><hr class="dropdown-divider dropdown-divider-dark"></li>
                         <li>
                             <a class="dropdown-item rp-nav-item rp-nav-logout" href="#" onclick="cerrarSesion(); return false;">
                                 <span class="rp-nav-ico sm red"><i class="fa fa-sign-out"></i></span>
@@ -416,7 +430,7 @@
                         <div class="rp-config-icon teal rp-config-view-head-icon"><i class="fa fa-th-large"></i></div>
                         <div>
                             <div class="rp-config-title">Preferencias de visualizacion</div>
-                            <div class="rp-config-sub">Como se muestran los listados en todo el sistema · se guarda en este navegador</div>
+                            <div class="rp-config-sub">Como se muestran los listados en todo el sistema - se guarda en este navegador</div>
                         </div>
                     </div>
                     <div class="rp-config-grid rp-config-view-grid" id="rpConfigViewOptions">
@@ -424,7 +438,7 @@
                             <div class="rp-config-icon blue"><i class="fa fa-magic"></i></div>
                             <div>
                                 <div class="rp-config-title">Automatico</div>
-                                <div class="rp-config-sub">Tabla en PC · tarjetas en movil</div>
+                                <div class="rp-config-sub">Tabla en PC - tarjetas en movil</div>
                             </div>
                         </button>
                         <button type="button" class="rp-config-card rp-config-view-card" data-rp-view="table">
@@ -649,8 +663,8 @@
 
 <partial name="~/Views/Utils/Modals.cshtml" />
 
-<script src="~/js/Permisos.js?v=5.1"></script>
+<script src="~/js/Permisos.js?v=5.2"></script>
 
 
 
-<script src="~/js/NavBarLogin.js?v=5.4" asp-append-version="true"></script>
+<script src="~/js/NavBarLogin.js?v=5.5" asp-append-version="true"></script>

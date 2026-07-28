@@ -138,6 +138,36 @@ public class ClienteStockDto
     public decimal EnPoderCliente { get; set; }
 }
 
+public class ProveedorControlMensualDto
+{
+    public int? IdControl { get; set; }
+    public int Anio { get; set; }
+    public int Mes { get; set; }
+    public string MesNombre { get; set; } = "";
+    public int CantCompras { get; set; }
+    public decimal TotalCompras { get; set; }
+    public decimal TotalPagos { get; set; }
+    public decimal Debe { get; set; }
+    public decimal Haber { get; set; }
+    public decimal Saldo { get; set; }
+    public bool SinCompra { get; set; }
+    public string? Observaciones { get; set; }
+    public bool TieneOverride { get; set; }
+}
+
+public class ProveedorControlFiltradoDto
+{
+    public int IdProveedor { get; set; }
+    public string Proveedor { get; set; } = "";
+    public string? Cuit { get; set; }
+    public decimal SaldoActual { get; set; }
+    public decimal TotalDebe { get; set; }
+    public decimal TotalHaber { get; set; }
+    public decimal TotalSaldo { get; set; }
+    public bool DatosParciales { get; set; }
+    public List<ProveedorControlMensualDto> Filas { get; set; } = new();
+}
+
 public class LibroDiarioFiltroDto
 {
     public DateTime? FechaDesde { get; set; }

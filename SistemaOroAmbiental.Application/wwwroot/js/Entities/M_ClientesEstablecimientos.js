@@ -57,6 +57,7 @@
             this._contactoSeleccionadoId = 0;
             this._productosCache = [];
             this._productoSeleccionadoId = 0;
+            this._cargarCombosSeq = 0;
 
             this._camposObligatorios = [
                 "cmbClienteEst", "txtNombreEst", "cmbDiaEst", "cmbSemanaEst",
@@ -85,7 +86,8 @@
                 Dias: { selectId: "cmbDiaEst", url: this.options.endpoints.dias },
                 Semanas: { selectId: "cmbSemanaEst", url: this.options.endpoints.semanas },
                 ListasPrecios: { selectId: "cmbListaPrecioEst", url: this.options.endpoints.listasPrecios },
-                ClientesTiposGenerador: { selectId: "cmbTipoGeneradorEst", url: this.options.endpoints.tiposGenerador, textField: "Etiqueta" }
+                ClientesTiposGenerador: { selectId: "cmbTipoGeneradorEst", url: this.options.endpoints.tiposGenerador, textField: "Etiqueta" },
+                Camiones: { selectId: "cmbCamionEst", url: this.options.endpoints.camiones }
             };
 
             window.establecimientoModal = this;
@@ -143,6 +145,10 @@
             const el = this._id(id);
             if (!el) return "";
             if (el.type === "checkbox") return el.checked;
+            if (window.jQuery) {
+                const $el = window.jQuery(el);
+                if ($el.data("select2")) return $el.val() ?? "";
+            }
             return el.value ?? "";
         }
 
@@ -227,7 +233,7 @@
             };
             [
                 "cmbClienteEst", "cmbCondicionIvaEst", "cmbProvinciaEst", "cmbTipoGeneradorEst",
-                "cmbDiaEst", "cmbSemanaEst", "cmbListaPrecioEst", "cmbProductoEst"
+                "cmbDiaEst", "cmbSemanaEst", "cmbListaPrecioEst", "cmbCamionEst", "cmbProductoEst"
             ].forEach(id => {
                 this.ensureSelect2(window.jQuery(this._id(id)), opts);
             });
@@ -1043,21 +1049,29 @@
             this._refreshSelect2Field(id);
         }
 
-        async _llenarCombo(selectId, url) {
+        async _llenarCombo(selectId, url, seq, textField = "Nombre") {
             const data = await this._fetchJson(url, { headers: this._headers(false) });
+            if (seq !== this._cargarCombosSeq) return;
+
             const select = this._id(selectId);
             if (!select) return;
-            (data || []).forEach(x => select.append(new Option(x.Nombre, x.Id)));
+
+            const seen = new Set();
+            (data || []).forEach(x => {
+                const id = String(x.Id);
+                if (seen.has(id)) return;
+                seen.add(id);
+                select.append(new Option(x[textField] || x.Nombre, x.Id));
+            });
         }
 
-        async _llenarComboTiposGenerador() {
-            const data = await this._fetchJson(this.options.endpoints.tiposGenerador, { headers: this._headers(false) });
-            const select = this._id("cmbTipoGeneradorEst");
-            if (!select) return;
-            (data || []).forEach(x => select.append(new Option(x.Etiqueta || x.Nombre, x.Id)));
+        async _llenarComboTiposGenerador(seq) {
+            await this._llenarCombo("cmbTipoGeneradorEst", this.options.endpoints.tiposGenerador, seq, "Etiqueta");
         }
 
         async cargarCombos() {
+            const seq = ++this._cargarCombosSeq;
+
             this.resetSelect("cmbClienteEst", "Seleccionar");
             this.resetSelect("cmbCondicionIvaEst", "Seleccionar");
             this.resetSelect("cmbProvinciaEst", "Seleccionar");
@@ -1065,18 +1079,21 @@
             this.resetSelect("cmbDiaEst", "Seleccionar");
             this.resetSelect("cmbSemanaEst", "Seleccionar");
             this.resetSelect("cmbListaPrecioEst", "Seleccionar");
+            this.resetSelect("cmbCamionEst", "Seleccionar");
             this.resetSelect("cmbProductoEst", "Seleccionar");
 
             await Promise.all([
-                this._llenarCombo("cmbClienteEst", this.options.endpoints.clientes),
-                this._llenarCombo("cmbCondicionIvaEst", this.options.endpoints.condicionesIva),
-                this._llenarCombo("cmbProvinciaEst", this.options.endpoints.provincias),
-                this._llenarComboTiposGenerador(),
-                this._llenarCombo("cmbDiaEst", this.options.endpoints.dias),
-                this._llenarCombo("cmbSemanaEst", this.options.endpoints.semanas),
-                this._llenarCombo("cmbListaPrecioEst", this.options.endpoints.listasPrecios),
-                this._llenarCombo("cmbCamionEst", this.options.endpoints.camiones)
+                this._llenarCombo("cmbClienteEst", this.options.endpoints.clientes, seq),
+                this._llenarCombo("cmbCondicionIvaEst", this.options.endpoints.condicionesIva, seq),
+                this._llenarCombo("cmbProvinciaEst", this.options.endpoints.provincias, seq),
+                this._llenarComboTiposGenerador(seq),
+                this._llenarCombo("cmbDiaEst", this.options.endpoints.dias, seq),
+                this._llenarCombo("cmbSemanaEst", this.options.endpoints.semanas, seq),
+                this._llenarCombo("cmbListaPrecioEst", this.options.endpoints.listasPrecios, seq),
+                this._llenarCombo("cmbCamionEst", this.options.endpoints.camiones, seq)
             ]);
+
+            if (seq !== this._cargarCombosSeq) return;
 
             this.inicializarSelect2Modal();
         }

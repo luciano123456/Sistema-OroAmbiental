@@ -301,6 +301,7 @@ table.dataTable thead tr.filters th .select2-selection__arrow {
     position: relative;
     display: grid;
     grid-template-columns: repeat(3, 1fr);
+    align-items: center;
     gap: var(--rp-activo-gap);
     width: 100%;
     min-height: 30px;
@@ -369,6 +370,11 @@ table.dataTable thead tr.filters th .select2-selection__arrow {
 }
 
 .rp-filter-activo-opt .fa {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1em;
+    height: 1em;
     font-size: 12px;
     line-height: 1;
     transition: color 0.18s ease, transform 0.18s ease;
@@ -418,7 +424,12 @@ table.dataTable thead tr.filters th .select2-selection__arrow {
 }
 
 .rp-filter-activo-toggle.rp-filter-thead .rp-filter-activo-opt {
+    flex-direction: row;
+    gap: 0;
     height: 24px;
+    padding: 0;
+    align-items: center;
+    justify-content: center;
 }
 
 .rp-filter-activo-toggle.rp-filter-thead .rp-filter-activo-opt span {
@@ -427,6 +438,7 @@ table.dataTable thead tr.filters th .select2-selection__arrow {
 
 .rp-filter-activo-toggle.rp-filter-thead .rp-filter-activo-opt .fa {
     font-size: 13px;
+    line-height: 1;
 }
 
 /* Panel expandido: icono + etiqueta */
@@ -439,6 +451,8 @@ table.dataTable thead tr.filters th .select2-selection__arrow {
 .rp-filter-activo-toggle-panel .rp-filter-activo-opt {
     height: 30px;
     flex-direction: row;
+    align-items: center;
+    justify-content: center;
     gap: 5px;
     padding: 0 6px;
 }
@@ -499,6 +513,10 @@ table.dataTable thead tr.filters th .select2-selection__arrow {
 table.dt-dark th.rp-col-activo .rp-filter-activo-toggle,
 table.dt-dark thead tr.filters th.rp-col-activo .rp-filter-activo-toggle {
     min-width: 96px;
+}
+
+table.dt-dark thead tr.filters th.rp-col-activo {
+    vertical-align: middle !important;
 }
 
 /* Filas — pisa CDN de DataTables y colores viejos */

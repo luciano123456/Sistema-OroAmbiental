@@ -1,0 +1,27 @@
+@{
+    var ctrl = (ViewContext.RouteData.Values["controller"]?.ToString() ?? "").ToLowerInvariant();
+}
+<div class="card-glass p-0 mb-3 ph-hub-card">
+    <div class="rp-tabs-shell ph-hub-tabs-shell">
+        <ul class="nav rp-tabs-modern ph-hub-tabs" role="tablist">
+            <li class="nav-item">
+                <a class="nav-link @(ctrl == "productos" ? "active" : "")"
+                   href="@Url.Action("Index", "Productos")">
+                    <i class="fa fa-cubes"></i><span>Catalogo</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link @(ctrl == "inventario" ? "active" : "")"
+                   href="@Url.Action("Index", "Inventario")">
+                    <i class="fa fa-archive"></i><span>Inventario</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link @(ctrl == "productosrecuperados" ? "active" : "")"
+                   href="@Url.Action("Index", "ProductosRecuperados")">
+                    <i class="fa fa-recycle"></i><span>Stock e historial</span>
+                </a>
+            </li>
+        </ul>
+    </div>
+</div>

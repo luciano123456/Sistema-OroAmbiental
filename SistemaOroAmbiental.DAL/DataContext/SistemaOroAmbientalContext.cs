@@ -33,6 +33,8 @@ public partial class SistemaOroAmbientalContext : DbContext
 
     public virtual DbSet<ClientesControlMensual> ClientesControlMensuales { get; set; }
 
+    public virtual DbSet<ProveedoresControlMensual> ProveedoresControlMensuales { get; set; }
+
     public virtual DbSet<LibroDiarioConcepto> LibroDiarioConceptos { get; set; }
 
     public virtual DbSet<LibroDiarioMovimiento> LibroDiarioMovimientos { get; set; }
@@ -1645,6 +1647,29 @@ public partial class SistemaOroAmbientalContext : DbContext
             entity.HasOne(d => d.IdUsuarioModificaNavigation).WithMany()
                 .HasForeignKey(d => d.IdUsuarioModifica)
                 .HasConstraintName("FK_ClientesControlMensual_UsuMod");
+        });
+
+        modelBuilder.Entity<ProveedoresControlMensual>(entity =>
+        {
+            entity.ToTable("ProveedoresControlMensual");
+            entity.Property(e => e.Observaciones).HasMaxLength(500).IsUnicode(false);
+            entity.Property(e => e.FechaUsuarioModifica).HasColumnType("datetime");
+            entity.Property(e => e.FechaUsuarioRegistra).HasColumnType("datetime");
+            entity.HasIndex(e => new { e.IdProveedor, e.Anio, e.Mes }).IsUnique();
+
+            entity.HasOne(d => d.IdProveedorNavigation).WithMany(p => p.ProveedoresControlMensuales)
+                .HasForeignKey(d => d.IdProveedor)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ProveedoresControlMensual_Proveedores");
+
+            entity.HasOne(d => d.IdUsuarioRegistraNavigation).WithMany()
+                .HasForeignKey(d => d.IdUsuarioRegistra)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ProveedoresControlMensual_UsuReg");
+
+            entity.HasOne(d => d.IdUsuarioModificaNavigation).WithMany()
+                .HasForeignKey(d => d.IdUsuarioModifica)
+                .HasConstraintName("FK_ProveedoresControlMensual_UsuMod");
         });
 
         modelBuilder.Entity<LibroDiarioConcepto>(entity =>

@@ -262,7 +262,7 @@
             ? window.confirmarModal
             : (msg) => Promise.resolve(window.confirm(msg));
 
-        const ok = await confirmar("¿Desea renovar la sesion?");
+        const ok = await confirmar("Desea renovar la sesion?");
         if (!ok) return;
 
         hideWarningModal();

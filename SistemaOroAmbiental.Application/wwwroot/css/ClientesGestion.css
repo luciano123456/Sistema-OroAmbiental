@@ -772,8 +772,19 @@ body.layout-modulo .container-fluid {
 .cg-page .dt-dark-wrap.cg-table-wrap {
     border-radius: 16px;
     border: 1px solid rgba(255, 255, 255, 0.08);
-    overflow: hidden;
+    overflow-x: auto;
+    overflow-y: visible;
     background: rgba(0, 0, 0, 0.18);
+}
+
+.cg-page .dt-dark-wrap.cg-table-wrap .dataTables_wrapper {
+    width: 100%;
+    min-width: 0;
+}
+
+.cg-page .dt-dark-wrap.cg-table-wrap .dataTables_scrollHead,
+.cg-page .dt-dark-wrap.cg-table-wrap .dataTables_scrollBody {
+    width: 100% !important;
 }
 
 .cg-page.cg-mode-table .cg-table-wrap .dataTables_scrollHeadInner,
@@ -1379,8 +1390,9 @@ body.layout-modulo .container-fluid {
     }
 }
 
-/* Modal control mensual */
-#modalControlMensualCg .cg-cm-sin-entrega-box {
+/* Modal control mensual (clientes + proveedores) */
+#modalControlMensualCg .cg-cm-sin-entrega-box,
+#modalControlMensualPg .cg-cm-sin-entrega-box {
     border-radius: 14px;
     border: 1px solid rgba(255, 255, 255, 0.1);
     background: rgba(255, 255, 255, 0.03);
@@ -1388,13 +1400,15 @@ body.layout-modulo .container-fluid {
     transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
 }
 
-#modalControlMensualCg .cg-cm-sin-entrega-box.is-active {
+#modalControlMensualCg .cg-cm-sin-entrega-box.is-active,
+#modalControlMensualPg .cg-cm-sin-entrega-box.is-active {
     border-color: rgba(251, 191, 36, 0.45);
     background: rgba(251, 191, 36, 0.08);
     box-shadow: 0 0 0 1px rgba(251, 191, 36, 0.12);
 }
 
-#modalControlMensualCg .cg-cm-sin-entrega-toggle {
+#modalControlMensualCg .cg-cm-sin-entrega-toggle,
+#modalControlMensualPg .cg-cm-sin-entrega-toggle {
     display: flex;
     align-items: center;
     gap: 0.85rem;
@@ -1403,14 +1417,16 @@ body.layout-modulo .container-fluid {
     margin: 0;
 }
 
-#modalControlMensualCg .cg-cm-sin-entrega-toggle .rp-switch-input {
+#modalControlMensualCg .cg-cm-sin-entrega-toggle .rp-switch-input,
+#modalControlMensualPg .cg-cm-sin-entrega-toggle .rp-switch-input {
     position: absolute;
     opacity: 0;
     width: 0;
     height: 0;
 }
 
-#modalControlMensualCg .cg-cm-sin-entrega-toggle .rp-switch-slider {
+#modalControlMensualCg .cg-cm-sin-entrega-toggle .rp-switch-slider,
+#modalControlMensualPg .cg-cm-sin-entrega-toggle .rp-switch-slider {
     position: relative;
     flex-shrink: 0;
     width: 46px;
@@ -1421,7 +1437,8 @@ body.layout-modulo .container-fluid {
     transition: background 0.15s, border-color 0.15s;
 }
 
-#modalControlMensualCg .cg-cm-sin-entrega-toggle .rp-switch-slider::after {
+#modalControlMensualCg .cg-cm-sin-entrega-toggle .rp-switch-slider::after,
+#modalControlMensualPg .cg-cm-sin-entrega-toggle .rp-switch-slider::after {
     content: "";
     position: absolute;
     top: 2px;
@@ -1434,38 +1451,46 @@ body.layout-modulo .container-fluid {
     transition: transform 0.15s;
 }
 
-#modalControlMensualCg .cg-cm-sin-entrega-toggle .rp-switch-input:checked + .rp-switch-slider {
+#modalControlMensualCg .cg-cm-sin-entrega-toggle .rp-switch-input:checked + .rp-switch-slider,
+#modalControlMensualPg .cg-cm-sin-entrega-toggle .rp-switch-input:checked + .rp-switch-slider {
     background: rgba(251, 191, 36, 0.55);
     border-color: rgba(251, 191, 36, 0.65);
 }
 
-#modalControlMensualCg .cg-cm-sin-entrega-toggle .rp-switch-input:checked + .rp-switch-slider::after {
+#modalControlMensualCg .cg-cm-sin-entrega-toggle .rp-switch-input:checked + .rp-switch-slider::after,
+#modalControlMensualPg .cg-cm-sin-entrega-toggle .rp-switch-input:checked + .rp-switch-slider::after {
     transform: translateX(20px);
 }
 
-#modalControlMensualCg .cg-cm-sin-entrega-toggle .rp-switch-input:focus-visible + .rp-switch-slider {
+#modalControlMensualCg .cg-cm-sin-entrega-toggle .rp-switch-input:focus-visible + .rp-switch-slider,
+#modalControlMensualPg .cg-cm-sin-entrega-toggle .rp-switch-input:focus-visible + .rp-switch-slider {
     box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.22);
 }
 
-#modalControlMensualCg .cg-cm-sin-entrega-copy {
+#modalControlMensualCg .cg-cm-sin-entrega-copy,
+#modalControlMensualPg .cg-cm-sin-entrega-copy {
     display: flex;
     flex-direction: column;
     gap: 0.15rem;
     min-width: 0;
+    flex: 1;
 }
 
-#modalControlMensualCg .cg-cm-sin-entrega-copy strong {
+#modalControlMensualCg .cg-cm-sin-entrega-copy strong,
+#modalControlMensualPg .cg-cm-sin-entrega-copy strong {
     font-size: 0.95rem;
     font-weight: 700;
     color: #eaf1ff;
     line-height: 1.25;
 }
 
-#modalControlMensualCg .cg-cm-sin-entrega-box.is-active .cg-cm-sin-entrega-copy strong {
+#modalControlMensualCg .cg-cm-sin-entrega-box.is-active .cg-cm-sin-entrega-copy strong,
+#modalControlMensualPg .cg-cm-sin-entrega-box.is-active .cg-cm-sin-entrega-copy strong {
     color: #fde68a;
 }
 
-#modalControlMensualCg .cg-cm-sin-entrega-copy small {
+#modalControlMensualCg .cg-cm-sin-entrega-copy small,
+#modalControlMensualPg .cg-cm-sin-entrega-copy small {
     font-size: 0.78rem;
     color: #9fb0cc;
     line-height: 1.35;

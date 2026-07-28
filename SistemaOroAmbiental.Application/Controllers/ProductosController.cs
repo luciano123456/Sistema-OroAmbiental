@@ -66,7 +66,7 @@ namespace SistemaOroAmbiental.Application.Controllers
                 return ("sin_stock", "Sin stock");
 
             if (stockMinimo > 0 && stockTotal < stockMinimo)
-                return ("bajo", "Bajo mínimo");
+                return ("bajo", "Bajo minimo");
 
             if (stockMinimo > 0)
                 return ("ok", "Stock OK");

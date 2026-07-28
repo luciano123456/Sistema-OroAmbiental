@@ -373,7 +373,7 @@ function modalGuardadoConSalida(opciones = {}) {
         const cfg = Object.assign({
             titulo: "Guardado correctamente",
             mensaje: "Los cambios se guardaron correctamente.",
-            pregunta: "¿Deseas volver al listado?",
+            pregunta: "Deseas volver al listado?",
             btnSalir: "Si, volver al listado",
             btnQuedarse: "No, seguir aca",
             urlSalida: null,

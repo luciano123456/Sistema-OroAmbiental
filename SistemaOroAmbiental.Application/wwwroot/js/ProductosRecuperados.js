@@ -168,6 +168,7 @@ $(document).ready(async () => {
 
 
     await cargarSucursalesRec();
+    initSelectsFiltrosRec();
 
     await cargarProductosModalRec();
 
@@ -208,8 +209,27 @@ async function cargarSucursalesRec() {
 
     if ($("#fSucursalRec").data("select2")) $("#fSucursalRec").select2("destroy");
 
-    $("#fSucursalRec").select2({ width: "100%", allowClear: true, placeholder: "Todas las sucursales" });
+    $("#fSucursalRec").select2({
+        width: "100%",
+        allowClear: true,
+        placeholder: "Todas las sucursales",
+        dropdownParent: $("#panelFiltrosRecuperados")
+    });
 
+}
+
+
+
+function initSelectsFiltrosRec() {
+    const $origen = $("#fOrigenRec");
+    if ($origen.data("select2")) $origen.select2("destroy");
+    $origen.select2({
+        width: "100%",
+        allowClear: true,
+        placeholder: "Todos",
+        minimumResultsForSearch: Infinity,
+        dropdownParent: $("#panelFiltrosRecuperados")
+    });
 }
 
 
@@ -248,7 +268,7 @@ function limpiarFiltrosRec() {
 
     $("#fTextoRec").val("");
 
-    $("#fOrigenRec").val("");
+    $("#fOrigenRec").val("").trigger("change");
 
     $("#txtBuscarHistorialRec").val("");
 

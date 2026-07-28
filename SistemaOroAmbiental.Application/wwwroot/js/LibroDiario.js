@@ -220,6 +220,10 @@ function textoColumnaLd(row, col) {
         case 6: return esSaldoAnt ? "" : fmtNumLd(row.PrecioUnitario);
         case 7: return esSaldoAnt ? "" : (row.Debe ? fmtNumLd(row.Debe) : "");
         case 8: return esSaldoAnt ? "" : (row.Haber ? fmtNumLd(row.Haber) : "");
+        case 9: return esSaldoAnt ? "" : fmtNumLd(row.PorcIva);
+        case 10: return esSaldoAnt ? "" : fmtNumLd(row.Iva);
+        case 11: return esSaldoAnt ? "" : fmtNumLd(row.OtrosImp);
+        case 12: return esSaldoAnt ? "" : fmtNumLd(row.Total);
         case 13: return fmtNumLd(row.Saldo);
         case 14: return row.FormaPago || "";
         default: return "";

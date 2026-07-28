@@ -10,11 +10,11 @@
     <link href="https://cdn.datatables.net/fixedheader/3.2.2/css/fixedHeader.dataTables.min.css" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
-    <link href="~/css/Productora.css?v=6.1" rel="stylesheet" />
-    <link href="~/css/disenopantallas.css?v=6.1" rel="stylesheet" />
-    <link href="~/css/M_Generico.css?v=6.1" rel="stylesheet" />
-    <link href="~/css/ClientesGestion.css?v=8.6" rel="stylesheet" />
-    <link href="~/css/ProveedoresGestion.css?v=1.0" rel="stylesheet" />
+    <link href="~/css/Productora.css?v=6.2" rel="stylesheet" />
+    <link href="~/css/disenopantallas.css?v=6.2" rel="stylesheet" />
+    <link href="~/css/M_Generico.css?v=6.2" rel="stylesheet" />
+    <link href="~/css/ClientesGestion.css?v=8.8" rel="stylesheet" />
+    <link href="~/css/ProveedoresGestion.css?v=1.2" rel="stylesheet" />
 }
 
 <div class="cg-page pg-page">
@@ -75,6 +75,11 @@
                 <li class="nav-item">
                     <button class="nav-link" id="tabBtnPagosPg" data-bs-toggle="tab" data-bs-target="#tabPagosPg" type="button" data-pg-tab="pagos" disabled>
                         <i class="fa fa-money"></i><span>Pagos</span>
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link" id="tabBtnControlMensualPg" data-bs-toggle="tab" data-bs-target="#tabControlMensualPg" type="button" data-pg-tab="controlMensual" disabled>
+                        <i class="fa fa-calendar"></i><span>Control mensual</span>
                     </button>
                 </li>
             </ul>
@@ -354,6 +359,106 @@
                 </div>
             </div>
 
+            <!-- CONTROL MENSUAL -->
+            <div class="tab-pane fade" id="tabControlMensualPg">
+                <div class="cg-cm-shell">
+                    <div class="cg-cm-filtros">
+                        <div class="cg-cm-filtros-top">
+                            <div>
+                                <h6 class="cg-cm-filtros-title">Periodo a consultar</h6>
+                            </div>
+                            <button type="button" id="btnRefreshControlMensualPg" class="btn btn-success btn-sm cg-cm-btn-refresh">
+                                <i class="fa fa-refresh me-1"></i> Actualizar
+                            </button>
+                        </div>
+
+                        <div class="row g-3">
+                            <div class="col-lg-5">
+                                <div class="cg-cm-picker">
+                                    <div class="cg-cm-picker-head">
+                                        <label class="form-label mb-0">Anos</label>
+                                        <small class="cg-cm-picker-hint">Toca para marcar o desmarcar</small>
+                                    </div>
+                                    <div class="cg-cm-chips cg-cm-chips--years" id="pgControlAniosChips"></div>
+                                </div>
+                            </div>
+                            <div class="col-lg-5">
+                                <div class="cg-cm-picker">
+                                    <div class="cg-cm-picker-head">
+                                        <label class="form-label mb-0">Meses</label>
+                                        <small class="cg-cm-picker-hint">Vacio = todos los meses</small>
+                                    </div>
+                                    <div class="cg-cm-chips cg-cm-chips--months" id="pgControlMesesChips"></div>
+                                </div>
+                            </div>
+                            <div class="col-lg-2">
+                                <div class="cg-cm-count-box">
+                                    <span class="cg-cm-count-label">Periodos</span>
+                                    <strong id="pgControlCount">-</strong>
+                                    <small class="cg-cm-count-sub" id="pgControlFiltroResumen">-</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="cg-cm-presets">
+                            <span class="cg-cm-presets-label">Atajos</span>
+                            <button type="button" class="cg-cm-preset pg-cm-preset-meses" data-meses="1,2,3">Ene-Mar</button>
+                            <button type="button" class="cg-cm-preset pg-cm-preset-meses" data-meses="4,5,6">Abr-Jun</button>
+                            <button type="button" class="cg-cm-preset pg-cm-preset-meses" data-meses="7,8,9">Jul-Sep</button>
+                            <button type="button" class="cg-cm-preset pg-cm-preset-meses" data-meses="10,11,12">Oct-Dic</button>
+                            <button type="button" class="cg-cm-preset pg-cm-preset-meses" data-meses="all">Todos los meses</button>
+                            <button type="button" class="cg-cm-preset" id="btnControlAniosRecientesPg">Ultimos 3 anos</button>
+                        </div>
+                    </div>
+
+                    <div class="cg-cm-kpis">
+                        <div class="cg-cm-kpi">
+                            <span>Debe del periodo</span>
+                            <strong id="pgControlTotalDebe">$ 0</strong>
+                        </div>
+                        <div class="cg-cm-kpi">
+                            <span>Haber del periodo</span>
+                            <strong id="pgControlTotalHaber">$ 0</strong>
+                        </div>
+                        <div class="cg-cm-kpi cg-cm-kpi-saldo">
+                            <span>Saldo del periodo</span>
+                            <strong id="pgControlSaldoPeriodo">$ 0</strong>
+                        </div>
+                        <div class="cg-cm-kpi">
+                            <span>Saldo actual CC</span>
+                            <strong id="pgControlSaldoActual">$ 0</strong>
+                        </div>
+                    </div>
+
+                    <div id="pgControlError" class="cg-cm-alert d-none" role="alert">
+                        <i class="fa fa-exclamation-triangle"></i>
+                        <span>Algunos datos no se pudieron calcular. Podes editar los meses manualmente.</span>
+                    </div>
+
+                    <div class="cg-cards-grid cg-cm-cards-grid" id="pgCards_controlMensual"></div>
+
+                    <div class="cg-cm-table-wrap cg-table-wrap">
+                        <table class="cg-cm-table" id="tblControlMensualPg">
+                            <thead>
+                                <tr>
+                                    <th class="cg-col-anio cg-cm-th-periodo">Ano</th>
+                                    <th class="cg-cm-th-periodo">Mes</th>
+                                    <th class="cg-cm-th-num">Compras</th>
+                                    <th class="cg-cm-th-num cg-cm-th-grp-start">Total compras</th>
+                                    <th class="cg-cm-th-num">Pagos</th>
+                                    <th class="cg-cm-th-num cg-cm-th-grp-start">Debe</th>
+                                    <th class="cg-cm-th-num">Haber</th>
+                                    <th class="cg-cm-th-num cg-cm-th-saldo">Saldo</th>
+                                    <th class="cg-cm-th-flag">S/C</th>
+                                    <th class="cg-cm-th-obs">Obs.</th>
+                                </tr>
+                            </thead>
+                            <tbody id="pgControlMensualBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
             <!-- PAGOS -->
             <div class="tab-pane fade" id="tabPagosPg">
                 <div class="cg-list-panel" data-pg-list="pagos">
@@ -383,6 +488,46 @@
                 </div>
             </div>
 
+        </div>
+    </div>
+</div>
+
+<!-- Modal control mensual -->
+<div class="modal fade rp-modal" id="modalControlMensualPg" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content rp-modal-content">
+            <div class="modal-header rp-modal-header">
+                <div>
+                    <div class="rp-modal-title"><i class="fa fa-calendar"></i> Control mensual - <span id="pgCmMesTitulo"></span></div>
+                </div>
+                <button type="button" class="btn-close rp-btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="pgCmAnio" />
+                <input type="hidden" id="pgCmMes" />
+                <div class="row g-3">
+                    <div class="col-12">
+                        <div class="cg-cm-sin-entrega-box" id="pgCmSinCompraBox">
+                            <label class="cg-cm-sin-entrega-toggle mb-0" for="pgCmSinCompra">
+                                <input type="checkbox" id="pgCmSinCompra" class="rp-switch-input">
+                                <span class="rp-switch-slider"></span>
+                                <span class="cg-cm-sin-entrega-copy">
+                                    <strong id="lblPgCmSinCompra">Con compra este mes</strong>
+                                    <small>Marca si no hubo compras en el periodo</small>
+                                </span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Observaciones</label>
+                        <textarea id="pgCmObservaciones" class="form-control" rows="2" maxlength="500"></textarea>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer rp-modal-footer">
+                <button class="rp-btn rp-btn-soft" data-bs-dismiss="modal"><i class="fa fa-times"></i> Cancelar</button>
+                <button class="rp-btn rp-btn-primary" id="btnGuardarControlMensualPg" type="button"><i class="fa fa-check"></i> Guardar</button>
+            </div>
         </div>
     </div>
 </div>
@@ -475,5 +620,6 @@
     <script>
         window.PG_INIT = { id: @id };
     </script>
-    <script src="~/js/ProveedoresGestion.js?v=1.0"></script>
+    <script src="~/js/ProveedoresGestion.js?v=1.4"></script>
+    <script src="~/js/ProveedoresControlMensual.js?v=1.2"></script>
 }

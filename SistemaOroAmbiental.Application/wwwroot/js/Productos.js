@@ -8,7 +8,7 @@ const columnConfig = [
     { index: 5, filterType: 'text' },
     { index: 6, filterType: 'text' },
     { index: 7, filterType: 'text' },
-    { index: 8, filterType: 'select', fetchDataFunc: listaEstadosStockFilter }
+    { index: 8, filterType: 'select_local' }
 ];
 
 registrarFiltrosGrilla('grd_Productos', columnConfig, {
@@ -157,7 +157,12 @@ async function configurarDataTable(data) {
                 {
                     data: 'StockEstadoTexto',
                     orderable: true,
-                    render: (data, type, row) => renderEstadoStockBadge(row)
+                    render: (data, type, row) => {
+                        if (type === "filter" || type === "sort" || type === "type") {
+                            return row?.StockEstadoTexto || data || "Sin stock";
+                        }
+                        return renderEstadoStockBadge(row);
+                    }
                 },
                 typeof columnaGridActivo === "function" ? columnaGridActivo("Productos") : { data: "Activo" },
             ],
@@ -201,15 +206,6 @@ async function listaMedidasFilter() {
         headers: { 'Authorization': 'Bearer ' + token }
     });
     return await response.json();
-}
-
-async function listaEstadosStockFilter() {
-    return [
-        { Nombre: "Sin stock" },
-        { Nombre: "Bajo minimo" },
-        { Nombre: "Stock OK" },
-        { Nombre: "Disponible" }
-    ];
 }
 
 function renderStockCantidad(valor, row) {
