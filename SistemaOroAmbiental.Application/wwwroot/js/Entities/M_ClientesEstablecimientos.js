@@ -25,6 +25,7 @@
                     semanas: "/Semanas/Lista",
                     listasPrecios: "/ListasPrecios/Lista",
                     camiones: "/Camiones/Lista?soloActivos=true",
+                    tiposGenerador: "/ClientesTiposGenerador/Lista",
                     contactosLista: "/ClientesEstablecimientosContactos/ListaPorEstablecimiento?idEstablecimiento={idEstablecimiento}",
                     contactosInsertar: "/ClientesEstablecimientosContactos/Insertar",
                     contactosActualizar: "/ClientesEstablecimientosContactos/Actualizar",
@@ -83,7 +84,8 @@
                 Provincias: { selectId: "cmbProvinciaEst", url: this.options.endpoints.provincias },
                 Dias: { selectId: "cmbDiaEst", url: this.options.endpoints.dias },
                 Semanas: { selectId: "cmbSemanaEst", url: this.options.endpoints.semanas },
-                ListasPrecios: { selectId: "cmbListaPrecioEst", url: this.options.endpoints.listasPrecios }
+                ListasPrecios: { selectId: "cmbListaPrecioEst", url: this.options.endpoints.listasPrecios },
+                ClientesTiposGenerador: { selectId: "cmbTipoGeneradorEst", url: this.options.endpoints.tiposGenerador, textField: "Etiqueta" }
             };
 
             window.establecimientoModal = this;
@@ -224,7 +226,7 @@
                 placeholder: "Seleccionar"
             };
             [
-                "cmbClienteEst", "cmbCondicionIvaEst", "cmbProvinciaEst",
+                "cmbClienteEst", "cmbCondicionIvaEst", "cmbProvinciaEst", "cmbTipoGeneradorEst",
                 "cmbDiaEst", "cmbSemanaEst", "cmbListaPrecioEst", "cmbProductoEst"
             ].forEach(id => {
                 this.ensureSelect2(window.jQuery(this._id(id)), opts);
@@ -886,7 +888,7 @@
                 return;
             }
             if (typeof errorModal === "function") {
-                errorModal("No está disponible el alta de clientes en esta pantalla. Andá a Clientes → Nuevo.");
+                errorModal("No esta disponible el alta de clientes en esta pantalla. Anda a Clientes → Nuevo.");
             }
         }
 
@@ -912,7 +914,7 @@
 
                 if (!this._tieneClientesEnCombo()) {
                     this.mostrarErrorCampos(
-                        "No hay clientes cargados. Creá primero un <strong>Cliente</strong> con el botón + al lado del combo (o en el menú Clientes → Nuevo). Después podés registrar el establecimiento. <em>No hace falta ningún contrato.</em>",
+                        "No hay clientes cargados. Crea primero un <strong>Cliente</strong> con el boton + al lado del combo (o en el menu Clientes → Nuevo). Despues podes registrar el establecimiento. <em>No hace falta ningun contrato.</em>",
                         null,
                         "validacion"
                     );
@@ -988,7 +990,9 @@
             this._setFieldValue("txtIdEst", modelo.Id || "");
             this._setFieldValue("txtNombreEst", modelo.Nombre || "");
             this._setFieldValue("txtCuitEst", modelo.Cuit || "");
-            this._setFieldValue("txtDomicilioEst", modelo.Domicilio || "");
+            this._setFieldValue("txtCalleEst", modelo.Calle || modelo.Domicilio || "");
+            this._setFieldValue("txtNumeroEst", modelo.Numero || "");
+            this._setFieldValue("txtPisoDeptoEst", modelo.PisoDepartamento || "");
             this._setFieldValue("txtLocalidadEst", modelo.Localidad || "");
             this._setFieldValue("txtCodPostalEst", modelo.CodPostal || "");
             this._setFieldValue("chkImpuestoIvaEst", !!modelo.ImpuestoIva);
@@ -998,6 +1002,7 @@
             if (modelo.IdCliente) this._setFieldValue("cmbClienteEst", modelo.IdCliente, true);
             if (modelo.IdCondicionIva) this._setFieldValue("cmbCondicionIvaEst", modelo.IdCondicionIva, true);
             if (modelo.IdProvincia) this._setFieldValue("cmbProvinciaEst", modelo.IdProvincia, true);
+            if (modelo.IdTipoGenerador) this._setFieldValue("cmbTipoGeneradorEst", modelo.IdTipoGenerador, true);
             if (modelo.IdDiaRecoleccion) this._setFieldValue("cmbDiaEst", modelo.IdDiaRecoleccion, true);
             if (modelo.IdSemanaRecoleccion) this._setFieldValue("cmbSemanaEst", modelo.IdSemanaRecoleccion, true);
             if (modelo.IdListaPrecio) this._setFieldValue("cmbListaPrecioEst", modelo.IdListaPrecio, true);
@@ -1045,10 +1050,18 @@
             (data || []).forEach(x => select.append(new Option(x.Nombre, x.Id)));
         }
 
+        async _llenarComboTiposGenerador() {
+            const data = await this._fetchJson(this.options.endpoints.tiposGenerador, { headers: this._headers(false) });
+            const select = this._id("cmbTipoGeneradorEst");
+            if (!select) return;
+            (data || []).forEach(x => select.append(new Option(x.Etiqueta || x.Nombre, x.Id)));
+        }
+
         async cargarCombos() {
             this.resetSelect("cmbClienteEst", "Seleccionar");
             this.resetSelect("cmbCondicionIvaEst", "Seleccionar");
             this.resetSelect("cmbProvinciaEst", "Seleccionar");
+            this.resetSelect("cmbTipoGeneradorEst", "Seleccionar");
             this.resetSelect("cmbDiaEst", "Seleccionar");
             this.resetSelect("cmbSemanaEst", "Seleccionar");
             this.resetSelect("cmbListaPrecioEst", "Seleccionar");
@@ -1058,6 +1071,7 @@
                 this._llenarCombo("cmbClienteEst", this.options.endpoints.clientes),
                 this._llenarCombo("cmbCondicionIvaEst", this.options.endpoints.condicionesIva),
                 this._llenarCombo("cmbProvinciaEst", this.options.endpoints.provincias),
+                this._llenarComboTiposGenerador(),
                 this._llenarCombo("cmbDiaEst", this.options.endpoints.dias),
                 this._llenarCombo("cmbSemanaEst", this.options.endpoints.semanas),
                 this._llenarCombo("cmbListaPrecioEst", this.options.endpoints.listasPrecios),
@@ -1080,10 +1094,13 @@
                 Cuit: this._getFieldValue("txtCuitEst") || null,
                 IdCondicionIva: this._getIntOrNull("cmbCondicionIvaEst"),
                 ImpuestoIva: !!this._getFieldValue("chkImpuestoIvaEst"),
+                Calle: (this._getFieldValue("txtCalleEst") || "").trim() || null,
+                Numero: (this._getFieldValue("txtNumeroEst") || "").trim() || null,
+                PisoDepartamento: (this._getFieldValue("txtPisoDeptoEst") || "").trim() || null,
+                IdTipoGenerador: this._getIntOrNull("cmbTipoGeneradorEst"),
                 IdProvincia: this._getIntOrNull("cmbProvinciaEst"),
                 Localidad: this._getFieldValue("txtLocalidadEst") || null,
                 CodPostal: this._getFieldValue("txtCodPostalEst") || null,
-                Domicilio: this._getFieldValue("txtDomicilioEst") || null,
                 IdDiaRecoleccion: this._getIntOrNull("cmbDiaEst") ?? 0,
                 IdSemanaRecoleccion: this._getIntOrNull("cmbSemanaEst") ?? 0,
                 IdListaPrecio: this._getIntOrNull("cmbListaPrecioEst") ?? 0,
@@ -1233,7 +1250,7 @@
             return true;
         }
 
-        async _recargarCombo(selectId, url) {
+        async _recargarCombo(selectId, url, textField = "Nombre") {
             const el = this._id(selectId);
             if (!el) return;
 
@@ -1242,7 +1259,7 @@
             el.append(new Option("Seleccionar", ""));
 
             const data = await this._fetchJson(url, { headers: this._headers(false) });
-            (data || []).forEach(x => el.append(new Option(x.Nombre, x.Id)));
+            (data || []).forEach(x => el.append(new Option(x[textField] || x.Nombre, x.Id)));
 
             this._refreshSelect2Field(selectId);
 
@@ -1255,7 +1272,7 @@
             const cfg = this._comboPorController[detail?.tipo];
             if (!cfg) return;
 
-            await this._recargarCombo(cfg.selectId, cfg.url);
+            await this._recargarCombo(cfg.selectId, cfg.url, cfg.textField || "Nombre");
 
             if (detail.nuevoId) {
                 this._setFieldValue(cfg.selectId, detail.nuevoId, true);

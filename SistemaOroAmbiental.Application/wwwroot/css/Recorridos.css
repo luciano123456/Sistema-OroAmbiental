@@ -479,7 +479,7 @@
     min-width: 0;
     display: flex;
     flex-direction: column;
-    gap: 0.25rem;
+    gap: 0.45rem;
 }
 
 .rec-cliente-name {
@@ -488,6 +488,94 @@
     color: #f8fbff;
     line-height: 1.25;
     word-break: break-word;
+}
+
+/* Bloque principal: domicilio + localidad + unidad */
+.rec-cliente-ubicacion {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+    padding: 0.55rem 0.65rem;
+    border-radius: 10px;
+    background: linear-gradient(135deg, rgba(30, 58, 95, 0.55), rgba(37, 99, 235, 0.12));
+    border: 1px solid rgba(96, 165, 250, 0.22);
+}
+
+.rec-cliente-domicilio {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.45rem;
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: #e8f0ff;
+    line-height: 1.35;
+    word-break: break-word;
+}
+
+.rec-cliente-domicilio .fa {
+    margin-top: 0.15rem;
+    color: #60a5fa;
+    flex-shrink: 0;
+}
+
+.rec-cliente-ubicacion-empty {
+    color: #8fa3bf;
+    font-weight: 500;
+    font-style: italic;
+}
+
+.rec-cliente-ubicacion-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+}
+
+.rec-cliente-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.2rem 0.55rem;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    line-height: 1.2;
+}
+
+.rec-cliente-chip .fa {
+    font-size: 0.72rem;
+    opacity: 0.9;
+}
+
+.rec-cliente-chip--loc {
+    background: rgba(16, 185, 129, 0.15);
+    border: 1px solid rgba(52, 211, 153, 0.35);
+    color: #a7f3d0;
+}
+
+.rec-cliente-chip--truck {
+    background: rgba(245, 158, 11, 0.12);
+    border: 1px solid rgba(251, 191, 36, 0.35);
+    color: #fde68a;
+}
+
+.rec-cliente-chip--muted {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px dashed rgba(255, 255, 255, 0.12);
+    color: #7a8aa3;
+    font-weight: 500;
+}
+
+.rec-cliente-est-line {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.74rem;
+    color: #7d8fa8;
+}
+
+.rec-cliente-est-line .fa {
+    opacity: 0.7;
+    font-size: 0.7rem;
 }
 
 .rec-cliente-est {

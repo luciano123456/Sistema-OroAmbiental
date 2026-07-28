@@ -25,7 +25,7 @@
                 ? this.root
                 : this.root.querySelector("[data-gasto-modal]");
 
-            if (!this.modalEl) throw new Error("No se encontró [data-gasto-modal].");
+            if (!this.modalEl) throw new Error("No se encontro [data-gasto-modal].");
 
             this.bsModal = new bootstrap.Modal(this.modalEl);
             this._ultimoModo = "nuevo";
@@ -43,7 +43,7 @@
 
             this._labelsCampos = {
                 txtFecha: "Fecha",
-                cmbCategoria: "Categoría",
+                cmbCategoria: "Categoria",
                 cmbCuenta: "Cuenta",
                 txtConcepto: "Concepto",
                 txtImporteNeto: "Importe neto"
@@ -484,7 +484,7 @@
 
         async eliminar(id) {
             const ok = typeof confirmarModal === "function"
-                ? await confirmarModal("¿Desea eliminar este gasto? Se revertirá el movimiento en caja.")
+                ? await confirmarModal("¿Desea eliminar este gasto? Se revertira el movimiento en caja.")
                 : window.confirm("¿Desea eliminar este gasto?");
 
             if (!ok) return false;

@@ -767,7 +767,7 @@
 
         async eliminar(id) {
             if (typeof window.ejecutarEliminacionEntidad !== "function") {
-                errorModal("No está disponible el asistente de eliminación.");
+                errorModal("No esta disponible el asistente de eliminacion.");
                 return false;
             }
 
@@ -859,7 +859,7 @@
                 try {
                     await this._onConfiguracionActualizada(e.detail || {});
                 } catch (err) {
-                    console.error("Error recargando combo tras configuraci?n", err);
+                    console.error("Error recargando combo tras configuraci\u00F3n", err);
                 }
             };
 

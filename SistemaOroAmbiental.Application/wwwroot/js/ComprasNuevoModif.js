@@ -169,7 +169,7 @@
 
         const clavesDatos = ["proveedor", "sucursal", "fecha", "nota"];
         const clavesPagos = ["pago", "pagos", "cuenta", "caja"];
-        const clavesProductos = ["producto", "línea", "linea", "cantidad", "costo", "ítem", "item", "líneas", "lineas"];
+        const clavesProductos = ["producto", "linea", "cantidad", "costo", "item", "lineas"];
 
         clavesDatos.forEach(k => { if (m.includes(k)) secciones.datos = true; });
         clavesProductos.forEach(k => { if (m.includes(k)) secciones.productos = true; });
@@ -248,7 +248,7 @@
         } else {
             const sinProducto = CM.lineas.some(l => !l.IdProducto);
             if (sinProducto) {
-                erroresProductos.push("Hay líneas sin producto seleccionado.");
+                erroresProductos.push("Hay lineas sin producto seleccionado.");
             }
 
             const cantidadInvalida = CM.lineas.some(l => l.IdProducto > 0 && !(Number(l.Cantidad) > 0));
@@ -408,7 +408,7 @@
     async function cargarCompra(id) {
         const r = await fetch(API.editarInfo(id), { headers: authHeaders() });
         if (!r.ok) {
-            errorModal("No se encontró la compra.");
+            errorModal("No se encontro la compra.");
             return;
         }
 
@@ -667,10 +667,11 @@
         $("#totSaldoResumen").text(fmtMoney(saldo));
         $("#cntPagos").text(`(${activos.length})`);
 
+        const accionGuardar = CM.id > 0 ? "Guardar cambios" : "Registrar compra";
         $("#lblPagosHintText").text(
             activos.length
-                ? `${activos.length} pago(s) en la grilla. Se guardan al pulsar ?,?${CM.id > 0 ? "Guardar cambios" : "Registrar compra"}?,? (caja y cuenta corriente).`
-                : "Agregá filas de pago como en productos. Nada se registra hasta guardar la compra."
+                ? `${activos.length} pago(s) en la grilla. Se guardan al pulsar ${accionGuardar} (caja y cuenta corriente).`
+                : "Agrega filas de pago como en productos. Nada se registra hasta guardar la compra."
         );
     }
 
@@ -735,7 +736,7 @@
         recalcularTotalesUI();
     }
 
-    /** IDs de producto ya elegidos en otras líneas (no repetir en la misma compra). */
+    /** IDs de producto ya elegidos en otras lineas (no repetir en la misma compra). */
     function idsProductosEnOtrasLineas(excluirKey) {
         const ids = new Set();
         CM.lineas.forEach(l => {
@@ -948,7 +949,7 @@
         });
 
         if (!r.ok) {
-            mostrarErrorCompra("Error de comunicación con el servidor.");
+            mostrarErrorCompra("Error de comunicacion con el servidor.");
             return;
         }
 
@@ -973,10 +974,10 @@
 
         const tienePagos = (CM.pagosLineas || []).some(p => p.IdPago > 0) || pagosActivos().length > 0;
         const msgPagos = tienePagos
-            ? " También se revertirán los pagos (egresos de caja y cuenta corriente)."
+            ? " Tambien se revertiran los pagos (egresos de caja y cuenta corriente)."
             : "";
         const confirmado = await confirmarModal(
-            `¿Eliminar esta compra? Se revertirá stock y deuda del proveedor.${msgPagos}`);
+            `Eliminar esta compra? Se revertira stock y deuda del proveedor.${msgPagos}`);
         if (!confirmado) return;
 
         const r = await fetch(API.eliminar(CM.id), { method: "DELETE", headers: authHeaders() });

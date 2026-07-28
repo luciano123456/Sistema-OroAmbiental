@@ -1,0 +1,479 @@
+@{
+    Layout = "_LayoutModulo";
+    ViewData["Title"] = "Proveedores - Gestion";
+    var id = (int)(ViewBag.Id ?? 0);
+}
+
+@section Estilos {
+    <link href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css" rel="stylesheet" />
+    <link href="https://cdn.datatables.net/buttons/2.2.2/css/buttons.dataTables.min.css" rel="stylesheet" />
+    <link href="https://cdn.datatables.net/fixedheader/3.2.2/css/fixedHeader.dataTables.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link href="~/css/Productora.css?v=6.1" rel="stylesheet" />
+    <link href="~/css/disenopantallas.css?v=6.1" rel="stylesheet" />
+    <link href="~/css/M_Generico.css?v=6.1" rel="stylesheet" />
+    <link href="~/css/ClientesGestion.css?v=8.6" rel="stylesheet" />
+    <link href="~/css/ProveedoresGestion.css?v=1.0" rel="stylesheet" />
+}
+
+<div class="cg-page pg-page">
+
+    <div class="cg-header cc-header cg-header-hero shadow-lg rounded-4 p-3 mb-3 pg-header-hero">
+        <div class="d-flex align-items-center gap-3 flex-wrap w-100">
+            <a href="@Url.Action("Index", "Proveedores")" class="cg-btn-back" title="Volver al listado">
+                <i class="fa fa-arrow-left"></i>
+            </a>
+
+            <span class="cc-badge pg-badge">
+                <i class="fa fa-industry"></i>
+            </span>
+
+            <div class="flex-grow-1 min-w-0">
+                <h2 class="m-0 fw-800 text-truncate" id="pgTituloProveedor">@(id > 0 ? "Cargando..." : "Nuevo proveedor")</h2>
+                <small class="text-muted-cc d-none" id="pgSubtituloProveedor"></small>
+            </div>
+
+            <div class="d-flex gap-2 flex-wrap align-items-center cg-header-actions">
+                <a id="btnNuevaCompraPg" class="btn btn-outline-light btn-sm cg-btn-action" href="#" hidden>
+                    <i class="fa fa-shopping-cart me-1"></i> Nueva compra
+                </a>
+                <button id="btnEliminarProveedorPg" class="btn btn-outline-danger btn-sm" type="button" hidden>
+                    <i class="fa fa-trash"></i>
+                </button>
+                <button id="btnGuardarProveedorPg" class="btn btn-success btn-sm" type="button">
+                    <i class="fa fa-check me-1"></i> <span id="lblGuardarProveedorPg">@(id > 0 ? "Guardar" : "Registrar")</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="card-glass p-0 cg-card">
+
+        <div class="rp-tabs-shell cg-tabs-shell">
+            <ul class="nav rp-tabs-modern cg-tabs-scroll" id="pgTabsNav" role="tablist">
+                <li class="nav-item">
+                    <button class="nav-link active" id="tabBtnDatosPg" data-bs-toggle="tab" data-bs-target="#tabDatosPg" type="button" data-pg-tab="datos">
+                        <i class="fa fa-id-card"></i><span>Datos</span>
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link" id="tabBtnContactosPg" data-bs-toggle="tab" data-bs-target="#tabContactosPg" type="button" data-pg-tab="contactos" disabled>
+                        <i class="fa fa-address-book"></i><span>Contactos</span>
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link" id="tabBtnCcPg" data-bs-toggle="tab" data-bs-target="#tabCcPg" type="button" data-pg-tab="cuentaCorriente" disabled>
+                        <i class="fa fa-credit-card"></i><span>Cuenta corriente</span>
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link" id="tabBtnComprasPg" data-bs-toggle="tab" data-bs-target="#tabComprasPg" type="button" data-pg-tab="compras" disabled>
+                        <i class="fa fa-shopping-cart"></i><span>Compras</span>
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link" id="tabBtnPagosPg" data-bs-toggle="tab" data-bs-target="#tabPagosPg" type="button" data-pg-tab="pagos" disabled>
+                        <i class="fa fa-money"></i><span>Pagos</span>
+                    </button>
+                </li>
+            </ul>
+        </div>
+
+        <div class="tab-content cg-tab-content" id="pgTabsContent">
+
+            <!-- DATOS -->
+            <div class="tab-pane fade show active" id="tabDatosPg">
+                <div id="errorCamposPg" class="rp-error-panel d-none mb-3">
+                    <div class="rp-error-icon"><i class="fa fa-exclamation-triangle"></i></div>
+                    <div class="rp-error-content">
+                        <div class="rp-error-title">No se pudo guardar</div>
+                        <div class="rp-error-message"></div>
+                    </div>
+                    <button type="button" class="rp-error-close" id="btnCerrarErrorPg"><i class="fa fa-times"></i></button>
+                </div>
+
+                <input type="hidden" id="pgId" value="@id" />
+
+                <div class="cg-form-panel">
+                    <form class="row g-3 cg-form" id="formDatosProveedor">
+                        <div class="col-md-4">
+                            <label class="form-label">Nombre</label>
+                            <input id="pgNombre" class="form-control" required />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">CUIT</label>
+                            <input id="pgCuit" class="form-control" required maxlength="11" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Condicion IVA</label>
+                            <div class="rp-select-plus">
+                                <select id="pgCondicionIva" class="form-control"></select>
+                                <button type="button" class="rp-btn-plus" title="Agregar condicion IVA"
+                                        data-config-nombre="Condiciones IVA" data-config-controller="CondicionesIva">
+                                    <i class="fa fa-plus"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Telefono</label>
+                            <input id="pgTelefono" class="form-control" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Email</label>
+                            <input id="pgEmail" class="form-control" type="email" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Banco</label>
+                            <div class="rp-select-plus">
+                                <select id="pgBanco" class="form-control"></select>
+                                <button type="button" class="rp-btn-plus" title="Agregar banco"
+                                        data-config-nombre="Bancos" data-config-controller="Bancos">
+                                    <i class="fa fa-plus"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Alias bancario</label>
+                            <input id="pgAlias" class="form-control" maxlength="50" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">CBU</label>
+                            <input id="pgCbu" class="form-control" maxlength="50" />
+                        </div>
+                        <div class="col-md-4">
+                            <div class="rp-activo-box">
+                                <div class="rp-activo-box-head">
+                                    <span class="rp-activo-box-title">Estado</span>
+                                    <span class="rp-activo-box-sub">Inactivos quedan ocultos por defecto.</span>
+                                </div>
+                                <label class="rp-switch mb-0 rp-switch-block">
+                                    <input type="checkbox" id="pgActivo" class="rp-switch-input" checked>
+                                    <span class="rp-switch-slider"></span>
+                                    <span class="rp-activo-estado-text" id="lblActivoPg">Activo</span>
+                                </label>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="rp-auditoria d-none mt-3" id="pgAuditoria">
+                    <div id="pgInfoRegistro"></div>
+                    <div id="pgInfoModificacion"></div>
+                </div>
+            </div>
+
+            <!-- CONTACTOS -->
+            <div class="tab-pane fade" id="tabContactosPg">
+                <div class="rp-contact-page">
+                    <div class="rp-contact-hero mb-3">
+                        <div>
+                            <div class="text-muted small">Contactos del proveedor</div>
+                            <div class="rp-contact-hero-hint">
+                                <i class="fa fa-info-circle"></i> Administra los contactos asociados.
+                            </div>
+                        </div>
+                        <div class="rp-kpi-card-mini">
+                            <span>Contactos</span>
+                            <strong id="pgContactoCantidad">0</strong>
+                        </div>
+                    </div>
+                    <div class="rp-contact-layout">
+                        <div class="rp-contact-list-panel">
+                            <h6><i class="fa fa-list"></i> Listado</h6>
+                            <div id="pgListaContactos" class="rp-contact-list">
+                                <div class="rp-contact-empty">Sin contactos cargados.</div>
+                            </div>
+                        </div>
+                        <div class="rp-contact-form-panel">
+                            <h6><i class="fa fa-user-plus"></i> <span id="pgContactoFormTitulo">Nuevo contacto</span></h6>
+                            <input type="hidden" id="pgContactoId" />
+                            <div class="row g-2">
+                                <div class="col-md-12">
+                                    <label class="form-label">Nombre</label>
+                                    <input id="pgContactoNombre" class="form-control" maxlength="100" />
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Puesto</label>
+                                    <input id="pgContactoPuesto" class="form-control" maxlength="100" />
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Telefono</label>
+                                    <input id="pgContactoTelefono" class="form-control" maxlength="50" />
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Telefono alternativo</label>
+                                    <input id="pgContactoTelefonoAlt" class="form-control" maxlength="50" />
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Email</label>
+                                    <input id="pgContactoEmail" class="form-control" type="email" maxlength="100" />
+                                </div>
+                            </div>
+                            <div class="d-flex flex-wrap gap-2 mt-3">
+                                <button type="button" id="btnGuardarContactoPg" class="btn btn-primary btn-sm">
+                                    <i class="fa fa-check"></i> Guardar contacto
+                                </button>
+                                <button type="button" id="btnNuevoContactoPg" class="btn btn-outline-secondary btn-sm">
+                                    <i class="fa fa-plus"></i> Nuevo
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CUENTA CORRIENTE -->
+            <div class="tab-pane fade" id="tabCcPg">
+                <div class="pg-cc-filters mb-3">
+                    <div class="row g-2 align-items-end">
+                        <div class="col-md-2">
+                            <label class="form-label mb-1">Desde</label>
+                            <input type="date" id="pgCcDesde" class="form-control form-control-sm" />
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label mb-1">Hasta</label>
+                            <input type="date" id="pgCcHasta" class="form-control form-control-sm" />
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label mb-1">Tipo</label>
+                            <select id="pgCcTipo" class="form-control form-control-sm">
+                                <option value="">Todos</option>
+                                <option value="COMPRA">Compra</option>
+                                <option value="PAGO">Pago</option>
+                                <option value="AJUSTE">Ajuste</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label mb-1">Concepto</label>
+                            <input type="text" id="pgCcTexto" class="form-control form-control-sm" placeholder="Buscar..." />
+                        </div>
+                        <div class="col-md-3 d-flex gap-2 flex-wrap">
+                            <button type="button" id="btnFiltrarCcPg" class="btn btn-primary btn-sm"><i class="fa fa-filter"></i> Filtrar</button>
+                            <button type="button" id="btnLimpiarCcPg" class="btn btn-outline-secondary btn-sm"><i class="fa fa-eraser"></i> Limpiar</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="cg-cc-hero mb-3" id="pgCcResumen">
+                    <div class="cg-cc-kpi cg-cc-kpi--neutral">
+                        <span class="cg-cc-kpi-icon"><i class="fa fa-history"></i></span>
+                        <div><span>Saldo anterior</span><strong id="pgSaldoAnterior">$ 0,00</strong></div>
+                    </div>
+                    <div class="cg-cc-kpi cg-cc-kpi--debe">
+                        <span class="cg-cc-kpi-icon"><i class="fa fa-arrow-up"></i></span>
+                        <div><span>Debe</span><strong id="pgDebe">$ 0,00</strong></div>
+                    </div>
+                    <div class="cg-cc-kpi cg-cc-kpi--haber">
+                        <span class="cg-cc-kpi-icon"><i class="fa fa-arrow-down"></i></span>
+                        <div><span>Haber</span><strong id="pgHaber">$ 0,00</strong></div>
+                    </div>
+                    <div class="cg-cc-kpi cg-cc-kpi--total">
+                        <span class="cg-cc-kpi-icon"><i class="fa fa-balance-scale"></i></span>
+                        <div><span>Saldo actual</span><strong id="pgSaldoActual">$ 0,00</strong></div>
+                    </div>
+                </div>
+
+                <div class="cg-list-panel" data-pg-list="cuentaCorriente">
+                    <div class="cg-list-toolbar">
+                        <div class="cg-list-toolbar-info">
+                            <h6 class="cg-list-title"><i class="fa fa-credit-card"></i> Movimientos</h6>
+                        </div>
+                        <div class="d-flex gap-2 flex-wrap">
+                            <button type="button" id="btnPagoPg" class="cg-btn cg-btn--success cg-btn--sm" data-permiso="crear" data-modulo="Proveedores CC">
+                                <i class="fa fa-plus"></i> Registrar pago
+                            </button>
+                            <button type="button" id="btnAjustePg" class="cg-btn cg-btn--ghost cg-btn--sm" data-permiso="crear" data-modulo="Proveedores CC">
+                                <i class="fa fa-pencil"></i> Ajuste
+                            </button>
+                            <button type="button" id="btnRefreshCcPg" class="cg-btn cg-btn--ghost cg-btn--sm">
+                                <i class="fa fa-refresh"></i> Actualizar
+                            </button>
+                        </div>
+                    </div>
+                    <div class="cg-cards-grid" id="pgCards_cuentaCorriente"></div>
+                    <div class="dt-dark-wrap cg-table-wrap">
+                        <table class="dt-dark display" id="grd_CuentaCorrientePg" style="width:100%">
+                            <thead>
+                                <tr>
+                                    <th></th>
+                                    <th>Id</th>
+                                    <th>Fecha</th>
+                                    <th>Tipo</th>
+                                    <th>Concepto</th>
+                                    <th>Debe</th>
+                                    <th>Haber</th>
+                                    <th>Saldo</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- COMPRAS -->
+            <div class="tab-pane fade" id="tabComprasPg">
+                <div class="pg-compras-kpis mb-3">
+                    <div class="pg-mini-kpi"><span>Compras</span><strong id="pgKpiComprasCant">0</strong></div>
+                    <div class="pg-mini-kpi"><span>Total comprado</span><strong id="pgKpiComprasTotal">$ 0,00</strong></div>
+                    <div class="pg-mini-kpi"><span>Items</span><strong id="pgKpiComprasItems">0</strong></div>
+                </div>
+                <div class="cg-list-panel" data-pg-list="compras">
+                    <div class="cg-list-toolbar">
+                        <div class="cg-list-toolbar-info">
+                            <h6 class="cg-list-title"><i class="fa fa-shopping-cart"></i> Compras del proveedor</h6>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <a id="btnNuevaCompraTabPg" class="cg-btn cg-btn--success cg-btn--sm" href="#">
+                                <i class="fa fa-plus"></i> Nueva compra
+                            </a>
+                            <button type="button" id="btnRefreshComprasPg" class="cg-btn cg-btn--ghost cg-btn--sm">
+                                <i class="fa fa-refresh"></i> Actualizar
+                            </button>
+                        </div>
+                    </div>
+                    <div class="cg-cards-grid" id="pgCards_compras"></div>
+                    <div class="dt-dark-wrap cg-table-wrap">
+                        <table class="dt-dark display" id="grd_ComprasPg" style="width:100%">
+                            <thead>
+                                <tr>
+                                    <th></th>
+                                    <th>Id</th>
+                                    <th>Fecha</th>
+                                    <th>Sucursal</th>
+                                    <th>Productos</th>
+                                    <th>Total</th>
+                                    <th>Pagado</th>
+                                    <th>Restante</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PAGOS -->
+            <div class="tab-pane fade" id="tabPagosPg">
+                <div class="cg-list-panel" data-pg-list="pagos">
+                    <div class="cg-list-toolbar">
+                        <div class="cg-list-toolbar-info">
+                            <h6 class="cg-list-title"><i class="fa fa-money"></i> Pagos registrados</h6>
+                        </div>
+                        <button type="button" id="btnPagoTabPg" class="cg-btn cg-btn--success cg-btn--sm" data-permiso="crear" data-modulo="Proveedores CC">
+                            <i class="fa fa-plus"></i> Registrar pago
+                        </button>
+                    </div>
+                    <div class="cg-cards-grid" id="pgCards_pagos"></div>
+                    <div class="dt-dark-wrap cg-table-wrap">
+                        <table class="dt-dark display" id="grd_PagosPg" style="width:100%">
+                            <thead>
+                                <tr>
+                                    <th></th>
+                                    <th>Id</th>
+                                    <th>Fecha</th>
+                                    <th>Concepto</th>
+                                    <th class="text-end">Importe</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- Modal pago -->
+<div class="modal fade rp-modal" id="modalPagoPg" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content rp-modal-content">
+            <div class="modal-header rp-modal-header">
+                <div class="rp-modal-title"><i class="fa fa-money"></i> Registrar pago</div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Fecha</label>
+                        <input type="date" id="pgPagoFecha" class="form-control" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Importe</label>
+                        <input type="text" id="pgPagoImporte" class="form-control" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Sucursal (caja)</label>
+                        <select id="pgPagoSucursal" class="form-control"></select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Cuenta</label>
+                        <select id="pgPagoCuenta" class="form-control"></select>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Concepto</label>
+                        <input type="text" id="pgPagoConcepto" class="form-control" placeholder="Pago a proveedor" />
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer rp-modal-footer">
+                <button type="button" class="btn btn-outline-light btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" id="btnConfirmarPagoPg" class="btn btn-success btn-sm"><i class="fa fa-check"></i> Confirmar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal ajuste -->
+<div class="modal fade rp-modal" id="modalAjustePg" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content rp-modal-content">
+            <div class="modal-header rp-modal-header">
+                <div class="rp-modal-title"><i class="fa fa-pencil"></i> Ajuste manual</div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Fecha</label>
+                        <input type="date" id="pgAjusteFecha" class="form-control" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Debe</label>
+                        <input type="text" id="pgAjusteDebe" class="form-control" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Haber</label>
+                        <input type="text" id="pgAjusteHaber" class="form-control" />
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Concepto</label>
+                        <input type="text" id="pgAjusteConcepto" class="form-control" />
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer rp-modal-footer">
+                <button type="button" class="btn btn-outline-light btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" id="btnConfirmarAjustePg" class="btn btn-warning btn-sm"><i class="fa fa-check"></i> Confirmar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script>
+        window.PG_INIT = { id: @id };
+    </script>
+    <script src="~/js/ProveedoresGestion.js?v=1.0"></script>
+}

@@ -60,6 +60,8 @@ namespace SistemaOroAmbiental.BLL.Service
 
         public async Task<ServiceResult> InsertarMovimiento(LibroDiarioMovimientoDto dto, int idUsuario)
         {
+            await ResolverTercerosAsync(dto);
+
             var validacion = ValidarMovimiento(dto);
             if (validacion != null)
                 return validacion;
@@ -86,6 +88,8 @@ namespace SistemaOroAmbiental.BLL.Service
         {
             if (dto.Id <= 0)
                 return ServiceResult.Error("Movimiento inválido.", "validacion");
+
+            await ResolverTercerosAsync(dto);
 
             var validacion = ValidarMovimiento(dto);
             if (validacion != null)
@@ -135,6 +139,33 @@ namespace SistemaOroAmbiental.BLL.Service
 
         public Task<List<(int Id, string Nombre)>> AutocompleteProveedores(string? buscar)
             => _repo.AutocompleteProveedores(buscar);
+
+        private async Task ResolverTercerosAsync(LibroDiarioMovimientoDto dto)
+        {
+            if ((!dto.IdCliente.HasValue || dto.IdCliente <= 0) &&
+                !string.IsNullOrWhiteSpace(dto.Cliente))
+            {
+                var nombreCliente = dto.Cliente.Trim();
+                var clientes = await _repo.AutocompleteClientes(nombreCliente);
+                var exacto = clientes.FirstOrDefault(c =>
+                    string.Equals(c.Nombre, nombreCliente, StringComparison.OrdinalIgnoreCase));
+
+                if (exacto.Id > 0)
+                    dto.IdCliente = exacto.Id;
+            }
+
+            if ((!dto.IdProveedor.HasValue || dto.IdProveedor <= 0) &&
+                !string.IsNullOrWhiteSpace(dto.Proveedor))
+            {
+                var nombreProveedor = dto.Proveedor.Trim();
+                var proveedores = await _repo.AutocompleteProveedores(nombreProveedor);
+                var exacto = proveedores.FirstOrDefault(p =>
+                    string.Equals(p.Nombre, nombreProveedor, StringComparison.OrdinalIgnoreCase));
+
+                if (exacto.Id > 0)
+                    dto.IdProveedor = exacto.Id;
+            }
+        }
 
         private static ServiceResult? ValidarMovimiento(LibroDiarioMovimientoDto dto)
         {

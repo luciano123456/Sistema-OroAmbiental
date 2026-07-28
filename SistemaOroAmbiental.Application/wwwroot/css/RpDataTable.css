@@ -1,0 +1,801 @@
+/* =========================================================
+   RpDataTable v2 — skin premium unificado para todo el sistema
+   Cargar después de site.css y disenopantallas.css
+   ========================================================= */
+
+:root {
+    --rp-dt-bg: rgba(8, 12, 22, 0.72);
+    --rp-dt-border: rgba(255, 255, 255, 0.08);
+    --rp-dt-head: #121b30;
+    --rp-dt-head-text: #b8c9e6;
+    --rp-dt-row-a: rgba(255, 255, 255, 0.018);
+    --rp-dt-row-b: rgba(255, 255, 255, 0.042);
+    --rp-dt-hover: rgba(56, 189, 148, 0.08);
+    --rp-dt-selected: rgba(37, 99, 235, 0.22);
+    --rp-dt-accent: #34d399;
+    --rp-dt-pag-active: #1e293b;
+}
+
+/* Contenedor de grilla — overflow visible para toolbar/dropdowns (no recortar botones) */
+.dt-dark-wrap,
+.rp-table-wrap {
+    border-radius: 16px;
+    border: 1px solid var(--rp-dt-border);
+    background: var(--rp-dt-bg);
+    overflow: visible;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.28);
+    backdrop-filter: blur(8px);
+}
+
+.dt-dark-wrap .dataTables_scroll,
+.rp-table-wrap .dataTables_scroll {
+    overflow: hidden;
+    border-radius: 0 0 14px 14px;
+}
+
+/* Aire interno: toolbar, tabla y paginacion no pegados al borde */
+.dt-dark-wrap > .dataTables_wrapper,
+.rp-table-wrap > .dataTables_wrapper,
+.dt-dark-wrap .dataTables_wrapper,
+.rp-grid-panel .dataTables_wrapper {
+    padding: 0.9rem 1.1rem 1.1rem !important;
+    box-sizing: border-box;
+}
+
+/* Toolbar superior (botones + length) */
+.dataTables_wrapper .dt-buttons,
+.dataTables_wrapper .dt-buttons.btn-group {
+    display: inline-flex !important;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.65rem !important;
+    margin: 0 0 0.85rem 0 !important;
+    padding: 0.15rem 0.1rem 0.25rem !important;
+    vertical-align: middle;
+    width: auto !important;
+    max-width: 100%;
+    box-sizing: border-box;
+    position: relative;
+    z-index: 30;
+}
+
+.dataTables_wrapper .dt-buttons .dt-button,
+.dataTables_wrapper .dt-buttons.btn-group > .dt-button {
+    margin: 0 !important;
+    float: none !important;
+    position: relative !important;
+    background: rgba(255, 255, 255, 0.05) !important;
+    color: #dce6f5 !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    border-radius: 10px !important;
+    padding: 0.48rem 0.95rem !important;
+    font-size: 0.78rem !important;
+    font-weight: 600 !important;
+    line-height: 1.25 !important;
+    box-shadow: none !important;
+    transition: background 0.15s, border-color 0.15s, transform 0.12s, box-shadow 0.15s;
+}
+
+.dataTables_wrapper .dt-buttons .dt-button + .dt-button,
+.dataTables_wrapper .dt-buttons.btn-group > .dt-button + .dt-button,
+.dataTables_wrapper .dt-buttons.btn-group > .dt-button:not(:first-child) {
+    margin-left: 0 !important;
+    border-top-left-radius: 10px !important;
+    border-bottom-left-radius: 10px !important;
+}
+
+.dataTables_wrapper .dt-buttons .dt-button:hover,
+.dataTables_wrapper .dt-buttons .dt-button:focus {
+    background: rgba(255, 255, 255, 0.1) !important;
+    border-color: rgba(52, 211, 153, 0.35) !important;
+    color: #f8fafc !important;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.22) !important;
+}
+
+.dataTables_wrapper .dt-buttons .dt-button:active {
+    transform: translateY(0);
+}
+
+.dataTables_wrapper .dt-buttons .rp-dt-btn-length {
+    min-width: 8.25rem;
+    margin-left: 0.15rem !important;
+}
+
+.dataTables_wrapper .dt-buttons .rp-dt-btn-length::after {
+    margin-left: 0.35rem;
+    opacity: 0.65;
+}
+
+/* Sin velo oscuro al abrir "Mostrar filas" */
+div.dt-button-background {
+    display: none !important;
+}
+
+/* Dropdown de cantidad de filas — popover compacto */
+div.dt-button-collection {
+    position: absolute !important;
+    margin-top: 0.35rem !important;
+    padding: 0.35rem !important;
+    min-width: 7.5rem !important;
+    background: linear-gradient(160deg, rgba(30, 38, 52, 0.98) 0%, rgba(18, 24, 36, 0.99) 100%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    border-radius: 12px !important;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(0, 0, 0, 0.2) !important;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    z-index: 100002 !important;
+}
+
+div.dt-button-collection .dt-button {
+    display: block !important;
+    width: 100% !important;
+    margin: 0.15rem 0 !important;
+    padding: 0.45rem 0.75rem !important;
+    text-align: center !important;
+    border-radius: 8px !important;
+    background: transparent !important;
+    border: 1px solid transparent !important;
+    color: #dce6f5 !important;
+    font-size: 0.82rem !important;
+    font-weight: 600 !important;
+    box-shadow: none !important;
+}
+
+div.dt-button-collection .dt-button:hover,
+div.dt-button-collection .dt-button:focus {
+    background: rgba(52, 211, 153, 0.14) !important;
+    border-color: rgba(52, 211, 153, 0.28) !important;
+    color: #ecfdf5 !important;
+}
+
+div.dt-button-collection .dt-button.active,
+div.dt-button-collection .dt-button.dt-button-active {
+    background: rgba(52, 211, 153, 0.22) !important;
+    border-color: rgba(52, 211, 153, 0.45) !important;
+    color: #a7f3d0 !important;
+}
+
+.dataTables_wrapper .dataTables_length,
+.dataTables_wrapper .dataTables_filter {
+    margin-bottom: 0.5rem;
+}
+
+.dataTables_wrapper .dataTables_length select,
+.dataTables_wrapper .dataTables_filter input {
+    background: rgba(15, 23, 42, 0.85) !important;
+    color: #eaf1ff !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    border-radius: 10px !important;
+    padding: 0.35rem 0.65rem !important;
+    font-size: 0.82rem !important;
+}
+
+/* Encabezados */
+.dt-dark thead tr:first-child th,
+table.dataTable.dt-dark thead > tr:first-child > th {
+    background: linear-gradient(180deg, #1a2744 0%, var(--rp-dt-head) 100%) !important;
+    color: var(--rp-dt-head-text) !important;
+    font-size: 0.72rem !important;
+    font-weight: 700 !important;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 0.75rem 0.85rem !important;
+    border-bottom: 2px solid rgba(255, 255, 255, 0.08) !important;
+    vertical-align: middle !important;
+    white-space: nowrap;
+}
+
+/* Fila de filtros por columna — TODOS los inputs oscuros */
+.dt-dark thead tr.filters th,
+table.dataTable.dt-dark thead tr.filters th,
+table.dataTable thead tr.filters th,
+.ld-table thead tr.ld-filters th {
+    background: rgba(8, 12, 20, 0.98) !important;
+    padding: 7px 10px !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
+    vertical-align: middle !important;
+}
+
+.rp-filter-thead,
+.dt-dark thead tr.filters th input:not([type="checkbox"]),
+table.dataTable thead tr.filters th input:not([type="checkbox"]),
+.ld-table thead tr.ld-filters th input,
+.ld-col-filter {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 30px !important;
+    min-height: 30px !important;
+    padding: 0 8px !important;
+    font-size: 0.72rem !important;
+    line-height: 1.2 !important;
+    border-radius: 7px !important;
+    background: rgba(10, 16, 28, 0.95) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    color: #eaf1ff !important;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.22) !important;
+}
+
+select.rp-filter-thead,
+.dt-dark thead tr.filters th select,
+table.dataTable thead tr.filters th select {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 30px !important;
+    min-height: 30px !important;
+    padding: 0 24px 0 8px !important;
+    font-size: 0.72rem !important;
+    line-height: 1.2 !important;
+    border-radius: 7px !important;
+    background: rgba(10, 16, 28, 0.95) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    color: #eaf1ff !important;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.22) !important;
+    -webkit-appearance: menulist !important;
+    appearance: auto !important;
+    cursor: pointer;
+}
+
+.rp-filter-thead::placeholder,
+.dt-dark thead tr.filters th input::placeholder,
+.ld-col-filter::placeholder {
+    color: rgba(234, 241, 255, 0.32) !important;
+    opacity: 1 !important;
+}
+
+.rp-filter-thead:focus,
+.dt-dark thead tr.filters th input:focus,
+.dt-dark thead tr.filters th select:focus,
+.ld-col-filter:focus {
+    border-color: rgba(52, 211, 153, 0.5) !important;
+    box-shadow: 0 0 0 2px rgba(52, 211, 153, 0.12) !important;
+    outline: none !important;
+    background: rgba(12, 20, 36, 0.98) !important;
+}
+
+/* Select nativo si Select2 no cargo */
+select.rp-filter-thead.rp-filter-select-native {
+    -webkit-appearance: menulist !important;
+    appearance: auto !important;
+    cursor: pointer;
+}
+
+/* Select2 en filtros de columna */
+.dt-dark thead tr.filters th .select2-container,
+table.dataTable thead tr.filters th .select2-container {
+    width: 100% !important;
+    max-width: 100% !important;
+}
+
+.dt-dark thead tr.filters th .select2-container .select2-selection--single,
+table.dataTable thead tr.filters th .select2-container .select2-selection--single {
+    height: 30px !important;
+    min-height: 30px !important;
+    background: rgba(10, 16, 28, 0.95) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    border-radius: 7px !important;
+}
+
+.dt-dark thead tr.filters th .select2-selection__rendered,
+table.dataTable thead tr.filters th .select2-selection__rendered {
+    color: #eaf1ff !important;
+    line-height: 28px !important;
+    padding-left: 8px !important;
+    font-size: 0.72rem !important;
+}
+
+.dt-dark thead tr.filters th .select2-selection__arrow,
+table.dataTable thead tr.filters th .select2-selection__arrow {
+    height: 28px !important;
+}
+
+.rp-filter-thead-spacer {
+    display: block;
+    height: 30px;
+}
+
+/* Filtro columna Activo — toggle premium con glider animado */
+.rp-filter-activo-toggle {
+    --rp-activo-gap: 2px;
+    --rp-activo-pad: 3px;
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--rp-activo-gap);
+    width: 100%;
+    min-height: 30px;
+    padding: var(--rp-activo-pad);
+    border-radius: 10px;
+    background: linear-gradient(165deg, rgba(22, 30, 48, 0.98) 0%, rgba(9, 14, 26, 0.98) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.11);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.05),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.22),
+        0 2px 10px rgba(0, 0, 0, 0.18);
+    box-sizing: border-box;
+}
+
+.rp-filter-activo-glider {
+    position: absolute;
+    top: var(--rp-activo-pad);
+    left: var(--rp-activo-pad);
+    width: calc((100% - (var(--rp-activo-pad) * 2) - (var(--rp-activo-gap) * 2)) / 3);
+    height: calc(100% - (var(--rp-activo-pad) * 2));
+    border-radius: 7px;
+    pointer-events: none;
+    z-index: 0;
+    transition:
+        transform 0.28s cubic-bezier(0.34, 1.25, 0.64, 1),
+        background 0.22s ease,
+        box-shadow 0.22s ease;
+}
+
+.rp-filter-activo-toggle[data-modo="activos"] .rp-filter-activo-glider {
+    transform: translateX(0);
+    background: linear-gradient(180deg, rgba(52, 211, 153, 0.42) 0%, rgba(16, 185, 129, 0.28) 100%);
+    box-shadow: 0 0 14px rgba(52, 211, 153, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+.rp-filter-activo-toggle[data-modo="inactivos"] .rp-filter-activo-glider {
+    transform: translateX(calc(100% + var(--rp-activo-gap)));
+    background: linear-gradient(180deg, rgba(248, 113, 113, 0.38) 0%, rgba(220, 38, 38, 0.24) 100%);
+    box-shadow: 0 0 14px rgba(248, 113, 113, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.rp-filter-activo-toggle[data-modo="todos"] .rp-filter-activo-glider {
+    transform: translateX(calc(200% + (var(--rp-activo-gap) * 2)));
+    background: linear-gradient(180deg, rgba(96, 165, 250, 0.38) 0%, rgba(59, 130, 246, 0.24) 100%);
+    box-shadow: 0 0 14px rgba(96, 165, 250, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.rp-filter-activo-opt {
+    position: relative;
+    z-index: 1;
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1px;
+    min-width: 0;
+    height: 24px;
+    margin: 0;
+    padding: 0 2px;
+    border: 0;
+    border-radius: 7px;
+    background: transparent;
+    color: rgba(234, 241, 255, 0.42);
+    cursor: pointer;
+    transition: color 0.18s ease, transform 0.12s ease;
+}
+
+.rp-filter-activo-opt .fa {
+    font-size: 12px;
+    line-height: 1;
+    transition: color 0.18s ease, transform 0.18s ease;
+}
+
+.rp-filter-activo-opt span {
+    font-size: 0.58rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    line-height: 1;
+    text-transform: uppercase;
+}
+
+.rp-filter-activo-opt:hover {
+    color: rgba(234, 241, 255, 0.78);
+}
+
+.rp-filter-activo-opt:active {
+    transform: scale(0.96);
+}
+
+.rp-filter-activo-toggle[data-modo="activos"] .rp-filter-activo-opt[data-modo="activos"],
+.rp-filter-activo-toggle[data-modo="inactivos"] .rp-filter-activo-opt[data-modo="inactivos"],
+.rp-filter-activo-toggle[data-modo="todos"] .rp-filter-activo-opt[data-modo="todos"] {
+    color: #f8fafc;
+}
+
+.rp-filter-activo-toggle[data-modo="activos"] .rp-filter-activo-opt[data-modo="activos"] .fa {
+    color: #a7f3d0;
+    transform: scale(1.08);
+}
+
+.rp-filter-activo-toggle[data-modo="inactivos"] .rp-filter-activo-opt[data-modo="inactivos"] .fa {
+    color: #fecaca;
+    transform: scale(1.08);
+}
+
+.rp-filter-activo-toggle[data-modo="todos"] .rp-filter-activo-opt[data-modo="todos"] .fa {
+    color: #bfdbfe;
+    transform: scale(1.08);
+}
+
+/* Thead compacto: solo iconos */
+.rp-filter-activo-toggle.rp-filter-thead {
+    min-height: 30px;
+    padding: 3px;
+}
+
+.rp-filter-activo-toggle.rp-filter-thead .rp-filter-activo-opt {
+    height: 24px;
+}
+
+.rp-filter-activo-toggle.rp-filter-thead .rp-filter-activo-opt span {
+    display: none;
+}
+
+.rp-filter-activo-toggle.rp-filter-thead .rp-filter-activo-opt .fa {
+    font-size: 13px;
+}
+
+/* Panel expandido: icono + etiqueta */
+.rp-filter-activo-toggle-panel {
+    min-height: 38px;
+    padding: 4px;
+    max-width: 280px;
+}
+
+.rp-filter-activo-toggle-panel .rp-filter-activo-opt {
+    height: 30px;
+    flex-direction: row;
+    gap: 5px;
+    padding: 0 6px;
+}
+
+.rp-filter-activo-toggle-panel .rp-filter-activo-opt span {
+    display: inline;
+    font-size: 0.68rem;
+}
+
+.rp-filter-activo-toggle-panel .rp-filter-activo-opt .fa {
+    font-size: 13px;
+}
+
+/* Legacy segment / chips — panel cards */
+.rp-filter-segment {
+    display: flex;
+    width: 100%;
+    min-height: 30px;
+    border-radius: 7px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    overflow: hidden;
+    background: rgba(10, 16, 28, 0.95);
+}
+
+.rp-filter-activo-chips {
+    display: flex;
+    gap: 3px;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    min-height: 30px;
+}
+
+.rp-filter-activo-chips.rp-grid-panel-activo-chips {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    margin-top: 0.35rem;
+}
+
+.rp-filter-activo-chip {
+    flex: 0 1 auto;
+    min-width: 5.5rem;
+    height: 32px;
+    padding: 0 10px;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(10, 16, 28, 0.95);
+    color: rgba(234, 241, 255, 0.45);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    font-size: 0.72rem;
+    line-height: 1;
+}
+
+table.dt-dark th.rp-col-activo .rp-filter-activo-toggle,
+table.dt-dark thead tr.filters th.rp-col-activo .rp-filter-activo-toggle {
+    min-width: 96px;
+}
+
+/* Filas — pisa CDN de DataTables y colores viejos */
+table.dataTable.display tbody tr,
+table.dataTable.stripe tbody tr,
+table.dt-dark tbody tr {
+    background: transparent !important;
+    background-image: none !important;
+}
+
+table.dataTable.display tbody tr td,
+table.dataTable.stripe tbody tr td,
+table.dt-dark tbody tr td {
+    background-color: var(--rp-dt-row-a) !important;
+    background-image: none !important;
+    color: #dce6f5 !important;
+    padding: 0.55rem 0.65rem !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+    vertical-align: middle !important;
+    font-size: 0.82rem;
+    line-height: 1.35;
+}
+
+table.dataTable.display tbody tr:nth-child(even) td,
+table.dataTable.stripe tbody tr.even td,
+table.dt-dark tbody tr:nth-child(even) td {
+    background-color: var(--rp-dt-row-b) !important;
+}
+
+table.dataTable.display tbody tr:hover td,
+table.dt-dark tbody tr:hover td {
+    background-color: var(--rp-dt-hover) !important;
+}
+
+/* Selección */
+table.dt-dark tbody tr.dt-row-selected td,
+table.dataTable.dt-dark tbody tr.dt-row-selected td {
+    background-color: var(--rp-dt-selected) !important;
+    color: #f0f6ff !important;
+}
+
+table.dt-dark tbody tr.dt-row-selected td:first-child {
+    box-shadow: inset 3px 0 0 var(--rp-dt-accent) !important;
+}
+
+/* Columnas fijas */
+table.dt-dark td.rp-col-acciones,
+table.dt-dark th.rp-col-acciones {
+    width: 120px !important;
+    min-width: 120px !important;
+    max-width: 120px !important;
+    text-align: center !important;
+    padding: 4px 6px !important;
+}
+
+table.dt-dark td.rp-col-id,
+table.dt-dark th.rp-col-id {
+    width: 88px !important;
+    min-width: 88px !important;
+    max-width: 88px !important;
+    text-align: center !important;
+}
+
+/* Acciones inline — nunca apilar */
+.rp-row-actions {
+    display: inline-flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 4px !important;
+    padding: 2px 4px !important;
+    margin: 0 auto !important;
+    white-space: nowrap !important;
+}
+
+.rp-act {
+    width: 28px !important;
+    height: 28px !important;
+    min-width: 28px !important;
+    flex-shrink: 0 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border-radius: 8px !important;
+    padding: 0 !important;
+}
+
+.rp-act i {
+    font-size: 13px !important;
+    line-height: 1 !important;
+}
+
+/* Badge Id */
+.rp-grid-id {
+    color: #a7f3d0;
+    background: linear-gradient(160deg, rgba(16, 185, 129, 0.22) 0%, rgba(6, 95, 70, 0.18) 100%);
+    border: 1px solid rgba(52, 211, 153, 0.35);
+    box-shadow: none;
+}
+
+/* Paginación — sin azul bootstrap */
+.dataTables_wrapper .dataTables_paginate,
+.dataTables_wrapper .dataTables_info {
+    margin-top: 0.65rem !important;
+}
+
+.dataTables_wrapper .dataTables_paginate {
+    padding: 0.55rem 0.65rem;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button {
+    color: #94a3b8 !important;
+    border: 1px solid transparent !important;
+    background: transparent !important;
+    border-radius: 8px !important;
+    margin: 0 2px !important;
+    padding: 0.35rem 0.65rem !important;
+    font-size: 0.8rem !important;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button:hover {
+    color: #f1f5f9 !important;
+    background: rgba(255, 255, 255, 0.08) !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button.current,
+.paginate_button.current {
+    color: #ecfdf5 !important;
+    background: linear-gradient(180deg, rgba(16, 185, 129, 0.45), rgba(5, 150, 105, 0.35)) !important;
+    border: 1px solid rgba(52, 211, 153, 0.4) !important;
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.2) !important;
+}
+
+.dataTables_wrapper .dataTables_info {
+    color: #94a3b8;
+    font-size: 0.8rem;
+    padding-top: 0.65rem;
+}
+
+/* Scroll alineado — no forzar width 100% (rompe scrollX y solapa columnas) */
+.dataTables_scrollHead,
+.dataTables_scrollBody {
+    background: transparent !important;
+}
+
+.dataTables_scrollHeadInner {
+    box-sizing: content-box !important;
+}
+
+.dataTables_scrollHeadInner table,
+.dataTables_scrollBody table {
+    margin: 0 !important;
+    table-layout: auto !important;
+}
+
+/* Texto largo: ellipsis en lugar de invadir la columna vecina */
+table.dt-dark tbody td.rp-col-nombre,
+table.dt-dark tbody td.rp-col-email,
+table.dt-dark tbody td.rp-col-cuit,
+table.dt-dark tbody td.rp-col-tel {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 0;
+}
+
+table.dt-dark th.rp-col-nombre,
+table.dt-dark td.rp-col-nombre { min-width: 220px !important; width: 260px !important; }
+
+table.dt-dark th.rp-col-cuit,
+table.dt-dark td.rp-col-cuit { min-width: 130px !important; width: 145px !important; }
+
+table.dt-dark th.rp-col-sucursal,
+table.dt-dark td.rp-col-sucursal { min-width: 150px !important; width: 165px !important; }
+
+table.dt-dark th.rp-col-provincia,
+table.dt-dark td.rp-col-provincia { min-width: 140px !important; width: 155px !important; }
+
+table.dt-dark th.rp-col-profesion,
+table.dt-dark td.rp-col-profesion { min-width: 150px !important; width: 170px !important; }
+
+table.dt-dark th.rp-col-iva,
+table.dt-dark td.rp-col-iva { min-width: 150px !important; width: 170px !important; }
+
+table.dt-dark th.rp-col-banco,
+table.dt-dark td.rp-col-banco { min-width: 140px !important; width: 155px !important; }
+
+table.dt-dark th.rp-col-email,
+table.dt-dark td.rp-col-email { min-width: 220px !important; width: 280px !important; }
+
+table.dt-dark th.rp-col-tel,
+table.dt-dark td.rp-col-tel { min-width: 120px !important; width: 135px !important; }
+
+table.dt-dark th.rp-col-activo,
+table.dt-dark td.rp-col-activo {
+    min-width: 100px !important;
+    width: 108px !important;
+    max-width: none !important;
+    text-align: center !important;
+    padding-left: 4px !important;
+    padding-right: 4px !important;
+}
+
+table.dt-dark thead tr.filters th {
+    box-sizing: border-box;
+}
+
+.dataTables_scrollBody::-webkit-scrollbar {
+    height: 8px;
+    width: 8px;
+}
+
+.dataTables_scrollBody::-webkit-scrollbar-thumb {
+    background: rgba(148, 163, 184, 0.35);
+    border-radius: 8px;
+}
+
+/* Libro Diario — misma línea visual */
+.ld-table-wrap {
+    border-radius: 0 0 16px 16px;
+}
+
+.ld-table thead th {
+    background: linear-gradient(180deg, #1a2744 0%, var(--rp-dt-head) 100%);
+    color: var(--rp-dt-head-text);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.ld-table thead tr.ld-filters th {
+    background: rgba(10, 16, 28, 0.98);
+    padding: 5px 6px;
+}
+
+.ld-table thead tr.ld-filters th input {
+    width: 100%;
+    height: 32px;
+    padding: 0 8px;
+    font-size: 0.75rem;
+    border-radius: 8px;
+    background: rgba(15, 23, 42, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #eaf1ff;
+}
+
+.ld-table tbody td {
+    background: var(--rp-dt-row-a) !important;
+    padding: 0.55rem 0.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    vertical-align: middle;
+}
+
+.ld-table tbody tr:nth-child(even) td {
+    background: var(--rp-dt-row-b) !important;
+}
+
+.ld-table tbody tr:hover td {
+    background: var(--rp-dt-hover) !important;
+}
+
+.ld-col-acc {
+    width: 88px !important;
+    min-width: 88px !important;
+    max-width: 88px !important;
+    text-align: center;
+    white-space: nowrap;
+    padding: 4px 6px !important;
+}
+
+.ld-col-acc .rp-row-actions {
+    gap: 3px !important;
+}
+
+.ld-table .ld-col-saldo {
+    background: rgba(255, 209, 102, 0.06) !important;
+}
+
+/* Panel filtros global — complementa thead */
+.rp-grid-filtros-wrap {
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(8, 12, 22, 0.55);
+    overflow: hidden;
+}
+
+.rp-grid-filtros-wrap .rp-filtros-head {
+    padding: 0.65rem 1rem;
+}
+
+.rp-grid-filtros-wrap .rp-filtros-badge {
+    background: rgba(52, 211, 153, 0.18);
+    border-color: rgba(52, 211, 153, 0.35);
+    color: #a7f3d0;
+}

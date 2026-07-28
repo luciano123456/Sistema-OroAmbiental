@@ -78,10 +78,12 @@ async function configurarDataTable(data) {
             fixedHeader: true,
             initComplete: async function () {
                 const api = this.api();
-                await armarFiltrosGrillaLista(api, '#grd_Camiones', columnConfig);
-                configurarOpcionesColumnas();
-                actualizarKpis(data);
-                api.draw(false);
+                await initFiltrosGrillaListaEnInitComplete(api, '#grd_Camiones', columnConfig, {}, {
+                    afterFilters: () => {
+                        configurarOpcionesColumnas();
+                        actualizarKpis(data);
+                    }
+                });
             }
         });
 
@@ -92,6 +94,10 @@ async function configurarDataTable(data) {
 }
 
 function configurarOpcionesColumnas() {
+    if (typeof configurarMenuColumnasDataTable === "function") {
+        configurarMenuColumnasDataTable(gridCamiones, "#configColumnasMenu", "Camiones_Columnas", "#grd_Camiones");
+        return;
+    }
     const grid = $('#grd_Camiones').DataTable();
     const columnas = grid.settings().init().columns;
     const container = $('#configColumnasMenu');

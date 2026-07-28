@@ -1,5 +1,5 @@
 /* =========================================================
-   CAJA.JS — Tesorería Cajas (Sistema Oro Ambiental)
+   CAJA.JS - Tesoreria Cajas (Sistema Oro Ambiental)
 ========================================================= */
 
 let gridCaja;
@@ -660,8 +660,8 @@ function asegurarFilaFiltrosCaja(api) {
 }
 
 /**
- * Limpia búsquedas de columnas y controles de la fila de filtros.
- * Con sucursal única, mantiene el filtro de sucursal aplicado por prepararFiltroSucursalDataTable.
+ * Limpia busquedas de columnas y controles de la fila de filtros.
+ * Con sucursal unica, mantiene el filtro de sucursal aplicado por prepararFiltroSucursalDataTable.
  */
 function limpiarFiltrosColumnasGrilla(api, opts = {}) {
     const dt = api || gridCaja;
@@ -1010,7 +1010,7 @@ async function editarMovimiento(id) {
             return;
         }
 
-        errorModal("Este tipo de movimiento no admite edición desde esta pantalla.");
+        errorModal("Este tipo de movimiento no admite edicion desde esta pantalla.");
     } catch (e) {
         console.error(e);
         errorModal("No se pudo editar el movimiento.");
@@ -1379,7 +1379,7 @@ function validarTransferencia() {
     if (idCuentaOrigen && idCuentaDestino && String(idCuentaOrigen) === String(idCuentaDestino)) {
         validacionCajaTransferencia?.cancelarPanelExito?.();
         mostrarErrorCamposTransferencia(
-            `Revisá los siguientes campos/reglas:<br><strong>Origen y destino no pueden ser la misma cuenta</strong>`
+            `Revisa los siguientes campos/reglas:<br><strong>Origen y destino no pueden ser la misma cuenta</strong>`
         );
         return false;
     }

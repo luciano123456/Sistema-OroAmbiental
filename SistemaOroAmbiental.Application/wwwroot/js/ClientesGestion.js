@@ -1,5 +1,5 @@
 /* =========================================================
-   CLIENTES GESTIÓN — Hub unificado por cliente
+   CLIENTES GESTION - Hub unificado por cliente
 ========================================================= */
 
 const CG = {
@@ -38,11 +38,13 @@ const API_CG = {
     provincias: "/Provincias/Lista",
     partidosPorProvincia: id => `/Partidos/ListaPorProvincia?idProvincia=${id}`,
     localidadesPorPartido: id => `/Localidades/ListaPorPartido?idPartido=${id}`,
+    localidadesPorProvincia: id => `/Localidades/ListaPorProvincia?idProvincia=${id}`,
     condicionesIva: "/CondicionesIva/Lista",
     profesiones: "/ClientesProfesiones/Lista",
     estados: "/ClientesEstados/Lista",
     motivos: "/ClientesMotivos/Lista",
     calificaciones: "/ClientesCalificaciones/Lista",
+    tiposGenerador: "/ClientesTiposGenerador/Lista",
     contactosLista: id => `/ClientesContactos/ListaPorCliente?idCliente=${id}`,
     contactosInsertar: "/ClientesContactos/Insertar",
     contactosActualizar: "/ClientesContactos/Actualizar",
@@ -109,6 +111,23 @@ function initModalesCg() {
     if (typeof initEstablecimientoModal === "function") {
         CG.establecimientoModal = initEstablecimientoModal({
             token: token,
+            onOpen: async (modo, modal) => {
+                if (modo !== "nuevo" || !CG.modelo || CG.id <= 0) return;
+                const all = await fetchJsonCg(API_CG.establecimientosLista, { headers: authCg() }) || [];
+                if (all.some(x => x.IdCliente === CG.id)) return;
+
+                const c = CG.modelo;
+                modal._setFieldValue("txtNombreEst", c.Nombre || "");
+                modal._setFieldValue("txtCuitEst", c.Cuit || "");
+                if (c.IdCondicionIva) modal._setFieldValue("cmbCondicionIvaEst", c.IdCondicionIva, true);
+                modal._setFieldValue("txtCalleEst", c.Calle || c.Domicilio || "");
+                modal._setFieldValue("txtNumeroEst", c.Numero || "");
+                modal._setFieldValue("txtPisoDeptoEst", c.PisoDepartamento || "");
+                modal._setFieldValue("txtLocalidadEst", localidadTextoCg() || c.Localidad || "");
+                modal._setFieldValue("txtCodPostalEst", c.CodPostal || "");
+                if (c.IdProvincia) modal._setFieldValue("cmbProvinciaEst", c.IdProvincia, true);
+                if (c.IdTipoGenerador) modal._setFieldValue("cmbTipoGeneradorEst", c.IdTipoGenerador, true);
+            },
             onSaved: async () => {
                 CG.tabsLoaded.establecimientos = false;
                 if ($("#tabEstablecimientos").hasClass("active")) await cargarTabEstablecimientos();
@@ -158,18 +177,10 @@ function wireEventosCg() {
 
     $("#cgProvincia").on("change", async function () {
         await cargarPartidosCg($(this).val());
-        await cargarLocalidadesCg(null);
     });
 
     $("#cgPartido").on("change", async function () {
         await cargarLocalidadesCg($(this).val());
-    });
-
-    $("#cgLocalidad").on("change", function () {
-        const txt = $(this).find("option:selected").text();
-        if ($(this).val() && txt !== "Seleccionar") {
-            $("#cgLocalidadTexto").val(txt);
-        }
     });
 
     $('button[data-cg-tab]').on("shown.bs.tab", async function () {
@@ -241,17 +252,21 @@ function wireEventosCg() {
             CondicionesIva: "#cgCondicionIva",
             ClientesEstados: "#cgEstado",
             ClientesMotivos: "#cgMotivo",
-            ClientesCalificaciones: "#cgCalificacion"
+            ClientesCalificaciones: "#cgCalificacion",
+            ClientesTiposGenerador: "#cgTipoGenerador"
         };
         const sel = map[tipo];
-        if (sel) await recargarComboCg(sel, nuevoId);
+        if (sel) {
+            await recargarComboCg(sel, nuevoId, tipo === "ClientesTiposGenerador" ? "Etiqueta" : "Nombre");
+            return;
+        }
     });
 }
 
 function initSelect2Cg() {
     const opts = { width: "100%", allowClear: true, placeholder: "Seleccionar" };
     ["#cgSucursal", "#cgProvincia", "#cgPartido", "#cgLocalidad", "#cgProfesion",
-        "#cgCondicionIva", "#cgEstado", "#cgMotivo", "#cgCalificacion", "#cgCobroCuenta"].forEach(sel => {
+        "#cgCondicionIva", "#cgEstado", "#cgMotivo", "#cgCalificacion", "#cgTipoGenerador", "#cgCobroCuenta"].forEach(sel => {
         ensureSelect2Cg($(sel), opts);
     });
 }
@@ -268,21 +283,21 @@ async function fetchJsonCg(url, options = {}) {
     return await r.json();
 }
 
-async function llenarComboCg(selector, url, selectedId) {
+async function llenarComboCg(selector, url, selectedId, textField = "Nombre") {
     const $sel = $(selector);
     $sel.empty().append(new Option("Seleccionar", ""));
     try {
         const data = await fetchJsonCg(url, { headers: authCg() });
-        (data || []).forEach(x => $sel.append(new Option(x.Nombre, x.Id)));
+        (data || []).forEach(x => $sel.append(new Option(x[textField] || x.Nombre, x.Id)));
     } catch (e) {
         console.warn(`No se pudo cargar combo ${selector}:`, e);
-        $sel.append(new Option("—", ""));
+        $sel.append(new Option("-", ""));
     }
     if (selectedId) $sel.val(String(selectedId)).trigger("change");
     else $sel.trigger("change");
 }
 
-async function recargarComboCg(selector, nuevoId) {
+async function recargarComboCg(selector, nuevoId, textField = "Nombre") {
     const mapUrl = {
         "#cgSucursal": API_CG.sucursales,
         "#cgProvincia": API_CG.provincias,
@@ -290,12 +305,13 @@ async function recargarComboCg(selector, nuevoId) {
         "#cgCondicionIva": API_CG.condicionesIva,
         "#cgEstado": API_CG.estados,
         "#cgMotivo": API_CG.motivos,
-        "#cgCalificacion": API_CG.calificaciones
+        "#cgCalificacion": API_CG.calificaciones,
+        "#cgTipoGenerador": API_CG.tiposGenerador
     };
     const url = mapUrl[selector];
     if (!url) return;
     const val = $(selector).val();
-    await llenarComboCg(selector, url, nuevoId || val);
+    await llenarComboCg(selector, url, nuevoId || val, textField);
 }
 
 async function cargarCombosDatosCg() {
@@ -306,7 +322,8 @@ async function cargarCombosDatosCg() {
         llenarComboCg("#cgCondicionIva", API_CG.condicionesIva),
         llenarComboCg("#cgEstado", API_CG.estados),
         llenarComboCg("#cgMotivo", API_CG.motivos),
-        llenarComboCg("#cgCalificacion", API_CG.calificaciones)
+        llenarComboCg("#cgCalificacion", API_CG.calificaciones),
+        llenarComboCg("#cgTipoGenerador", API_CG.tiposGenerador, null, "Etiqueta")
     ]);
 
     const $suc = $("#cgSucursal");
@@ -325,22 +342,61 @@ async function cargarCombosDatosCg() {
     }
 }
 
-async function cargarPartidosCg(idProvincia, selectedId) {
-    const $p = $("#cgPartido").empty().append(new Option("Seleccionar", ""));
-    if (!idProvincia) { $p.trigger("change"); return; }
+function refreshSelect2Cg($el) {
+    if (!$el?.length) return;
+    if ($el.data("select2")) $el.trigger("change.select2");
+}
+
+async function cargarPartidosCg(idProvincia, selectedPartidoId, selectedLocalidadId) {
+    const $p = $("#cgPartido");
+    $p.empty().append(new Option("Seleccionar", ""));
+
+    if (!idProvincia) {
+        refreshSelect2Cg($p);
+        await cargarLocalidadesCg(null);
+        return;
+    }
+
     const data = await fetchJsonCg(API_CG.partidosPorProvincia(idProvincia), { headers: authCg() });
-    (data || []).forEach(x => $p.append(new Option(x.Nombre, x.Id)));
-    if (selectedId) $p.val(String(selectedId)).trigger("change");
-    else $p.trigger("change");
+    const seen = new Set();
+    (data || []).forEach(x => {
+        if (seen.has(x.Id)) return;
+        seen.add(x.Id);
+        $p.append(new Option(x.Nombre, x.Id));
+    });
+
+    if (selectedPartidoId) $p.val(String(selectedPartidoId));
+    refreshSelect2Cg($p);
+    await cargarLocalidadesCg(selectedPartidoId || null, selectedLocalidadId);
 }
 
 async function cargarLocalidadesCg(idPartido, selectedId) {
-    const $l = $("#cgLocalidad").empty().append(new Option("Seleccionar", ""));
-    if (!idPartido) { $l.trigger("change"); return; }
-    const data = await fetchJsonCg(API_CG.localidadesPorPartido(idPartido), { headers: authCg() });
-    (data || []).forEach(x => $l.append(new Option(x.Nombre, x.Id)));
-    if (selectedId) $l.val(String(selectedId)).trigger("change");
-    else $l.trigger("change");
+    const $l = $("#cgLocalidad");
+    $l.empty().append(new Option("Seleccionar", ""));
+
+    if (!idPartido) {
+        refreshSelect2Cg($l);
+        return;
+    }
+
+    let data = await fetchJsonCg(API_CG.localidadesPorPartido(idPartido), { headers: authCg() });
+
+    if ((!data || !data.length) && $("#cgProvincia").val()) {
+        data = await fetchJsonCg(
+            API_CG.localidadesPorProvincia($("#cgProvincia").val()),
+            { headers: authCg() }
+        );
+    }
+
+    const seen = new Set();
+    (data || []).forEach(x => {
+        if (seen.has(x.Id)) return;
+        seen.add(x.Id);
+        $l.append(new Option(x.Nombre, x.Id));
+    });
+
+    if (selectedId) $l.val(String(selectedId));
+    refreshSelect2Cg($l);
 }
 
 async function cargarClienteCg(id) {
@@ -355,8 +411,9 @@ async function cargarClienteCg(id) {
         $("#cgTelefono").val(m.Telefono || "");
         $("#cgTelefonoAlt").val(m.TelefonoAlt || "");
         $("#cgEmail").val(m.Email || "");
-        $("#cgDomicilio").val(m.Domicilio || "");
-        $("#cgLocalidadTexto").val(m.Localidad || "");
+        $("#cgCalle").val(m.Calle || m.Domicilio || "");
+        $("#cgNumero").val(m.Numero || "");
+        $("#cgPisoDepto").val(m.PisoDepartamento || "");
         $("#cgCodPostal").val(m.CodPostal || "");
         $("#cgMotivoDetalle").val(m.MotivoDetalle || "");
         $("#cgNumeroCliente").val(m.NumeroCliente ?? "");
@@ -375,11 +432,12 @@ async function cargarClienteCg(id) {
             $("#wrapMotivoDetalle").prop("hidden", false);
         }
         if (m.IdCalificacion) $("#cgCalificacion").val(String(m.IdCalificacion)).trigger("change");
+        if (m.IdTipoGenerador) $("#cgTipoGenerador").val(String(m.IdTipoGenerador)).trigger("change");
 
         if (m.IdProvincia) {
-            $("#cgProvincia").val(String(m.IdProvincia)).trigger("change");
-            await cargarPartidosCg(m.IdProvincia, m.IdPartido);
-            if (m.IdPartido) await cargarLocalidadesCg(m.IdPartido, m.IdLocalidad);
+            $("#cgProvincia").val(String(m.IdProvincia));
+            refreshSelect2Cg($("#cgProvincia"));
+            await cargarPartidosCg(m.IdProvincia, m.IdPartido, m.IdLocalidad);
         }
 
         setAuditoriaCg(m);
@@ -390,7 +448,7 @@ async function cargarClienteCg(id) {
     } catch (e) {
         console.error(e);
         if (typeof errorModal === "function") {
-            errorModal("No se pudo cargar la información del cliente. Intente nuevamente o vuelva al listado.");
+            errorModal("No se pudo cargar la informacion del cliente. Intente nuevamente o vuelva al listado.");
         }
     }
 }
@@ -432,7 +490,7 @@ function setAuditoriaCg(m) {
     if (m.UsuarioModifica && m.FechaUsuarioModifica) {
         $("#cgInfoModificacion").html(`
             <div class="rp-auditoria-item"><i class="fa fa-edit"></i>
-            Última modificación por <strong>${m.UsuarioModifica}</strong>
+            Ultima modificacion por <strong>${m.UsuarioModifica}</strong>
             el <strong>${formatearFechaCg(m.FechaUsuarioModifica)}</strong></div>`);
         wrap.removeClass("d-none");
     } else if (m.UsuarioRegistra && m.FechaUsuarioRegistra) {
@@ -500,8 +558,11 @@ function obtenerModeloCg() {
         Telefono: $("#cgTelefono").val() || null,
         TelefonoAlt: $("#cgTelefonoAlt").val() || null,
         Email: $("#cgEmail").val() || null,
-        Domicilio: $("#cgDomicilio").val() || null,
-        Localidad: $("#cgLocalidadTexto").val() || null,
+        Calle: ($("#cgCalle").val() || "").trim() || null,
+        Numero: ($("#cgNumero").val() || "").trim() || null,
+        PisoDepartamento: ($("#cgPisoDepto").val() || "").trim() || null,
+        IdTipoGenerador: intOrNullCg("#cgTipoGenerador"),
+        Localidad: localidadTextoCg(),
         CodPostal: $("#cgCodPostal").val() || null,
         IdProvincia: intOrNullCg("#cgProvincia"),
         IdProfesion: intOrNullCg("#cgProfesion"),
@@ -525,6 +586,14 @@ function intOrNullCg(sel) {
     if (!v) return null;
     const n = parseInt(v, 10);
     return Number.isNaN(n) ? null : n;
+}
+
+function localidadTextoCg() {
+    const $l = $("#cgLocalidad");
+    const val = $l.val();
+    if (!val) return null;
+    const txt = ($l.find("option:selected").text() || "").trim();
+    return txt && txt !== "Seleccionar" ? txt : null;
 }
 
 function validarDatosCg() {
@@ -569,8 +638,8 @@ async function guardarClienteCg() {
             await modalGuardadoConSalida({
                 titulo: "Cliente actualizado",
                 mensaje: data.mensaje || "Cliente modificado correctamente",
-                pregunta: "¿Deseás volver al listado de clientes?",
-                btnSalir: "Sí, ir a Clientes",
+                pregunta: "¿Deseas volver al listado de clientes?",
+                btnSalir: "Si, ir a Clientes",
                 btnQuedarse: "No, seguir editando",
                 urlSalida: "/Clientes/Index"
             });
@@ -586,7 +655,7 @@ async function guardarClienteCg() {
 async function eliminarClienteCg() {
     if (CG.id <= 0) return;
     if (typeof ejecutarEliminacionEntidad !== "function") {
-        errorModal("No está disponible el asistente de eliminación.");
+        errorModal("No esta disponible el asistente de eliminacion.");
         return;
     }
 
@@ -617,7 +686,7 @@ function cerrarErrorCg() {
 
 async function cargarTabCg(tab) {
     if (CG.id <= 0) return;
-    if (CG.tabsLoaded[tab] && tab !== "cuentaCorriente") return;
+    if (CG.tabsLoaded[tab] && tab !== "cuentaCorriente" && tab !== "controlMensual") return;
 
     try {
         switch (tab) {
@@ -626,7 +695,7 @@ async function cargarTabCg(tab) {
             case "contratos": await cargarTabContratos(); break;
             case "entregas": await cargarTabEntregas(); break;
             case "recorridos": await cargarTabRecorridos(); break;
-            case "controlMensual": await cargarTabControlMensual(); break;
+            case "controlMensual": await cargarTabControlMensual(true); break;
             case "stockCliente": await cargarTabStockCliente(); break;
             case "cuentaCorriente": await cargarTabCuentaCorriente(); break;
             case "cobros": await cargarTabCobros(); break;
@@ -634,7 +703,7 @@ async function cargarTabCg(tab) {
     } catch (e) {
         console.error(`Error cargando tab ${tab}:`, e);
         if (typeof errorModal === "function") {
-            const nombre = CG_TAB_LABELS[tab] || "esta sección";
+            const nombre = CG_TAB_LABELS[tab] || "esta seccion";
             errorModal(`No se pudo cargar ${nombre}. Intente nuevamente.`);
         }
     }
@@ -753,7 +822,9 @@ async function cargarTabEstablecimientos() {
         columnaGridAcciones({ editar: "editarEstablecimientoCg" }, "Establecimientos"),
         columnaGridId(),
         { data: "Nombre" },
-        { data: "Provincia" },
+        { data: "Domicilio" },
+        { data: "Localidad" },
+        { data: "Camion" },
         { data: "DiaRecoleccion" },
         { data: "SemanaRecoleccion" },
         { data: "ListaPrecio" }
@@ -784,7 +855,7 @@ async function cargarTabContratos() {
         { data: "FechaContrato", render: d => formatearFechaCortaCg(d) },
         { data: "FechaInicio", render: d => formatearFechaCortaCg(d) },
         { data: "FechaVencimiento", render: d => formatearFechaCortaCg(d) },
-        { data: "Vigente", render: v => v ? "Sí" : "No" }
+        { data: "Vigente", render: v => v ? "Si" : "No" }
     ]);
     CG.tabsLoaded.contratos = true;
 }
@@ -854,7 +925,7 @@ function renderRecorridosCg(items, huboError) {
             <div class="cg-empty-state cg-empty-state--warn">
                 <span class="cg-empty-icon"><i class="fa fa-exclamation-circle"></i></span>
                 <p class="cg-empty-title">No pudimos mostrar los recorridos</p>
-                <p class="cg-empty-hint">Intente actualizar la página. Si el problema continúa, contacte al administrador del sistema.</p>
+                <p class="cg-empty-hint">Intente actualizar la pagina. Si el problema continua, contacte al administrador del sistema.</p>
             </div>`);
         return;
     }
@@ -864,7 +935,7 @@ function renderRecorridosCg(items, huboError) {
             <div class="cg-empty-state">
                 <span class="cg-empty-icon"><i class="fa fa-road"></i></span>
                 <p class="cg-empty-title">Sin recorridos asignados</p>
-                <p class="cg-empty-hint">Este cliente aún no está en ninguna ruta de recolección. Use <strong>Gestionar recorridos</strong> para asignarlo a una unidad, día y posición.</p>
+                <p class="cg-empty-hint">Este cliente aun no esta en ninguna ruta de recoleccion. Use <strong>Gestionar recorridos</strong> para asignarlo a una unidad, dia y posicion.</p>
             </div>`);
         return;
     }
@@ -954,8 +1025,8 @@ function toggleFiltroControlCg(tipo, val) {
 function actualizarResumenFiltrosCg() {
     const { anios, meses } = CG.controlFiltros;
     const txtAnios = anios.length
-        ? `${anios.length} año${anios.length === 1 ? "" : "s"}`
-        : "Sin años";
+        ? `${anios.length} ano${anios.length === 1 ? "" : "s"}`
+        : "Sin anos";
     const txtMeses = meses.length
         ? `${meses.length} mes${meses.length === 1 ? "" : "es"}`
         : "Todos los meses";
@@ -1325,11 +1396,12 @@ const CG_CARD_BREAKPOINT = 992;
 const CG_CARD_SCHEMAS = {
     establecimientos: {
         title: r => r.Nombre,
-        subtitle: r => r.Provincia || "Sin provincia",
-        badge: r => `#${r.Id}`,
+        subtitle: r => r.Domicilio || "Sin domicilio",
+        badge: r => r.Camion || "Sin unidad",
         tone: () => "cg-data-card--blue",
         fields: [
-            { label: "Día rec.", value: r => r.DiaRecoleccion },
+            { label: "Localidad", value: r => r.Localidad },
+            { label: "Dia rec.", value: r => r.DiaRecoleccion },
             { label: "Semana", value: r => r.SemanaRecoleccion },
             { label: "Lista precio", value: r => r.ListaPrecio, full: true }
         ],
@@ -1353,7 +1425,7 @@ const CG_CARD_SCHEMAS = {
         badge: r => `#${r.Id}`,
         tone: r => (Number(r.Saldo) || 0) > 0 ? "cg-data-card--warn" : "cg-data-card--teal",
         fields: [
-            { label: "Estado", value: r => r.Estado || "—" },
+            { label: "Estado", value: r => r.Estado || "-" },
             { label: "Total", value: r => fmtMoneyCg(r.ImporteTotal), cls: "cg-val-neutral" },
             { label: "Pagado", value: r => fmtMoneyCg(r.ImporteAbonado), cls: "cg-val-haber" },
             { label: "Saldo", value: r => fmtMoneyCg(r.Saldo), cls: "cg-val-saldo" }
@@ -1502,7 +1574,7 @@ function renderControlMensualCardsCg(filas, mostrarAnio) {
                 <div class="cg-data-card-head">
                     <div class="cg-data-card-head-text">
                         <div class="cg-data-card-title">${escapeCg(m.MesNombre)}${mostrarAnio ? ` ${anio}` : ""}</div>
-                        <div class="cg-data-card-sub">Visita: ${formatearFechaCortaCg(m.FechaVisita) || "—"}</div>
+                        <div class="cg-data-card-sub">Visita: ${formatearFechaCortaCg(m.FechaVisita) || "-"}</div>
                     </div>
                     ${m.SinEntrega ? `<span class="cg-data-card-badge cg-data-card-badge--warn">Sin entrega</span>` : ""}
                 </div>
@@ -1528,21 +1600,35 @@ function initDataTableCg(key) {
     if (!meta?.selector || CG.grids[key]) return;
 
     const opts = meta.opts || {};
+    const tableId = $(meta.selector).attr("id") || "";
+    if (tableId.startsWith("grd_")) {
+        registrarFiltrosGrilla(tableId, meta.columnConfig || [], meta.filterOpts || {});
+    }
+
     CG.grids[key] = $(meta.selector).DataTable({
         data: meta.data,
         columns: meta.columns,
         language: { url: "//cdn.datatables.net/plug-ins/2.0.7/i18n/es-MX.json" },
         autoWidth: false,
         scrollX: true,
+        scrollCollapse: true,
+        orderCellsTop: true,
+        fixedHeader: true,
         pageLength: opts.pageLength ?? 10,
         paging: opts.paging !== false,
         searching: opts.searching !== false,
         info: opts.info !== false,
         dom: opts.dom || "frtip",
-        order: opts.order || [[1, "desc"]]
+        order: opts.order || [[1, "desc"]],
+        columnDefs: typeof columnDefsGridLista === "function" ? columnDefsGridLista() : [],
+        initComplete: async function () {
+            const api = this.api();
+            if (tableId.startsWith("grd_") && typeof armarFiltrosGrillaLista === "function") {
+                await armarFiltrosGrillaLista(api, meta.selector, meta.columnConfig || [], meta.filterOpts || {});
+            }
+            programarAjusteGrillasCg();
+        }
     });
-
-    programarAjusteGrillasCg();
 }
 
 function programarAjusteGrillasCg() {

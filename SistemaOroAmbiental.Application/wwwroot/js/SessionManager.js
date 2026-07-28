@@ -1,5 +1,5 @@
 /**
- * Gestión de sesión JWT: duración, contador en navbar, expiración y redirección al login.
+ * Gestion de sesion JWT: duracion, contador en navbar, expiracion y redireccion al login.
  */
 (function (window) {
     "use strict";
@@ -123,7 +123,7 @@
         window.location.replace("/Login/Index");
     }
 
-    /** Cierre de sesión manual (navbar): sin mensaje de expiración. */
+    /** Cierre de sesion manual (navbar): sin mensaje de expiracion. */
     function beginVoluntaryLogout() {
         voluntaryLogout = true;
         stopCountdown();
@@ -158,7 +158,7 @@
         return Math.max(0, Math.floor(getRemainingMs() / 1000));
     }
 
-    /** Cartel y contador solo con 5:00 o menos (p. ej. 5:57 no entra; 5:00 sí). */
+    /** Cartel y contador solo con 5:00 o menos (p. ej. 5:57 no entra; 5:00 si). */
     function shouldShowSessionCartel() {
         const sec = getRemainingSeconds();
         return sec > 0 && sec <= WARNING_SECONDS;
@@ -262,7 +262,7 @@
             ? window.confirmarModal
             : (msg) => Promise.resolve(window.confirm(msg));
 
-        const ok = await confirmar("¿Desea renovar la sesión?");
+        const ok = await confirmar("¿Desea renovar la sesion?");
         if (!ok) return;
 
         hideWarningModal();
@@ -292,7 +292,7 @@
             const data = await response.json().catch(() => ({}));
 
             if (!response.ok || !data.success || !data.token) {
-                const msg = data.message || "No se pudo renovar la sesión.";
+                const msg = data.message || "No se pudo renovar la sesion.";
                 if (typeof window.errorModal === "function") {
                     window.errorModal(msg);
                 } else {
@@ -315,18 +315,18 @@
             updateCountdownUi();
 
             if (typeof window.exitoModal === "function") {
-                window.exitoModal("Sesión renovada correctamente.");
+                window.exitoModal("Sesion renovada correctamente.");
             }
         } catch (e) {
             console.error("SessionManager: error al renovar", e);
             if (typeof window.errorModal === "function") {
-                window.errorModal("Error de conexión al renovar la sesión.");
+                window.errorModal("Error de conexion al renovar la sesion.");
             }
         } finally {
             renewingSession = false;
             if (btn) {
                 btn.disabled = false;
-                btn.innerHTML = '<i class="fa fa-refresh me-1"></i> Renovar sesión';
+                btn.innerHTML = '<i class="fa fa-refresh me-1"></i> Renovar sesion';
             }
         }
     }
@@ -358,7 +358,7 @@
             wrap.classList.toggle("rp-session-warning", warn);
             if (warn) {
                 wrap.style.cursor = "pointer";
-                wrap.title = "Clic para ver opciones de renovación";
+                wrap.title = "Clic para ver opciones de renovacion";
                 wrap.onclick = (e) => {
                     e.preventDefault();
                     setWarningDismissed(false);
@@ -366,7 +366,7 @@
                 };
             } else {
                 wrap.style.cursor = "";
-                wrap.title = "Tiempo restante de sesión";
+                wrap.title = "Tiempo restante de sesion";
                 wrap.onclick = null;
             }
         }

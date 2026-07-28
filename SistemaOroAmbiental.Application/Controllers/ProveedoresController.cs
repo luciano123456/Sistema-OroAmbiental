@@ -23,6 +23,13 @@ namespace SistemaOroAmbiental.Application.Controllers
             return View();
         }
 
+        [AllowAnonymous]
+        public IActionResult Gestion(int? id)
+        {
+            ViewBag.Id = id ?? 0;
+            return View();
+        }
+
         [HttpGet]
         public async Task<IActionResult> Lista(bool soloActivos = false)
         {

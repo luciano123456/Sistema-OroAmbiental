@@ -1,4 +1,4 @@
-/* Generación Word desde plantillas .docx — campos {entre llaves} */
+/* Generacion Word desde plantillas .docx - campos {entre llaves} */
 
 (function (window) {
     "use strict";
@@ -261,7 +261,7 @@
             NumeroContrato: safe(d.Id || d.id),
             TipoContrato: safe(d.TipoContrato || d.tipoContrato),
             Sucursal: safe(d.Sucursal || d.sucursal),
-            Vigente: (d.Vigente === true || d.vigente === true) ? "Sí" : "No",
+            Vigente: (d.Vigente === true || d.vigente === true) ? "Si" : "No",
             NombreArchivo: nombreArchivo
         };
 
@@ -327,10 +327,10 @@
         const tipo = (opts.formato || "word").toLowerCase();
 
         if (idContrato <= 0) {
-            throw new Error("Guardá el contrato antes de generar el documento.");
+            throw new Error("Guarda el contrato antes de generar el documento.");
         }
         if (idTipoContrato <= 0) {
-            throw new Error("Seleccioná el tipo de contrato (plantilla).");
+            throw new Error("Selecciona el tipo de contrato (plantilla).");
         }
 
         if (typeof opts.onProgress === "function") {
@@ -363,7 +363,7 @@
             };
         } catch (err) {
             if (err.name === "AbortError") {
-                throw new Error("La generación tardó demasiado. Probá con Word o reintentá.");
+                throw new Error("La generacion tardo demasiado. Proba con Word o reintenta.");
             }
             throw err;
         } finally {
@@ -418,7 +418,7 @@
 
     async function cargarListaDocumentosContrato(idContrato, $container, idDestacar) {
         if (!$container?.length || idContrato <= 0) {
-            $container?.html(`<div class="rp-sub-empty"><p>Guardá el contrato para ver documentos adjuntos.</p></div>`);
+            $container?.html(`<div class="rp-sub-empty"><p>Guarda el contrato para ver documentos adjuntos.</p></div>`);
             return;
         }
 
@@ -427,7 +427,7 @@
             const msg = await fetchApiErrorMessage(
                 r,
                 r.status === 401
-                    ? "Sesión expirada."
+                    ? "Sesion expirada."
                     : "No se pudieron cargar los documentos adjuntos."
             );
             $container.html(`<div class="text-danger small">${escapeHtml(msg)}</div>`);
@@ -436,7 +436,7 @@
 
         const lista = await r.json();
         if (!lista.length) {
-            $container.html(`<div class="rp-sub-empty"><i class="fa fa-folder-open-o"></i><p>Sin documentos adjuntos. Usá «Generar Word» para crear uno.</p></div>`);
+            $container.html(`<div class="rp-sub-empty"><i class="fa fa-folder-open-o"></i><p>Sin documentos adjuntos. Usa Generar Word para crear uno.</p></div>`);
             return;
         }
 

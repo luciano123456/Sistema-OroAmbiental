@@ -221,6 +221,21 @@ namespace SistemaOroAmbiental.DAL.Repository
                 datosParciales = true;
             }
 
+            List<LibroDiarioMovimiento> movimientosLibro = new();
+            try
+            {
+                movimientosLibro = await _db.LibroDiarioMovimientos
+                    .AsNoTracking()
+                    .Where(m =>
+                        m.IdCliente == idCliente &&
+                        aniosNorm.Contains(m.Fecha.Year))
+                    .ToListAsync();
+            }
+            catch
+            {
+                datosParciales = true;
+            }
+
             var recorridos = new List<ClientesRecorridoDto>();
             try
             {
@@ -253,7 +268,8 @@ namespace SistemaOroAmbiental.DAL.Repository
                         anio,
                         mes,
                         entregas,
-                        overrides);
+                        overrides,
+                        movimientosLibro);
 
                     totalDebe += fila.Debe;
                     totalHaber += fila.Haber;
@@ -276,11 +292,17 @@ namespace SistemaOroAmbiental.DAL.Repository
             };
         }
 
+        private static bool EsAbonoTransferenciaLibroDiario(LibroDiarioMovimiento movimiento)
+            => movimiento.EsBancario ||
+               (!string.IsNullOrWhiteSpace(movimiento.FormaPago) &&
+                movimiento.FormaPago.Contains("Transferencia", StringComparison.OrdinalIgnoreCase));
+
         private ClienteControlMensualDto ConstruirFilaControlMensual(
             int anio,
             int mes,
             List<ClientesEntrega> entregas,
-            Dictionary<(int Anio, int Mes), ClientesControlMensual> overrides)
+            Dictionary<(int Anio, int Mes), ClientesControlMensual> overrides,
+            List<LibroDiarioMovimiento> movimientosLibro)
         {
             var entregasMes = entregas
                 .Where(e => e.Fecha.Year == anio && e.Fecha.Month == mes)
@@ -303,9 +325,21 @@ namespace SistemaOroAmbiental.DAL.Repository
 
             overrides.TryGetValue((anio, mes), out var ov);
 
-            var abonoEfectivo = ov?.AbonoEfectivo ?? 0;
-            var abonoTransferencia = ov?.AbonoTransferencia ?? 0;
-            var debe = subtotalEntregas;
+            var movsMes = movimientosLibro
+                .Where(m => m.Fecha.Year == anio && m.Fecha.Month == mes)
+                .ToList();
+
+            var libroDebe = movsMes.Sum(m => m.Debe);
+            var libroAbonoEfectivo = movsMes
+                .Where(m => m.Haber > 0 && !EsAbonoTransferenciaLibroDiario(m))
+                .Sum(m => m.Haber);
+            var libroAbonoTransferencia = movsMes
+                .Where(m => m.Haber > 0 && EsAbonoTransferenciaLibroDiario(m))
+                .Sum(m => m.Haber);
+
+            var abonoEfectivo = (ov?.AbonoEfectivo ?? 0) + libroAbonoEfectivo;
+            var abonoTransferencia = (ov?.AbonoTransferencia ?? 0) + libroAbonoTransferencia;
+            var debe = subtotalEntregas + libroDebe;
             var haber = subtotalRetiros + abonoEfectivo + abonoTransferencia;
             var saldo = debe - haber;
 

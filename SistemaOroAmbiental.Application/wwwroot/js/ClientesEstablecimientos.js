@@ -37,7 +37,7 @@ function initModalClienteEstablecimientos() {
 $(document).ready(() => {
     const modalEl = document.querySelector("[data-establecimiento-modal]");
     if (!modalEl) {
-        console.error("No se encontró [data-establecimiento-modal].");
+        console.error("No se encontro [data-establecimiento-modal].");
         return;
     }
 

@@ -50,7 +50,11 @@ namespace SistemaOroAmbiental.DAL.Repository
                 entity.Telefono = model.Telefono;
                 entity.TelefonoAlt = model.TelefonoAlt;
                 entity.Cuit = model.Cuit;
+                entity.Calle = model.Calle;
+                entity.Numero = model.Numero;
+                entity.PisoDepartamento = model.PisoDepartamento;
                 entity.Domicilio = model.Domicilio;
+                entity.IdTipoGenerador = model.IdTipoGenerador;
                 entity.IdProvincia = model.IdProvincia;
                 entity.Localidad = model.Localidad;
                 entity.CodPostal = model.CodPostal;
@@ -133,6 +137,7 @@ namespace SistemaOroAmbiental.DAL.Repository
                 .Include(x => x.IdEstadoNavigation)
                 .Include(x => x.IdMotivoNavigation)
                 .Include(x => x.IdCalificacionNavigation)
+                .Include(x => x.IdTipoGeneradorNavigation)
                 .Include(x => x.IdLocalidadNavigation)
                 .Include(x => x.IdPartidoNavigation)
                 .Include(x => x.IdUsuarioRegistraNavigation)
@@ -151,6 +156,7 @@ namespace SistemaOroAmbiental.DAL.Repository
                 .Include(x => x.IdEstadoNavigation)
                 .Include(x => x.IdMotivoNavigation)
                 .Include(x => x.IdCalificacionNavigation)
+                .Include(x => x.IdTipoGeneradorNavigation)
                 .Include(x => x.IdLocalidadNavigation)
                 .Include(x => x.IdPartidoNavigation)
                 .Include(x => x.IdUsuarioRegistraNavigation)

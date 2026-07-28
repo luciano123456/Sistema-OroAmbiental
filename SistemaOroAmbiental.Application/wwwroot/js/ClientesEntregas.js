@@ -275,10 +275,10 @@ window.editarEntrega = function editarEntrega(id) {
 
 async function eliminarEntrega(id, tieneCobros) {
     const msgCobros = tieneCobros === true || tieneCobros === "true"
-        ? " También se revertirán los cobros al contrato (caja y cuenta corriente)."
+        ? " Tambien se revertiran los cobros al contrato (caja y cuenta corriente)."
         : "";
     const ok = await confirmarModal(
-        `¿Eliminar esta entrega? Se revertirá el stock y la deuda en cuenta corriente del contrato.${msgCobros}`);
+        `¿Eliminar esta entrega? Se revertira el stock y la deuda en cuenta corriente del contrato.${msgCobros}`);
     if (!ok) return;
 
     const response = await fetch(API.eliminar(id), {
@@ -375,7 +375,7 @@ function renderModalProductosEntrega(detalle) {
     const puedeEditar = detalle.PuedeEditar !== false && detalle.puedeEditar !== false;
 
     $("#cmProdModalTitle").text(`Entrega #${id}`);
-    $("#cmProdModalSub").text(`${contrato} ?,? ${estado} ?,? ${fecha}`);
+    $("#cmProdModalSub").text(`${contrato} - ${estado} - ${fecha}`);
 
     const totalPagado = Number(detalle.TotalPagado ?? detalle.totalPagado ?? 0);
     const saldoPend = Number(detalle.SaldoPendiente ?? detalle.saldoPendiente
@@ -383,7 +383,7 @@ function renderModalProductosEntrega(detalle) {
 
     const resumenHtml = `
         <div class="cm-prod-resumen-item">
-            <div class="lbl">ítems</div>
+            <div class="lbl">items</div>
             <div class="val">${lineas.length}</div>
         </div>
         <div class="cm-prod-resumen-item">
@@ -454,7 +454,7 @@ function renderModalProductosEntrega(detalle) {
                         <div class="val">${fmtCantEntregas(porcIva)}%</div>
                     </div>
                     <div class="cm-prod-stat cm-prod-stat-wide cm-prod-stat-total">
-                        <div class="lbl">Subtotal línea</div>
+                        <div class="lbl">Subtotal linea</div>
                         <div class="val">${fmtMoneyEntregas(subtotal)}</div>
                     </div>
                 </div>

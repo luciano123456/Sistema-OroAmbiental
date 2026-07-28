@@ -11,7 +11,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
     <link href="~/css/CuentaCorriente.css?v=5.1" rel="stylesheet" />
     <link href="~/css/Ventas.css?v=5.1" rel="stylesheet" />
-    <link href="~/css/disenopantallas.css?v=5.1" rel="stylesheet" />
+    <link href="~/css/disenopantallas.css?v=8.0" rel="stylesheet" />
     <link href="~/css/Inventario.css?v=5.1" rel="stylesheet" />
     <link href="~/css/M_Generico.css?v=5.1" rel="stylesheet" />
 }
@@ -52,7 +52,7 @@
                 <div class="vi-kpi"><span id="kpiProductos">0</span></div>
             </div>
             <div class="cc-card-body">
-                <div class="rp-filter-label mb-1">Sucursal (depósito)</div>
+                <div class="rp-filter-label mb-1">Sucursal (deposito)</div>
                 <select id="fSucursalLista" class="rp-filter-select select2 mb-2" style="width:100%"></select>
 
                 <div class="vi-search mb-2">
@@ -63,7 +63,7 @@
                 <div class="rp-filtros-body p-0 mb-2">
                     <div class="row g-2">
                         <div class="col-12">
-                            <div class="rp-filter-label">Categoría</div>
+                            <div class="rp-filter-label">Categoria</div>
                             <select id="fCategoriaLista" class="rp-filter-select select2" style="width:100%">
                                 <option value="">Todas</option>
                             </select>
@@ -74,7 +74,7 @@
                                     <input type="checkbox" id="fSoloBajoMinimo">
                                     <span class="slider"></span>
                                 </label>
-                                <span class="vi-switch-label">Solo bajo mínimo</span>
+                                <span class="vi-switch-label">Solo bajo minimo</span>
                             </div>
                         </div>
                     </div>
@@ -88,7 +88,7 @@
             <div class="cc-card-head">
                 <div class="t"><i class="fa fa-list-alt"></i> Stock</div>
                 <div class="vi-filters">
-                    <div id="lblFiltroProducto" class="vi-pill">Seleccioná un producto</div>
+                    <div id="lblFiltroProducto" class="vi-pill">Selecciona un producto</div>
                 </div>
             </div>
 
@@ -201,7 +201,7 @@
 
                 <div id="invEmpty" class="cc-empty mt-3 d-none">
                     <i class="fa fa-cube"></i>
-                    Seleccioná un producto para ver su Stock.
+                    Selecciona un producto para ver su Stock.
                 </div>
             </div>
         </div>
@@ -242,7 +242,7 @@
                     </div>
                     <div class="col-md-9">
                         <label class="form-label">Concepto</label>
-                        <input type="text" id="eConcepto" class="form-control" maxlength="500" placeholder="Ej: ingreso inicial, devolución..." />
+                        <input type="text" id="eConcepto" class="form-control" maxlength="500" placeholder="Ej: ingreso inicial, devolucion..." />
                         <div class="invalid-feedback">Campo obligatorio</div>
                     </div>
                 </form>
@@ -334,12 +334,12 @@
                         <input type="text" id="ajEntrada" class="form-control Inputmiles" inputmode="decimal" autocomplete="off" placeholder="0,00" />
                     </div>
                     <div class="col-md-2">
-                        <label class="form-label">Salida (�^')</label>
+                        <label class="form-label">Salida (-)</label>
                         <input type="text" id="ajSalida" class="form-control Inputmiles" inputmode="decimal" autocomplete="off" placeholder="0,00" />
                     </div>
                     <div class="col-md-8">
                         <label class="form-label">Concepto</label>
-                        <input type="text" id="ajConcepto" class="form-control" maxlength="500" placeholder="Ej: regularización, conteo..." />
+                        <input type="text" id="ajConcepto" class="form-control" maxlength="500" placeholder="Ej: regularizacion, conteo..." />
                         <div class="invalid-feedback">Campo obligatorio</div>
                     </div>
                 </form>
@@ -397,7 +397,7 @@
                     </div>
                     <div class="col-md-9">
                         <label class="form-label">Nota / concepto</label>
-                        <input type="text" id="tNota" class="form-control" maxlength="500" placeholder="Ej: traslado a depósito central..." />
+                        <input type="text" id="tNota" class="form-control" maxlength="500" placeholder="Ej: traslado a deposito central..." />
                     </div>
                 </form>
             </div>
@@ -424,10 +424,10 @@
                 <div class="inv-detalle-hero">
                     <div class="inv-detalle-hero-main">
                         <div id="vmInvTipoBadge" class="mb-2"></div>
-                        <div class="inv-detalle-hero-concepto" id="vmInvConceptoHero">�?"</div>
+                        <div class="inv-detalle-hero-concepto" id="vmInvConceptoHero">-</div>
                         <div class="inv-detalle-hero-meta">
                             <i class="fa fa-calendar-o"></i>
-                            <span id="vmInvFechaHero">�?"</span>
+                            <span id="vmInvFechaHero">-</span>
                         </div>
                     </div>
                     <div class="inv-detalle-hero-stock">
@@ -438,16 +438,16 @@
 
                 <div class="inv-detalle-section">
                     <div class="inv-detalle-section-title">
-                        <i class="fa fa-map-marker"></i> Ubicación
+                        <i class="fa fa-map-marker"></i> Ubicacion
                     </div>
                     <div class="cc-view-grid">
                         <div class="cc-view-item" id="divVmInvProducto">
                             <div class="k"><i class="fa fa-cube me-1"></i> Producto</div>
-                            <div class="v" id="vmInvProducto">�?"</div>
+                            <div class="v" id="vmInvProducto">-</div>
                         </div>
                         <div class="cc-view-item" id="divVmInvSucursal">
                             <div class="k"><i class="fa fa-building-o me-1"></i> Sucursal</div>
-                            <div class="v" id="vmInvSucursal">�?"</div>
+                            <div class="v" id="vmInvSucursal">-</div>
                         </div>
                     </div>
                 </div>
@@ -456,7 +456,7 @@
                     <div class="inv-detalle-section-title">
                         <i class="fa fa-file-text-o"></i> Concepto
                     </div>
-                    <div class="inv-detalle-concepto-box" id="vmInvConcepto">�?"</div>
+                    <div class="inv-detalle-concepto-box" id="vmInvConcepto">-</div>
                 </div>
 
                 <div class="inv-detalle-section mb-0">

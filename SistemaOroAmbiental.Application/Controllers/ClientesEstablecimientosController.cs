@@ -51,7 +51,11 @@ namespace SistemaOroAmbiental.Application.Controllers
                 Nombre = e.Nombre,
                 Cuit = e.Cuit,
                 IdCondicionIva = e.IdCondicionIva,
-                Domicilio = e.Domicilio,
+                Domicilio = DomicilioHelper.Componer(e.Calle, e.Numero, e.PisoDepartamento, e.Domicilio),
+                Calle = e.Calle,
+                Numero = e.Numero,
+                PisoDepartamento = e.PisoDepartamento,
+                IdTipoGenerador = e.IdTipoGenerador,
                 IdProvincia = e.IdProvincia,
                 Localidad = e.Localidad,
                 CodPostal = e.CodPostal,
@@ -65,6 +69,9 @@ namespace SistemaOroAmbiental.Application.Controllers
                 Cliente = e.IdClienteNavigation?.Nombre ?? "",
                 Provincia = e.IdProvinciaNavigation?.Nombre ?? "",
                 CondicionIva = e.IdCondicionIvaNavigation?.Nombre ?? "",
+                TipoGenerador = e.IdTipoGeneradorNavigation != null
+                    ? e.IdTipoGeneradorNavigation.Codigo + " - " + e.IdTipoGeneradorNavigation.Nombre
+                    : "",
                 DiaRecoleccion = e.IdDiaRecoleccionNavigation?.Nombre ?? "",
                 SemanaRecoleccion = e.IdSemanaRecoleccionNavigation?.Nombre ?? "",
                 ListaPrecio = e.IdListaPrecioNavigation?.Nombre ?? "",
@@ -93,7 +100,11 @@ namespace SistemaOroAmbiental.Application.Controllers
                 e.Nombre,
                 e.Cuit,
                 e.IdCondicionIva,
-                e.Domicilio,
+                e.Calle,
+                e.Numero,
+                e.PisoDepartamento,
+                Domicilio = DomicilioHelper.Componer(e.Calle, e.Numero, e.PisoDepartamento, e.Domicilio),
+                e.IdTipoGenerador,
                 e.IdProvincia,
                 e.Localidad,
                 e.CodPostal,
@@ -101,6 +112,7 @@ namespace SistemaOroAmbiental.Application.Controllers
                 e.IdDiaRecoleccion,
                 e.IdSemanaRecoleccion,
                 e.IdListaPrecio,
+                e.IdCamion,
                 HorarioRecoleccionDesde = FormatearHora(e.HorarioRecoleccionDesde),
                 HorarioRecoleccionHasta = FormatearHora(e.HorarioRecoleccionHasta),
                 e.FechaUsuarioRegistra,
@@ -163,6 +175,10 @@ namespace SistemaOroAmbiental.Application.Controllers
 
         private static ClientesEstablecimiento MapearEntidad(VMClienteEstablecimiento model, int idUsuario, bool esNuevo)
         {
+            var calle = string.IsNullOrWhiteSpace(model.Calle) ? null : model.Calle.Trim();
+            var numero = string.IsNullOrWhiteSpace(model.Numero) ? null : model.Numero.Trim();
+            var piso = string.IsNullOrWhiteSpace(model.PisoDepartamento) ? null : model.PisoDepartamento.Trim();
+
             var entity = new ClientesEstablecimiento
             {
                 Id = model.Id,
@@ -170,7 +186,11 @@ namespace SistemaOroAmbiental.Application.Controllers
                 Nombre = model.Nombre?.Trim() ?? "",
                 Cuit = model.Cuit,
                 IdCondicionIva = model.IdCondicionIva,
-                Domicilio = model.Domicilio,
+                Calle = calle,
+                Numero = numero,
+                PisoDepartamento = piso,
+                Domicilio = DomicilioHelper.Componer(calle, numero, piso, model.Domicilio),
+                IdTipoGenerador = model.IdTipoGenerador,
                 IdProvincia = model.IdProvincia,
                 Localidad = model.Localidad,
                 CodPostal = model.CodPostal,

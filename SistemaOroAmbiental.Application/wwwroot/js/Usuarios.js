@@ -109,7 +109,7 @@ async function guardarCambios() {
         const dataJson = await response.json();
 
         if (dataJson.valor === 'Contrasena') {
-            errorModal("Contraseña incorrecta");
+            errorModal("Contrasena incorrecta");
             return;
         }
 
@@ -313,7 +313,7 @@ function rpBadgeEstado(estado) {
     const s = (estado || "").toString().toLowerCase();
     if (s.includes("bloq")) return `<span class="rp-badge rp-badge-danger">Bloqueado</span>`;
     if (s.includes("acti")) return `<span class="rp-badge rp-badge-success">Activo</span>`;
-    return `<span class="rp-badge rp-badge-soft">${estado || "—"}</span>`;
+    return `<span class="rp-badge rp-badge-soft">${estado || "-"}</span>`;
 }
 
 async function configurarDataTable(data) {
@@ -373,7 +373,11 @@ async function configurarDataTable(data) {
                     title: '',
                     className: 'rp-dt-btn'
                 },
-                'pageLength'
+                {
+                    extend: "pageLength",
+                    background: false,
+                    className: "rp-dt-btn-length"
+                }
             ],
             orderCellsTop: true,
             fixedHeader: true,
@@ -550,12 +554,12 @@ function limpiarModal() {
     moduloPermisoSeleccionadoId = 0;
 
     actualizarBadgeUsuarioPermisos();
-    renderPermisosPlaceholder("Guardá el usuario para administrar permisos.");
+    renderPermisosPlaceholder("Guarda el usuario para administrar permisos.");
     habilitarSeccionPermisos(false);
     actualizarResumenPermisos();
 
     sucursalesUsuarioIds = [];
-    renderSucursalesUsuarioPlaceholder("Guardá el usuario para asignar sucursales.");
+    renderSucursalesUsuarioPlaceholder("Guarda el usuario para asignar sucursales.");
     habilitarSeccionSucursales(false);
     actualizarResumenSucursalesUsuario();
 }
@@ -571,7 +575,7 @@ function getCamposObligatoriosUsuario() {
     ];
 
     if (($("#txtId").val() || "") === "") {
-        campos.push({ id: "txtContrasena", nombre: "Contraseña" });
+        campos.push({ id: "txtContrasena", nombre: "Contrasena" });
     }
 
     return campos;
@@ -692,7 +696,7 @@ async function cargarTodasSucursalesParaAsignar() {
 
 function prepararSucursalesEnModalNuevo() {
     sucursalesUsuarioIds = [];
-    renderSucursalesUsuarioPlaceholder("Guardá el usuario para asignar sucursales.");
+    renderSucursalesUsuarioPlaceholder("Guarda el usuario para asignar sucursales.");
     habilitarSeccionSucursales(false);
     actualizarBadgeUsuarioSucursales();
     actualizarResumenSucursalesUsuario();
@@ -706,11 +710,11 @@ function habilitarSeccionSucursales(habilitar) {
     if (habilitar) {
         section.classList.remove("rp-section-disabled");
         hint.classList.add("success");
-        hint.innerHTML = `<i class="fa fa-check-circle"></i> Marcá las sucursales a las que puede acceder.`;
+        hint.innerHTML = `<i class="fa fa-check-circle"></i> Marca las sucursales a las que puede acceder.`;
     } else {
         section.classList.add("rp-section-disabled");
         hint.classList.remove("success");
-        hint.innerHTML = `<i class="fa fa-info-circle"></i> Guardá el usuario para asignar sucursales.`;
+        hint.innerHTML = `<i class="fa fa-info-circle"></i> Guarda el usuario para asignar sucursales.`;
     }
 
     $("#listaSucursalesUsuario").find("input[type=checkbox]").prop("disabled", !habilitar || usuarioPermisosModo === "ver");
@@ -835,7 +839,7 @@ function prepararPermisosEnModalNuevo() {
     permisosUsuarioCache = [];
     permisosUsuarioOriginal = [];
     moduloPermisoSeleccionadoId = 0;
-    renderPermisosPlaceholder("Guardá el usuario para administrar permisos.");
+    renderPermisosPlaceholder("Guarda el usuario para administrar permisos.");
     habilitarSeccionPermisos(false);
     actualizarBadgeUsuarioPermisos();
     actualizarResumenPermisos();
@@ -850,11 +854,11 @@ function habilitarSeccionPermisos(habilitar) {
     if (habilitar) {
         section.classList.remove("rp-section-disabled");
         hint.classList.add("success");
-        hint.innerHTML = `<i class="fa fa-check-circle"></i> Ya podés administrar permisos por módulo.`;
+        hint.innerHTML = `<i class="fa fa-check-circle"></i> Ya podes administrar permisos por modulo.`;
     } else {
         section.classList.add("rp-section-disabled");
         hint.classList.remove("success");
-        hint.innerHTML = `<i class="fa fa-info-circle"></i> Guardá el usuario para administrar permisos.`;
+        hint.innerHTML = `<i class="fa fa-info-circle"></i> Guarda el usuario para administrar permisos.`;
     }
 
     bloquearControlesPermisos(usuarioPermisosModo === "ver" || !habilitar);
@@ -943,7 +947,7 @@ function renderListaModulosPermisos(filtro = "") {
     container.empty();
 
     if (!Array.isArray(permisosUsuarioCache) || permisosUsuarioCache.length === 0) {
-        container.html(`<div class="rp-perm-empty-state">No hay módulos.</div>`);
+        container.html(`<div class="rp-perm-empty-state">No hay modulos.</div>`);
         return;
     }
 
@@ -1043,14 +1047,14 @@ function renderDetalleModuloSeleccionado() {
     const item = permisosUsuarioCache.find(x => Number(x.IdModulo) === Number(moduloPermisoSeleccionadoId));
 
     if (!item) {
-        titulo.text("Seleccioná un módulo");
-        desc.text("Configuración de permisos.");
-        container.html(`<div class="rp-perm-empty-state">Seleccioná un módulo.</div>`);
+        titulo.text("Selecciona un modulo");
+        desc.text("Configuracion de permisos.");
+        container.html(`<div class="rp-perm-empty-state">Selecciona un modulo.</div>`);
         return;
     }
 
-    titulo.text(item.Modulo || "Módulo");
-    desc.text("Permisos disponibles para este módulo.");
+    titulo.text(item.Modulo || "Modulo");
+    desc.text("Permisos disponibles para este modulo.");
 
     const idRol = Number($("#Roles").val());
     const esModuloUsuarios = (item.Modulo || "").toLowerCase() === "usuarios";
@@ -1180,8 +1184,8 @@ function renderPermisosPlaceholder(texto) {
         <div class="rp-perm-empty-state">${texto}</div>
     `);
 
-    $("#permModuloNombre").text("Seleccioná un módulo");
-    $("#permModuloDesc").text("Acá vas a poder activar o desactivar cada permiso de forma individual.");
+    $("#permModuloNombre").text("Selecciona un modulo");
+    $("#permModuloDesc").text("Aca vas a poder activar o desactivar cada permiso de forma individual.");
 }
 
 function actualizarResumenPermisos() {
@@ -1254,7 +1258,7 @@ async function copiarDesdeRolUsuario() {
         const idRol = Number($("#Roles").val());
 
         if (!idUsuario || idUsuario <= 0) {
-            errorModal("Primero guardá el usuario.");
+            errorModal("Primero guarda el usuario.");
             return;
         }
 
@@ -1301,7 +1305,7 @@ async function guardarPermisosMasivo() {
 
         const idUsuario = Number($("#txtId").val());
         if (!idUsuario || idUsuario <= 0) {
-            errorModal("Primero guardá el usuario.");
+            errorModal("Primero guarda el usuario.");
             return;
         }
 

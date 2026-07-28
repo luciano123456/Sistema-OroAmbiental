@@ -128,6 +128,13 @@ namespace SistemaOroAmbiental.Application.Controllers
             TelefonoAlt = c.TelefonoAlt,
             Cuit = c.Cuit ?? "",
             Domicilio = c.Domicilio,
+            Calle = c.Calle,
+            Numero = c.Numero,
+            PisoDepartamento = c.PisoDepartamento,
+            IdTipoGenerador = c.IdTipoGenerador,
+            TipoGenerador = c.IdTipoGeneradorNavigation != null
+                ? c.IdTipoGeneradorNavigation.Codigo + " - " + c.IdTipoGeneradorNavigation.Nombre
+                : null,
             IdProvincia = c.IdProvincia,
             Localidad = c.Localidad,
             CodPostal = c.CodPostal,
@@ -162,6 +169,10 @@ namespace SistemaOroAmbiental.Application.Controllers
 
         private static Cliente MapEntidad(VMCliente model, int idUsuario, bool esNuevo)
         {
+            var calle = string.IsNullOrWhiteSpace(model.Calle) ? null : model.Calle.Trim();
+            var numero = string.IsNullOrWhiteSpace(model.Numero) ? null : model.Numero.Trim();
+            var piso = string.IsNullOrWhiteSpace(model.PisoDepartamento) ? null : model.PisoDepartamento.Trim();
+
             var entity = new Cliente
             {
                 Id = model.Id,
@@ -170,7 +181,11 @@ namespace SistemaOroAmbiental.Application.Controllers
                 Telefono = model.Telefono,
                 TelefonoAlt = model.TelefonoAlt,
                 Cuit = model.Cuit,
-                Domicilio = model.Domicilio,
+                Calle = calle,
+                Numero = numero,
+                PisoDepartamento = piso,
+                Domicilio = DomicilioHelper.Componer(calle, numero, piso, model.Domicilio),
+                IdTipoGenerador = model.IdTipoGenerador,
                 IdProvincia = model.IdProvincia,
                 Localidad = model.Localidad,
                 CodPostal = model.CodPostal,

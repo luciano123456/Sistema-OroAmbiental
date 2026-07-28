@@ -19,6 +19,14 @@ public partial class Cliente
 
     public string? Domicilio { get; set; }
 
+    public string? Calle { get; set; }
+
+    public string? Numero { get; set; }
+
+    public string? PisoDepartamento { get; set; }
+
+    public int? IdTipoGenerador { get; set; }
+
     public int? IdProvincia { get; set; }
 
     public string? Localidad { get; set; }
@@ -88,6 +96,8 @@ public partial class Cliente
     public virtual ClientesMotivo? IdMotivoNavigation { get; set; }
 
     public virtual ClientesCalificacion? IdCalificacionNavigation { get; set; }
+
+    public virtual ClientesTipoGenerador? IdTipoGeneradorNavigation { get; set; }
 
     public virtual Localidad? IdLocalidadNavigation { get; set; }
 

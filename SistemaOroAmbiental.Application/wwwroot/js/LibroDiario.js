@@ -1,9 +1,11 @@
-/* Libro Diario — Caja efectivo / Caja bancaria */
+/* Libro Diario - Caja efectivo / Caja bancaria */
 
 const LD = {
     movimientos: [],
     conceptos: [],
-    esBancario: false
+    esBancario: false,
+    /** 'debe' | 'haber' - lado activo del importe (mutuamente excluyentes) */
+    ladoImporte: null
 };
 
 let modalLibroDiario;
@@ -50,7 +52,7 @@ function escapeHtmlLd(s) {
 }
 
 function fmtFechaLd(d) {
-    if (!d) return "—";
+    if (!d) return "-";
     const s = String(d).slice(0, 10);
     if (s.length < 10) return s;
     const [y, m, day] = s.split("-");
@@ -73,7 +75,7 @@ function obtenerFiltroLd() {
 function terceroTexto(row) {
     if (row.Cliente) return row.Cliente;
     if (row.Proveedor) return row.Proveedor;
-    return "—";
+    return "-";
 }
 
 function recalcTotalModal() {
@@ -96,6 +98,33 @@ function recalcIvaModal() {
     recalcTotalModal();
 }
 
+function detectarLadoImporteLd() {
+    const debe = leerNumLd($("#mDebeLd").val());
+    const haber = leerNumLd($("#mHaberLd").val());
+    if (debe > 0 && haber <= 0) return "debe";
+    if (haber > 0 && debe <= 0) return "haber";
+    if (LD.ladoImporte) return LD.ladoImporte;
+    return "debe";
+}
+
+function aplicarImporteDesdeUnidadesLd() {
+    const u = leerNumLd($("#mUnidadesLd").val());
+    const p = leerNumLd($("#mPrecioLd").val());
+    if (u <= 0 || p <= 0) return;
+
+    const importe = u * p;
+    const lado = detectarLadoImporteLd();
+    if (lado === "haber") {
+        $("#mHaberLd").val(fmtNumLd(importe));
+        $("#mDebeLd").val("");
+    } else {
+        $("#mDebeLd").val(fmtNumLd(importe));
+        $("#mHaberLd").val("");
+    }
+    LD.ladoImporte = lado;
+    recalcIvaModal();
+}
+
 $(document).ready(async () => {
     LD.esBancario = esBancarioActual();
     modalLibroDiario = new bootstrap.Modal(document.getElementById("modalLibroDiario"));
@@ -114,19 +143,24 @@ $(document).ready(async () => {
     $("#btnGuardarLd").on("click", guardarMovimientoLd);
     $("#fTextoLd").on("keydown", e => { if (e.key === "Enter") aplicarFiltrosLd(); });
 
-    $("#mUnidadesLd, #mPrecioLd").on("input", () => {
-        const u = leerNumLd($("#mUnidadesLd").val());
-        const p = leerNumLd($("#mPrecioLd").val());
-        if (u > 0 && p > 0) {
-            $("#mDebeLd").val(fmtNumLd(u * p));
-            recalcIvaModal();
-        }
-    });
+    $("#mUnidadesLd, #mPrecioLd").on("input", aplicarImporteDesdeUnidadesLd);
 
-    $("#mDebeLd, #mHaberLd, #mIvaLd, #mOtrosImpLd, #mPorcIvaLd").on("input", () => {
-        if ($(document.activeElement).attr("id") === "mPorcIvaLd") recalcIvaModal();
-        else recalcTotalModal();
+    $("#mDebeLd").on("input", function () {
+        if (leerNumLd($(this).val()) > 0) {
+            LD.ladoImporte = "debe";
+            $("#mHaberLd").val("");
+        }
+        recalcTotalModal();
     });
+    $("#mHaberLd").on("input", function () {
+        if (leerNumLd($(this).val()) > 0) {
+            LD.ladoImporte = "haber";
+            $("#mDebeLd").val("");
+        }
+        recalcTotalModal();
+    });
+    $("#mIvaLd, #mOtrosImpLd").on("input", recalcTotalModal);
+    $("#mPorcIvaLd").on("input", recalcIvaModal);
 
     initAutocompleteLd("#mConceptoLd", "#mConceptoSugLd", "#mIdConceptoLd", buscarConceptosLocal, seleccionarConceptoLd);
     initAutocompleteLd("#mClienteLd", "#mClienteSugLd", "#mIdClienteLd", buscarClientesLd, () => { $("#mIdProveedorLd, #mProveedorLd").val(""); });
@@ -141,8 +175,169 @@ $(document).ready(async () => {
         if (id > 0) eliminarMovimientoLd(id);
     });
 
+    initFiltrosColumnasLd();
+    initLibroDiarioViewMode();
+
+    $(document).on("rpGridViewChanged", actualizarVistaLibroDiario);
+
     await aplicarFiltrosLd();
 });
+
+function initLibroDiarioViewMode() {
+    if (!window.RpGridView?.registerManualList) return;
+
+    RpGridView.registerManualList("libroDiario", {
+        pageRoot: ".ld-index",
+        wrap: ".ld-table-wrap",
+        getData: movimientosFiltradosLd,
+        renderCards: renderCardsLd
+    });
+}
+
+function actualizarVistaLibroDiario() {
+    if (window.RpGridView?.debeMostrarTabla()) return;
+    renderCardsLd(movimientosFiltradosLd());
+}
+
+function obtenerFiltrosColumnaLd() {
+    const filtros = {};
+    $("#tblLibroDiario .ld-col-filter").each(function () {
+        const col = parseInt($(this).data("col"), 10);
+        const val = ($(this).val() || "").trim().toLowerCase();
+        if (!isNaN(col) && val) filtros[col] = val;
+    });
+    return filtros;
+}
+
+function textoColumnaLd(row, col) {
+    const esSaldoAnt = row.Id === 0;
+    switch (col) {
+        case 1: return fmtFechaLd(row.Fecha);
+        case 2: return row.Concepto || "";
+        case 3: return terceroTexto(row);
+        case 4: return row.RecorridoTexto || "";
+        case 5: return esSaldoAnt ? "" : fmtNumLd(row.Unidades);
+        case 6: return esSaldoAnt ? "" : fmtNumLd(row.PrecioUnitario);
+        case 7: return esSaldoAnt ? "" : (row.Debe ? fmtNumLd(row.Debe) : "");
+        case 8: return esSaldoAnt ? "" : (row.Haber ? fmtNumLd(row.Haber) : "");
+        case 13: return fmtNumLd(row.Saldo);
+        case 14: return row.FormaPago || "";
+        default: return "";
+    }
+}
+
+function movimientoPasaFiltrosLd(row, filtros) {
+    for (const [col, needle] of Object.entries(filtros)) {
+        const txt = String(textoColumnaLd(row, parseInt(col, 10))).trim().toLowerCase();
+        if (!txt.includes(needle)) return false;
+    }
+    return true;
+}
+
+function movimientosFiltradosLd() {
+    const filtros = obtenerFiltrosColumnaLd();
+    const keys = Object.keys(filtros);
+    if (!keys.length) return LD.movimientos || [];
+    return (LD.movimientos || []).filter(m => movimientoPasaFiltrosLd(m, filtros));
+}
+
+function renderCardsLd(movimientos) {
+    const $cards = $("#rpCards_libroDiario");
+    if (!$cards.length) return;
+
+    const items = Array.isArray(movimientos) ? movimientos : movimientosFiltradosLd();
+    if (!items.length) {
+        $cards.html('<div class="rp-cards-empty cg-cards-empty"><i class="fa fa-inbox"></i> Sin movimientos en el periodo</div>');
+        return;
+    }
+
+    $cards.html(items.map(row => {
+        const esSaldoAnt = row.Id === 0;
+        const tercero = terceroTexto(row);
+        const tone = esSaldoAnt ? "ld-card-saldo-ant" : (row.Debe > 0 ? "ld-card-debe" : (row.Haber > 0 ? "ld-card-haber" : ""));
+
+        if (esSaldoAnt) {
+            return `
+<article class="rp-data-card cg-data-card ld-mov-card ${tone}" data-row-id="0">
+    <div class="rp-data-card-head cg-data-card-head">
+        <div>
+            <div class="rp-data-card-title cg-data-card-title">Saldo anterior</div>
+            <div class="rp-data-card-sub cg-data-card-sub">${fmtFechaLd(row.Fecha)}</div>
+        </div>
+    </div>
+    <div class="rp-data-card-body cg-data-card-body">
+        <div class="rp-card-field rp-card-field--full"><span>Saldo</span><strong class="ld-val-saldo">${fmtNumLd(row.Saldo)}</strong></div>
+    </div>
+</article>`;
+        }
+
+        const acc = `<div class="rp-row-actions">
+            <button type="button" class="btn btn-sm rp-act rp-act-edit btn-edit-ld" data-id="${row.Id}" title="Editar"><i class="fa fa-pencil-square-o"></i></button>
+            <button type="button" class="btn btn-sm rp-act rp-act-del btn-del-ld" data-id="${row.Id}" title="Eliminar"><i class="fa fa-trash-o"></i></button>
+        </div>`;
+
+        return `
+<article class="rp-data-card cg-data-card ld-mov-card ${tone} rp-card-selectable" data-row-id="${row.Id}" tabindex="0">
+    <div class="rp-data-card-head cg-data-card-head">
+        <div class="ld-card-head-text">
+            <div class="rp-data-card-title cg-data-card-title">${escapeHtmlLd(row.Concepto)}</div>
+            <div class="rp-data-card-sub cg-data-card-sub">${escapeHtmlLd(tercero)} · ${fmtFechaLd(row.Fecha)}</div>
+        </div>
+        <span class="rp-data-card-badge cg-data-card-badge">#${row.Id}</span>
+    </div>
+    <div class="rp-data-card-body cg-data-card-body">
+        <div class="rp-card-field"><span>Recorrido</span><strong>${escapeHtmlLd(row.RecorridoTexto || "-")}</strong></div>
+        <div class="rp-card-field"><span>Unid.</span><strong>${fmtNumLd(row.Unidades)}</strong></div>
+        <div class="rp-card-field"><span>P.U.</span><strong>${fmtNumLd(row.PrecioUnitario)}</strong></div>
+        <div class="rp-card-field"><span>Debe</span><strong class="ld-val-debe">${row.Debe ? fmtNumLd(row.Debe) : "-"}</strong></div>
+        <div class="rp-card-field"><span>Haber</span><strong class="ld-val-haber">${row.Haber ? fmtNumLd(row.Haber) : "-"}</strong></div>
+        <div class="rp-card-field"><span>Total</span><strong>${fmtNumLd(row.Total)}</strong></div>
+        <div class="rp-card-field rp-card-field--full"><span>Saldo</span><strong class="ld-val-saldo">${fmtNumLd(row.Saldo)}</strong></div>
+        <div class="rp-card-field rp-card-field--full"><span>Forma pago</span><strong>${escapeHtmlLd(row.FormaPago || "-")}</strong></div>
+    </div>
+    <div class="rp-data-card-foot cg-data-card-foot">${acc}</div>
+</article>`;
+    }).join(""));
+
+    $cards.off("click.ldCardEdit").on("click.ldCardEdit", ".btn-edit-ld", function (e) {
+        e.stopPropagation();
+        const id = parseInt($(this).data("id"), 10);
+        if (id > 0) abrirModalLd(id);
+    });
+    $cards.off("click.ldCardDel").on("click.ldCardDel", ".btn-del-ld", function (e) {
+        e.stopPropagation();
+        const id = parseInt($(this).data("id"), 10);
+        if (id > 0) eliminarMovimientoLd(id);
+    });
+
+    if (window.RpGridView?.restoreCardSelection) {
+        RpGridView.restoreCardSelection($cards);
+    }
+}
+
+function initFiltrosColumnasLd() {
+    $("#tblLibroDiario").on("keyup change", ".ld-col-filter", function () {
+        filtrarFilasLibroDiario();
+    });
+}
+
+function filtrarFilasLibroDiario() {
+    const filtros = obtenerFiltrosColumnaLd();
+
+    $("#tbodyLibroDiario tr").each(function () {
+        const $tr = $(this);
+        if ($tr.hasClass("ld-empty")) {
+            $tr.show();
+            return;
+        }
+        const id = parseInt($tr.attr("data-ld-id"), 10);
+        const row = (LD.movimientos || []).find(m => m.Id === id);
+        if (!row) { $tr.show(); return; }
+        $tr.toggle(movimientoPasaFiltrosLd(row, filtros));
+    });
+
+    actualizarVistaLibroDiario();
+}
 
 async function cargarConceptosLd() {
     const r = await fetch(API_LD.conceptos, { headers: authHeadersLd() });
@@ -165,10 +360,8 @@ function seleccionarConceptoLd(item) {
     $("#mConceptoLd").val(c.Nombre);
     if (c.PrecioUnitario > 0) {
         $("#mPrecioLd").val(fmtNumLd(c.PrecioUnitario));
-        const u = leerNumLd($("#mUnidadesLd").val());
-        if (u > 0) {
-            $("#mDebeLd").val(fmtNumLd(u * c.PrecioUnitario));
-            recalcIvaModal();
+        if (leerNumLd($("#mUnidadesLd").val()) > 0) {
+            aplicarImporteDesdeUnidadesLd();
         }
     }
 }
@@ -259,6 +452,7 @@ async function aplicarFiltrosLd() {
     }
 
     renderTablaLd();
+    actualizarVistaLibroDiario();
 }
 
 function limpiarFiltrosLd() {
@@ -273,23 +467,24 @@ function limpiarFiltrosLd() {
 function renderTablaLd() {
     const $tb = $("#tbodyLibroDiario");
     if (!LD.movimientos.length) {
-        $tb.html(`<tr><td colspan="15" class="ld-empty">Sin movimientos en el período</td></tr>`);
+        $tb.html(`<tr><td colspan="15" class="ld-empty">Sin movimientos en el periodo</td></tr>`);
         return;
     }
 
     const rows = LD.movimientos.map(row => {
         const esSaldoAnt = row.Id === 0;
         const cls = esSaldoAnt ? "ld-row-saldo-ant" : "";
-        const acc = esSaldoAnt ? "" : `
-            <button type="button" class="btn btn-sm rp-act rp-act-edit btn-edit-ld" data-id="${row.Id}" title="Editar"><i class="fa fa-pencil"></i></button>
-            <button type="button" class="btn btn-sm rp-act rp-act-del btn-del-ld" data-id="${row.Id}" title="Eliminar"><i class="fa fa-trash"></i></button>`;
+        const acc = esSaldoAnt ? "" : `<div class="rp-row-actions">
+            <button type="button" class="btn btn-sm rp-act rp-act-edit btn-edit-ld" data-id="${row.Id}" title="Editar"><i class="fa fa-pencil-square-o"></i></button>
+            <button type="button" class="btn btn-sm rp-act rp-act-del btn-del-ld" data-id="${row.Id}" title="Eliminar"><i class="fa fa-trash-o"></i></button>
+        </div>`;
 
-        return `<tr class="${cls}">
+        return `<tr class="${cls}" data-ld-id="${row.Id}">
             <td class="ld-col-acc">${acc}</td>
             <td>${fmtFechaLd(row.Fecha)}</td>
             <td class="ld-col-concepto">${escapeHtmlLd(row.Concepto)}</td>
             <td>${escapeHtmlLd(terceroTexto(row))}</td>
-            <td>${escapeHtmlLd(row.RecorridoTexto || "—")}</td>
+            <td>${escapeHtmlLd(row.RecorridoTexto || "-")}</td>
             <td class="ld-num">${esSaldoAnt ? "" : fmtNumLd(row.Unidades)}</td>
             <td class="ld-num">${esSaldoAnt ? "" : fmtNumLd(row.PrecioUnitario)}</td>
             <td class="ld-num ld-val-debe">${esSaldoAnt ? "" : (row.Debe ? fmtNumLd(row.Debe) : "")}</td>
@@ -304,6 +499,7 @@ function renderTablaLd() {
     }).join("");
 
     $tb.html(rows);
+    filtrarFilasLibroDiario();
 }
 
 async function abrirModalLd(id) {
@@ -326,6 +522,9 @@ async function abrirModalLd(id) {
         $("#mPrecioLd").val(fmtNumLd(m.PrecioUnitario));
         $("#mDebeLd").val(m.Debe ? fmtNumLd(m.Debe) : "");
         $("#mHaberLd").val(m.Haber ? fmtNumLd(m.Haber) : "");
+        const debeVal = leerNumLd(m.Debe);
+        const haberVal = leerNumLd(m.Haber);
+        LD.ladoImporte = haberVal > 0 && debeVal <= 0 ? "haber" : "debe";
         $("#mPorcIvaLd").val(fmtNumLd(m.PorcIva));
         $("#mIvaLd").val(fmtNumLd(m.Iva));
         $("#mOtrosImpLd").val(fmtNumLd(m.OtrosImp));
@@ -338,6 +537,7 @@ async function abrirModalLd(id) {
 }
 
 function limpiarModalLd() {
+    LD.ladoImporte = null;
     $("#mIdLd").val("0");
     $("#mIdConceptoLd, #mIdClienteLd, #mIdProveedorLd").val("");
     $("#mConceptoLd, #mClienteLd, #mProveedorLd, #mRecorridoLd").val("");
@@ -348,13 +548,29 @@ function limpiarModalLd() {
 }
 
 async function guardarMovimientoLd() {
+    const clienteTexto = ($("#mClienteLd").val() || "").trim();
+    const proveedorTexto = ($("#mProveedorLd").val() || "").trim();
+    const idCliente = parseInt($("#mIdClienteLd").val(), 10) || null;
+    const idProveedor = parseInt($("#mIdProveedorLd").val(), 10) || null;
+
+    if (clienteTexto && !idCliente) {
+        errorModal("Selecciona el cliente de la lista desplegable.");
+        return;
+    }
+    if (proveedorTexto && !idProveedor) {
+        errorModal("Selecciona el proveedor de la lista desplegable.");
+        return;
+    }
+
     const payload = {
         Id: parseInt($("#mIdLd").val(), 10) || 0,
         Fecha: $("#mFechaLd").val() || new Date().toISOString().slice(0, 10),
         IdConcepto: parseInt($("#mIdConceptoLd").val(), 10) || null,
         Concepto: ($("#mConceptoLd").val() || "").trim(),
-        IdCliente: parseInt($("#mIdClienteLd").val(), 10) || null,
-        IdProveedor: parseInt($("#mIdProveedorLd").val(), 10) || null,
+        IdCliente: idCliente,
+        Cliente: clienteTexto || null,
+        IdProveedor: idProveedor,
+        Proveedor: proveedorTexto || null,
         RecorridoTexto: ($("#mRecorridoLd").val() || "").trim() || null,
         Unidades: leerNumLd($("#mUnidadesLd").val()),
         PrecioUnitario: leerNumLd($("#mPrecioLd").val()),
@@ -376,7 +592,7 @@ async function guardarMovimientoLd() {
     const data = await r.json();
     if (data.valor) {
         modalLibroDiario.hide();
-        if (typeof okModal === "function") okModal(data.mensaje);
+        if (typeof exitoModal === "function") exitoModal(data.mensaje || "Movimiento guardado.");
         await aplicarFiltrosLd();
     } else if (typeof errorModal === "function") {
         errorModal(data.mensaje || "No se pudo guardar.");
@@ -397,7 +613,7 @@ async function ejecutarEliminarLd(id) {
     const r = await fetch(API_LD.eliminar(id), { method: "DELETE", headers: authHeadersLd() });
     const data = await r.json();
     if (data.valor) {
-        if (typeof okModal === "function") okModal(data.mensaje);
+        if (typeof exitoModal === "function") exitoModal(data.mensaje || "Movimiento eliminado.");
         await aplicarFiltrosLd();
     } else if (typeof errorModal === "function") {
         errorModal(data.mensaje || "No se pudo eliminar.");

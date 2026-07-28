@@ -1,5 +1,5 @@
 /* =========================================================
-   GASTOS — Listado + ABM + dashboards (Oro Ambiental)
+   GASTOS - Listado + ABM + dashboards (Oro Ambiental)
 ========================================================= */
 
 let gridGastos;
@@ -430,7 +430,7 @@ function renderDashboards(data) {
 
     data.forEach(x => {
         const imp = Number(x.ImporteTotal) || 0;
-        const cat = (x.Categoria || "Sin categoría").trim();
+        const cat = (x.Categoria || "Sin categoria").trim();
         const cta = (x.Cuenta || "Sin cuenta").trim();
         porCategoria[cat] = (porCategoria[cat] || 0) + imp;
         porCuenta[cta] = (porCuenta[cta] || 0) + imp;

@@ -1,60 +1,3 @@
-<!-- Modal Error -->
-<div class="modal fade w-100" id="errorModal" tabindex="-1" aria-labelledby="errorModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content text-white" style="background: #323844">
-            <div class="modal-header border-0 bg-danger bg-opacity-10 colorEncabezado">
-                <i class="fa fa-exclamation-circle text-danger fs-2 me-2"></i>
-                <h5 class="modal-title text-white fw-bold" id="errorModalLabel">Error</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-            </div>
-            <div class="modal-body text-center">
-                <p id="errorModalText" class="text-danger fs-4 fw-semibold m-0 text-white text-wrap"></p>
-            </div>
-            <div class="modal-footer border-0 justify-content-center">
-                <button type="button" class="btn btn-danger px-4" data-bs-dismiss="modal">Aceptar</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Modal Advertencia -->
-<div class="modal fade w-100" id="AdvertenciaModal" tabindex="-1" aria-labelledby="AdvertenciaModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content text-white" style="background: #323844">
-            <div class="modal-header border-0 bg-warning bg-opacity-10 colorEncabezado">
-                <i class="fa fa-exclamation-triangle text-warning fs-2 me-2"></i>
-                <h5 class="modal-title text-white fw-bold" id="AdvertenciaModalLabel">Advertencia</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-            </div>
-            <div class="modal-body text-center">
-                <p id="AdvertenciaModalText" class="text-warning fs-4 fw-semibold m-0 text-white text-wrap"></p>
-            </div>
-            <div class="modal-footer border-0 justify-content-center">
-                <button type="button" class="btn btn-warning px-4" data-bs-dismiss="modal">Aceptar</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Modal Exito -->
-<div class="modal fade w-100" id="exitoModal" tabindex="-1" aria-labelledby="exitoModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content text-white" style="background: #323844">
-            <div class="modal-header border-0 bg-success bg-opacity-10 colorEncabezado">
-                <i class="fa fa-check-circle text-success fs-2 me-2"></i>
-                <h5 class="modal-title text-white fw-bold" id="exitoModalLabel">&#201;xito</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-            </div>
-            <div class="modal-body text-center">
-                <p id="exitoModalText" class="text-success fs-4 fw-semibold m-0 text-white text-wrap"></p>
-            </div>
-            <div class="modal-footer border-0 justify-content-center">
-                <button type="button" class="btn btn-success px-4" data-bs-dismiss="modal">Aceptar</button>
-            </div>
-        </div>
-    </div>
-</div>
-
 <!-- Modal Confirmar -->
 <div class="modal fade w-100" id="modalConfirmar" tabindex="-1" aria-labelledby="modalConfirmarLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
@@ -77,7 +20,7 @@
     </div>
 </div>
 
-<!-- Modal genérico: guardado OK + opción de volver al listado -->
+<!-- Modal generico: guardado OK + opcion de volver al listado -->
 <div class="modal fade" id="modalGuardadoConSalida" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
     <div class="modal-dialog modal-dialog-centered modal-md">
         <div class="modal-content rp-guardado-modal">
@@ -90,34 +33,34 @@
             <div class="modal-body rp-guardado-body text-center">
                 <h5 class="rp-guardado-title" id="modalGuardadoConSalidaTitulo">Guardado correctamente</h5>
                 <p class="rp-guardado-message" id="modalGuardadoConSalidaMensaje"></p>
-                <p class="rp-guardado-pregunta" id="modalGuardadoConSalidaPregunta">¿Deseás volver al listado?</p>
+                <p class="rp-guardado-pregunta" id="modalGuardadoConSalidaPregunta">¿Deseas volver al listado?</p>
             </div>
 
             <div class="modal-footer rp-guardado-footer border-0">
                 <button type="button" class="rp-guardado-btn rp-guardado-btn-quedarse" id="btnGuardadoQuedarse">
                     <i class="fa fa-pencil"></i>
-                    <span>No, seguir acá</span>
+                    <span>No, seguir aca</span>
                 </button>
                 <button type="button" class="rp-guardado-btn rp-guardado-btn-salir" id="btnGuardadoSalir">
                     <i class="fa fa-arrow-left"></i>
-                    <span>Sí, volver al listado</span>
+                    <span>Si, volver al listado</span>
                 </button>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Modal sesión por expirar (últimos 5 minutos) -->
+<!-- Modal sesion por expirar (ultimos 5 minutos) -->
 <div class="modal fade" id="modalSessionPorExpirar" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content text-white rp-session-renew-modal" style="background: #323844">
             <div class="modal-header border-0 bg-warning bg-opacity-10 colorEncabezado">
                 <i class="fa fa-hourglass-half text-warning fs-2 me-2"></i>
-                <h5 class="modal-title text-white fw-bold">Sesión por expirar</h5>
+                <h5 class="modal-title text-white fw-bold">Sesion por expirar</h5>
             </div>
             <div class="modal-body text-center">
-                <p class="fs-5 fw-semibold m-0 text-white">Tu sesión está por finalizar</p>
-                <p class="text-muted small mt-2 mb-3">Quedan menos de 5 minutos. Podés renovarla para seguir trabajando sin interrupciones.</p>
+                <p class="fs-5 fw-semibold m-0 text-white">Tu sesion esta por finalizar</p>
+                <p class="text-muted small mt-2 mb-3">Quedan menos de 5 minutos. Podes renovarla para seguir trabajando sin interrupciones.</p>
                 <div class="rp-session-renew-countdown">
                     <span class="rp-session-renew-countdown-label">Tiempo restante</span>
                     <strong id="modalSessionPorExpirarCountdown">--:--</strong>
@@ -128,24 +71,24 @@
                     Continuar
                 </button>
                 <button type="button" class="btn btn-warning px-4" id="btnSessionRenovar">
-                    <i class="fa fa-refresh me-1"></i> Renovar sesión
+                    <i class="fa fa-refresh me-1"></i> Renovar sesion
                 </button>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Modal sesión expirada -->
+<!-- Modal sesion expirada -->
 <div class="modal fade" id="modalSessionExpirada" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content text-white" style="background: #323844">
             <div class="modal-header border-0 bg-danger bg-opacity-10 colorEncabezado">
                 <i class="fa fa-clock-o text-danger fs-2 me-2"></i>
-                <h5 class="modal-title text-white fw-bold">Sesión expirada</h5>
+                <h5 class="modal-title text-white fw-bold">Sesion expirada</h5>
             </div>
             <div class="modal-body text-center">
-                <p class="fs-5 fw-semibold m-0 text-white">La sesión ha expirado</p>
-                <p class="text-muted small mt-2 mb-0">Volvé a iniciar sesión para continuar.</p>
+                <p class="fs-5 fw-semibold m-0 text-white">La sesion ha expirado</p>
+                <p class="text-muted small mt-2 mb-0">Volve a iniciar sesion para continuar.</p>
             </div>
             <div class="modal-footer border-0 justify-content-center">
                 <button type="button" class="btn btn-danger px-4" id="btnSessionExpiradaAceptar">Aceptar</button>
@@ -223,3 +166,6 @@
         </div>
     </div>
 </div>
+
+<!-- Toasts globales (guardado / error) -->
+<div id="rpToastStack" class="rp-toast-stack" aria-live="polite" aria-atomic="false"></div>

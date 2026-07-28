@@ -59,7 +59,7 @@
                                         <i class="fa fa-plus"></i>
                                     </button>
                                 </div>
-                                <div class="form-text text-muted">No requiere contrato. Si no hay clientes, usá el botón +.</div>
+                                <div class="form-text text-muted">No requiere contrato. Si no hay clientes, usa el boton +.</div>
                                 <div class="invalid-feedback">Campo obligatorio</div>
                             </div>
 
@@ -75,7 +75,7 @@
                             </div>
 
                             <div class="col-md-4">
-                                <label class="form-label">Condición IVA</label>
+                                <label class="form-label">Condicion IVA</label>
                                 <div class="rp-select-plus">
                                     <select id="cmbCondicionIvaEst" class="form-control"></select>
                                     <button type="button" class="rp-btn-plus" data-config-nombre="Condiciones IVA" data-config-controller="CondicionesIva"><i class="fa fa-plus"></i></button>
@@ -114,31 +114,52 @@
                                 <input id="txtLocalidadEst" class="form-control" maxlength="200" />
                             </div>
 
-                            <div class="col-md-4">
-                                <label class="form-label">Código postal</label>
+                            <div class="col-md-5">
+                                <label class="form-label">Calle</label>
+                                <input id="txtCalleEst" class="form-control" maxlength="40" />
+                            </div>
+
+                            <div class="col-md-2">
+                                <label class="form-label">Numero</label>
+                                <input id="txtNumeroEst" class="form-control" maxlength="13" />
+                            </div>
+
+                            <div class="col-md-2">
+                                <label class="form-label">Piso / Depto</label>
+                                <input id="txtPisoDeptoEst" class="form-control" maxlength="50" />
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label">Codigo postal</label>
                                 <input id="txtCodPostalEst" class="form-control" maxlength="10" />
                             </div>
 
-                            <div class="col-md-8">
-                                <label class="form-label">Domicilio</label>
-                                <input id="txtDomicilioEst" class="form-control" maxlength="200" />
+                            <div class="col-md-4">
+                                <label class="form-label">Tipo de generador</label>
+                                <div class="rp-select-plus">
+                                    <select id="cmbTipoGeneradorEst" class="form-control"></select>
+                                    <button type="button" class="rp-btn-plus" title="Agregar tipo de generador"
+                                            data-config-nombre="Tipos de Generador" data-config-controller="ClientesTiposGenerador">
+                                        <i class="fa fa-plus"></i>
+                                    </button>
+                                </div>
                             </div>
 
                             <div class="col-12 rp-recoleccion-block">
                                 <div class="rp-recoleccion-block-title">
-                                    <i class="fa fa-truck"></i> Recolección y precios
+                                    <i class="fa fa-truck"></i> Recoleccion y precios
                                 </div>
                                 <div class="row g-3">
                                     <div class="col-md-4">
-                                        <label class="form-label">Día recolección</label>
+                                        <label class="form-label">Dia recoleccion</label>
                                         <div class="rp-select-plus">
                                             <select id="cmbDiaEst" class="form-control" required></select>
-                                            <button type="button" class="rp-btn-plus" data-config-nombre="Días" data-config-controller="Dias"><i class="fa fa-plus"></i></button>
+                                            <button type="button" class="rp-btn-plus" data-config-nombre="Dias" data-config-controller="Dias"><i class="fa fa-plus"></i></button>
                                         </div>
                                         <div class="invalid-feedback">Campo obligatorio</div>
                                     </div>
                                     <div class="col-md-4">
-                                        <label class="form-label">Semana recolección</label>
+                                        <label class="form-label">Semana recoleccion</label>
                                         <div class="rp-select-plus">
                                             <select id="cmbSemanaEst" class="form-control" required></select>
                                             <button type="button" class="rp-btn-plus" data-config-nombre="Semanas" data-config-controller="Semanas"><i class="fa fa-plus"></i></button>
@@ -164,10 +185,10 @@
                                         <div class="invalid-feedback">Campo obligatorio</div>
                                     </div>
                                     <div class="col-md-6">
-                                        <label class="form-label">Unidad / Camión</label>
+                                        <label class="form-label">Unidad / Camion</label>
                                         <div class="rp-select-plus">
                                             <select id="cmbCamionEst" class="form-control"></select>
-                                            <button type="button" class="rp-btn-plus" onclick="abrirConfiguracion('Camiones', 'Camiones'); return false;" title="Agregar camión"><i class="fa fa-plus"></i></button>
+                                            <button type="button" class="rp-btn-plus" onclick="abrirConfiguracion('Camiones', 'Camiones'); return false;" title="Agregar camion"><i class="fa fa-plus"></i></button>
                                         </div>
                                     </div>
                                 </div>
@@ -187,7 +208,7 @@
                                     <div class="text-muted small">Establecimiento</div>
                                     <div class="rp-sub-hero-name" id="contactoEstNombre">Nuevo</div>
                                     <div class="rp-sub-hero-hint" id="contactoEstHint">
-                                        <i class="fa fa-info-circle"></i> Guardá el establecimiento para administrar contactos.
+                                        <i class="fa fa-info-circle"></i> Guarda el establecimiento para administrar contactos.
                                     </div>
                                 </div>
                                 <div class="rp-kpi-card-mini">
@@ -199,13 +220,13 @@
                                 <div class="rp-sub-panel">
                                     <div class="rp-sub-panel-head">
                                         <i class="fa fa-list"></i> Listado
-                                        <small>Seleccioná para editar</small>
+                                        <small>Selecciona para editar</small>
                                     </div>
                                     <div class="rp-sub-panel-body">
                                         <div id="listaContactosEst" class="rp-sub-list">
                                             <div class="rp-sub-empty">
                                                 <i class="fa fa-address-book-o"></i>
-                                                <p>Guardá el establecimiento para ver contactos.</p>
+                                                <p>Guarda el establecimiento para ver contactos.</p>
                                             </div>
                                         </div>
                                     </div>
@@ -227,11 +248,11 @@
                                                 <input id="txtContactoEstPuesto" class="form-control" maxlength="100" placeholder="Ej. Encargado" />
                                             </div>
                                             <div class="col-md-6">
-                                                <label class="form-label"><i class="fa fa-phone"></i> Teléfono</label>
+                                                <label class="form-label"><i class="fa fa-phone"></i> Telefono</label>
                                                 <input id="txtContactoEstTelefono" class="form-control" maxlength="50" />
                                             </div>
                                             <div class="col-md-6">
-                                                <label class="form-label"><i class="fa fa-phone"></i> Teléfono alternativo</label>
+                                                <label class="form-label"><i class="fa fa-phone"></i> Telefono alternativo</label>
                                                 <input id="txtContactoEstTelefonoAlt" class="form-control" maxlength="50" />
                                             </div>
                                             <div class="col-md-6">

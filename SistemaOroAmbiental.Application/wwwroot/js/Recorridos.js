@@ -35,14 +35,14 @@ $(document).ready(async () => {
     $(".rec-btn-shortcut[data-config-controller]").on("click", async function (e) {
         e.preventDefault();
         if (typeof abrirConfiguracion !== "function") {
-            errorModal("No se pudo abrir la configuración.");
+            errorModal("No se pudo abrir la configuracion.");
             return;
         }
         try {
             await abrirConfiguracion($(this).data("config-nombre"), $(this).data("config-controller"), null, null, null, true);
         } catch (err) {
             console.error(err);
-            errorModal("No se pudo abrir la configuración.");
+            errorModal("No se pudo abrir la configuracion.");
         }
     });
 
@@ -339,9 +339,9 @@ function getUnidadPromptHtml() {
             <div class="rec-unidad-prompt-glow"></div>
             <span class="rec-unidad-prompt-icon"><i class="fa fa-truck"></i></span>
             <p class="rec-unidad-prompt-step">Paso 1</p>
-            <h6 class="rec-unidad-prompt-title">Seleccioná una unidad</h6>
+            <h6 class="rec-unidad-prompt-title">Selecciona una unidad</h6>
             <p class="rec-unidad-prompt-text">
-                Acá vas a ver las rutas por semana y día. Elegí la unidad de recolección en el selector de arriba para empezar.
+                Aca vas a ver las rutas por semana y dia. Elegi la unidad de recoleccion en el selector de arriba para empezar.
             </p>
             <button type="button" class="btn btn-success rec-btn-unidad-prompt">
                 <i class="fa fa-hand-pointer-o me-1"></i> Elegir unidad
@@ -356,7 +356,7 @@ function setEstadoUnidadSeleccionada(seleccionada) {
 
     if (!seleccionada) {
         $("#lblRutasHint").html(
-            '<span class="rec-hint-pendiente"><i class="fa fa-arrow-circle-up"></i> Elegí una unidad arriba para continuar</span>'
+            '<span class="rec-hint-pendiente"><i class="fa fa-arrow-circle-up"></i> Elegi una unidad arriba para continuar</span>'
         );
     }
 }
@@ -377,15 +377,15 @@ function renderListaRutasVacia() {
     const idCamion = parseInt($("#selCamion").val(), 10);
     setEstadoUnidadSeleccionada(!!idCamion);
 
-    $("#selRecorridoRapido").prop("disabled", true).empty().append(new Option("Primero elegí una unidad", "")).trigger("change.select2");
+    $("#selRecorridoRapido").prop("disabled", true).empty().append(new Option("Primero elegi una unidad", "")).trigger("change.select2");
 
     if (!semanas.length || !dias.length) {
-        $("#lblRutasHint").text("Configurá semanas y días para armar los recorridos");
+        $("#lblRutasHint").text("Configura semanas y dias para armar los recorridos");
         $("#listaRutas").html(`
             <div class="rec-empty">
                 <i class="fa fa-calendar-plus-o"></i>
-                Todavía no hay semanas o días cargados.<br>
-                <span class="text-muted-cc">Usá los botones <strong>+ Semanas</strong> y <strong>+ Días</strong> para crearlos.</span>
+                Todavia no hay semanas o dias cargados.<br>
+                <span class="text-muted-cc">Usa los botones <strong>+ Semanas</strong> y <strong>+ Dias</strong> para crearlos.</span>
             </div>`);
         return;
     }
@@ -414,7 +414,7 @@ function renderRutaItemHtml(s, d, mapa) {
                     <label class="rec-ruta-zona-label">Zona / barrio</label>
                     <div class="rec-ruta-zona-row">
                         <input type="text" class="form-control rec-input rec-zona-input"
-                               value="${escapeHtml(zona)}" placeholder="Ej: Lanús, Avellaneda..."
+                               value="${escapeHtml(zona)}" placeholder="Ej: Lanus, Avellaneda..."
                                maxlength="120" autocomplete="off" />
                     </div>
                 </div>
@@ -452,7 +452,7 @@ function renderListaRutas() {
     }
 
     const camionNombre = camiones.find(c => c.Id === idCamion)?.Nombre || "";
-    $("#lblRutasHint").html(`${camionNombre} — ${semanas.length * dias.length} recorridos posibles · <span class="rec-hint-multi">Ctrl + clic para elegir varios días</span>`);
+    $("#lblRutasHint").html(`${camionNombre} - ${semanas.length * dias.length} recorridos posibles · <span class="rec-hint-multi">Ctrl + clic para elegir varios dias</span>`);
 
     const mapa = {};
     (rutasData || []).forEach(r => { mapa[`${r.IdSemana}_${r.IdDia}`] = r; });
@@ -482,7 +482,7 @@ function renderListaRutas() {
             const key = `${s.Id}_${d.Id}`;
             const ruta = mapa[key];
             const zona = (ruta?.Zona || "").trim();
-            const label = `${s.Nombre} · ${d.Nombre}${zona ? " — " + zona : ""}`;
+            const label = `${s.Nombre} · ${d.Nombre}${zona ? " - " + zona : ""}`;
             items.push({ s, d, zona, label, key });
             opcionesRapidas.push({ key, label });
         });
@@ -575,7 +575,7 @@ function syncSeleccionRecorridosUI(recargarClientes) {
 
     const activo = getRecorridoActivo();
     if (!activo) {
-        $("#lblRecorridoSeleccionado").text("Elegí un recorrido de la lista");
+        $("#lblRecorridoSeleccionado").text("Elegi un recorrido de la lista");
         $("#btnNuevoClienteRecorrido, #btnHojaRutaRecorrido, #btnTraerProgramadosRec").prop("disabled", true);
         $("#btnTraerProgramadosRec").addClass("d-none");
         ocultarPanelSugeridos();
@@ -596,7 +596,7 @@ function syncSeleccionRecorridosUI(recargarClientes) {
 function actualizarLabelRecorridoSeleccionado(extra) {
     const activo = getRecorridoActivo();
     if (!activo) {
-        $("#lblRecorridoSeleccionado").text("Elegí un recorrido de la lista");
+        $("#lblRecorridoSeleccionado").text("Elegi un recorrido de la lista");
         return;
     }
 
@@ -610,7 +610,7 @@ function actualizarLabelRecorridoSeleccionado(extra) {
             })
             .join(" · ");
         const activoDia = dias.find(d => d.Id === activo.idDia)?.Nombre || "";
-        const base = `${camion} · ${recorridosSeleccionados.length} días seleccionados (${resumenDias}) · viendo ${activoDia}`;
+        const base = `${camion} · ${recorridosSeleccionados.length} dias seleccionados (${resumenDias}) · viendo ${activoDia}`;
         $("#lblRecorridoSeleccionado").text(extra ? `${base} · ${extra}` : base);
         return;
     }
@@ -638,7 +638,7 @@ function getHorarioSalidaRecorrido(idSemana, idDia) {
 
 function getRecorridoLabelText(extra) {
     const activo = getRecorridoActivo();
-    if (!activo) return "Elegí un recorrido de la lista";
+    if (!activo) return "Elegi un recorrido de la lista";
     const { idCamion, idSemana, idDia, zona } = activo;
     const camion = camiones.find(c => c.Id === idCamion)?.Nombre || "";
     const semana = semanas.find(s => s.Id === idSemana)?.Nombre || "";
@@ -660,7 +660,7 @@ function seleccionarRecorrido(idSemana, idDia, zona) {
 function limpiarSeleccionRecorrido() {
     recorridosSeleccionados = [];
     $(".rec-ruta-item").removeClass("selected");
-    $("#lblRecorridoSeleccionado").text("Elegí un recorrido de la lista");
+    $("#lblRecorridoSeleccionado").text("Elegi un recorrido de la lista");
     $("#btnNuevoClienteRecorrido, #btnHojaRutaRecorrido, #btnTraerProgramadosRec").prop("disabled", true);
     $("#btnTraerProgramadosRec").addClass("d-none");
     ocultarPanelSugeridos();
@@ -679,12 +679,12 @@ async function guardarMetaRecorrido(idSemana, idDia, zona, horarioSalida, opcion
     const valorSalida = (horarioSalida || "").trim();
 
     if (!idCamion) {
-        if (!silent) errorModal("Seleccioná una unidad.");
+        if (!silent) errorModal("Selecciona una unidad.");
         return false;
     }
 
     if (!valorZona && !valorSalida) {
-        if (!silent) errorModal("Ingresá la zona o el horario de salida antes de guardar.");
+        if (!silent) errorModal("Ingresa la zona o el horario de salida antes de guardar.");
         return false;
     }
 
@@ -693,7 +693,7 @@ async function guardarMetaRecorrido(idSemana, idDia, zona, horarioSalida, opcion
     const salidaAnterior = (anterior?.HorarioSalida || "").trim();
 
     if (valorZona === zonaAnterior && valorSalida === salidaAnterior) {
-        if (!silent && typeof exitoModal === "function") exitoModal("Los datos ya están guardados.");
+        if (!silent && typeof exitoModal === "function") exitoModal("Los datos ya estan guardados.");
         return true;
     }
 
@@ -746,7 +746,7 @@ async function guardarMetaRecorrido(idSemana, idDia, zona, horarioSalida, opcion
         return true;
     } catch (e) {
         console.error(e);
-        if (!silent) errorModal("Error al guardar. Verificá tu sesión e intentá de nuevo.");
+        if (!silent) errorModal("Error al guardar. Verifica tu sesion e intenta de nuevo.");
         return false;
     }
 }
@@ -789,7 +789,7 @@ function renderClientesRecorrido(data) {
         $lista.html(`
             <div class="rec-empty">
                 <i class="fa fa-hand-pointer-o"></i>
-                Elegí un recorrido y tocá <strong>Clientes</strong> para ver la lista
+                Elegi un recorrido y toca <strong>Clientes</strong> para ver la lista
             </div>`);
         return;
     }
@@ -799,7 +799,7 @@ function renderClientesRecorrido(data) {
             <div class="rec-empty" id="recEmptyClientes">
                 <i class="fa fa-users"></i>
                 Sin clientes en este recorrido.<br>
-                <span class="text-muted-cc">Usá <strong>Traer programados</strong> para cargar los del día/semana del establecimiento, o <strong>+ Agregar cliente</strong>.</span>
+                <span class="text-muted-cc">Usa <strong>Traer programados</strong> para cargar los del dia/semana del establecimiento, o <strong>+ Agregar cliente</strong>.</span>
             </div>`);
         return;
     }
@@ -809,17 +809,43 @@ function renderClientesRecorrido(data) {
             ? '<span class="rec-badge-activo rec-badge-activo--si"><i class="fa fa-check-circle"></i> Activo</span>'
             : '<span class="rec-badge-activo rec-badge-activo--no"><i class="fa fa-pause-circle"></i> Inactivo</span>';
 
+        const domicilioTxt = (item.Domicilio || "").trim();
+        const localidadTxt = (item.Localidad || "").trim();
+        const camionTxt = (item.Camion || "").trim();
+
+        const domicilioHtml = domicilioTxt
+            ? escapeHtml(domicilioTxt)
+            : `<span class="rec-cliente-ubicacion-empty">Sin domicilio cargado</span>`;
+
+        const localidadHtml = localidadTxt
+            ? `<span class="rec-cliente-chip rec-cliente-chip--loc"><i class="fa fa-map-pin"></i>${escapeHtml(localidadTxt)}</span>`
+            : `<span class="rec-cliente-chip rec-cliente-chip--muted"><i class="fa fa-map-pin"></i>Sin localidad</span>`;
+
+        const camionHtml = camionTxt
+            ? `<span class="rec-cliente-chip rec-cliente-chip--truck"><i class="fa fa-truck"></i>${escapeHtml(camionTxt)}</span>`
+            : `<span class="rec-cliente-chip rec-cliente-chip--muted"><i class="fa fa-truck"></i>Sin unidad</span>`;
+
         const establecimiento = item.Establecimiento
-            ? `<span class="rec-cliente-est"><i class="fa fa-building-o"></i> ${escapeHtml(item.Establecimiento)}</span>`
-            : `<span class="rec-cliente-est rec-cliente-est--empty"><i class="fa fa-building-o"></i> Sin establecimiento</span>`;
+            ? `<div class="rec-cliente-est-line"><i class="fa fa-building-o"></i>${escapeHtml(item.Establecimiento)}</div>`
+            : "";
 
         return `
             <article class="rec-cliente-item${item.Activo ? "" : " rec-cliente-item--inactive"}" data-id="${item.Id}">
-                <div class="rec-cliente-pos" title="Posición en la ruta">
+                <div class="rec-cliente-pos" title="Posicion en la ruta">
                     <span>${item.Posicion}</span>
                 </div>
                 <div class="rec-cliente-main">
                     <div class="rec-cliente-name">${escapeHtml(item.Cliente)}</div>
+                    <div class="rec-cliente-ubicacion">
+                        <div class="rec-cliente-domicilio">
+                            <i class="fa fa-map-marker" aria-hidden="true"></i>
+                            <span>${domicilioHtml}</span>
+                        </div>
+                        <div class="rec-cliente-ubicacion-chips">
+                            ${localidadHtml}
+                            ${camionHtml}
+                        </div>
+                    </div>
                     ${establecimiento}
                 </div>
                 <div class="rec-cliente-status">${badge}</div>
@@ -832,7 +858,7 @@ function renderClientesRecorrido(data) {
                     </button>
                 </div>
                 <div class="rec-cliente-obs">
-                    <label class="rec-cliente-obs-label">Observación hoja de ruta</label>
+                    <label class="rec-cliente-obs-label">Observacion hoja de ruta</label>
                     <textarea class="form-control rec-input rec-obs-input" data-id="${item.Id}" rows="2"
                               maxlength="500" placeholder="Notas para imprimir en la hoja de ruta...">${escapeHtml(item.Observacion || "")}</textarea>
                 </div>
@@ -879,7 +905,7 @@ function renderResultadosBusqueda(data) {
             <tr>
                 <td>${escapeHtml(item.RecorridoTexto)}</td>
                 <td>${escapeHtml(item.Camion)}</td>
-                <td>${escapeHtml(item.Zona || "—")}</td>
+                <td>${escapeHtml(item.Zona || "-")}</td>
                 <td>${item.Posicion}</td>
                 <td>${escapeHtml(item.Cliente)}</td>
                 <td class="text-end">
@@ -971,7 +997,7 @@ async function guardarClienteRecorrido() {
     };
 
     if (!payload.IdCliente) {
-        errorModal("Seleccioná un cliente.");
+        errorModal("Selecciona un cliente.");
         return;
     }
 
@@ -1048,20 +1074,20 @@ async function guardarObservacionClienteRecorrido(id, observacion) {
         });
 
         if (!(data?.valor ?? data?.Valor)) {
-            errorModal(data?.mensaje ?? data?.Mensaje ?? "No se pudo guardar la observación.");
+            errorModal(data?.mensaje ?? data?.Mensaje ?? "No se pudo guardar la observacion.");
             return;
         }
 
         item.Observacion = valor || null;
     } catch (e) {
         console.error(e);
-        errorModal("Error al guardar la observación.");
+        errorModal("Error al guardar la observacion.");
     }
 }
 
 async function abrirHojaRutaRecorrido() {
     if (!recorridosSeleccionados.length) {
-        errorModal("Seleccioná al menos un recorrido.");
+        errorModal("Selecciona al menos un recorrido.");
         return;
     }
 
@@ -1097,7 +1123,7 @@ async function abrirHojaRutaRecorrido() {
         const html = await response.text();
         const ventana = window.open("", "_blank");
         if (!ventana) {
-            errorModal("El navegador bloqueó la ventana emergente. Permití pop-ups e intentá de nuevo.");
+            errorModal("El navegador bloqueo la ventana emergente. Permiti pop-ups e intenta de nuevo.");
             return;
         }
 
@@ -1173,7 +1199,7 @@ function renderPanelSugeridos() {
 
     $panel.removeClass("d-none");
     $("#lblSugeridosRecorrido").text(
-        `${pendientes.length} cliente${pendientes.length === 1 ? "" : "s"} con recolección programada para este día y semana` +
+        `${pendientes.length} cliente${pendientes.length === 1 ? "" : "s"} con recoleccion programada para este dia y semana` +
         (enRuta.length ? ` · ${enRuta.length} ya en la ruta` : "")
     );
 
@@ -1191,7 +1217,7 @@ function renderPanelSugeridos() {
                     ${item.Establecimiento ? `<small>${escapeHtml(item.Establecimiento)}</small>` : ""}
                     ${domicilio ? `<span class="rec-sugerido-meta">${escapeHtml(domicilio)}</span>` : ""}
                 </span>
-                <span class="rec-sugerido-horario">${escapeHtml(item.Horario || "—")}</span>
+                <span class="rec-sugerido-horario">${escapeHtml(item.Horario || "-")}</span>
                 ${item.YaEnRecorrido ? `<span class="rec-sugerido-badge">En ruta</span>` : ""}
             </label>`;
     }).join("");
@@ -1235,7 +1261,7 @@ async function agregarSugeridosSeleccionados() {
     });
 
     if (!items.length) {
-        errorModal("Seleccioná al menos un cliente programado.");
+        errorModal("Selecciona al menos un cliente programado.");
         return;
     }
 

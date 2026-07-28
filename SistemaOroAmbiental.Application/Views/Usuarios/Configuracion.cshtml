@@ -8,7 +8,7 @@
 
 @model SistemaOroAmbiental.Models.User
 @{
-    ViewData["Title"] = "Configuración";
+    ViewData["Title"] = "Configuracion";
 }
 
 <!DOCTYPE html>
@@ -29,9 +29,9 @@
 
 <div class="container d-flex justify-content-center align-items-center " style="min-height: 1vh;">
     <div class="card p-4" style="background-color: rgba(230, 240, 240, 2); box-shadow: 0 4px 10px rgba(40, 138, 237, 1); width: 100%; max-width: 700px;">
-        <h2 class="text-center mb-4 text-white">Configuración</h2>
+        <h2 class="text-center mb-4 text-white">Configuracion</h2>
 
-        @* Mostrar el mensaje de éxito si se actualizó correctamente *@
+        @* Mostrar el mensaje de exito si se actualizo correctamente *@
         @if (TempData["SuccessMessage"] != null)
         {
             <div class="alert alert-success">
@@ -61,12 +61,12 @@
             </div>
 
             <div class="mb-3">
-                <label for="Telefono" class="form-label">Teléfono</label>
+                <label for="Telefono" class="form-label">Telefono</label>
                 <input type="text" class="form-control form-control-sm" id="Telefono" name="Telefono" value="@Model.Telefono" />
             </div>
 
             <div class="mb-3">
-                <label for="Direccion" class="form-label">Dirección</label>
+                <label for="Direccion" class="form-label">Direccion</label>
                 <input type="text" class="form-control form-control-sm" id="Direccion" name="Direccion" value="@Model.Direccion" />
             </div>
 
@@ -79,7 +79,7 @@
             <div class="mb-3">
                 <label for="rpConfigViewMode" class="form-label">Vista de listados</label>
                 <select class="form-control form-control-sm" id="rpConfigViewMode">
-                    <option value="auto">Automático (tabla en PC, tarjetas en móvil)</option>
+                    <option value="auto">Automatico (tabla en PC, tarjetas en movil)</option>
                     <option value="table">Siempre tabla</option>
                     <option value="cards">Siempre tarjetas</option>
                 </select>
@@ -87,12 +87,12 @@
             </div>
 
             <div class="mb-3">
-                <label for="Contrasena" class="form-label text-danger">Contraseña Actual (*)</label>
+                <label for="Contrasena" class="form-label text-danger">Contrasena Actual (*)</label>
                 <input type="password" class="form-control form-control-sm" id="Contrasena" name="Contrasena" required />
             </div>
 
             <div class="mb-3">
-                <label for="ContrasenaNueva" class="form-label">Contraseña Nueva</label>
+                <label for="ContrasenaNueva" class="form-label">Contrasena Nueva</label>
                 <input type="password" class="form-control form-control-sm" id="ContrasenaNueva" name="ContrasenaNueva" />
             </div>
             <label for="msjerror" class="form-label" id="msjerror" hidden></label>

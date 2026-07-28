@@ -37,7 +37,7 @@ document.querySelector('#formularioActualizar')?.addEventListener('submit', asyn
     }
 
     if (result.valor === "Contrasena") {
-        msjError.html('<i class="fa fa-exclamation-circle"></i> Contraseña incorrecta <i class="fa fa-exclamation-circle"></i>');
+        msjError.html('<i class="fa fa-exclamation-circle"></i> Contrasena incorrecta <i class="fa fa-exclamation-circle"></i>');
         msjError.css('color', 'red');
         btnGuardar.show();
         timerError = setTimeout(() => {
@@ -45,7 +45,7 @@ document.querySelector('#formularioActualizar')?.addEventListener('submit', asyn
         }, 6000);
 
     } else if (result.valor === "OK") {
-        msjError.html('<i class="fa fa-check-circle"></i> Datos guardados correctamente <i class="fa fa-check-circle"></i><br>En <span id="contador">5</span> segundos serás redirigido a la página principal.');
+        msjError.html('<i class="fa fa-check-circle"></i> Datos guardados correctamente <i class="fa fa-check-circle"></i><br>En <span id="contador">5</span> segundos seras redirigido a la pagina principal.');
         msjError.css('color', 'green');
         btnGuardar.hide();
         let seconds = 5;

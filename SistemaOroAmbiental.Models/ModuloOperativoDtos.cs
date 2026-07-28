@@ -50,6 +50,8 @@ public class ClientesRecorridoDto
     public string Cliente { get; set; } = "";
     public int? IdEstablecimiento { get; set; }
     public string? Establecimiento { get; set; }
+    public string? Domicilio { get; set; }
+    public string? Localidad { get; set; }
     public int IdCamion { get; set; }
     public string Camion { get; set; } = "";
     public int IdSemana { get; set; }

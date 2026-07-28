@@ -1,7 +1,7 @@
 /**
- * Validación estándar para modales ABM:
+ * Validacion estandar para modales ABM:
  * - Al abrir: sin errores ni verdes.
- * - Blur en requerido vacío: "Campo obligatorio".
+ * - Blur en requerido vacio: "Campo obligatorio".
  * - Registrar: valida todo + panel general de error.
  * - Al completar campos: borde verde.
  * - Todos los requeridos OK: panel verde ~3s y desaparece.
@@ -62,9 +62,9 @@
             this._timerExito = null;
             /** Panel verde visible ahora (no reiniciar ni pisar HTML) */
             this._exitoVisible = false;
-            /** Ya se mostró el éxito en esta apertura del modal; no repetir al seguir escribiendo */
+            /** Ya se mostro el exito en esta apertura del modal; no repetir al seguir escribiendo */
             this._exitoMostradoEnSesion = false;
-            /** Panel rojo de validación visible; no volver a renderizar ni scroll al escribir */
+            /** Panel rojo de validacion visible; no volver a renderizar ni scroll al escribir */
             this._errorVisible = false;
             this._ultimoMensajeError = null;
         }

@@ -172,12 +172,14 @@ async function configurarDataTable(data) {
             fixedHeader: true,
             initComplete: async function () {
                 const api = this.api();
-                await armarFiltrosGrillaLista(api, '#grd_Productos', columnConfig, {
+                await initFiltrosGrillaListaEnInitComplete(api, '#grd_Productos', columnConfig, {
                     initSelect2: ($el) => inicializarSelect2Filtro($el)
+                }, {
+                    afterFilters: () => {
+                        configurarOpcionesColumnas();
+                        actualizarKpis(data);
+                    }
                 });
-                configurarOpcionesColumnas();
-                actualizarKpis(data);
-                api.draw(false);
             }
         });
 
@@ -204,7 +206,7 @@ async function listaMedidasFilter() {
 async function listaEstadosStockFilter() {
     return [
         { Nombre: "Sin stock" },
-        { Nombre: "Bajo mínimo" },
+        { Nombre: "Bajo minimo" },
         { Nombre: "Stock OK" },
         { Nombre: "Disponible" }
     ];

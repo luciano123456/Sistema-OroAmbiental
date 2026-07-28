@@ -1,6 +1,6 @@
-﻿@{
+@{
     Layout = "_LayoutModulo";
-    ViewData["Title"] = "Clientes - Gestión";
+    ViewData["Title"] = "Clientes - Gestion";
     var id = (int)(ViewBag.Id ?? 0);
 }
 
@@ -134,7 +134,7 @@
                         <input id="cgNombre" class="form-control" required />
                     </div>
                     <div class="col-md-2">
-                        <label class="form-label">Nº cliente</label>
+                        <label class="form-label">N� cliente</label>
                         <input id="cgNumeroCliente" class="form-control" type="number" min="1" placeholder="Auto" />
                     </div>
                     <div class="col-md-3">
@@ -163,10 +163,10 @@
                         </div>
                     </div>
                     <div class="col-md-4">
-                        <label class="form-label">Calificación</label>
+                        <label class="form-label">Calificacion</label>
                         <div class="rp-select-plus">
                             <select id="cgCalificacion" class="form-control"></select>
-                            <button type="button" class="rp-btn-plus" title="Agregar calificación"
+                            <button type="button" class="rp-btn-plus" title="Agregar calificacion"
                                     data-config-nombre="Calificaciones de clientes" data-config-controller="ClientesCalificaciones">
                                 <i class="fa fa-plus"></i>
                             </button>
@@ -202,7 +202,7 @@
                     <div class="col-12">
                         <small class="text-muted">
                             Si hoy cae entre las fechas de licencia, el cliente cuenta en <strong>Licencia</strong> del tablero
-                            (aunque el estado comercial siga en Activo). Las <strong>Alertas</strong> avisan licencias que vencen en los próximos 30 días.
+                            (aunque el estado comercial siga en Activo). Las <strong>Alertas</strong> avisan licencias que vencen en los proximos 30 dias.
                         </small>
                     </div>
 
@@ -246,20 +246,20 @@
                         <input id="cgLocalidadTexto" class="form-control" />
                     </div>
                     <div class="col-md-4">
-                        <label class="form-label">Profesión</label>
+                        <label class="form-label">Profesion</label>
                         <div class="rp-select-plus">
                             <select id="cgProfesion" class="form-control"></select>
-                            <button type="button" class="rp-btn-plus" title="Agregar profesión"
+                            <button type="button" class="rp-btn-plus" title="Agregar profesion"
                                     data-config-nombre="Profesiones de Clientes" data-config-controller="ClientesProfesiones">
                                 <i class="fa fa-plus"></i>
                             </button>
                         </div>
                     </div>
                     <div class="col-md-4">
-                        <label class="form-label">Condición IVA</label>
+                        <label class="form-label">Condicion IVA</label>
                         <div class="rp-select-plus">
                             <select id="cgCondicionIva" class="form-control"></select>
-                            <button type="button" class="rp-btn-plus" title="Agregar condición IVA"
+                            <button type="button" class="rp-btn-plus" title="Agregar condicion IVA"
                                     data-config-nombre="Condiciones IVA" data-config-controller="CondicionesIva">
                                 <i class="fa fa-plus"></i>
                             </button>
@@ -267,11 +267,11 @@
                     </div>
 
                     <div class="col-md-4">
-                        <label class="form-label">Teléfono</label>
+                        <label class="form-label">Telefono</label>
                         <input id="cgTelefono" class="form-control" />
                     </div>
                     <div class="col-md-4">
-                        <label class="form-label">Teléfono alternativo</label>
+                        <label class="form-label">Telefono alternativo</label>
                         <input id="cgTelefonoAlt" class="form-control" />
                     </div>
                     <div class="col-md-4">
@@ -284,7 +284,7 @@
                         <input id="cgDomicilio" class="form-control" />
                     </div>
                     <div class="col-md-3">
-                        <label class="form-label">Código postal</label>
+                        <label class="form-label">Codigo postal</label>
                         <input id="cgCodPostal" class="form-control" />
                     </div>
                     <div class="col-md-3">
@@ -315,7 +315,7 @@
                         <div>
                             <div class="text-muted small">Contactos del cliente</div>
                             <div class="rp-contact-hero-hint">
-                                <i class="fa fa-info-circle"></i> Administrá los contactos asociados.
+                                <i class="fa fa-info-circle"></i> Administra los contactos asociados.
                             </div>
                         </div>
                         <div class="rp-kpi-card-mini">
@@ -343,11 +343,11 @@
                                     <input id="cgContactoPuesto" class="form-control" maxlength="100" />
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label">Teléfono</label>
+                                    <label class="form-label">Telefono</label>
                                     <input id="cgContactoTelefono" class="form-control" maxlength="50" />
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label">Teléfono alternativo</label>
+                                    <label class="form-label">Telefono alternativo</label>
                                     <input id="cgContactoTelefonoAlt" class="form-control" maxlength="50" />
                                 </div>
                                 <div class="col-md-6">
@@ -388,7 +388,7 @@
                                 <th>Id</th>
                                 <th>Nombre</th>
                                 <th>Provincia</th>
-                                <th>Día rec.</th>
+                                <th>Dia rec.</th>
                                 <th>Semana rec.</th>
                                 <th>Lista precio</th>
                             </tr>
@@ -466,7 +466,7 @@
             <!-- RECORRIDOS -->
             <div class="tab-pane fade" id="tabRecorridos">
                 <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
-                    <div class="text-muted small">Rutas de recolección asignadas a este cliente</div>
+                    <div class="text-muted small">Rutas de recoleccion asignadas a este cliente</div>
                     <a href="/Recorridos/Index" class="btn btn-outline-light btn-sm" target="_blank">
                         <i class="fa fa-plus me-1"></i> Gestionar recorridos
                     </a>
@@ -480,7 +480,7 @@
                     <div class="cg-cm-filtros">
                         <div class="cg-cm-filtros-top">
                             <div>
-                                <h6 class="cg-cm-filtros-title">Período a consultar</h6>
+                                <h6 class="cg-cm-filtros-title">Periodo a consultar</h6>
                             </div>
                             <button type="button" id="btnRefreshControlMensual" class="btn btn-success btn-sm cg-cm-btn-refresh">
                                 <i class="fa fa-refresh me-1"></i> Actualizar
@@ -491,8 +491,8 @@
                             <div class="col-lg-5">
                                 <div class="cg-cm-picker">
                                     <div class="cg-cm-picker-head">
-                                        <label class="form-label mb-0">Años</label>
-                                        <small class="cg-cm-picker-hint">Tocá para marcar o desmarcar</small>
+                                        <label class="form-label mb-0">Anos</label>
+                                        <small class="cg-cm-picker-hint">Toca para marcar o desmarcar</small>
                                     </div>
                                     <div class="cg-cm-chips cg-cm-chips--years" id="cgControlAniosChips"></div>
                                 </div>
@@ -501,28 +501,28 @@
                                 <div class="cg-cm-picker">
                                     <div class="cg-cm-picker-head">
                                         <label class="form-label mb-0">Meses</label>
-                                        <small class="cg-cm-picker-hint">Vacío = todos los meses</small>
+                                        <small class="cg-cm-picker-hint">Vacio = todos los meses</small>
                                     </div>
                                     <div class="cg-cm-chips cg-cm-chips--months" id="cgControlMesesChips"></div>
                                 </div>
                             </div>
                             <div class="col-lg-2">
                                 <div class="cg-cm-count-box">
-                                    <span class="cg-cm-count-label">Períodos</span>
-                                    <strong id="cgControlCount">—</strong>
-                                    <small class="cg-cm-count-sub" id="cgControlFiltroResumen">—</small>
+                                    <span class="cg-cm-count-label">Periodos</span>
+                                    <strong id="cgControlCount">-</strong>
+                                    <small class="cg-cm-count-sub" id="cgControlFiltroResumen">-</small>
                                 </div>
                             </div>
                         </div>
 
                         <div class="cg-cm-presets">
                             <span class="cg-cm-presets-label">Atajos</span>
-                            <button type="button" class="cg-cm-preset cg-preset-meses" data-meses="1,2,3">Ene–Mar</button>
-                            <button type="button" class="cg-cm-preset cg-preset-meses" data-meses="4,5,6">Abr–Jun</button>
-                            <button type="button" class="cg-cm-preset cg-preset-meses" data-meses="7,8,9">Jul–Sep</button>
-                            <button type="button" class="cg-cm-preset cg-preset-meses" data-meses="10,11,12">Oct–Dic</button>
+                            <button type="button" class="cg-cm-preset cg-preset-meses" data-meses="1,2,3">Ene-Mar</button>
+                            <button type="button" class="cg-cm-preset cg-preset-meses" data-meses="4,5,6">Abr-Jun</button>
+                            <button type="button" class="cg-cm-preset cg-preset-meses" data-meses="7,8,9">Jul-Sep</button>
+                            <button type="button" class="cg-cm-preset cg-preset-meses" data-meses="10,11,12">Oct-Dic</button>
                             <button type="button" class="cg-cm-preset cg-preset-meses" data-meses="all">Todos los meses</button>
-                            <button type="button" class="cg-cm-preset" id="btnControlAniosRecientes">Últimos 3 años</button>
+                            <button type="button" class="cg-cm-preset" id="btnControlAniosRecientes">Ultimos 3 anos</button>
                         </div>
                     </div>
 
@@ -532,14 +532,14 @@
                             <strong id="cgControlStockActual">0</strong>
                         </div>
                         <div class="cg-cm-kpi cg-cm-kpi-saldo">
-                            <span>Saldo del período</span>
+                            <span>Saldo del periodo</span>
                             <strong id="cgControlSaldoAnual">$ 0</strong>
                         </div>
                     </div>
 
                     <div id="cgControlError" class="cg-cm-alert d-none" role="alert">
                         <i class="fa fa-exclamation-triangle"></i>
-                        <span>Algunos datos no se pudieron calcular. Podés editar los meses manualmente.</span>
+                        <span>Algunos datos no se pudieron calcular. Podes editar los meses manualmente.</span>
                     </div>
 
                     <div class="cg-cards-grid cg-cm-cards-grid" id="cgCards_controlMensual"></div>
@@ -548,7 +548,7 @@
                         <table class="cg-cm-table" id="tblControlMensual">
                             <thead>
                                 <tr>
-                                    <th class="cg-col-anio cg-cm-th-periodo">Año</th>
+                                    <th class="cg-col-anio cg-cm-th-periodo">Ano</th>
                                     <th class="cg-cm-th-periodo">Mes</th>
                                     <th class="cg-cm-th-periodo">Visita</th>
                                     <th class="cg-cm-th-num cg-cm-th-grp-start">Entreg.</th>
@@ -695,7 +695,7 @@
         <div class="modal-content rp-modal-content">
             <div class="modal-header rp-modal-header">
                 <div>
-                    <div class="rp-modal-title"><i class="fa fa-calendar"></i> Control mensual — <span id="cgCmMesTitulo"></span></div>
+                    <div class="rp-modal-title"><i class="fa fa-calendar"></i> Control mensual - <span id="cgCmMesTitulo"></span></div>
                 </div>
                 <button type="button" class="btn-close rp-btn-close" data-bs-dismiss="modal"></button>
             </div>
@@ -730,7 +730,7 @@
                                 <span class="rp-switch-slider"></span>
                                 <span class="cg-cm-sin-entrega-copy">
                                     <strong id="lblCgCmSinEntrega">Con entrega este mes</strong>
-                                    <small>Marcá si no se realizó recolección en el período</small>
+                                    <small>Marca si no se realizo recoleccion en el periodo</small>
                                 </span>
                             </label>
                         </div>
@@ -799,5 +799,5 @@
     <script src="~/js/Entities/M_ClientesEstablecimientos.js?v=5.1"></script>
     <script src="~/js/ContratosDocumentos.js?v=5.2"></script>
     <script src="~/js/Entities/M_Contratos.js?v=5.3"></script>
-    <script src="~/js/ClientesGestion.js?v=9.3"></script>
+    <script src="~/js/ClientesGestion.js?v=10.1"></script>
 }

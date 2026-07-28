@@ -440,7 +440,11 @@ namespace SistemaOroAmbiental.DAL.Repository
             var abonoEfectivo = control?.AbonoEfectivo ?? 0;
             var abonoTransferencia = control?.AbonoTransferencia ?? 0;
 
-            var domicilio = (establecimiento?.Domicilio ?? cliente.Domicilio ?? "").Trim();
+            var domicilio = ComponerDomicilio(
+                establecimiento?.Calle ?? cliente.Calle,
+                establecimiento?.Numero ?? cliente.Numero,
+                establecimiento?.PisoDepartamento ?? cliente.PisoDepartamento,
+                establecimiento?.Domicilio ?? cliente.Domicilio);
             if (!string.IsNullOrWhiteSpace(establecimiento?.Nombre) &&
                 !string.Equals(establecimiento.Nombre.Trim(), cliente.Nombre.Trim(), StringComparison.OrdinalIgnoreCase))
             {
@@ -581,7 +585,11 @@ namespace SistemaOroAmbiental.DAL.Repository
                     e.IdCliente,
                     Cliente = c.Nombre,
                     Establecimiento = e.Nombre,
-                    Domicilio = e.Domicilio ?? c.Domicilio,
+                    e.Calle,
+                    e.Numero,
+                    e.PisoDepartamento,
+                    DomicilioEst = e.Domicilio,
+                    DomicilioCli = c.Domicilio,
                     Localidad = e.Localidad ?? c.Localidad,
                     e.HorarioRecoleccionDesde,
                     e.HorarioRecoleccionHasta
@@ -593,7 +601,7 @@ namespace SistemaOroAmbiental.DAL.Repository
                 IdCliente = x.IdCliente,
                 Cliente = x.Cliente,
                 Establecimiento = x.Establecimiento,
-                Domicilio = x.Domicilio,
+                Domicilio = ComponerDomicilio(x.Calle, x.Numero, x.PisoDepartamento, x.DomicilioEst ?? x.DomicilioCli),
                 Localidad = x.Localidad,
                 Horario = $"{x.HorarioRecoleccionDesde:hh\\:mm} a {x.HorarioRecoleccionHasta:hh\\:mm}",
                 YaEnRecorrido = EstaEnRecorrido(x.IdCliente, x.Id, enRutaPairs)
@@ -705,6 +713,8 @@ namespace SistemaOroAmbiental.DAL.Repository
                        Cliente = cl.Nombre,
                        IdEstablecimiento = r.IdEstablecimiento,
                        Establecimiento = e != null ? e.Nombre : null,
+                       Domicilio = (e != null ? e.Domicilio : null) ?? cl.Domicilio,
+                       Localidad = e != null ? (e.Localidad ?? cl.Localidad) : cl.Localidad,
                        IdCamion = r.IdCamion,
                        Camion = c.Nombre,
                        IdSemana = r.IdSemana,
@@ -717,6 +727,19 @@ namespace SistemaOroAmbiental.DAL.Repository
                        Observacion = r.Observacion,
                        RecorridoTexto = s.Nombre + " " + d.Nombre
                    };
+        }
+
+        private static string ComponerDomicilio(string? calle, string? numero, string? pisoDepartamento, string? legacy)
+        {
+            var partes = new List<string>();
+            if (!string.IsNullOrWhiteSpace(calle)) partes.Add(calle.Trim());
+            if (!string.IsNullOrWhiteSpace(numero)) partes.Add(numero.Trim());
+            if (!string.IsNullOrWhiteSpace(pisoDepartamento)) partes.Add(pisoDepartamento.Trim());
+
+            if (partes.Count > 0)
+                return string.Join(" ", partes);
+
+            return string.IsNullOrWhiteSpace(legacy) ? "" : legacy.Trim();
         }
     }
 }

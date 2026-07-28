@@ -1,4 +1,4 @@
-/* Productos recuperados — cards, filtros estándar, sin DataTables */
+/* Productos recuperados - cards, filtros estandar, sin DataTables */
 
 
 
@@ -95,7 +95,7 @@ function escapeHtmlRec(s) {
 
 function fmtFechaRec(d) {
 
-    if (!d) return "—";
+    if (!d) return "-";
 
     const s = String(d).slice(0, 10);
 
@@ -329,7 +329,7 @@ function renderRankingRec(selector, items, highlightTop) {
 
     if (!items.length) {
 
-        renderEmptyRec($cont, "fa-bar-chart", "Sin datos en el período", "Ajustá las fechas o registrá recuperos.");
+        renderEmptyRec($cont, "fa-bar-chart", "Sin datos en el periodo", "Ajusta las fechas o registra recuperos.");
 
         return;
 
@@ -401,7 +401,7 @@ async function cargarStockRecuperadoCards() {
 
     if (!REC.stock.length) {
 
-        renderEmptyRec($grid, "fa-cubes", "Sin stock recuperado", "Los productos recuperados en entregas o manual aparecerán aquí.");
+        renderEmptyRec($grid, "fa-cubes", "Sin stock recuperado", "Los productos recuperados en entregas o manual apareceran aqui.");
 
         return;
 
@@ -425,7 +425,7 @@ async function cargarStockRecuperadoCards() {
 
                         <div class="pr-sc-meta">
 
-                            ${escapeHtmlRec(x.Categoria || "Sin categoría")}
+                            ${escapeHtmlRec(x.Categoria || "Sin categoria")}
 
                             · ${escapeHtmlRec(x.Sucursal)}
 
@@ -553,7 +553,7 @@ function renderHistorialRec() {
 
                     <div class="pr-rc-title">${escapeHtmlRec(x.Producto)}</div>
 
-                    <span class="pr-rc-badge ${badgeCls}">${escapeHtmlRec(x.Origen || "—")}</span>
+                    <span class="pr-rc-badge ${badgeCls}">${escapeHtmlRec(x.Origen || "-")}</span>
 
                 </div>
 
@@ -569,7 +569,7 @@ function renderHistorialRec() {
 
                     ${x.Cliente ? `<span><i class="fa fa-user"></i>${escapeHtmlRec(x.Cliente)}</span>` : ""}
 
-                    <span><i class="fa fa-building-o"></i>${escapeHtmlRec(x.Sucursal || "—")}</span>
+                    <span><i class="fa fa-building-o"></i>${escapeHtmlRec(x.Sucursal || "-")}</span>
 
                     ${x.Categoria ? `<span><i class="fa fa-tag"></i>${escapeHtmlRec(x.Categoria)}</span>` : ""}
 
@@ -587,7 +587,7 @@ function renderHistorialRec() {
 
 async function eliminarRecuperadoManual(id) {
     const ok = typeof confirmarModal === "function"
-        ? await confirmarModal("¿Eliminar este recupero manual? Se descontará del stock recuperado.")
+        ? await confirmarModal("¿Eliminar este recupero manual? Se descontara del stock recuperado.")
         : confirm("¿Eliminar este recupero manual?");
     if (!ok) return;
 

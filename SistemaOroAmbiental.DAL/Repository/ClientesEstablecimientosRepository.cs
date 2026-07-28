@@ -38,7 +38,11 @@ namespace SistemaOroAmbiental.DAL.Repository
                 entity.Nombre = model.Nombre;
                 entity.Cuit = model.Cuit;
                 entity.IdCondicionIva = model.IdCondicionIva;
+                entity.Calle = model.Calle;
+                entity.Numero = model.Numero;
+                entity.PisoDepartamento = model.PisoDepartamento;
                 entity.Domicilio = model.Domicilio;
+                entity.IdTipoGenerador = model.IdTipoGenerador;
                 entity.IdProvincia = model.IdProvincia;
                 entity.Localidad = model.Localidad;
                 entity.CodPostal = model.CodPostal;
@@ -46,6 +50,7 @@ namespace SistemaOroAmbiental.DAL.Repository
                 entity.IdDiaRecoleccion = model.IdDiaRecoleccion;
                 entity.IdSemanaRecoleccion = model.IdSemanaRecoleccion;
                 entity.IdListaPrecio = model.IdListaPrecio;
+                entity.IdCamion = model.IdCamion;
                 entity.HorarioRecoleccionDesde = model.HorarioRecoleccionDesde;
                 entity.HorarioRecoleccionHasta = model.HorarioRecoleccionHasta;
                 entity.IdUsuarioModifica = model.IdUsuarioModifica;
@@ -126,6 +131,7 @@ namespace SistemaOroAmbiental.DAL.Repository
                 .Include(x => x.IdClienteNavigation)
                 .Include(x => x.IdProvinciaNavigation)
                 .Include(x => x.IdCondicionIvaNavigation)
+                .Include(x => x.IdTipoGeneradorNavigation)
                 .Include(x => x.IdDiaRecoleccionNavigation)
                 .Include(x => x.IdSemanaRecoleccionNavigation)
                 .Include(x => x.IdListaPrecioNavigation)
@@ -142,6 +148,7 @@ namespace SistemaOroAmbiental.DAL.Repository
                 .Include(x => x.IdClienteNavigation)
                 .Include(x => x.IdProvinciaNavigation)
                 .Include(x => x.IdCondicionIvaNavigation)
+                .Include(x => x.IdTipoGeneradorNavigation)
                 .Include(x => x.IdDiaRecoleccionNavigation)
                 .Include(x => x.IdSemanaRecoleccionNavigation)
                 .Include(x => x.IdListaPrecioNavigation)

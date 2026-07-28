@@ -245,13 +245,18 @@
     border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.cl-grid-toolbar {
-    padding: 0 0.15rem;
+.cl-grid-card .dt-dark-wrap {
+    overflow-x: auto;
+    overflow-y: visible;
 }
 
-/* Filtros grilla — tema oscuro consistente */
+.cl-grid-card .dataTables_wrapper {
+    min-width: 0;
+}
+
+/* Filtros grilla — respetar padding global de RpDataTable */
 .cl-page #grd_Clientes thead tr.filters th {
-    padding: 0.35rem 0.25rem !important;
+    padding: 7px 10px !important;
     vertical-align: middle;
 }
 
@@ -266,11 +271,7 @@
     border-radius: 8px !important;
 }
 
-.cl-page #grd_Clientes .rp-filter-activo {
-    font-weight: 600;
-}
-
-.cl-page #grd_Clientes .select2-container .select2-selection--single {
+.cl-page #grd_Clientes thead tr.filters th .select2-container .select2-selection--single {
     height: 34px !important;
     min-height: 34px !important;
     background: rgba(15, 23, 42, 0.9) !important;

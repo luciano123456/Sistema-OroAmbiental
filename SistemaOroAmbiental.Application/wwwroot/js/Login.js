@@ -1,7 +1,7 @@
-﻿$(document).ready(function () {
+$(document).ready(function () {
 
     if (window.SessionManager?.consumeExpiredMessageOnLogin?.()) {
-        $("#errorMessage").text("La sesión ha expirado. Iniciá sesión nuevamente.");
+        $("#errorMessage").text("La sesion ha expirado. Inicia sesion nuevamente.");
         $("#diverrorMessage").show();
     }
 
@@ -139,7 +139,7 @@
                 const mensaje =
                     err?.message ||
                     err?.Message ||
-                    "Usuario o contraseña incorrectos.";
+                    "Usuario o contrasena incorrectos.";
 
                 $("#errorMessage").text(mensaje);
 
