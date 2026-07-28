@@ -11,7 +11,7 @@
     <link href="~/css/Productora.css?v=6.2" rel="stylesheet" />
     <link href="~/css/disenopantallas.css?v=6.2" rel="stylesheet" />
     <link href="~/css/M_Generico.css?v=6.2" rel="stylesheet" />
-    <link href="~/css/ClientesGestion.css?v=8.9" rel="stylesheet" />
+    <link href="~/css/ClientesGestion.css?v=10.2" rel="stylesheet" />
     <link href="~/css/ClientesEstablecimientos.css?v=5.4" rel="stylesheet" />
     <link href="~/css/ContratosModal.css?v=5.4" rel="stylesheet" />
 }
@@ -129,176 +129,313 @@
 
                 <div class="cg-form-panel">
                 <form class="row g-3 cg-form" id="formDatosCliente">
-                    <div class="col-md-4">
-                        <label class="form-label">Nombre</label>
-                        <input id="cgNombre" class="form-control" required />
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label">N? cliente</label>
-                        <input id="cgNumeroCliente" class="form-control" type="number" min="1" placeholder="Auto" />
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label">CUIT</label>
-                        <input id="cgCuit" class="form-control" required />
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label">Sucursal</label>
-                        <div class="rp-select-plus">
-                            <select id="cgSucursal" class="form-control"></select>
-                            <button type="button" class="rp-btn-plus" title="Agregar sucursal"
-                                    data-config-nombre="Sucursales" data-config-controller="Sucursales">
-                                <i class="fa fa-plus"></i>
-                            </button>
-                        </div>
-                    </div>
 
-                    <div class="col-md-4">
-                        <label class="form-label">Estado comercial</label>
-                        <div class="rp-select-plus">
-                            <select id="cgEstado" class="form-control"></select>
-                            <button type="button" class="rp-btn-plus" title="Agregar estado"
-                                    data-config-nombre="Estados de clientes" data-config-controller="ClientesEstados">
-                                <i class="fa fa-plus"></i>
-                            </button>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Calificacion</label>
-                        <div class="rp-select-plus">
-                            <select id="cgCalificacion" class="form-control"></select>
-                            <button type="button" class="rp-btn-plus" title="Agregar calificacion"
-                                    data-config-nombre="Calificaciones de clientes" data-config-controller="ClientesCalificaciones">
-                                <i class="fa fa-plus"></i>
-                            </button>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Motivo</label>
-                        <div class="rp-select-plus">
-                            <select id="cgMotivo" class="form-control"></select>
-                            <button type="button" class="rp-btn-plus" title="Agregar motivo"
-                                    data-config-nombre="Motivos de clientes" data-config-controller="ClientesMotivos">
-                                <i class="fa fa-plus"></i>
-                            </button>
-                        </div>
-                    </div>
-                    <div class="col-12" id="wrapMotivoDetalle" hidden>
-                        <label class="form-label">Detalle del motivo</label>
-                        <textarea id="cgMotivoDetalle" class="form-control" rows="2"></textarea>
-                    </div>
-
-                    <div class="col-md-3">
-                        <label class="form-label">Fecha inicio</label>
-                        <input type="date" id="cgFechaInicio" class="form-control" />
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label">Licencia desde</label>
-                        <input type="date" id="cgFechaLicenciaDesde" class="form-control" />
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label">Licencia hasta</label>
-                        <input type="date" id="cgFechaLicenciaHasta" class="form-control" />
-                    </div>
-                    <div class="col-12">
-                        <small class="text-muted">
-                            Si hoy cae entre las fechas de licencia, el cliente cuenta en <strong>Licencia</strong> del tablero
-                            (aunque el estado comercial siga en Activo). Las <strong>Alertas</strong> avisan licencias que vencen en los proximos 30 dias.
-                        </small>
-                    </div>
-
-                    <div class="col-md-4">
-                        <label class="form-label">Provincia</label>
-                        <div class="rp-select-plus">
-                            <select id="cgProvincia" class="form-control"></select>
-                            <button type="button" class="rp-btn-plus" title="Agregar provincia"
-                                    data-config-nombre="Provincias" data-config-controller="Provincias">
-                                <i class="fa fa-plus"></i>
-                            </button>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Partido</label>
-                        <div class="rp-select-plus">
-                            <select id="cgPartido" class="form-control"></select>
-                            <button type="button" class="rp-btn-plus" title="Agregar partido"
-                                    data-config-nombre="Partidos" data-config-controller="Partidos"
-                                    data-config-combo-nombre="Provincias" data-config-combo-controller="Provincias"
-                                    data-config-combo-label="Provincia">
-                                <i class="fa fa-plus"></i>
-                            </button>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Localidad</label>
-                        <div class="rp-select-plus">
-                            <select id="cgLocalidad" class="form-control"></select>
-                            <button type="button" class="rp-btn-plus" title="Agregar localidad"
-                                    data-config-nombre="Localidades" data-config-controller="Localidades"
-                                    data-config-combo-nombre="Provincias" data-config-combo-controller="Provincias"
-                                    data-config-combo-label="Provincia">
-                                <i class="fa fa-plus"></i>
-                            </button>
-                        </div>
-                    </div>
-
-                    <div class="col-md-4">
-                        <label class="form-label">Localidad (texto)</label>
-                        <input id="cgLocalidadTexto" class="form-control" />
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Profesion</label>
-                        <div class="rp-select-plus">
-                            <select id="cgProfesion" class="form-control"></select>
-                            <button type="button" class="rp-btn-plus" title="Agregar profesion"
-                                    data-config-nombre="Profesiones de Clientes" data-config-controller="ClientesProfesiones">
-                                <i class="fa fa-plus"></i>
-                            </button>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Condicion IVA</label>
-                        <div class="rp-select-plus">
-                            <select id="cgCondicionIva" class="form-control"></select>
-                            <button type="button" class="rp-btn-plus" title="Agregar condicion IVA"
-                                    data-config-nombre="Condiciones IVA" data-config-controller="CondicionesIva">
-                                <i class="fa fa-plus"></i>
-                            </button>
-                        </div>
-                    </div>
-
-                    <div class="col-md-4">
-                        <label class="form-label">Telefono</label>
-                        <input id="cgTelefono" class="form-control" />
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Telefono alternativo</label>
-                        <input id="cgTelefonoAlt" class="form-control" />
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Email</label>
-                        <input id="cgEmail" class="form-control" type="email" />
-                    </div>
-
-                    <div class="col-md-6">
-                        <label class="form-label">Domicilio</label>
-                        <input id="cgDomicilio" class="form-control" />
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label">Codigo postal</label>
-                        <input id="cgCodPostal" class="form-control" />
-                    </div>
-                    <div class="col-md-3">
-                        <div class="rp-activo-box h-100">
-                            <div class="rp-activo-box-head">
-                                <span class="rp-activo-box-title">Estado del registro</span>
+                    <div class="col-12 cg-form-section">
+                        <div class="cg-form-section-title">Identificacion</div>
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label">Nombre</label>
+                                <input id="cgNombre" class="form-control" required />
                             </div>
-                            <label class="rp-switch mb-0 rp-switch-block">
-                                <input type="checkbox" id="cgActivo" class="rp-switch-input" checked>
-                                <span class="rp-switch-slider"></span>
-                                <span class="rp-activo-estado-text" id="lblActivoCg">Activo</span>
-                            </label>
+                            <div class="col-md-2">
+                                <label class="form-label">N? cliente</label>
+                                <input id="cgNumeroCliente" class="form-control" type="number" min="1" placeholder="Auto" />
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">CUIT</label>
+                                <input id="cgCuit" class="form-control" required />
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Sucursal</label>
+                                <div class="rp-select-plus">
+                                    <select id="cgSucursal" class="form-control"></select>
+                                    <button type="button" class="rp-btn-plus" title="Agregar sucursal"
+                                            data-config-nombre="Sucursales" data-config-controller="Sucursales">
+                                        <i class="fa fa-plus"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Estado comercial</label>
+                                <div class="rp-select-plus">
+                                    <select id="cgEstado" class="form-control"></select>
+                                    <button type="button" class="rp-btn-plus" title="Agregar estado"
+                                            data-config-nombre="Estados de clientes" data-config-controller="ClientesEstados">
+                                        <i class="fa fa-plus"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Calificacion</label>
+                                <div class="rp-select-plus">
+                                    <select id="cgCalificacion" class="form-control"></select>
+                                    <button type="button" class="rp-btn-plus" title="Agregar calificacion"
+                                            data-config-nombre="Calificaciones de clientes" data-config-controller="ClientesCalificaciones">
+                                        <i class="fa fa-plus"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Motivo</label>
+                                <div class="rp-select-plus">
+                                    <select id="cgMotivo" class="form-control"></select>
+                                    <button type="button" class="rp-btn-plus" title="Agregar motivo"
+                                            data-config-nombre="Motivos de clientes" data-config-controller="ClientesMotivos">
+                                        <i class="fa fa-plus"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-12" id="wrapMotivoDetalle" hidden>
+                                <label class="form-label">Detalle del motivo</label>
+                                <textarea id="cgMotivoDetalle" class="form-control" rows="2"></textarea>
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label">Fecha inicio</label>
+                                <input type="date" id="cgFechaInicio" class="form-control" />
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Licencia desde</label>
+                                <input type="date" id="cgFechaLicenciaDesde" class="form-control" />
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Licencia hasta</label>
+                                <input type="date" id="cgFechaLicenciaHasta" class="form-control" />
+                            </div>
+                            <div class="col-12">
+                                <small class="text-muted">
+                                    Si hoy cae entre las fechas de licencia, el cliente cuenta en <strong>Licencia</strong> del tablero
+                                    (aunque el estado comercial siga en Activo). Las <strong>Alertas</strong> avisan licencias que vencen en los proximos 30 dias.
+                                </small>
+                            </div>
                         </div>
                     </div>
+
+                    <div class="col-12 cg-form-section">
+                        <div class="cg-form-section-title">Domicilio y ubicacion</div>
+                        <div class="row g-3">
+                            <div class="col-md-5">
+                                <label class="form-label">Calle</label>
+                                <input id="cgCalle" class="form-control" />
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">Numero</label>
+                                <input id="cgNumero" class="form-control" />
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">Piso / Depto</label>
+                                <input id="cgPisoDepto" class="form-control" />
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Codigo postal</label>
+                                <input id="cgCodPostal" class="form-control" />
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Provincia</label>
+                                <div class="rp-select-plus">
+                                    <select id="cgProvincia" class="form-control"></select>
+                                    <button type="button" class="rp-btn-plus" title="Agregar provincia"
+                                            data-config-nombre="Provincias" data-config-controller="Provincias">
+                                        <i class="fa fa-plus"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">Cod. provincia</label>
+                                <input id="cgCodProvincia" class="form-control" readonly placeholder="-" />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Partido</label>
+                                <div class="rp-select-plus">
+                                    <select id="cgPartido" class="form-control"></select>
+                                    <button type="button" class="rp-btn-plus" title="Agregar partido"
+                                            data-config-nombre="Partidos" data-config-controller="Partidos"
+                                            data-config-combo-nombre="Provincias" data-config-combo-controller="Provincias"
+                                            data-config-combo-label="Provincia">
+                                        <i class="fa fa-plus"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">Cod. partido</label>
+                                <input id="cgCodPartido" class="form-control" readonly placeholder="-" />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Localidad</label>
+                                <div class="rp-select-plus">
+                                    <select id="cgLocalidad" class="form-control"></select>
+                                    <button type="button" class="rp-btn-plus" title="Agregar localidad"
+                                            data-config-nombre="Localidades" data-config-controller="Localidades"
+                                            data-config-combo-nombre="Provincias" data-config-combo-controller="Provincias"
+                                            data-config-combo-label="Provincia">
+                                        <i class="fa fa-plus"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">Cod. localidad</label>
+                                <input id="cgCodLocalidad" class="form-control" readonly placeholder="-" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-12 cg-form-section">
+                        <div class="cg-form-section-title">Contacto y fiscal</div>
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label">Telefono</label>
+                                <input id="cgTelefono" class="form-control" />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Telefono alternativo</label>
+                                <input id="cgTelefonoAlt" class="form-control" />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Email</label>
+                                <input id="cgEmail" class="form-control" type="email" />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Profesion</label>
+                                <div class="rp-select-plus">
+                                    <select id="cgProfesion" class="form-control"></select>
+                                    <button type="button" class="rp-btn-plus" title="Agregar profesion"
+                                            data-config-nombre="Profesiones de Clientes" data-config-controller="ClientesProfesiones">
+                                        <i class="fa fa-plus"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Condicion IVA</label>
+                                <div class="rp-select-plus">
+                                    <select id="cgCondicionIva" class="form-control"></select>
+                                    <button type="button" class="rp-btn-plus" title="Agregar condicion IVA"
+                                            data-config-nombre="Condiciones IVA" data-config-controller="CondicionesIva">
+                                        <i class="fa fa-plus"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="rp-activo-box h-100">
+                                    <div class="rp-activo-box-head">
+                                        <span class="rp-activo-box-title">Estado del registro</span>
+                                    </div>
+                                    <label class="rp-switch mb-0 rp-switch-block">
+                                        <input type="checkbox" id="cgActivo" class="rp-switch-input" checked>
+                                        <span class="rp-switch-slider"></span>
+                                        <span class="rp-activo-estado-text" id="lblActivoCg">Activo</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-12 cg-form-section cg-form-section--recoleccion">
+                        <div class="cg-form-section-toggle"
+                             data-bs-toggle="collapse"
+                             data-bs-target="#cgRecoleccionBody"
+                             aria-expanded="false"
+                             aria-controls="cgRecoleccionBody">
+                            <div class="cg-form-section-title mb-0">Recoleccion y recorrido</div>
+                            <i class="fa fa-chevron-down cg-form-section-chev" aria-hidden="true"></i>
+                        </div>
+                        <div id="cgRecoleccionBody" class="collapse">
+                        <div class="row g-3 cg-form-section-body">
+                            <div class="col-md-3">
+                                <label class="form-label">Id establecimiento</label>
+                                <input id="cgEstId" class="form-control" readonly placeholder="-" />
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Horario atencion desde</label>
+                                <input type="time" id="cgHorarioDesde" class="form-control" />
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Horario atencion hasta</label>
+                                <input type="time" id="cgHorarioHasta" class="form-control" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Tipo generador</label>
+                                <div class="rp-select-plus">
+                                    <select id="cgTipoGenerador" class="form-control"></select>
+                                    <button type="button" class="rp-btn-plus" title="Agregar tipo generador"
+                                            data-config-nombre="Tipos de generador" data-config-controller="ClientesTiposGenerador">
+                                        <i class="fa fa-plus"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label mb-2">Dias de recoleccion / unidad</label>
+                                <div class="cg-rec-dias-table">
+                                    <div class="cg-rec-dias-head-row">
+                                        <span>Dia</span>
+                                        <span>Unidad / Camion</span>
+                                        <span>En ruta</span>
+                                    </div>
+                                    <div class="cg-rec-dia-row" data-dia="1">
+                                        <span class="cg-rec-dia-label"><span class="cg-rec-row-num">1</span> Lunes</span>
+                                        <select id="cgRecCamion1" class="form-control"></select>
+                                        <span class="cg-rec-en-ruta" id="cgRecEnRuta1">-</span>
+                                    </div>
+                                    <div class="cg-rec-dia-row" data-dia="2">
+                                        <span class="cg-rec-dia-label"><span class="cg-rec-row-num">2</span> Martes</span>
+                                        <select id="cgRecCamion2" class="form-control"></select>
+                                        <span class="cg-rec-en-ruta" id="cgRecEnRuta2">-</span>
+                                    </div>
+                                    <div class="cg-rec-dia-row" data-dia="3">
+                                        <span class="cg-rec-dia-label"><span class="cg-rec-row-num">3</span> Miercoles</span>
+                                        <select id="cgRecCamion3" class="form-control"></select>
+                                        <span class="cg-rec-en-ruta" id="cgRecEnRuta3">-</span>
+                                    </div>
+                                    <div class="cg-rec-dia-row" data-dia="4">
+                                        <span class="cg-rec-dia-label"><span class="cg-rec-row-num">4</span> Jueves</span>
+                                        <select id="cgRecCamion4" class="form-control"></select>
+                                        <span class="cg-rec-en-ruta" id="cgRecEnRuta4">-</span>
+                                    </div>
+                                    <div class="cg-rec-dia-row" data-dia="5">
+                                        <span class="cg-rec-dia-label"><span class="cg-rec-row-num">5</span> Viernes</span>
+                                        <select id="cgRecCamion5" class="form-control"></select>
+                                        <span class="cg-rec-en-ruta" id="cgRecEnRuta5">-</span>
+                                    </div>
+                                    <div class="cg-rec-dia-row" data-dia="6">
+                                        <span class="cg-rec-dia-label"><span class="cg-rec-row-num">6</span> Sabado</span>
+                                        <select id="cgRecCamion6" class="form-control"></select>
+                                        <span class="cg-rec-en-ruta" id="cgRecEnRuta6">-</span>
+                                    </div>
+                                    <div class="cg-rec-dia-row" data-dia="7">
+                                        <span class="cg-rec-dia-label"><span class="cg-rec-row-num">7</span> Domingo</span>
+                                        <select id="cgRecCamion7" class="form-control"></select>
+                                        <span class="cg-rec-en-ruta" id="cgRecEnRuta7">-</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Semana recoleccion</label>
+                                <select id="cgRecSemana" class="form-control"></select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Lista de precios</label>
+                                <select id="cgRecListaPrecio" class="form-control"></select>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">Orden en recorrido</label>
+                                <input id="cgOrdenRecorrido" class="form-control" type="number" min="1" step="1" />
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">Kilos</label>
+                                <input id="cgEstKilos" class="form-control" type="number" min="0" step="0.01" />
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label mb-2">Recorridos asignados</label>
+                                <div id="cgRecorridosAsignados" class="cg-recorridos-inline"></div>
+                            </div>
+                        </div>
+                        </div>
+                    </div>
+
                 </form>
                 </div>
 
@@ -801,5 +938,5 @@
     <script src="~/js/Entities/M_ClientesEstablecimientos.js?v=5.3"></script>
     <script src="~/js/ContratosDocumentos.js?v=5.3"></script>
     <script src="~/js/Entities/M_Contratos.js?v=5.4"></script>
-    <script src="~/js/ClientesGestion.js?v=10.4"></script>
+    <script src="~/js/ClientesGestion.js?v=11.4"></script>
 }

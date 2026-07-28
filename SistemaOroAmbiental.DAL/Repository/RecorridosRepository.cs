@@ -634,16 +634,65 @@ namespace SistemaOroAmbiental.DAL.Repository
                     .Select(r => (int?)r.Posicion)
                     .MaxAsync() ?? 0;
 
+                var posicionesOcupadas = await _db.ClientesRecorridos
+                    .Where(r => r.IdCamion == idCamion && r.IdSemana == idSemana && r.IdDia == idDia)
+                    .Select(r => r.Posicion)
+                    .ToListAsync();
+                var ocupadas = new HashSet<int>(posicionesOcupadas);
+
+                var estIds = items
+                    .Where(x => x.IdEstablecimiento.HasValue && x.IdEstablecimiento > 0)
+                    .Select(x => x.IdEstablecimiento!.Value)
+                    .Distinct()
+                    .ToList();
+
+                var ordenPorEst = estIds.Count == 0
+                    ? new Dictionary<int, int?>()
+                    : await _db.ClientesEstablecimientos
+                        .AsNoTracking()
+                        .Where(e => estIds.Contains(e.Id))
+                        .ToDictionaryAsync(e => e.Id, e => e.OrdenRecorrido);
+
+                var itemsOrdenados = items
+                    .Select(item =>
+                    {
+                        int? orden = null;
+                        if (item.IdEstablecimiento.HasValue && item.IdEstablecimiento > 0
+                            && ordenPorEst.TryGetValue(item.IdEstablecimiento.Value, out var o))
+                        {
+                            orden = o;
+                        }
+
+                        return new { Item = item, Orden = orden };
+                    })
+                    .OrderBy(x => x.Orden.HasValue ? 0 : 1)
+                    .ThenBy(x => x.Orden ?? int.MaxValue)
+                    .ThenBy(x => x.Item.IdCliente)
+                    .ToList();
+
                 var pos = maxPos;
                 var insertados = 0;
                 var ahora = DateTime.Now;
 
-                foreach (var item in items)
+                foreach (var entry in itemsOrdenados)
                 {
+                    var item = entry.Item;
                     if (EstaEnRecorrido(item.IdCliente, item.IdEstablecimiento, enRutaPairs))
                         continue;
 
-                    pos++;
+                    int posicion;
+                    if (entry.Orden.HasValue && entry.Orden > 0 && !ocupadas.Contains(entry.Orden.Value))
+                    {
+                        posicion = entry.Orden.Value;
+                    }
+                    else
+                    {
+                        pos++;
+                        posicion = pos;
+                    }
+
+                    ocupadas.Add(posicion);
+
                     var entity = new ClientesRecorrido
                     {
                         IdCliente = item.IdCliente,
@@ -651,7 +700,7 @@ namespace SistemaOroAmbiental.DAL.Repository
                         IdCamion = idCamion,
                         IdSemana = idSemana,
                         IdDia = idDia,
-                        Posicion = pos,
+                        Posicion = posicion,
                         Activo = true,
                         IdUsuarioRegistra = idUsuario,
                         FechaUsuarioRegistra = ahora

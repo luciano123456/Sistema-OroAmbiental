@@ -51,6 +51,8 @@ namespace SistemaOroAmbiental.DAL.Repository
                 entity.IdSemanaRecoleccion = model.IdSemanaRecoleccion;
                 entity.IdListaPrecio = model.IdListaPrecio;
                 entity.IdCamion = model.IdCamion;
+                entity.OrdenRecorrido = model.OrdenRecorrido;
+                entity.Kilos = model.Kilos;
                 entity.HorarioRecoleccionDesde = model.HorarioRecoleccionDesde;
                 entity.HorarioRecoleccionHasta = model.HorarioRecoleccionHasta;
                 entity.IdUsuarioModifica = model.IdUsuarioModifica;
@@ -166,6 +168,87 @@ namespace SistemaOroAmbiental.DAL.Repository
                 query = query.Where(x => x.Id != idExcluir.Value);
 
             return await query.FirstOrDefaultAsync();
+        }
+
+        public async Task<ClientesEstablecimiento?> ObtenerPrincipalPorCliente(int idCliente)
+        {
+            return await _db.ClientesEstablecimientos
+                .AsNoTracking()
+                .Where(x => x.IdCliente == idCliente)
+                .OrderBy(x => x.Id)
+                .FirstOrDefaultAsync();
+        }
+
+        public async Task<List<ClientesEstablecimientosDia>> ObtenerDiasAdicionales(int idEstablecimiento)
+        {
+            return await _db.ClientesEstablecimientosDias
+                .AsNoTracking()
+                .Where(x => x.IdEstablecimiento == idEstablecimiento)
+                .OrderBy(x => x.Id)
+                .ToListAsync();
+        }
+
+        public async Task<bool> ReemplazarDiasAdicionales(
+            int idEstablecimiento,
+            IReadOnlyList<ClientesEstablecimientosDia> dias,
+            int idUsuario)
+        {
+            await using var tx = await _db.Database.BeginTransactionAsync();
+            try
+            {
+                var existentes = await _db.ClientesEstablecimientosDias
+                    .Where(x => x.IdEstablecimiento == idEstablecimiento)
+                    .Select(x => x.Id)
+                    .ToListAsync();
+
+                if (existentes.Count > 0)
+                {
+                    var horarios = await _db.ClientesEstablecimientosDiasHorarios
+                        .Where(x => existentes.Contains(x.IdEstablecimientoDia))
+                        .ToListAsync();
+                    _db.ClientesEstablecimientosDiasHorarios.RemoveRange(horarios);
+
+                    var diasEnt = await _db.ClientesEstablecimientosDias
+                        .Where(x => x.IdEstablecimiento == idEstablecimiento)
+                        .ToListAsync();
+                    _db.ClientesEstablecimientosDias.RemoveRange(diasEnt);
+                }
+
+                var ahora = DateTime.Now;
+                foreach (var dia in dias)
+                {
+                    if (dia.IdDia <= 0) continue;
+
+                    _db.ClientesEstablecimientosDias.Add(new ClientesEstablecimientosDia
+                    {
+                        IdEstablecimiento = idEstablecimiento,
+                        IdDia = dia.IdDia,
+                        IdCamion = dia.IdCamion,
+                        IdUsuarioRegistra = idUsuario,
+                        FechaUsuarioRegistra = ahora
+                    });
+                }
+
+                await _db.SaveChangesAsync();
+                await tx.CommitAsync();
+                return true;
+            }
+            catch
+            {
+                await tx.RollbackAsync();
+                return false;
+            }
+        }
+
+        public async Task<int> ObtenerPrimerIdCatalogo(string tabla)
+        {
+            return tabla switch
+            {
+                "Dias" => await _db.Dias.OrderBy(x => x.Id).Select(x => x.Id).FirstOrDefaultAsync(),
+                "Semanas" => await _db.Semanas.OrderBy(x => x.Id).Select(x => x.Id).FirstOrDefaultAsync(),
+                "ListasPrecios" => await _db.ListasPrecios.OrderBy(x => x.Id).Select(x => x.Id).FirstOrDefaultAsync(),
+                _ => 0
+            };
         }
     }
 }

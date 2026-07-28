@@ -45,6 +45,10 @@ public partial class ClientesEstablecimiento
 
     public int? IdCamion { get; set; }
 
+    public int? OrdenRecorrido { get; set; }
+
+    public decimal? Kilos { get; set; }
+
     public int? IdLocalidad { get; set; }
 
     public int? IdPartido { get; set; }

@@ -3,6 +3,7 @@ let dias = [];
 let camiones = [];
 let rutasData = [];
 let clientesCatalogo = [];
+let establecimientosClienteCache = [];
 let recorridosSeleccionados = [];
 let clientesRecorridoActual = [];
 let sugeridosRecorridoActual = [];
@@ -183,6 +184,8 @@ $(document).ready(async () => {
         await cargarEstablecimientosCliente(parseInt($(this).val(), 10));
     });
 
+    $("#crEstablecimiento").on("change", aplicarOrdenRecorridoDesdeEstablecimiento);
+
     $("#crActivo").on("change", function () {
         $("#lblCrActivo").text($(this).is(":checked") ? "Activo" : "Inactivo");
     });
@@ -298,6 +301,7 @@ async function cargarClientesCatalogo() {
 async function cargarEstablecimientosCliente(idCliente, selectedId) {
     const sel = $("#crEstablecimiento");
     sel.empty().append(new Option("Sin establecimiento", ""));
+    establecimientosClienteCache = [];
 
     if (!idCliente) {
         sel.val("").trigger("change");
@@ -306,12 +310,24 @@ async function cargarEstablecimientosCliente(idCliente, selectedId) {
 
     try {
         const data = await fetchJson(`/ClientesEstablecimientos/ListaPorCliente?idCliente=${idCliente}`);
-        (data || []).forEach(e => sel.append(new Option(e.Nombre || e.Etiqueta, e.Id)));
+        establecimientosClienteCache = Array.isArray(data) ? data : [];
+        establecimientosClienteCache.forEach(e => sel.append(new Option(e.Nombre || e.Etiqueta, e.Id)));
     } catch (e) {
         console.warn("No se pudieron cargar establecimientos:", e);
     }
 
     sel.val(selectedId ? String(selectedId) : "").trigger("change");
+    aplicarOrdenRecorridoDesdeEstablecimiento();
+}
+
+function aplicarOrdenRecorridoDesdeEstablecimiento() {
+    const idEst = parseInt($("#crEstablecimiento").val(), 10);
+    if (!idEst) return;
+
+    const est = establecimientosClienteCache.find(x => Number(x.Id) === idEst);
+    if (est?.OrdenRecorrido != null && est.OrdenRecorrido > 0) {
+        $("#crPosicion").val(est.OrdenRecorrido);
+    }
 }
 
 async function cargarRutasUnidad() {

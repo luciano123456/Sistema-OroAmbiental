@@ -20,8 +20,22 @@ const CG = {
     cuentas: [],
     controlFiltros: { anios: [], meses: [] },
     viewPref: "auto",
-    listMeta: {}
+    listMeta: {},
+    geoCache: { provincias: [], partidos: [], localidades: [] },
+    idDiaRecoleccionLegacy: 0
 };
+
+const CG_DIAS_SEMANA = [
+    { id: 1, nombre: "Lunes" },
+    { id: 2, nombre: "Martes" },
+    { id: 3, nombre: "Miercoles" },
+    { id: 4, nombre: "Jueves" },
+    { id: 5, nombre: "Viernes" },
+    { id: 6, nombre: "Sabado" },
+    { id: 7, nombre: "Domingo" }
+];
+
+const CG_REC_CAMION_SELECTORS = CG_DIAS_SEMANA.map(d => `#cgRecCamion${d.id}`);
 
 const MES_NOMBRES_CG = [
     "", "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
@@ -69,7 +83,13 @@ const API_CG = {
     },
     recorridosPorCliente: idCliente => `/Recorridos/PorCliente?idCliente=${idCliente}`,
     stockCliente: idCliente => `/ClientesOperativo/StockCliente?idCliente=${idCliente}`,
-    guardarControlMensual: "/ClientesOperativo/GuardarControlMensual"
+    guardarControlMensual: "/ClientesOperativo/GuardarControlMensual",
+    recoleccionPrincipal: id => `/Clientes/RecoleccionPrincipal?idCliente=${id}`,
+    recoleccionPrincipalGuardar: "/Clientes/RecoleccionPrincipal",
+    dias: "/Dias/Lista",
+    semanas: "/Semanas/Lista",
+    listasPrecios: "/ListasPrecios/Lista",
+    camiones: "/Camiones/Lista?soloActivos=true"
 };
 
 const CG_TAB_LABELS = {
@@ -97,9 +117,11 @@ $(document).ready(async () => {
     initSelect2Cg();
 
     await cargarCombosDatosCg();
+    await cargarCombosRecoleccionCg();
 
     if (CG.id > 0) {
         await cargarClienteCg(CG.id);
+        await cargarRecoleccionPrincipalCg();
         habilitarTabsRelacionados(true);
     } else {
         actualizarHeaderCg("Nuevo cliente", "Complete los datos y registre el cliente");
@@ -177,10 +199,19 @@ function wireEventosCg() {
 
     $("#cgProvincia").on("change", async function () {
         await cargarPartidosCg($(this).val());
+        actualizarCodigosGeoCg();
     });
 
     $("#cgPartido").on("change", async function () {
         await cargarLocalidadesCg($(this).val());
+        actualizarCodigosGeoCg();
+    });
+
+    $("#cgLocalidad").on("change", actualizarCodigosGeoCg);
+
+    $("#cgRecoleccionBody").on("shown.bs.collapse", function () {
+        ["#cgTipoGenerador", ...CG_REC_CAMION_SELECTORS, "#cgRecSemana", "#cgRecListaPrecio"]
+            .forEach(sel => refreshSelect2Cg($(sel)));
     });
 
     $('button[data-cg-tab]').on("shown.bs.tab", async function () {
@@ -266,7 +297,9 @@ function wireEventosCg() {
 function initSelect2Cg() {
     const opts = { width: "100%", allowClear: true, placeholder: "Seleccionar" };
     ["#cgSucursal", "#cgProvincia", "#cgPartido", "#cgLocalidad", "#cgProfesion",
-        "#cgCondicionIva", "#cgEstado", "#cgMotivo", "#cgCalificacion", "#cgTipoGenerador", "#cgCobroCuenta"].forEach(sel => {
+        "#cgCondicionIva", "#cgEstado", "#cgMotivo", "#cgCalificacion", "#cgTipoGenerador", "#cgCobroCuenta",
+        ...CG_REC_CAMION_SELECTORS,
+        "#cgRecSemana", "#cgRecListaPrecio"].forEach(sel => {
         ensureSelect2Cg($(sel), opts);
     });
 }
@@ -283,11 +316,14 @@ async function fetchJsonCg(url, options = {}) {
     return await r.json();
 }
 
-async function llenarComboCg(selector, url, selectedId, textField = "Nombre") {
+async function llenarComboCg(selector, url, selectedId, textField = "Nombre", cacheKey = null) {
     const $sel = $(selector);
     $sel.empty().append(new Option("Seleccionar", ""));
     try {
         const data = await fetchJsonCg(url, { headers: authCg() });
+        if (cacheKey) {
+            CG.geoCache[cacheKey] = data || [];
+        }
         (data || []).forEach(x => $sel.append(new Option(x[textField] || x.Nombre, x.Id)));
     } catch (e) {
         console.warn(`No se pudo cargar combo ${selector}:`, e);
@@ -295,6 +331,27 @@ async function llenarComboCg(selector, url, selectedId, textField = "Nombre") {
     }
     if (selectedId) $sel.val(String(selectedId)).trigger("change");
     else $sel.trigger("change");
+}
+
+function poblarSelectCamionesCg($sel, camiones, selectedId) {
+    $sel.empty().append(new Option("Sin asignar", ""));
+    (camiones || []).forEach(x => $sel.append(new Option(x.Nombre, x.Id)));
+    if (selectedId) $sel.val(String(selectedId)).trigger("change");
+    else $sel.val("").trigger("change");
+}
+
+function actualizarCodigosGeoCg() {
+    const idProv = intOrNullCg("#cgProvincia");
+    const idPart = intOrNullCg("#cgPartido");
+    const idLoc = intOrNullCg("#cgLocalidad");
+
+    const prov = (CG.geoCache.provincias || []).find(x => x.Id === idProv);
+    const part = (CG.geoCache.partidos || []).find(x => x.Id === idPart);
+    const loc = (CG.geoCache.localidades || []).find(x => x.Id === idLoc);
+
+    $("#cgCodProvincia").val(prov?.Codigo ?? "");
+    $("#cgCodPartido").val(part?.Codigo ?? "");
+    $("#cgCodLocalidad").val(loc?.Codigo ?? "");
 }
 
 async function recargarComboCg(selector, nuevoId, textField = "Nombre") {
@@ -314,10 +371,192 @@ async function recargarComboCg(selector, nuevoId, textField = "Nombre") {
     await llenarComboCg(selector, url, nuevoId || val, textField);
 }
 
+async function cargarCombosRecoleccionCg() {
+    const emptyOpt = { placeholder: "Seleccionar", allowClear: true };
+    let camiones = [];
+    try {
+        camiones = await fetchJsonCg(API_CG.camiones, { headers: authCg() }) || [];
+    } catch (e) {
+        console.warn("No se pudo cargar camiones:", e);
+    }
+
+    CG_REC_CAMION_SELECTORS.forEach(sel => poblarSelectCamionesCg($(sel), camiones));
+    await Promise.all([
+        llenarComboCg("#cgRecSemana", API_CG.semanas, null, "Nombre"),
+        llenarComboCg("#cgRecListaPrecio", API_CG.listasPrecios, null, "Nombre")
+    ]);
+    [...CG_REC_CAMION_SELECTORS, "#cgRecSemana", "#cgRecListaPrecio"].forEach(sel => {
+        ensureSelect2Cg($(sel), sel.startsWith("#cgRecCamion") ? { placeholder: "Sin asignar", allowClear: true } : emptyOpt);
+    });
+}
+
+function parseHorarioCg(val) {
+    if (!val) return "";
+    const s = String(val);
+    return s.length >= 5 ? s.substring(0, 5) : s;
+}
+
+async function cargarRecoleccionPrincipalCg() {
+    if (CG.id <= 0) return;
+
+    limpiarRecoleccionCg();
+    CG.idDiaRecoleccionLegacy = 0;
+
+    try {
+        const [r] = await Promise.all([
+            fetchJsonCg(API_CG.recoleccionPrincipal(CG.id), { headers: authCg() }),
+            cargarRecorridosAsignadosCg()
+        ]);
+        if (!r?.IdEstablecimiento) return;
+
+        CG.idDiaRecoleccionLegacy = r.IdDiaRecoleccion || 0;
+        $("#cgEstId").val(r.IdEstablecimiento);
+        $("#cgHorarioDesde").val(parseHorarioCg(r.HorarioRecoleccionDesde));
+        $("#cgHorarioHasta").val(parseHorarioCg(r.HorarioRecoleccionHasta));
+
+        if (r.IdSemanaRecoleccion) $("#cgRecSemana").val(String(r.IdSemanaRecoleccion)).trigger("change");
+        if (r.IdListaPrecio) $("#cgRecListaPrecio").val(String(r.IdListaPrecio)).trigger("change");
+        if (r.OrdenRecorrido != null) $("#cgOrdenRecorrido").val(r.OrdenRecorrido);
+        if (r.Kilos != null) $("#cgEstKilos").val(r.Kilos);
+        if (r.IdTipoGenerador) $("#cgTipoGenerador").val(String(r.IdTipoGenerador)).trigger("change");
+
+        const diasMap = {};
+        (r.DiasSemana || r.DiasAdicionales || []).forEach(d => {
+            if (d?.IdDia >= 1 && d.IdDia <= 7) diasMap[d.IdDia] = d.IdCamion;
+        });
+        if (r.IdDiaRecoleccion >= 1 && r.IdDiaRecoleccion <= 7 && r.IdCamion) {
+            diasMap[r.IdDiaRecoleccion] = r.IdCamion;
+        }
+
+        CG_DIAS_SEMANA.forEach(d => {
+            const camionId = diasMap[d.id];
+            if (camionId) $(`#cgRecCamion${d.id}`).val(String(camionId)).trigger("change");
+        });
+    } catch (e) {
+        console.warn("No se pudo cargar recoleccion principal:", e);
+    }
+}
+
+function limpiarRecoleccionCg() {
+    $("#cgEstId, #cgHorarioDesde, #cgHorarioHasta, #cgOrdenRecorrido, #cgEstKilos").val("");
+    CG_REC_CAMION_SELECTORS.forEach(sel => $(sel).val("").trigger("change"));
+    ["#cgRecSemana", "#cgRecListaPrecio"].forEach(sel => $(sel).val("").trigger("change"));
+    CG.idDiaRecoleccionLegacy = 0;
+}
+
+function obtenerDiasSemanaRecoleccionCg() {
+    const dias = [];
+    CG_DIAS_SEMANA.forEach(d => {
+        const idCamion = intOrNullCg(`#cgRecCamion${d.id}`);
+        if (idCamion) dias.push({ IdDia: d.id, IdCamion: idCamion });
+    });
+    return dias;
+}
+
+function resolverDiaPrincipalRecoleccionCg(diasSemana) {
+    if (!diasSemana.length) {
+        return { idDia: CG.idDiaRecoleccionLegacy || 0, idCamion: null, extras: [] };
+    }
+
+    const ordenados = [...diasSemana].sort((a, b) => a.IdDia - b.IdDia);
+    const legacy = ordenados.find(d => d.IdDia === CG.idDiaRecoleccionLegacy);
+    const principal = legacy || ordenados[0];
+    const extras = ordenados.filter(d => d.IdDia !== principal.IdDia);
+    return { idDia: principal.IdDia, idCamion: principal.IdCamion, extras };
+}
+
+function obtenerModeloRecoleccionCg() {
+    const diasSemana = obtenerDiasSemanaRecoleccionCg();
+    const { idDia, idCamion, extras } = resolverDiaPrincipalRecoleccionCg(diasSemana);
+
+    const kilosVal = ($("#cgEstKilos").val() || "").trim();
+    const kilos = kilosVal === "" ? null : parseFloat(kilosVal.replace(",", "."));
+
+    return {
+        IdCliente: CG.id,
+        IdEstablecimiento: parseInt($("#cgEstId").val(), 10) || 0,
+        IdDiaRecoleccion: idDia || 0,
+        IdSemanaRecoleccion: intOrNullCg("#cgRecSemana") || 0,
+        IdCamion: idCamion,
+        IdListaPrecio: intOrNullCg("#cgRecListaPrecio") || 0,
+        HorarioRecoleccionDesde: $("#cgHorarioDesde").val() || null,
+        HorarioRecoleccionHasta: $("#cgHorarioHasta").val() || null,
+        OrdenRecorrido: intOrNullCg("#cgOrdenRecorrido"),
+        Kilos: Number.isNaN(kilos) ? null : kilos,
+        IdTipoGenerador: intOrNullCg("#cgTipoGenerador"),
+        DiasSemana: diasSemana,
+        DiasAdicionales: extras
+    };
+}
+
+function tieneDatosRecoleccionCg() {
+    const m = obtenerModeloRecoleccionCg();
+    return !!(m.DiasSemana?.length || m.IdSemanaRecoleccion || m.IdListaPrecio
+        || m.HorarioRecoleccionDesde || m.HorarioRecoleccionHasta
+        || m.OrdenRecorrido || m.Kilos != null || m.IdTipoGenerador);
+}
+
+function marcarDiasEnRutaCg(items) {
+    const diasEnRuta = new Set(
+        (items || []).filter(r => r.Activo !== false).map(r => r.IdDia)
+    );
+
+    CG_DIAS_SEMANA.forEach(d => {
+        const $el = $(`#cgRecEnRuta${d.id}`);
+        if (!$el.length) return;
+        $el.html(diasEnRuta.has(d.id)
+            ? '<span class="badge bg-success">Si</span>'
+            : '<span class="text-muted">No</span>');
+    });
+}
+
+async function cargarRecorridosAsignadosCg() {
+    if (CG.id <= 0) {
+        marcarDiasEnRutaCg([]);
+        renderRecorridosCg([], false, "#cgRecorridosAsignados");
+        return;
+    }
+
+    try {
+        const items = await fetchJsonCg(API_CG.recorridosPorCliente(CG.id), { headers: authCg() });
+        marcarDiasEnRutaCg(items || []);
+        renderRecorridosCg(items || [], false, "#cgRecorridosAsignados");
+    } catch (e) {
+        console.warn("Recorridos asignados no disponibles:", e);
+        marcarDiasEnRutaCg([]);
+        renderRecorridosCg([], true, "#cgRecorridosAsignados");
+    }
+}
+
+async function guardarRecoleccionPrincipalCg() {
+    if (CG.id <= 0 || !tieneDatosRecoleccionCg()) return { ok: true };
+
+    try {
+        const data = await fetchJsonCg(API_CG.recoleccionPrincipalGuardar, {
+            method: "PUT",
+            headers: authCg(),
+            body: JSON.stringify(obtenerModeloRecoleccionCg())
+        });
+
+        if (data?.idEstablecimiento) {
+            $("#cgEstId").val(data.idEstablecimiento);
+        }
+
+        if (data?.valor) {
+            await cargarRecorridosAsignadosCg();
+        }
+
+        return { ok: !!data?.valor, mensaje: data?.mensaje };
+    } catch (e) {
+        console.warn("No se pudo guardar recoleccion principal:", e);
+        return { ok: false, mensaje: "No se pudo guardar la recoleccion del establecimiento principal." };
+    }
+}
+
 async function cargarCombosDatosCg() {
     await Promise.all([
         llenarComboCg("#cgSucursal", API_CG.sucursales),
-        llenarComboCg("#cgProvincia", API_CG.provincias),
+        llenarComboCg("#cgProvincia", API_CG.provincias, null, "Nombre", "provincias"),
         llenarComboCg("#cgProfesion", API_CG.profesiones),
         llenarComboCg("#cgCondicionIva", API_CG.condicionesIva),
         llenarComboCg("#cgEstado", API_CG.estados),
@@ -350,14 +589,18 @@ function refreshSelect2Cg($el) {
 async function cargarPartidosCg(idProvincia, selectedPartidoId, selectedLocalidadId) {
     const $p = $("#cgPartido");
     $p.empty().append(new Option("Seleccionar", ""));
+    CG.geoCache.partidos = [];
+    CG.geoCache.localidades = [];
 
     if (!idProvincia) {
         refreshSelect2Cg($p);
         await cargarLocalidadesCg(null);
+        actualizarCodigosGeoCg();
         return;
     }
 
     const data = await fetchJsonCg(API_CG.partidosPorProvincia(idProvincia), { headers: authCg() });
+    CG.geoCache.partidos = data || [];
     const seen = new Set();
     (data || []).forEach(x => {
         if (seen.has(x.Id)) return;
@@ -368,14 +611,17 @@ async function cargarPartidosCg(idProvincia, selectedPartidoId, selectedLocalida
     if (selectedPartidoId) $p.val(String(selectedPartidoId));
     refreshSelect2Cg($p);
     await cargarLocalidadesCg(selectedPartidoId || null, selectedLocalidadId);
+    actualizarCodigosGeoCg();
 }
 
 async function cargarLocalidadesCg(idPartido, selectedId) {
     const $l = $("#cgLocalidad");
     $l.empty().append(new Option("Seleccionar", ""));
+    CG.geoCache.localidades = [];
 
     if (!idPartido) {
         refreshSelect2Cg($l);
+        actualizarCodigosGeoCg();
         return;
     }
 
@@ -388,6 +634,7 @@ async function cargarLocalidadesCg(idPartido, selectedId) {
         );
     }
 
+    CG.geoCache.localidades = data || [];
     const seen = new Set();
     (data || []).forEach(x => {
         if (seen.has(x.Id)) return;
@@ -397,6 +644,7 @@ async function cargarLocalidadesCg(idPartido, selectedId) {
 
     if (selectedId) $l.val(String(selectedId));
     refreshSelect2Cg($l);
+    actualizarCodigosGeoCg();
 }
 
 async function cargarClienteCg(id) {
@@ -438,6 +686,8 @@ async function cargarClienteCg(id) {
             $("#cgProvincia").val(String(m.IdProvincia));
             refreshSelect2Cg($("#cgProvincia"));
             await cargarPartidosCg(m.IdProvincia, m.IdPartido, m.IdLocalidad);
+        } else {
+            actualizarCodigosGeoCg();
         }
 
         setAuditoriaCg(m);
@@ -628,11 +878,15 @@ async function guardarClienteCg() {
         cerrarErrorCg();
 
         if (esNuevo && data.id) {
+            CG.id = data.id;
+            await guardarRecoleccionPrincipalCg();
             window.location.href = `/Clientes/Gestion?id=${data.id}`;
             return;
         }
 
         await cargarClienteCg(m.Id);
+        await guardarRecoleccionPrincipalCg();
+        await cargarRecorridosAsignadosCg();
 
         if (typeof modalGuardadoConSalida === "function") {
             await modalGuardadoConSalida({
@@ -917,16 +1171,18 @@ async function cargarTabEntregas() {
 async function cargarTabRecorridos() {
     try {
         const items = await fetchJsonCg(API_CG.recorridosPorCliente(CG.id), { headers: authCg() });
+        marcarDiasEnRutaCg(items || []);
         renderRecorridosCg(items || [], false);
     } catch (e) {
         console.warn("Recorridos no disponibles:", e);
+        marcarDiasEnRutaCg([]);
         renderRecorridosCg([], true);
     }
     CG.tabsLoaded.recorridos = true;
 }
 
-function renderRecorridosCg(items, huboError) {
-    const cont = $("#cgListaRecorridos");
+function renderRecorridosCg(items, huboError, containerSelector) {
+    const cont = $(containerSelector || "#cgListaRecorridos");
 
     if (huboError) {
         cont.html(`
