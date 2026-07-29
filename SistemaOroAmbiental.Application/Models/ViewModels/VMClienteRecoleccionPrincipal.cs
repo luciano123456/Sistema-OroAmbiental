@@ -10,6 +10,7 @@ namespace SistemaOroAmbiental.Application.Models.ViewModels
         public int IdListaPrecio { get; set; }
         public string HorarioRecoleccionDesde { get; set; } = "";
         public string HorarioRecoleccionHasta { get; set; } = "";
+        public string? DiasHorarios { get; set; }
         public int? OrdenRecorrido { get; set; }
         public decimal? Kilos { get; set; }
         public int? IdTipoGenerador { get; set; }

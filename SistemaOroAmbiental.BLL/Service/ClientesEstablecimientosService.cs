@@ -80,7 +80,8 @@ namespace SistemaOroAmbiental.BLL.Service
             if (model.IdDiaRecoleccion <= 0 || model.IdSemanaRecoleccion <= 0 || model.IdListaPrecio <= 0)
                 return ServiceResult.Error("Día, semana y lista de precios son obligatorios.", "validacion");
 
-            if (model.HorarioRecoleccionHasta <= model.HorarioRecoleccionDesde)
+            if (string.IsNullOrWhiteSpace(model.DiasHorarios)
+                && model.HorarioRecoleccionHasta <= model.HorarioRecoleccionDesde)
                 return ServiceResult.Error("El horario hasta debe ser mayor al horario desde.", "validacion");
 
             return null;

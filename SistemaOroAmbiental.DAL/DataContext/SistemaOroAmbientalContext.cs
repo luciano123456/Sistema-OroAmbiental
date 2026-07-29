@@ -594,6 +594,9 @@ public partial class SistemaOroAmbientalContext : DbContext
             entity.Property(e => e.FechaUsuarioRegistra).HasColumnType("datetime");
             entity.Property(e => e.HorarioRecoleccionDesde).HasPrecision(0);
             entity.Property(e => e.HorarioRecoleccionHasta).HasPrecision(0);
+            entity.Property(e => e.DiasHorarios)
+                .HasMaxLength(1000)
+                .IsUnicode(false);
             entity.Property(e => e.IdCondicionIva).HasColumnName("IdCondicionIVA");
             entity.Property(e => e.ImpuestoIva).HasColumnName("ImpuestoIVA");
             entity.Property(e => e.Localidad)

@@ -43,6 +43,8 @@ public partial class ClientesEstablecimiento
 
     public TimeSpan HorarioRecoleccionHasta { get; set; }
 
+    public string? DiasHorarios { get; set; }
+
     public int? IdCamion { get; set; }
 
     public int? OrdenRecorrido { get; set; }

@@ -61,7 +61,7 @@
 
             this._camposObligatorios = [
                 "cmbClienteEst", "txtNombreEst", "cmbDiaEst", "cmbSemanaEst",
-                "cmbListaPrecioEst", "txtHorarioDesdeEst", "txtHorarioHastaEst"
+                "cmbListaPrecioEst"
             ];
             this._validacion = new ValidacionModalAbm({
                 modalEl: this.modalEl,
@@ -71,9 +71,7 @@
                     { id: "txtNombreEst", nombre: "Nombre establecimiento" },
                     { id: "cmbDiaEst", nombre: "D\u00EDa recolecci\u00F3n" },
                     { id: "cmbSemanaEst", nombre: "Semana recolecci\u00F3n" },
-                    { id: "cmbListaPrecioEst", nombre: "Lista de precios" },
-                    { id: "txtHorarioDesdeEst", nombre: "Horario desde" },
-                    { id: "txtHorarioHastaEst", nombre: "Horario hasta" }
+                    { id: "cmbListaPrecioEst", nombre: "Lista de precios" }
                 ],
                 esCampoValido: (el) => this._valorCampoValido(el),
                 isSoloLectura: () => this.isSoloLectura(),
@@ -928,8 +926,6 @@
                     this.cerrarErrorCampos();
                 }
 
-                this._setFieldValue("txtHorarioDesdeEst", "08:00");
-                this._setFieldValue("txtHorarioHastaEst", "12:00");
                 this._syncIvaCardUI();
 
                 this._id("modalEstablecimientoLabel").textContent = "Nuevo Establecimiento";
@@ -1002,8 +998,7 @@
             this._setFieldValue("txtLocalidadEst", modelo.Localidad || "");
             this._setFieldValue("txtCodPostalEst", modelo.CodPostal || "");
             this._setFieldValue("chkImpuestoIvaEst", !!modelo.ImpuestoIva);
-            this._setFieldValue("txtHorarioDesdeEst", this._parseHorario(modelo.HorarioRecoleccionDesde));
-            this._setFieldValue("txtHorarioHastaEst", this._parseHorario(modelo.HorarioRecoleccionHasta));
+                this._setFieldValue("txtDiasHorariosEst", modelo.DiasHorarios || "");
 
             if (modelo.IdCliente) this._setFieldValue("cmbClienteEst", modelo.IdCliente, true);
             if (modelo.IdCondicionIva) this._setFieldValue("cmbCondicionIvaEst", modelo.IdCondicionIva, true);
@@ -1122,8 +1117,7 @@
                 IdSemanaRecoleccion: this._getIntOrNull("cmbSemanaEst") ?? 0,
                 IdListaPrecio: this._getIntOrNull("cmbListaPrecioEst") ?? 0,
                 IdCamion: this._getIntOrNull("cmbCamionEst"),
-                HorarioRecoleccionDesde: this._parseHorario(this._getFieldValue("txtHorarioDesdeEst")),
-                HorarioRecoleccionHasta: this._parseHorario(this._getFieldValue("txtHorarioHastaEst"))
+                DiasHorarios: (this._getFieldValue("txtDiasHorariosEst") || "").trim() || null
             };
 
             if (typeof this.options.onGuardarModelo === "function") {
@@ -1249,22 +1243,7 @@
         }
 
         validarCampos() {
-            const base = this._validacion?.validarTodos() ?? true;
-            if (!base) return false;
-
-            const desde = this._parseHorario(this._getFieldValue("txtHorarioDesdeEst"));
-            const hasta = this._parseHorario(this._getFieldValue("txtHorarioHastaEst"));
-
-            if (desde && hasta && hasta <= desde) {
-                this.mostrarErrorCampos(
-                    "El horario hasta debe ser mayor al horario desde.",
-                    null,
-                    "validacion"
-                );
-                return false;
-            }
-
-            return true;
+            return this._validacion?.validarTodos() ?? true;
         }
 
         async _recargarCombo(selectId, url, textField = "Nombre") {

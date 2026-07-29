@@ -151,6 +151,7 @@ namespace SistemaOroAmbiental.Application.Controllers
                 IdListaPrecio = est.IdListaPrecio,
                 HorarioRecoleccionDesde = FormatearHoraRec(est.HorarioRecoleccionDesde),
                 HorarioRecoleccionHasta = FormatearHoraRec(est.HorarioRecoleccionHasta),
+                DiasHorarios = est.DiasHorarios,
                 OrdenRecorrido = est.OrdenRecorrido,
                 Kilos = est.Kilos,
                 IdTipoGenerador = est.IdTipoGenerador,
@@ -216,8 +217,8 @@ namespace SistemaOroAmbiental.Application.Controllers
                     IdDiaRecoleccion = idDia,
                     IdSemanaRecoleccion = idSemana,
                     IdListaPrecio = idLista,
-                    HorarioRecoleccionDesde = ParseHoraRec(model.HorarioRecoleccionDesde),
-                    HorarioRecoleccionHasta = ParseHoraRec(model.HorarioRecoleccionHasta),
+                    HorarioRecoleccionDesde = new TimeSpan(8, 0, 0),
+                    HorarioRecoleccionHasta = new TimeSpan(18, 0, 0),
                     IdUsuarioRegistra = idUsuario,
                     FechaUsuarioRegistra = DateTime.Now
                 };
@@ -236,17 +237,14 @@ namespace SistemaOroAmbiental.Application.Controllers
             est.IdSemanaRecoleccion = model.IdSemanaRecoleccion > 0 ? model.IdSemanaRecoleccion : est.IdSemanaRecoleccion;
             est.IdListaPrecio = model.IdListaPrecio > 0 ? model.IdListaPrecio : est.IdListaPrecio;
             est.IdCamion = idCamionPrincipal;
+            est.DiasHorarios = string.IsNullOrWhiteSpace(model.DiasHorarios) ? null : model.DiasHorarios.Trim();
 
-            var horaDesde = ParseHoraRec(model.HorarioRecoleccionDesde);
-            var horaHasta = ParseHoraRec(model.HorarioRecoleccionHasta);
-            if (horaHasta <= horaDesde)
+            if (est.HorarioRecoleccionHasta <= est.HorarioRecoleccionDesde)
             {
-                horaDesde = new TimeSpan(8, 0, 0);
-                horaHasta = new TimeSpan(18, 0, 0);
+                est.HorarioRecoleccionDesde = new TimeSpan(8, 0, 0);
+                est.HorarioRecoleccionHasta = new TimeSpan(18, 0, 0);
             }
 
-            est.HorarioRecoleccionDesde = horaDesde;
-            est.HorarioRecoleccionHasta = horaHasta;
             est.OrdenRecorrido = model.OrdenRecorrido;
             est.Kilos = model.Kilos;
             est.IdTipoGenerador = model.IdTipoGenerador ?? cliente.IdTipoGenerador;

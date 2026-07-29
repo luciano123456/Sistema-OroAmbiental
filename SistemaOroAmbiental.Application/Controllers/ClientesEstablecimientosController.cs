@@ -69,6 +69,7 @@ namespace SistemaOroAmbiental.Application.Controllers
                 Kilos = e.Kilos,
                 HorarioRecoleccionDesde = FormatearHora(e.HorarioRecoleccionDesde),
                 HorarioRecoleccionHasta = FormatearHora(e.HorarioRecoleccionHasta),
+                DiasHorarios = e.DiasHorarios,
                 Cliente = e.IdClienteNavigation?.Nombre ?? "",
                 Provincia = e.IdProvinciaNavigation?.Nombre ?? "",
                 CondicionIva = e.IdCondicionIvaNavigation?.Nombre ?? "",
@@ -120,6 +121,7 @@ namespace SistemaOroAmbiental.Application.Controllers
                 e.Kilos,
                 HorarioRecoleccionDesde = FormatearHora(e.HorarioRecoleccionDesde),
                 HorarioRecoleccionHasta = FormatearHora(e.HorarioRecoleccionHasta),
+                DiasHorarios = e.DiasHorarios,
                 e.FechaUsuarioRegistra,
                 UsuarioRegistra = e.IdUsuarioRegistraNavigation?.Usuario,
                 e.FechaUsuarioModifica,
@@ -206,8 +208,9 @@ namespace SistemaOroAmbiental.Application.Controllers
                 IdCamion = model.IdCamion,
                 OrdenRecorrido = model.OrdenRecorrido,
                 Kilos = model.Kilos,
-                HorarioRecoleccionDesde = ParseHora(model.HorarioRecoleccionDesde),
-                HorarioRecoleccionHasta = ParseHora(model.HorarioRecoleccionHasta)
+                DiasHorarios = string.IsNullOrWhiteSpace(model.DiasHorarios) ? null : model.DiasHorarios.Trim(),
+                HorarioRecoleccionDesde = ResolverHorarioDesde(model),
+                HorarioRecoleccionHasta = ResolverHorarioHasta(model)
             };
 
             if (esNuevo)
@@ -236,6 +239,22 @@ namespace SistemaOroAmbiental.Application.Controllers
                 return ts;
 
             return TimeSpan.Zero;
+        }
+
+        private static TimeSpan ResolverHorarioDesde(VMClienteEstablecimiento model)
+        {
+            var desde = ParseHora(model.HorarioRecoleccionDesde);
+            var hasta = ParseHora(model.HorarioRecoleccionHasta);
+            if (hasta > desde) return desde;
+            return new TimeSpan(8, 0, 0);
+        }
+
+        private static TimeSpan ResolverHorarioHasta(VMClienteEstablecimiento model)
+        {
+            var desde = ParseHora(model.HorarioRecoleccionDesde);
+            var hasta = ParseHora(model.HorarioRecoleccionHasta);
+            if (hasta > desde) return hasta;
+            return new TimeSpan(18, 0, 0);
         }
     }
 }

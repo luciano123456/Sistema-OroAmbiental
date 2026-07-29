@@ -132,11 +132,13 @@ async function configurarDataTableEst(data) {
                 { data: "SemanaRecoleccion" },
                 { data: "ListaPrecio" },
                 {
-                    data: null,
-                    render: function (row) {
-                        const d = row.HorarioRecoleccionDesde || "";
-                        const h = row.HorarioRecoleccionHasta || "";
-                        return d && h ? `${d} - ${h}` : "";
+                    data: "DiasHorarios",
+                    defaultContent: "",
+                    render: function (d, type, row) {
+                        if (d) return d;
+                        const desde = row.HorarioRecoleccionDesde || "";
+                        const hasta = row.HorarioRecoleccionHasta || "";
+                        return desde && hasta ? `${desde} - ${hasta}` : "";
                     }
                 }
             ],

@@ -520,6 +520,13 @@ namespace SistemaOroAmbiental.DAL.Repository
             if (establecimiento == null)
                 return "";
 
+            if (!string.IsNullOrWhiteSpace(establecimiento.DiasHorarios))
+                return establecimiento.DiasHorarios.Trim();
+
+            if (establecimiento.HorarioRecoleccionDesde == default
+                && establecimiento.HorarioRecoleccionHasta == default)
+                return "";
+
             return $"{establecimiento.HorarioRecoleccionDesde:hh\\:mm} a {establecimiento.HorarioRecoleccionHasta:hh\\:mm}";
         }
 
@@ -591,6 +598,7 @@ namespace SistemaOroAmbiental.DAL.Repository
                     DomicilioEst = e.Domicilio,
                     DomicilioCli = c.Domicilio,
                     Localidad = e.Localidad ?? c.Localidad,
+                    e.DiasHorarios,
                     e.HorarioRecoleccionDesde,
                     e.HorarioRecoleccionHasta
                 }).ToListAsync();
@@ -603,7 +611,11 @@ namespace SistemaOroAmbiental.DAL.Repository
                 Establecimiento = x.Establecimiento,
                 Domicilio = ComponerDomicilio(x.Calle, x.Numero, x.PisoDepartamento, x.DomicilioEst ?? x.DomicilioCli),
                 Localidad = x.Localidad,
-                Horario = $"{x.HorarioRecoleccionDesde:hh\\:mm} a {x.HorarioRecoleccionHasta:hh\\:mm}",
+                Horario = !string.IsNullOrWhiteSpace(x.DiasHorarios)
+                    ? x.DiasHorarios.Trim()
+                    : (x.HorarioRecoleccionDesde == default && x.HorarioRecoleccionHasta == default
+                        ? ""
+                        : $"{x.HorarioRecoleccionDesde:hh\\:mm} a {x.HorarioRecoleccionHasta:hh\\:mm}"),
                 YaEnRecorrido = EstaEnRecorrido(x.IdCliente, x.Id, enRutaPairs)
             }).ToList();
         }

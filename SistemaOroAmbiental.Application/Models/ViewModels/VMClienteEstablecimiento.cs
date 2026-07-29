@@ -25,6 +25,7 @@ namespace SistemaOroAmbiental.Application.Models.ViewModels
         public decimal? Kilos { get; set; }
         public string HorarioRecoleccionDesde { get; set; } = "";
         public string HorarioRecoleccionHasta { get; set; } = "";
+        public string? DiasHorarios { get; set; }
 
         public string? Cliente { get; set; }
         public string? Provincia { get; set; }

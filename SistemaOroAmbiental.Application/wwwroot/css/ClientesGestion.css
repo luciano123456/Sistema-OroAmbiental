@@ -235,6 +235,13 @@ body.layout-modulo .container-fluid {
     cursor: default;
 }
 
+.cg-dias-horarios-text {
+    min-height: 110px;
+    resize: vertical;
+    line-height: 1.45;
+    white-space: pre-wrap;
+}
+
 .cg-rec-dias-table {
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 12px;

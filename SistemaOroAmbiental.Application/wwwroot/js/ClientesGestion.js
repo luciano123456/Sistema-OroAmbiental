@@ -411,8 +411,7 @@ async function cargarRecoleccionPrincipalCg() {
 
         CG.idDiaRecoleccionLegacy = r.IdDiaRecoleccion || 0;
         $("#cgEstId").val(r.IdEstablecimiento);
-        $("#cgHorarioDesde").val(parseHorarioCg(r.HorarioRecoleccionDesde));
-        $("#cgHorarioHasta").val(parseHorarioCg(r.HorarioRecoleccionHasta));
+        $("#cgDiasHorarios").val(r.DiasHorarios || "");
 
         if (r.IdSemanaRecoleccion) $("#cgRecSemana").val(String(r.IdSemanaRecoleccion)).trigger("change");
         if (r.IdListaPrecio) $("#cgRecListaPrecio").val(String(r.IdListaPrecio)).trigger("change");
@@ -438,7 +437,7 @@ async function cargarRecoleccionPrincipalCg() {
 }
 
 function limpiarRecoleccionCg() {
-    $("#cgEstId, #cgHorarioDesde, #cgHorarioHasta, #cgOrdenRecorrido, #cgEstKilos").val("");
+    $("#cgEstId, #cgDiasHorarios, #cgOrdenRecorrido, #cgEstKilos").val("");
     CG_REC_CAMION_SELECTORS.forEach(sel => $(sel).val("").trigger("change"));
     ["#cgRecSemana", "#cgRecListaPrecio"].forEach(sel => $(sel).val("").trigger("change"));
     CG.idDiaRecoleccionLegacy = 0;
@@ -479,8 +478,7 @@ function obtenerModeloRecoleccionCg() {
         IdSemanaRecoleccion: intOrNullCg("#cgRecSemana") || 0,
         IdCamion: idCamion,
         IdListaPrecio: intOrNullCg("#cgRecListaPrecio") || 0,
-        HorarioRecoleccionDesde: $("#cgHorarioDesde").val() || null,
-        HorarioRecoleccionHasta: $("#cgHorarioHasta").val() || null,
+        DiasHorarios: ($("#cgDiasHorarios").val() || "").trim() || null,
         OrdenRecorrido: intOrNullCg("#cgOrdenRecorrido"),
         Kilos: Number.isNaN(kilos) ? null : kilos,
         IdTipoGenerador: intOrNullCg("#cgTipoGenerador"),
@@ -492,8 +490,7 @@ function obtenerModeloRecoleccionCg() {
 function tieneDatosRecoleccionCg() {
     const m = obtenerModeloRecoleccionCg();
     return !!(m.DiasSemana?.length || m.IdSemanaRecoleccion || m.IdListaPrecio
-        || m.HorarioRecoleccionDesde || m.HorarioRecoleccionHasta
-        || m.OrdenRecorrido || m.Kilos != null || m.IdTipoGenerador);
+        || m.DiasHorarios || m.OrdenRecorrido || m.Kilos != null || m.IdTipoGenerador);
 }
 
 function marcarDiasEnRutaCg(items) {

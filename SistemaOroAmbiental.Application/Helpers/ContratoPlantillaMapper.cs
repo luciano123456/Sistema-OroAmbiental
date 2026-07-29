@@ -87,7 +87,9 @@ namespace SistemaOroAmbiental.Application.Helpers
                 DiaRecoleccion = est?.IdDiaRecoleccionNavigation?.Nombre ?? "",
                 SemanaRecoleccion = est?.IdSemanaRecoleccionNavigation?.Nombre ?? "",
                 HorarioRecoleccion = est != null
-                    ? $"{FormatearHorarioRecoleccion(est.HorarioRecoleccionDesde)} a {FormatearHorarioRecoleccion(est.HorarioRecoleccionHasta)}"
+                    ? (!string.IsNullOrWhiteSpace(est.DiasHorarios)
+                        ? est.DiasHorarios.Trim()
+                        : $"{FormatearHorarioRecoleccion(est.HorarioRecoleccionDesde)} a {FormatearHorarioRecoleccion(est.HorarioRecoleccionHasta)}")
                     : "",
                 Ciudad = "Buenos Aires",
                 Empresa = "ORO AMBIENTAL GROUP S.R.L.",
@@ -200,6 +202,9 @@ namespace SistemaOroAmbiental.Application.Helpers
         private static string ArmarDiasHorariosCliente(ClientesEstablecimiento? est)
         {
             if (est == null) return "";
+
+            if (!string.IsNullOrWhiteSpace(est.DiasHorarios))
+                return est.DiasHorarios.Trim();
 
             var dia = est.IdDiaRecoleccionNavigation?.Nombre?.Trim() ?? "";
             var semana = est.IdSemanaRecoleccionNavigation?.Nombre?.Trim() ?? "";
