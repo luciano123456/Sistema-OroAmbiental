@@ -27,6 +27,17 @@ ERP-style system for an environmental/recycling company). It is a layered soluti
   `ConnectionStrings__SistemaDB` pointing at the local SQL Server. New interactive shells pick
   these up automatically.
 
+### Case-sensitivity gotcha (Linux)
+
+`Views/Login/Index.cshtml` references `~/js/login.js`, but the file on disk is `Login.js`.
+On Windows (case-insensitive FS) this works; on Linux it 404s, so the login form's submit
+handler never binds and the login button silently does a plain GET instead of authenticating.
+Other pages (e.g. Usuarios) reference their scripts with correct casing and are unaffected.
+Workaround used in this VM: an untracked lowercase copy `wwwroot/js/login.js` (a copy, not a
+symlink — ASP.NET Core static files serve a symlink using the symlink's own byte size and
+truncate the response). The proper fix is a one-line change in the view to reference
+`~/js/Login.js`, but committed code was intentionally left unchanged here.
+
 ### Connection string (non-obvious)
 
 The checked-in `appsettings.json` points `ConnectionStrings:SistemaDB` at a Windows machine
