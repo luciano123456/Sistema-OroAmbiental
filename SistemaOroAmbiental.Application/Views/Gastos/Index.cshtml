@@ -1,5 +1,10 @@
 @{
     ViewData["Title"] = "Gastos";
+    var embed = ViewBag.Embed is true;
+    if (embed)
+    {
+        Layout = "_LayoutEmbed";
+    }
 }
 
 @section Estilos {

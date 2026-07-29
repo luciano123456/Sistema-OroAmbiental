@@ -19,11 +19,16 @@ namespace SistemaOroAmbiental.BLL.Service
             int? idCuenta,
             int? idSucursal,
             string? tipoMovimiento,
-            string? texto)
-            => _repo.Movimientos(fechaDesde, fechaHasta, idCuenta, idSucursal, tipoMovimiento, texto);
+            string? texto,
+            string? tipoCuenta = null)
+            => _repo.Movimientos(fechaDesde, fechaHasta, idCuenta, idSucursal, tipoMovimiento, texto, tipoCuenta);
 
-        public Task<decimal> SaldoAnterior(DateTime? fechaDesde, int? idCuenta, int? idSucursal)
-            => _repo.SaldoAnterior(fechaDesde, idCuenta, idSucursal);
+        public Task<decimal> SaldoAnterior(
+            DateTime? fechaDesde,
+            int? idCuenta,
+            int? idSucursal,
+            string? tipoCuenta = null)
+            => _repo.SaldoAnterior(fechaDesde, idCuenta, idSucursal, tipoCuenta);
 
         public Task<(decimal ingresos, decimal egresos, int cantidad)> Resumen(
             DateTime? fechaDesde,
@@ -31,8 +36,16 @@ namespace SistemaOroAmbiental.BLL.Service
             int? idCuenta,
             int? idSucursal,
             string? tipoMovimiento,
+            string? texto,
+            string? tipoCuenta = null)
+            => _repo.Resumen(fechaDesde, fechaHasta, idCuenta, idSucursal, tipoMovimiento, texto, tipoCuenta);
+
+        public Task<(decimal saldoEfectivo, decimal saldoBanco, decimal ingresosEfectivo, decimal egresosEfectivo, decimal ingresosBanco, decimal egresosBanco)> ResumenConsolidado(
+            DateTime? fechaDesde,
+            DateTime? fechaHasta,
+            int? idSucursal,
             string? texto)
-            => _repo.Resumen(fechaDesde, fechaHasta, idCuenta, idSucursal, tipoMovimiento, texto);
+            => _repo.ResumenConsolidado(fechaDesde, fechaHasta, idSucursal, texto);
 
         public Task<(CajasMovimiento? mov, decimal saldo, string origen, bool puedeEditar, bool puedeEliminar, string? tipoTransferencia)> ObtenerMovimiento(int id)
             => _repo.ObtenerMovimiento(id);

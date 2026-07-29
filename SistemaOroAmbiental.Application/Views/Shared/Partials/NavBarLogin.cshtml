@@ -126,41 +126,10 @@
                     </ul>
                 </li>
 
-                <li class="nav-item dropdown" id="seccionFinanzas">
-                    <a class="nav-link dropdown-toggle rp-nav-link" href="@Url.Action("Index", "LibroDiario")" role="button"
-                       data-bs-toggle="dropdown" data-bs-auto-close="outside" data-bs-offset="0,4" aria-expanded="false">
+                <li class="nav-item" id="seccionFinanzas">
+                    <a class="nav-link rp-nav-link" href="@Url.Action("Index", "Finanzas")">
                         <span class="rp-nav-ico gold"><i class="fa fa-money"></i></span>
                         <span>Finanzas</span>
-                    </a>
-                    <ul class="dropdown-menu rp-nav-dropdown">
-                        <li><h6 class="dropdown-header rp-nav-group"><span class="rp-nav-ico xs gold"><i class="fa fa-book"></i></span> Libro diario</h6></li>
-                        <li>
-                            <a class="dropdown-item rp-nav-item rp-nav-item-accent" href="@Url.Action("Index", "LibroDiario")">
-                                <span class="rp-nav-ico sm gold"><i class="fa fa-money"></i></span>
-                                <span class="rp-nav-item-text"><span class="rp-nav-item-title">Caja efectivo</span><span class="rp-nav-item-sub">Solo movimientos en efectivo</span></span>
-                            </a>
-                        </li>
-                        <li>
-                            <a class="dropdown-item rp-nav-item" href="@Url.Action("Bancaria", "LibroDiario")">
-                                <span class="rp-nav-ico sm gold"><i class="fa fa-university"></i></span>
-                                <span class="rp-nav-item-text"><span class="rp-nav-item-title">Caja bancaria</span><span class="rp-nav-item-sub">Solo movimientos bancarios</span></span>
-                            </a>
-                        </li>
-                        <li><hr class="dropdown-divider rp-nav-divider" /></li>
-                        <li><h6 class="dropdown-header rp-nav-group"><span class="rp-nav-ico xs gold"><i class="fa fa-bank"></i></span> Tesoreria</h6></li>
-                        <li>
-                            <a class="dropdown-item rp-nav-item" href="@Url.Action("Index", "Cajas")">
-                                <span class="rp-nav-ico sm gold"><i class="fa fa-bank"></i></span>
-                                <span class="rp-nav-item-text"><span class="rp-nav-item-title">Cajas</span><span class="rp-nav-item-sub">Movimientos por cuenta</span></span>
-                            </a>
-                        </li>
-                    </ul>
-                </li>
-
-                <li class="nav-item" id="seccionGastos">
-                    <a class="nav-link rp-nav-link" href="@Url.Action("Index", "Gastos")">
-                        <span class="rp-nav-ico red"><i class="fa fa-minus-circle"></i></span>
-                        <span>Gastos</span>
                     </a>
                 </li>
 
@@ -613,6 +582,20 @@
 
                         <select id="cmbConfiguracionPartido"
                                 class="rp-input">
+                        </select>
+                    </div>
+
+                    <div id="divConfiguracionTipoCuenta" style="margin-top:12px;" hidden>
+                        <label id="lblConfiguracionTipoCuenta"
+                               class="rp-label"
+                               for="cmbConfiguracionTipoCuenta">
+                            Tipo cuenta
+                        </label>
+
+                        <select id="cmbConfiguracionTipoCuenta"
+                                class="rp-input">
+                            <option value="Efectivo">Efectivo</option>
+                            <option value="Banco">Banco</option>
                         </select>
                     </div>
 

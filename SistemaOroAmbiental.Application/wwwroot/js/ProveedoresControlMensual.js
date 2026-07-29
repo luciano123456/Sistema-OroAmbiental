@@ -132,6 +132,8 @@ function renderControlMensualPg(data) {
     }
 
     const tbody = $("#pgControlMensualBody");
+    $("#tblControlMensualPg").toggleClass("cg-cm-show-anio", !!mostrarAnio);
+
     if (!filas.length) {
         tbody.html(`<tr class="cg-cm-empty"><td colspan="10" class="text-center py-4"><i class="fa fa-calendar"></i> Sin datos para los filtros elegidos.</td></tr>`);
         renderControlMensualCardsPg([], mostrarAnio);
@@ -145,7 +147,7 @@ function renderControlMensualPg(data) {
         const sinCompra = m.SinCompra === true || m.sinCompra === true;
         return `
             <tr class="${sinCompra ? "cg-cm-sin-entrega" : ""}" data-anio="${anio}" data-mes="${m.Mes || m.mes}" role="button">
-                <td class="cg-col-anio cg-cm-mes"${mostrarAnio ? "" : ' style="display:none"'}>${anio}</td>
+                <td class="cg-col-anio cg-cm-mes">${anio}</td>
                 <td class="cg-cm-mes">${escapeHtmlPg(m.MesNombre || m.mesNombre || PG_CM_MESES_LARGO[m.Mes || m.mes] || "")}</td>
                 <td class="cg-cm-num">${m.CantCompras ?? m.cantCompras ?? 0}</td>
                 <td class="cg-cm-num cg-cm-grp-start">${fmtMoneyPg(m.TotalCompras ?? m.totalCompras)}</td>

@@ -1,89 +1,67 @@
 @{
-    var embed = ViewBag.Embed is true;
-    Layout = embed ? "_LayoutEmbed" : "_LayoutModulo";
-    ViewData["Title"] = ViewBag.TituloLibro ?? "Libro diario";
-    var esBancario = ViewBag.EsBancario is true;
-    var urlEfectivo = embed ? Url.Action("Index", "LibroDiario", new { embed = 1 }) : Url.Action("Index", "LibroDiario");
-    var urlBancario = embed ? Url.Action("Bancaria", "LibroDiario", new { embed = 1 }) : Url.Action("Bancaria", "LibroDiario");
+    var esBancario = false;
 }
 
-@section Estilos {
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
-    <link href="~/css/disenopantallas.css?v=8.1" rel="stylesheet" />
-    <link href="~/css/Ventas.css?v=5.2" rel="stylesheet" />
-    <link href="~/css/LibroDiario.css?v=6.2" rel="stylesheet" />
-}
-
-<div class="container-fluid mt-4 ventas-index ld-index" data-es-bancario="@(esBancario ? "1" : "0")">
-
-    <div class="vi-header cc-header shadow-lg rounded-4 p-3 mb-3">
-        <div class="d-flex align-items-center gap-3 flex-wrap">
-            <span class="cc-badge"><i class="fa fa-book"></i></span>
-            <div>
-                <h2 class="m-0 fw-800" id="ldTitulo">@ViewData["Title"]</h2>
-                <small class="text-white-50 d-block">Control operativo diario. La caja real esta en Finanzas.</small>
-            </div>
-            <div class="ms-auto d-flex gap-2 flex-wrap align-items-center">
-                <ul class="nav ld-tabs" id="ldTabsTipo" role="tablist">
-                    <li class="nav-item" role="presentation">
-                        <a class="nav-link @(esBancario ? "" : "active")" href="@urlEfectivo" role="tab">
-                            <i class="fa fa-money me-1"></i> Operativo efectivo
-                        </a>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <a class="nav-link @(esBancario ? "active" : "")" href="@urlBancario" role="tab">
-                            <i class="fa fa-university me-1"></i> Operativo bancario
-                        </a>
-                    </li>
-                </ul>
-                <button id="btnNuevoLd" class="btn btn-success vi-btn" type="button">
-                    <i class="fa fa-plus me-2"></i> Nuevo movimiento
-                </button>
-                <button id="btnRefreshLd" class="btn btn-outline-light vi-btn" type="button">
-                    <i class="fa fa-refresh me-2"></i> Actualizar
-                </button>
-            </div>
-        </div>
+<div class="fg-panel-toolbar mb-3">
+    <div>
+        <h4 class="m-0 fw-800" id="ldTitulo">Libro diario operativo</h4>
+        <small class="text-muted-cc">Control operativo diario. La caja real esta en Efectivo / Bancos / Tesoreria.</small>
     </div>
+    <div class="d-flex gap-2 flex-wrap align-items-center">
+        <ul class="nav ld-tabs" id="ldTabsTipo" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button type="button" class="nav-link active" id="btnLdEfectivo" data-ld-tipo="0">
+                    <i class="fa fa-money me-1"></i> Operativo efectivo
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button type="button" class="nav-link" id="btnLdBancario" data-ld-tipo="1">
+                    <i class="fa fa-university me-1"></i> Operativo bancario
+                </button>
+            </li>
+        </ul>
+        <button id="btnNuevoLd" class="btn btn-success vi-btn" type="button">
+            <i class="fa fa-plus me-2"></i> Nuevo
+        </button>
+        <button id="btnRefreshLd" class="btn btn-outline-light vi-btn" type="button">
+            <i class="fa fa-refresh me-2"></i> Actualizar
+        </button>
+    </div>
+</div>
 
-    <div class="cc-card mb-3">
-        <div class="cc-card-body p-0">
-            <div class="rp-filtros-wrap mb-0">
-                <div class="rp-filtros-head"
-                     data-bs-toggle="collapse"
-                     data-bs-target="#panelFiltrosLd"
-                     aria-expanded="true">
-                    <div class="title">
-                        <i class="fa fa-filter"></i>
-                        <span>Filtros</span>
+<div class="ld-index" data-es-bancario="@(esBancario ? "1" : "0")">
+
+    <div class="rp-filtros-wrap mb-3">
+        <div class="rp-filtros-head" data-bs-toggle="collapse" data-bs-target="#panelFiltrosLd" aria-expanded="true">
+            <div class="title">
+                <i class="fa fa-filter"></i>
+                <span>Filtros</span>
+            </div>
+            <i class="fa fa-chevron-down chev"></i>
+        </div>
+        <div id="panelFiltrosLd" class="collapse show">
+            <div class="rp-filtros-body">
+                <div class="row g-3">
+                    <div class="col-md-2">
+                        <div class="rp-filter-label">Fecha desde</div>
+                        <input type="date" id="fDesdeLd" class="rp-filter-input" />
                     </div>
-                    <i class="fa fa-chevron-down chev"></i>
+                    <div class="col-md-2">
+                        <div class="rp-filter-label">Fecha hasta</div>
+                        <input type="date" id="fHastaLd" class="rp-filter-input" />
+                    </div>
+                    <div class="col-md-4">
+                        <div class="rp-filter-label">Buscar</div>
+                        <input type="text" id="fTextoLd" class="rp-filter-input" placeholder="Concepto, cliente, proveedor, recorrido..." />
+                    </div>
                 </div>
-                <div id="panelFiltrosLd" class="collapse show">
-                    <div class="rp-filtros-body">
-                        <div class="row g-3">
-                            <div class="col-md-2">
-                                <div class="rp-filter-label">Fecha desde</div>
-                                <input type="date" id="fDesdeLd" class="rp-filter-input" />
-                            </div>
-                            <div class="col-md-2">
-                                <div class="rp-filter-label">Fecha hasta</div>
-                                <input type="date" id="fHastaLd" class="rp-filter-input" />
-                            </div>
-                            <div class="col-md-4">
-                                <div class="rp-filter-label">Buscar</div>
-                                <input type="text" id="fTextoLd" class="rp-filter-input" placeholder="Concepto, cliente, proveedor, recorrido..." />
-                            </div>
-                        </div>
-                        <div class="rp-filtros-actions mt-3">
-                            <button class="btn btn-outline-light vi-btn" type="button" id="btnLimpiarLd">
-                                <i class="fa fa-eraser"></i> Limpiar
-                            </button>
-                            <button class="btn btn-primary vi-btn" type="button" id="btnFiltrarLd">
-                                <i class="fa fa-check"></i> Aplicar
-                            </button>
-                        </div>
-                    </div>
+                <div class="rp-filtros-actions mt-3">
+                    <button class="btn btn-outline-light vi-btn" type="button" id="btnLimpiarLd">
+                        <i class="fa fa-eraser"></i> Limpiar
+                    </button>
+                    <button class="btn btn-primary vi-btn" type="button" id="btnFiltrarLd">
+                        <i class="fa fa-check"></i> Aplicar
+                    </button>
                 </div>
             </div>
         </div>
@@ -112,7 +90,7 @@
         </div>
     </div>
 
-    <div class="cc-card ld-grid-card rp-grid-panel-wrap">
+    <div class="cc-card ld-grid-card rp-grid-panel-wrap fg-caja-card">
         <div class="cc-card-body p-0">
             <div class="ld-table-wrap rp-table-wrap">
                 <table class="ld-table" id="tblLibroDiario">
@@ -200,7 +178,7 @@
                     </div>
                     <div class="col-12">
                         <label class="form-label">Recorrido (informativo)</label>
-                        <input type="text" id="mRecorridoLd" class="form-control" autocomplete="off" placeholder="Ej: 3º JUEVES" />
+                        <input type="text" id="mRecorridoLd" class="form-control" autocomplete="off" placeholder="Ej: 3 JUEVES" />
                     </div>
                     <div class="col-md-3">
                         <label class="form-label">Unidades</label>
@@ -253,7 +231,3 @@
         </div>
     </div>
 </div>
-
-@section Scripts {
-    <script src="~/js/LibroDiario.js?v=5.9"></script>
-}

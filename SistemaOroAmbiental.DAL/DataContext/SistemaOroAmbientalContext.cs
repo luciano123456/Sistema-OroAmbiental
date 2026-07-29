@@ -1002,6 +1002,10 @@ public partial class SistemaOroAmbientalContext : DbContext
             entity.Property(e => e.Nombre)
                 .HasMaxLength(100)
                 .IsUnicode(false);
+            entity.Property(e => e.TipoCuenta)
+                .HasMaxLength(20)
+                .IsUnicode(false)
+                .HasDefaultValue("Efectivo");
 
             entity.HasOne(d => d.IdSucursalNavigation).WithMany(p => p.Cuenta)
                 .HasForeignKey(d => d.IdSucursal)

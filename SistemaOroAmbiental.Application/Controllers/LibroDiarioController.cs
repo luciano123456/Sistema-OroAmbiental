@@ -17,18 +17,26 @@ namespace SistemaOroAmbiental.Application.Controllers
         }
 
         [AllowAnonymous]
-        public IActionResult Index()
+        public IActionResult Index(int? embed = null)
         {
+            if (embed != 1)
+                return RedirectToAction("Index", "Finanzas");
+
             ViewBag.EsBancario = false;
-            ViewBag.TituloLibro = "Libro diario — Caja efectivo";
+            ViewBag.TituloLibro = "Libro diario operativo - Efectivo";
+            ViewBag.Embed = true;
             return View();
         }
 
         [AllowAnonymous]
-        public IActionResult Bancaria()
+        public IActionResult Bancaria(int? embed = null)
         {
+            if (embed != 1)
+                return RedirectToAction("Index", "Finanzas");
+
             ViewBag.EsBancario = true;
-            ViewBag.TituloLibro = "Libro diario — Caja bancaria";
+            ViewBag.TituloLibro = "Libro diario operativo - Bancario";
+            ViewBag.Embed = true;
             return View("Index");
         }
 

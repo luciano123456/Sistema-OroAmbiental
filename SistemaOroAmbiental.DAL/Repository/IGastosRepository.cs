@@ -20,5 +20,10 @@ namespace SistemaOroAmbiental.DAL.Repository
             int? idSucursal,
             string? concepto,
             decimal? importeMin);
+
+        /// <summary>
+        /// Crea movimientos de caja faltantes para gastos ya guardados (sin IdMovCaja).
+        /// </summary>
+        Task<int> SincronizarMovimientosCajaPendientes(int idUsuario);
     }
 }

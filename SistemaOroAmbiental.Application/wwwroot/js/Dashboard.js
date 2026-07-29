@@ -137,10 +137,12 @@ function obtenerUrlModulo(nombre) {
         "artistas cc": "/ArtistasCuentaCorriente",
 
         "ventas": "/Ventas",
-        "cajas": "/Cajas",
+        "cajas": "/Finanzas?tab=tesoreria",
+        "finanzas": "/Finanzas",
         "monedas": "/PaisesMoneda",
         "tareas": "/Tareas",
-        "gastos": "/Gastos",
+        "gastos": "/Finanzas?tab=gastos",
+        "libro diario": "/Finanzas",
         "usuarios": "/Usuarios",
         "ubicaciones": "/Ubicaciones",
 

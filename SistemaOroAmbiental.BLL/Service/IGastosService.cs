@@ -20,5 +20,7 @@ namespace SistemaOroAmbiental.BLL.Service
             int? idSucursal,
             string? concepto,
             decimal? importeMin);
+
+        Task<int> SincronizarMovimientosCajaPendientes(int idUsuario);
     }
 }

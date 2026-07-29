@@ -125,7 +125,10 @@ function aplicarImporteDesdeUnidadesLd() {
     recalcIvaModal();
 }
 
-$(document).ready(async () => {
+async function inicializarLibroDiarioModulo() {
+    if (window.__LD_READY) return;
+    window.__LD_READY = true;
+
     LD.esBancario = esBancarioActual();
     modalLibroDiario = new bootstrap.Modal(document.getElementById("modalLibroDiario"));
 
@@ -137,40 +140,50 @@ $(document).ready(async () => {
 
     await cargarConceptosLd();
 
-    $("#btnFiltrarLd, #btnRefreshLd").on("click", aplicarFiltrosLd);
-    $("#btnLimpiarLd").on("click", limpiarFiltrosLd);
-    $("#btnNuevoLd").on("click", () => abrirModalLd());
-    $("#btnGuardarLd").on("click", guardarMovimientoLd);
-    $("#fTextoLd").on("keydown", e => { if (e.key === "Enter") aplicarFiltrosLd(); });
+    $("#btnFiltrarLd, #btnRefreshLd").off("click.ld").on("click.ld", aplicarFiltrosLd);
+    $("#btnLimpiarLd").off("click.ld").on("click.ld", limpiarFiltrosLd);
+    $("#btnNuevoLd").off("click.ld").on("click.ld", () => abrirModalLd());
+    $("#btnGuardarLd").off("click.ld").on("click.ld", guardarMovimientoLd);
+    $("#fTextoLd").off("keydown.ld").on("keydown.ld", e => { if (e.key === "Enter") aplicarFiltrosLd(); });
 
-    $("#mUnidadesLd, #mPrecioLd").on("input", aplicarImporteDesdeUnidadesLd);
+    $("#btnLdEfectivo, #btnLdBancario").off("click.ldTipo").on("click.ldTipo", function () {
+        const bancario = String($(this).data("ld-tipo")) === "1";
+        $(".ld-index").attr("data-es-bancario", bancario ? "1" : "0").data("es-bancario", bancario ? 1 : 0);
+        $("#btnLdEfectivo, #btnLdBancario").removeClass("active");
+        $(this).addClass("active");
+        $("#ldTitulo").text(bancario ? "Libro diario operativo — Bancario" : "Libro diario operativo — Efectivo");
+        LD.esBancario = bancario;
+        aplicarFiltrosLd();
+    });
 
-    $("#mDebeLd").on("input", function () {
+    $("#mUnidadesLd, #mPrecioLd").off("input.ld").on("input.ld", aplicarImporteDesdeUnidadesLd);
+
+    $("#mDebeLd").off("input.ld").on("input.ld", function () {
         if (leerNumLd($(this).val()) > 0) {
             LD.ladoImporte = "debe";
             $("#mHaberLd").val("");
         }
         recalcTotalModal();
     });
-    $("#mHaberLd").on("input", function () {
+    $("#mHaberLd").off("input.ld").on("input.ld", function () {
         if (leerNumLd($(this).val()) > 0) {
             LD.ladoImporte = "haber";
             $("#mDebeLd").val("");
         }
         recalcTotalModal();
     });
-    $("#mIvaLd, #mOtrosImpLd").on("input", recalcTotalModal);
-    $("#mPorcIvaLd").on("input", recalcIvaModal);
+    $("#mIvaLd, #mOtrosImpLd").off("input.ld").on("input.ld", recalcTotalModal);
+    $("#mPorcIvaLd").off("input.ld").on("input.ld", recalcIvaModal);
 
     initAutocompleteLd("#mConceptoLd", "#mConceptoSugLd", "#mIdConceptoLd", buscarConceptosLocal, seleccionarConceptoLd);
     initAutocompleteLd("#mClienteLd", "#mClienteSugLd", "#mIdClienteLd", buscarClientesLd, () => { $("#mIdProveedorLd, #mProveedorLd").val(""); });
     initAutocompleteLd("#mProveedorLd", "#mProveedorSugLd", "#mIdProveedorLd", buscarProveedoresLd, () => { $("#mIdClienteLd, #mClienteLd").val(""); });
 
-    $("#tbodyLibroDiario").on("click", ".btn-edit-ld", function () {
+    $("#tbodyLibroDiario").off("click.ld").on("click.ld", ".btn-edit-ld", function () {
         const id = parseInt($(this).data("id"), 10);
         if (id > 0) abrirModalLd(id);
     });
-    $("#tbodyLibroDiario").on("click", ".btn-del-ld", function () {
+    $("#tbodyLibroDiario").on("click.ld", ".btn-del-ld", function () {
         const id = parseInt($(this).data("id"), 10);
         if (id > 0) eliminarMovimientoLd(id);
     });
@@ -178,10 +191,16 @@ $(document).ready(async () => {
     initFiltrosColumnasLd();
     initLibroDiarioViewMode();
 
-    $(document).on("rpGridViewChanged", actualizarVistaLibroDiario);
+    $(document).off("rpGridViewChanged.ld").on("rpGridViewChanged.ld", actualizarVistaLibroDiario);
 
     await aplicarFiltrosLd();
-});
+}
+
+window.initFinanzasLibro = inicializarLibroDiarioModulo;
+
+if (!window.LD_HUB_MODE) {
+    $(document).ready(() => inicializarLibroDiarioModulo());
+}
 
 function initLibroDiarioViewMode() {
     if (!window.RpGridView?.registerManualList) return;

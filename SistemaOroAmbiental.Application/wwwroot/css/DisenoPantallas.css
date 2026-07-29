@@ -1977,24 +1977,35 @@ table.dataTable.display tbody tr.selected td {
 
 
 /* DASHBOARD GASTOS */
-#accordionDashboards .accordion-item {
+#accordionDashboards .accordion-item,
+#gsAccordionDash .accordion-item {
     background: transparent;
     border: none;
 }
 
-#accordionDashboards .accordion-button {
+#accordionDashboards .accordion-button,
+#gsAccordionDash .accordion-button {
     background: rgba(255,255,255,0.05);
     color: white;
     border-radius: 12px;
 }
 
-#accordionDashboards .accordion-body {
+#accordionDashboards .accordion-button:not(.collapsed),
+#gsAccordionDash .accordion-button:not(.collapsed) {
+    background: rgba(255,255,255,0.08);
+    color: #fde68a;
+    box-shadow: none;
+}
+
+#accordionDashboards .accordion-body,
+#gsAccordionDash .accordion-body {
     background: rgba(255,255,255,0.04);
     border-radius: 12px;
     padding: 25px;
 }
 
-#accordionDashboards canvas {
+#accordionDashboards canvas,
+#gsAccordionDash canvas {
     background: rgba(255,255,255,0.05);
     border-radius: 14px;
     padding: 10px;

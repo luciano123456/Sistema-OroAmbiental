@@ -209,14 +209,26 @@ function configurarPanelGeo() {
     if (!perfil) {
         divCodigo?.setAttribute("hidden", "hidden");
         divPartido?.setAttribute("hidden", "hidden");
-        return;
+    } else {
+        divCodigo?.removeAttribute("hidden");
+        if (perfil.partido) {
+            divPartido?.removeAttribute("hidden");
+        } else {
+            divPartido?.setAttribute("hidden", "hidden");
+        }
     }
 
-    divCodigo?.removeAttribute("hidden");
-    if (perfil.partido) {
-        divPartido?.removeAttribute("hidden");
+    configurarPanelCuentas();
+}
+
+function configurarPanelCuentas() {
+    const div = document.getElementById("divConfiguracionTipoCuenta");
+    if (!div) return;
+
+    if (controllerConfiguracion === "Cuentas") {
+        div.removeAttribute("hidden");
     } else {
-        divPartido?.setAttribute("hidden", "hidden");
+        div.setAttribute("hidden", "hidden");
     }
 }
 
@@ -367,6 +379,7 @@ async function abrirConfiguracion(
             validarCamposConfiguracion();
         });
         $('#cmbConfiguracionPartido').off('change').on('change', validarCamposConfiguracion);
+        $('#cmbConfiguracionTipoCuenta').off('change').on('change', validarCamposConfiguracion);
         $('#txtBuscarConfiguracion').off('input').on('input', filtrarConfiguraciones);
 
         document.getElementById("modalConfiguracionLabel").innerText =
@@ -416,6 +429,10 @@ async function editarConfiguracion(id) {
         } else if (comboNombre != null) {
             document.getElementById("lblConfiguracionCombo").innerText = lblComboNombre;
             document.getElementById("cmbConfiguracion").value = dataJson.IdCombo || "";
+        }
+
+        if (controllerConfiguracion === "Cuentas") {
+            document.getElementById("cmbConfiguracionTipoCuenta").value = dataJson.Codigo || "Efectivo";
         }
 
         validarCamposConfiguracion();
@@ -602,7 +619,6 @@ function validarCamposConfiguracion() {
     return camposValidos;
 }
 
-
 function guardarCambiosConfiguracion() {
     if (!validarCamposConfiguracion()) {
         errorModal("Debes completar los campos requeridos");
@@ -636,6 +652,10 @@ function guardarCambiosConfiguracion() {
             IdCombo: comboNombre != null ? idCombo : 0,
             Nombre: $("#txtNombreConfiguracion").val()
         };
+
+        if (controllerConfiguracion === "Cuentas") {
+            nuevoModelo.Codigo = $("#cmbConfiguracionTipoCuenta").val() || "Efectivo";
+        }
     }
 
     const url = idConfiguracion === "" ? "/" + controllerConfiguracion + "/Insertar" : "/" + controllerConfiguracion + "/Actualizar";
@@ -756,6 +776,10 @@ function agregarConfiguracion() {
 
     if (perfil?.partido) {
         document.getElementById("cmbConfiguracionPartido").value = "";
+    }
+
+    if (controllerConfiguracion === "Cuentas") {
+        document.getElementById("cmbConfiguracionTipoCuenta").value = "Efectivo";
     }
 }
 

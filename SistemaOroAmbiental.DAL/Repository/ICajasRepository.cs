@@ -10,12 +10,14 @@ namespace SistemaOroAmbiental.DAL.Repository
             int? idCuenta,
             int? idSucursal,
             string? tipoMovimiento,
-            string? texto);
+            string? texto,
+            string? tipoCuenta = null);
 
         Task<decimal> SaldoAnterior(
             DateTime? fechaDesde,
             int? idCuenta,
-            int? idSucursal);
+            int? idSucursal,
+            string? tipoCuenta = null);
 
         Task<(decimal ingresos, decimal egresos, int cantidad)> Resumen(
             DateTime? fechaDesde,
@@ -23,6 +25,13 @@ namespace SistemaOroAmbiental.DAL.Repository
             int? idCuenta,
             int? idSucursal,
             string? tipoMovimiento,
+            string? texto,
+            string? tipoCuenta = null);
+
+        Task<(decimal saldoEfectivo, decimal saldoBanco, decimal ingresosEfectivo, decimal egresosEfectivo, decimal ingresosBanco, decimal egresosBanco)> ResumenConsolidado(
+            DateTime? fechaDesde,
+            DateTime? fechaHasta,
+            int? idSucursal,
             string? texto);
 
         Task<(CajasMovimiento? mov, decimal saldo, string origen, bool puedeEditar, bool puedeEliminar, string? tipoTransferencia)> ObtenerMovimiento(int id);

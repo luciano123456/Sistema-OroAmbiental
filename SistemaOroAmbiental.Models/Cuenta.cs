@@ -11,6 +11,8 @@ public partial class Cuenta
 
     public string Nombre { get; set; } = null!;
 
+    public string TipoCuenta { get; set; } = "Efectivo";
+
     public virtual ICollection<CajasSaldo> CajasSaldos { get; set; } = new List<CajasSaldo>();
 
     public virtual ICollection<ClientesCobro> ClientesCobros { get; set; } = new List<ClientesCobro>();

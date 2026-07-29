@@ -1399,7 +1399,7 @@ function renderControlMensualCg(data) {
         ? String(filas.length)
         : "0");
 
-    $(".cg-col-anio").toggle(mostrarAnio);
+    $(".cg-cm-table").toggleClass("cg-cm-show-anio", !!mostrarAnio);
 
     if (!filas.length) {
         tbody.html(`<tr class="cg-cm-empty"><td colspan="17" class="text-center py-4">
@@ -1415,7 +1415,7 @@ function renderControlMensualCg(data) {
         const saldoClass = saldo > 0 ? "cg-cm-saldo-neg" : (saldo < 0 ? "cg-cm-saldo-pos" : "cg-cm-saldo-cero");
 
         return `<tr class="${rowClass}" data-anio="${anio}" data-mes="${m.Mes}">
-            <td class="cg-col-anio cg-cm-mes"${mostrarAnio ? "" : ' style="display:none"'}>${anio}</td>
+            <td class="cg-col-anio cg-cm-mes">${anio}</td>
             <td class="cg-cm-mes">${escapeCg(m.MesNombre)}</td>
             <td class="cg-cm-date">${formatearFechaCortaCg(m.FechaVisita)}</td>
             <td class="cg-cm-num cg-cm-grp-start">${fmtQtyCg(m.Entregadas)}</td>

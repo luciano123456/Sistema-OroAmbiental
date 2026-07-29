@@ -164,6 +164,39 @@ namespace SistemaOroAmbiental.DAL.Repository
                 .ToListAsync();
         }
 
+        public async Task<int> SincronizarMovimientosCajaPendientes(int idUsuario)
+        {
+            if (idUsuario <= 0) return 0;
+
+            var pendientes = await _db.Gastos
+                .Where(g => g.IdMovCaja == null && g.ImporteTotal > 0)
+                .OrderBy(g => g.Id)
+                .Take(200)
+                .ToListAsync();
+
+            if (pendientes.Count == 0)
+                return 0;
+
+            var ahora = DateTime.Now;
+            var sincronizados = 0;
+
+            foreach (var gasto in pendientes)
+            {
+                try
+                {
+                    await CrearMovimientoCajaAsync(gasto, idUsuario, ahora);
+                    await _db.SaveChangesAsync();
+                    sincronizados++;
+                }
+                catch
+                {
+                    // Continuar con el resto; no bloquear la grilla de caja
+                }
+            }
+
+            return sincronizados;
+        }
+
         private async Task<CajasSaldo> ObtenerOCrearCajasSaldo(int idCuenta)
         {
             var saldo = await _db.CajasSaldos.FirstOrDefaultAsync(x => x.IdCuenta == idCuenta);

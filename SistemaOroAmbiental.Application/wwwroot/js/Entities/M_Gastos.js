@@ -113,7 +113,9 @@
         _etiquetaCuenta(c) {
             const nom = (c.Nombre || "").trim();
             const suc = (c.NombreCombo || "").trim();
-            return suc ? `${nom} (${suc})` : nom;
+            const tipo = ((c.Codigo || "Efectivo") === "Banco") ? "Banco" : "Efectivo";
+            const base = suc ? `${nom} (${suc})` : nom;
+            return `${base} · ${tipo}`;
         }
 
         _refreshSelect2Field(id) {
@@ -348,7 +350,13 @@
 
                 await this.cargarCombos();
 
-                const hoy = new Date().toISOString().slice(0, 10);
+                // Fecha local (toISOString es UTC y puede pasar al dia siguiente)
+                const ahora = new Date();
+                const hoy = [
+                    ahora.getFullYear(),
+                    String(ahora.getMonth() + 1).padStart(2, "0"),
+                    String(ahora.getDate()).padStart(2, "0")
+                ].join("-");
                 this._setFieldValue("txtFecha", hoy);
 
                 this._id("modalEdicionLabel").textContent = "Nuevo gasto";

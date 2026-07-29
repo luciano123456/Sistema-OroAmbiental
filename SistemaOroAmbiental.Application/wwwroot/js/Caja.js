@@ -9,6 +9,22 @@ let validacionCajaIngreso = null;
 let validacionCajaEgreso = null;
 let validacionCajaTransferencia = null;
 
+let CAJA_MODO = (window.CAJA_MODO || "TESORERIA").toUpperCase();
+window.CAJA_MODO = CAJA_MODO;
+let CAJA_MODULO_LISTO = false;
+
+function getTipoCuentaFiltro() {
+    if (CAJA_MODO === "EFECTIVO") return "Efectivo";
+    if (CAJA_MODO === "BANCO") return "Banco";
+    return null;
+}
+
+function cuentasFiltradasPorModo(lista) {
+    const tipo = getTipoCuentaFiltro();
+    if (!tipo) return lista || [];
+    return (lista || []).filter(x => (x.Codigo || "Efectivo") === tipo);
+}
+
 const CJ = {
     movimientos: [],
     movimientosOriginal: [],
@@ -20,25 +36,27 @@ const CJ = {
         saldoActual: 0,
         cantidadMovimientos: 0
     },
-    filtrosActivos: false
+    resumenConsolidado: null,
+    filtrosActivos: false,
+    filtrosServidor: null
 };
 
 /**
  * Columnas:
  * 0 Acciones
- * 1 Fecha
- * 2 Tipo
- * 3 Origen
- * 4 Sucursal
- * 5 Cuenta
- * 6 Concepto
- * 7 Ingreso
- * 8 Egreso
- * 9 Saldo
+ * 1 Id
+ * 2 Fecha
+ * 3 Tipo
+ * 4 Origen
+ * 5 Sucursal
+ * 6 Cuenta
+ * 7 Concepto
+ * 8 Ingreso
+ * 9 Egreso
+ * 10 Saldo
  */
 const columnConfig = [
-    { index: 2, filterType: 'text' },
-    { index: 3, filterType: 'select_local' },
+    { index: 3, filterType: 'text' },
     { index: 4, filterType: 'select_local' },
     { index: 5, filterType: 'select', sucursalDt: true },
     { index: 6, filterType: 'select', fetchDataFunc: listaCuentasFilter },
@@ -76,6 +94,7 @@ registrarFiltrosGrilla('grd_Caja', columnConfig, {
 const API = {
     movimientos: "/Cajas/Movimientos",
     resumen: "/Cajas/Resumen",
+    resumenConsolidado: "/Cajas/ResumenConsolidado",
     movimiento: id => `/Cajas/Movimiento?id=${id}`,
     transferencia: idMovimientoGrupo => `/Cajas/Transferencia?idMovimientoGrupo=${idMovimientoGrupo}`,
     registrarIngreso: "/Cajas/RegistrarIngreso",
@@ -98,9 +117,15 @@ function tipoMov(row) {
 
 function etiquetaCuenta(c, mostrarSucursal = true) {
     const nom = (c.Nombre || "").trim();
-    if (!mostrarSucursal) return nom;
-    const suc = (c.NombreCombo || "").trim();
-    return suc ? `${nom} (${suc})` : nom;
+    const tipo = ((c.Codigo || "Efectivo") === "Banco") ? "Banco" : "Efectivo";
+    let base = nom;
+    if (mostrarSucursal) {
+        const suc = (c.NombreCombo || "").trim();
+        if (suc) base = `${nom} (${suc})`;
+    }
+    // En modo Tesoreria conviene ver el tipo; en Efectivo/Bancos ya esta filtrado
+    if (!getTipoCuentaFiltro()) return `${base} · ${tipo}`;
+    return base;
 }
 
 function sucursalPorCuenta(idCuenta) {
@@ -109,7 +134,8 @@ function sucursalPorCuenta(idCuenta) {
     return cuenta?.IdCombo ?? null;
 }
 
-$(document).ready(async () => {
+async function inicializarModuloCaja() {
+    if (CAJA_MODULO_LISTO) return;
 
     $(document).off("click.select2fix.caja").on(
         "click.select2fix.caja",
@@ -125,8 +151,11 @@ $(document).ready(async () => {
 
     wireEventos();
     inicializarFechasPorDefecto();
+    inicializarModoCaja();
 
-    await Promise.all([cargarSucursales(), cargarCuentas()]);
+    await cargarSucursales();
+    await cargarCuentas();
+    resetearFiltrosCajaParaModo();
 
     await cargarMovimientosYResumen();
 
@@ -181,7 +210,44 @@ $(document).ready(async () => {
             break;
         }
     });
-});
+
+    CAJA_MODULO_LISTO = true;
+}
+
+window.initCajaModule = inicializarModuloCaja;
+
+window.refrescarCajaModulo = async function () {
+    if (!CAJA_MODULO_LISTO) return;
+    await cargarMovimientosYResumen();
+};
+
+window.setCajaModo = async function (modo) {
+    const nuevo = (modo || "TESORERIA").toString().toUpperCase();
+    const cambioModo = CAJA_MODO !== nuevo;
+    CAJA_MODO = nuevo;
+    window.CAJA_MODO = nuevo;
+
+    if (!CAJA_MODULO_LISTO) {
+        await inicializarModuloCaja();
+        return;
+    }
+
+    inicializarModoCaja();
+
+    cargarCombosCuentas();
+    if (cambioModo) {
+        resetearFiltrosCajaParaModo();
+        limpiarFiltrosColumnasGrilla(gridCaja);
+    }
+
+    await cargarMovimientosYResumen();
+};
+
+if (!window.CAJA_HUB_MODE) {
+    $(document).ready(() => {
+        inicializarModuloCaja();
+    });
+}
 
 /** Sucursal → cuenta por modal (cuando la sucursal ya viene preseleccionada) */
 const CAJA_CUENTAS_POR_MODAL = {
@@ -224,6 +290,34 @@ function ensureSelect2($el, options) {
     }, options || {}));
 }
 
+function forzarFiltrosCajaAbiertos() {
+    // Select2 a veces deja un valor "fantasma" (ej. primer tipo) y oculta los GASTO
+    const $tipo = $("#fTipo");
+    if ($tipo.length) {
+        const t = $tipo.val();
+        if (t == null || t === undefined || t === "null" || t === "undefined") {
+            $tipo.val("").trigger("change.select2");
+        }
+    }
+    const $cta = $("#fCuenta");
+    if ($cta.length) {
+        const c = $cta.val();
+        if (c == null || c === undefined || c === "null" || c === "undefined") {
+            $cta.val("");
+        }
+    }
+    const $suc = $("#fSucursal");
+    if ($suc.length && !($suc.prop("disabled"))) {
+        const s = $suc.val();
+        if (s == null || s === undefined || s === "null" || s === "undefined") {
+            $suc.val("");
+        }
+    }
+    if (!$("#fFechaDesde").val() || !$("#fFechaHasta").val()) {
+        inicializarFechasPorDefecto();
+    }
+}
+
 function inicializarSelect2Caja() {
     const unica = typeof usuarioTieneUnicaSucursal === "function" && usuarioTieneUnicaSucursal(sucursalesCaja);
 
@@ -237,12 +331,14 @@ function inicializarSelect2Caja() {
     ensureSelect2($("#fCuenta"), {
         dropdownParent: $("#panelFiltrosCaja"),
         placeholder: "Todas",
+        allowClear: true,
         minimumResultsForSearch: 0
     });
 
     ensureSelect2($("#fTipo"), {
         dropdownParent: $("#panelFiltrosCaja"),
         placeholder: "Todos",
+        allowClear: true,
         minimumResultsForSearch: 0
     });
 
@@ -340,16 +436,24 @@ async function cargarSucursales() {
         sucursalesCaja = [];
     }
 
-    const idUnica = typeof getIdSucursalDefaultUsuario === "function"
-        ? getIdSucursalDefaultUsuario(sucursalesCaja)
-        : null;
+    const unica = typeof usuarioTieneUnicaSucursal === "function"
+        && usuarioTieneUnicaSucursal(sucursalesCaja);
 
+    // En filtros de caja: "Todas" por defecto (no forzar IdSucursalDefault del usuario,
+    // eso ocultaba gastos de otras sucursales).
     llenarSelectSucursales($("#fSucursal"), sucursalesCaja, {
         primeraOpcion: primeraOpcionSucursal({ value: "", text: "Todas" }, sucursalesCaja),
-        seleccionarPorDefecto: true
+        seleccionarPorDefecto: unica
     });
 
-    if (idUnica) $("#fSucursal").val(String(idUnica));
+    if (unica) {
+        const idUnica = typeof getIdSucursalDefaultUsuario === "function"
+            ? getIdSucursalDefaultUsuario(sucursalesCaja)
+            : null;
+        if (idUnica) $("#fSucursal").val(String(idUnica));
+    } else {
+        $("#fSucursal").val("");
+    }
 }
 
 async function cargarCuentas() {
@@ -365,9 +469,27 @@ async function cargarCuentas() {
     cargarCombosCuentas();
 }
 
+function inicializarModoCaja() {
+    const panel = document.getElementById("panelKpisConsolidado");
+    if (panel) {
+        panel.hidden = CAJA_MODO !== "TESORERIA";
+        panel.classList.toggle("d-none", CAJA_MODO !== "TESORERIA");
+    }
+
+    const titulos = {
+        EFECTIVO: "Caja efectivo",
+        BANCO: "Bancos",
+        TESORERIA: "Tesoreria"
+    };
+    $("#cajaTituloHub").text(titulos[CAJA_MODO] || titulos.TESORERIA);
+}
+
 function cuentasPorSucursal(idSucursal) {
-    if (!idSucursal) return cuentasCaja || [];
-    return (cuentasCaja || []).filter(x => String(x.IdCombo) === String(idSucursal));
+    let lista = cuentasCaja || [];
+    if (idSucursal) {
+        lista = lista.filter(x => String(x.IdCombo) === String(idSucursal));
+    }
+    return cuentasFiltradasPorModo(lista);
 }
 
 function cargarCombosCuentas() {
@@ -425,8 +547,11 @@ function cargarFiltroCuentas(idSucursal) {
         $fCuenta.append(`<option value="${x.Id}">${etiquetaCuenta(x, true)}</option>`);
     });
 
+    // Solo conservar la cuenta si sigue existiendo en el combo (mismo tipo de cuenta)
     if (valorActual && $fCuenta.find(`option[value="${valorActual}"]`).length) {
         $fCuenta.val(valorActual);
+    } else {
+        $fCuenta.val("");
     }
 
     ensureSelect2($fCuenta, {
@@ -467,19 +592,76 @@ function cargarCuentasModal(selectorCuenta, idSucursal, modalSelector) {
    FILTROS EXTERNOS
 ========================= */
 
-function obtenerFiltrosCaja() {
-    const idCuenta = $("#fCuenta").val();
-    const idSucursal = $("#fSucursal").val();
-    const tipo = $("#fTipo").val();
+function resetearFiltrosCajaParaModo() {
+    const unica = typeof usuarioTieneUnicaSucursal === "function"
+        && usuarioTieneUnicaSucursal(sucursalesCaja);
+    const $sucursal = $("#fSucursal");
 
-    return {
+    if (unica) {
+        const idSucursalDefault = typeof getIdSucursalDefaultUsuario === "function"
+            ? getIdSucursalDefaultUsuario(sucursalesCaja)
+            : null;
+        const idUnica = idSucursalDefault ?? sucursalesCaja[0]?.Id;
+        $sucursal.val(idUnica != null ? String(idUnica) : "").trigger("change.select2");
+    } else {
+        $sucursal.val("").trigger("change.select2");
+    }
+
+    cargarFiltroCuentas($sucursal.val());
+    $("#fCuenta").val("").trigger("change.select2");
+    $("#fTipo").val("").trigger("change.select2");
+    $("#fTexto").val("");
+    CJ.filtrosServidor = null;
+    CJ.filtrosActivos = false;
+    actualizarEstadoFiltrosCaja();
+}
+
+function obtenerFiltrosCaja() {
+    forzarFiltrosCajaAbiertos();
+
+    const rawCuenta = $("#fCuenta").val();
+    const rawSucursal = $("#fSucursal").val();
+    const rawTipo = $("#fTipo").val();
+
+    let idCuenta = rawCuenta != null && String(rawCuenta).trim() !== ""
+        ? parseInt(rawCuenta, 10) : NaN;
+    let idSucursal = rawSucursal != null && String(rawSucursal).trim() !== ""
+        ? parseInt(rawSucursal, 10) : NaN;
+    let tipo = rawTipo != null ? String(rawTipo).trim() : "";
+
+    const sucursalValida = Number.isFinite(idSucursal)
+        && (sucursalesCaja || []).some(x => String(x.Id) === String(idSucursal));
+    if (Number.isFinite(idSucursal) && !sucursalValida) {
+        idSucursal = NaN;
+        $("#fSucursal").val("").trigger("change.select2");
+    }
+
+    const cuentaValida = Number.isFinite(idCuenta)
+        && cuentasPorSucursal(Number.isFinite(idSucursal) ? idSucursal : null)
+            .some(x => String(x.Id) === String(idCuenta));
+    if (Number.isFinite(idCuenta) && !cuentaValida) {
+        idCuenta = NaN;
+        $("#fCuenta").val("").trigger("change.select2");
+    }
+
+    const tipoValido = tipo !== "" && $("#fTipo option").toArray()
+        .some(option => String(option.value) === tipo);
+    if (tipo && !tipoValido) {
+        tipo = "";
+        $("#fTipo").val("").trigger("change.select2");
+    }
+
+    CJ.filtrosServidor = {
         FechaDesde: $("#fFechaDesde").val() || null,
         FechaHasta: $("#fFechaHasta").val() || null,
-        IdCuenta: idCuenta ? parseInt(idCuenta, 10) : null,
-        IdSucursal: idSucursal ? parseInt(idSucursal, 10) : null,
+        IdCuenta: Number.isFinite(idCuenta) ? idCuenta : null,
+        IdSucursal: Number.isFinite(idSucursal) ? idSucursal : null,
         TipoMovimiento: tipo || null,
-        Texto: ($("#fTexto").val() || "").trim() || null
+        Texto: ($("#fTexto").val() || "").trim() || null,
+        TipoCuenta: getTipoCuentaFiltro()
     };
+
+    return { ...CJ.filtrosServidor };
 }
 
 async function aplicarFiltrosCaja() {
@@ -491,12 +673,8 @@ async function aplicarFiltrosCaja() {
 
 async function limpiarFiltrosCaja() {
     inicializarFechasPorDefecto();
-    $("#fSucursal").val("").trigger("change");
-    $("#fTipo").val("").trigger("change");
-    $("#fTexto").val("");
-    CJ.filtrosActivos = false;
+    resetearFiltrosCajaParaModo();
     limpiarFiltrosColumnasGrilla();
-    actualizarEstadoFiltrosCaja();
     await cargarMovimientosYResumen();
 }
 
@@ -510,19 +688,45 @@ function actualizarEstadoFiltrosCaja() {
 ========================= */
 
 async function cargarMovimientosYResumen() {
-    await Promise.all([cargarMovimientos(), cargarResumen()]);
-    renderMovimientos();
-    actualizarKpis();
+    try {
+        forzarFiltrosCajaAbiertos();
+        const filtros = obtenerFiltrosCaja();
+
+        // Sync gastos→caja primero; despues cargar todo con los mismos filtros
+        try {
+            await fetch("/Cajas/SincronizarGastos", {
+                method: "POST",
+                headers: { ...authHeaders(), "Content-Type": "application/json" }
+            });
+        } catch (syncErr) {
+            console.warn("Sync gastos caja:", syncErr);
+        }
+
+        const tasks = [cargarMovimientos(filtros), cargarResumen(filtros)];
+        if (CAJA_MODO === "TESORERIA") {
+            tasks.push(cargarResumenConsolidado(filtros));
+        }
+        await Promise.all(tasks);
+        renderMovimientos();
+        actualizarKpis();
+        if (CAJA_MODO === "TESORERIA") {
+            actualizarKpisConsolidado();
+        }
+        setTimeout(() => ajustarGrillaCaja(), 60);
+    } catch (e) {
+        console.error("Caja cargarMovimientosYResumen:", e);
+        errorModal("No se pudieron cargar los movimientos de caja.");
+    }
 }
 
-async function cargarMovimientos() {
+async function cargarMovimientos(filtros = null) {
     const response = await fetch(API.movimientos, {
         method: "POST",
         headers: {
             ...authHeaders(),
             'Content-Type': 'application/json'
         },
-        body: JSON.stringify(obtenerFiltrosCaja())
+        body: JSON.stringify(filtros ?? obtenerFiltrosCaja())
     });
 
     if (!response.ok) {
@@ -544,14 +748,14 @@ async function cargarMovimientos() {
     });
 }
 
-async function cargarResumen() {
+async function cargarResumen(filtros = null) {
     const response = await fetch(API.resumen, {
         method: "POST",
         headers: {
             ...authHeaders(),
             'Content-Type': 'application/json'
         },
-        body: JSON.stringify(obtenerFiltrosCaja())
+        body: JSON.stringify(filtros ?? obtenerFiltrosCaja())
     });
 
     if (!response.ok) {
@@ -568,6 +772,32 @@ async function cargarResumen() {
         saldoActual: Number(data.SaldoActual || 0),
         cantidadMovimientos: Number(data.CantidadMovimientos || 0)
     };
+}
+
+async function cargarResumenConsolidado(filtros = null) {
+    const response = await fetch(API.resumenConsolidado, {
+        method: "POST",
+        headers: {
+            ...authHeaders(),
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(filtros ?? obtenerFiltrosCaja())
+    });
+
+    if (!response.ok) {
+        errorModal("Error cargando resumen consolidado.");
+        return;
+    }
+
+    CJ.resumenConsolidado = await response.json();
+}
+
+function renderOrigenCaja(origen) {
+    const val = (origen || "").toUpperCase();
+    if (val === "GASTOS") {
+        return `<a href="/Gastos" class="rp-link-origen">Gastos</a>`;
+    }
+    return origen || "";
 }
 
 function renderMovimientos() {
@@ -708,8 +938,14 @@ async function configurarDataTable(data) {
         gridCaja = $('#grd_Caja').DataTable({
             data: data,
             language: {
-                sLengthMenu: "Mostrar MENU registros",
-                url: "//cdn.datatables.net/plug-ins/2.0.7/i18n/es-MX.json"
+                emptyTable: "No hay registros",
+                zeroRecords: "No hay registros con esos filtros",
+                infoEmpty: "Sin registros",
+                info: "Mostrando _START_ a _END_ de _TOTAL_",
+                infoFiltered: "(filtrado de _MAX_)",
+                lengthMenu: "Mostrar _MENU_ registros",
+                search: "Buscar:",
+                paginate: { first: "Primero", last: "Ultimo", next: "Siguiente", previous: "Anterior" }
             },
             autoWidth: false,
             columnDefs: typeof columnDefsGridLista === "function" ? columnDefsGridLista() : [],
@@ -733,7 +969,13 @@ async function configurarDataTable(data) {
                     }
                 },
                 { data: 'TipoMovimiento', render: function (v, type, row) { return tipoMov(row) || v || ""; } },
-                { data: 'Origen' },
+                {
+                    data: 'Origen',
+                    render: function (v, type) {
+                        if (type !== 'display') return v || "";
+                        return renderOrigenCaja(v);
+                    }
+                },
                 { data: 'Sucursal' },
                 { data: 'Cuenta' },
                 {
@@ -773,44 +1015,63 @@ async function configurarDataTable(data) {
             ],
             order: [[2, 'asc']],
             dom: 'Bfrtip',
-            buttons: getBotonesExportacion(gridCaja, "Cajas"),
+            buttons: typeof getBotonesExportacion === "function" ? getBotonesExportacion(null, "Cajas") : [],
             orderCellsTop: true,
-            fixedHeader: true,
+            fixedHeader: false,
             initComplete: async function () {
                 const api = this.api();
-                await armarFiltrosGrillaLista(api, '#grd_Caja', columnConfig, {
-                    includeActivo: false,
-                    panelTitle: 'Filtrar resultados cargados',
-                    initSelect2: ($el) => inicializarSelect2Filtro($el),
-                    onSelectChange: async (config, $select, api) => {
-                        if (config.index !== 5) return;
-                        const value = $select.val();
-                        const $panel = $select.closest('.rp-grid-filtros-wrap');
-                        const $cuentaSelect = $panel.find('.rp-grid-panel-field[data-col="6"]');
-                        if (!$cuentaSelect.length) return;
-                        const cuentas = await listaCuentasFilter(value || null);
-                        $cuentaSelect.empty().append(`<option value="">Todos</option>`);
-                        (cuentas || []).forEach(item => {
-                            $cuentaSelect.append(`<option value="${item.Id}">${etiquetaCuenta(item)}</option>`);
-                        });
-                        inicializarSelect2Filtro($cuentaSelect);
-                        $cuentaSelect.val("").trigger("change.select2");
-                        api.column(6).search('').draw(false);
-                    },
-                    afterSelectBuild: async (config, $select) => {
-                        if (config.index === 6) $select.addClass("rp-filter-select-cuenta");
-                    }
-                });
-                configurarOpcionesColumnasCaja();
+                try {
+                    await armarFiltrosGrillaLista(api, '#grd_Caja', columnConfig, {
+                        includeActivo: false,
+                        panelTitle: 'Filtrar resultados cargados',
+                        initSelect2: ($el) => inicializarSelect2Filtro($el),
+                        onSelectChange: async (config, $select, api) => {
+                            if (config.index !== 5) return;
+                            const value = $select.val();
+                            const $panel = $select.closest('.rp-grid-filtros-wrap');
+                            const $cuentaSelect = $panel.find('.rp-grid-panel-field[data-col="6"]');
+                            if (!$cuentaSelect.length) return;
+                            const cuentas = await listaCuentasFilter(value || null);
+                            $cuentaSelect.empty().append(`<option value="">Todos</option>`);
+                            (cuentas || []).forEach(item => {
+                                $cuentaSelect.append(`<option value="${item.Id}">${etiquetaCuenta(item)}</option>`);
+                            });
+                            inicializarSelect2Filtro($cuentaSelect);
+                            $cuentaSelect.val("").trigger("change.select2");
+                            api.column(6).search('').draw(false);
+                        },
+                        afterSelectBuild: async (config, $select) => {
+                            if (config.index === 6) $select.addClass("rp-filter-select-cuenta");
+                        }
+                    });
+                    configurarOpcionesColumnasCaja();
+                } catch (ex) {
+                    console.error("Filtros grilla caja:", ex);
+                }
                 actualizarKpis();
+                setTimeout(() => ajustarGrillaCaja(), 50);
             }
         });
 
     } else {
-        gridCaja.clear().rows.add(data).draw(false);
+        gridCaja.clear().rows.add(data || []).draw(false);
         actualizarKpis();
+        setTimeout(() => ajustarGrillaCaja(), 50);
     }
 }
+
+window.ajustarGrillaCaja = function ajustarGrillaCaja() {
+    if (!gridCaja) return;
+    try {
+        const $wrap = $("#grd_Caja").closest(".dt-dark-wrap");
+        if ($wrap.length && ($wrap.is(":hidden") || $wrap.parents().filter(":hidden").length)) return;
+        gridCaja.columns.adjust();
+        gridCaja.draw(false);
+        $($.fn.dataTable.tables(true)).DataTable().columns.adjust();
+    } catch (e) {
+        console.warn("ajustarGrillaCaja:", e);
+    }
+};
 
 /* =========================
    FILTROS DATATABLE
@@ -885,13 +1146,31 @@ function actualizarKpis() {
     const chip = $("#chipCajaEstado");
     chip.removeClass("ok warn neg");
 
-    if (saldoActual > 0) {
+    if (cantidad === 0 && ingresos === 0 && egresos === 0) {
+        chip.addClass("warn").html(`<i class="fa fa-line-chart"></i> Sin datos`);
+    } else if (saldoActual > 0) {
         chip.addClass("ok").html(`<i class="fa fa-arrow-up"></i> Saldo positivo ${fmtMoney(saldoActual)}`);
     } else if (saldoActual < 0) {
         chip.addClass("neg").html(`<i class="fa fa-arrow-down"></i> Saldo negativo ${fmtMoney(saldoActual)}`);
     } else {
         chip.addClass("warn").html(`<i class="fa fa-minus-circle"></i> Saldo cero`);
     }
+}
+
+function actualizarKpisConsolidado() {
+    const data = CJ.resumenConsolidado || {};
+    const ingE = Number(data.IngresosEfectivo || 0);
+    const egrE = Number(data.EgresosEfectivo || 0);
+    const ingB = Number(data.IngresosBanco || 0);
+    const egrB = Number(data.EgresosBanco || 0);
+    $("#kpiSaldoEfectivo").text(fmtMoney(data.SaldoEfectivo || 0));
+    $("#kpiSaldoBanco").text(fmtMoney(data.SaldoBanco || 0));
+    $("#kpiSaldoTotal").text(fmtMoney(data.SaldoTotal || 0));
+    $("#kpiIngEfectivo").text(fmtMoney(ingE));
+    $("#kpiEgrEfectivo").text(fmtMoney(egrE));
+    $("#kpiIngBanco").text(fmtMoney(ingB));
+    $("#kpiEgrBanco").text(fmtMoney(egrB));
+    $("#kpiNetoConsolidado").text(fmtMoney((ingE + ingB) - (egrE + egrB)));
 }
 
 /* =========================

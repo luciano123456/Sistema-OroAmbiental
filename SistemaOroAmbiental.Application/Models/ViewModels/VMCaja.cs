@@ -8,6 +8,7 @@ namespace SistemaOroAmbiental.Application.Models.ViewModels
         public int? IdSucursal { get; set; }
         public string? TipoMovimiento { get; set; }
         public string? Texto { get; set; }
+        public string? TipoCuenta { get; set; }
     }
 
     public class VMCajaMovimiento
@@ -36,6 +37,17 @@ namespace SistemaOroAmbiental.Application.Models.ViewModels
         public decimal Egresos { get; set; }
         public decimal SaldoActual { get; set; }
         public int CantidadMovimientos { get; set; }
+    }
+
+    public class VMCajaResumenConsolidado
+    {
+        public decimal SaldoEfectivo { get; set; }
+        public decimal SaldoBanco { get; set; }
+        public decimal SaldoTotal { get; set; }
+        public decimal IngresosEfectivo { get; set; }
+        public decimal EgresosEfectivo { get; set; }
+        public decimal IngresosBanco { get; set; }
+        public decimal EgresosBanco { get; set; }
     }
 
     public class VMCajaMovimientoManual

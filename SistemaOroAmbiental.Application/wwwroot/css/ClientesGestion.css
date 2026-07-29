@@ -1335,21 +1335,47 @@ body.layout-modulo .container-fluid {
     color: #93c5fd;
 }
 
-/* Tabla control mensual */
+/* Mostrar Ano solo cuando la tabla tiene la clase (table-cell, no block) */
+.cg-cm-table.cg-cm-show-anio .cg-col-anio {
+    display: table-cell !important;
+}
+
+/* Tabla control mensual — scroll propio, no hereda reglas de DataTables (.cg-table-wrap) */
 .cg-cm-table-wrap {
-    overflow: auto;
-    max-height: calc(100vh - 360px);
+    overflow: auto !important;
+    max-height: min(65vh, calc(100vh - 280px));
     border-radius: 16px;
     border: 1px solid rgba(255, 255, 255, 0.08);
     background: rgba(0, 0, 0, 0.18);
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+}
+
+/* Si quedó la clase vieja cg-table-wrap, no anular el scroll del control mensual */
+.cg-page.cg-mode-table .cg-cm-table-wrap,
+.cg-page.cg-mode-auto .cg-cm-table-wrap,
+.fg-page .cg-cm-table-wrap {
+    display: block !important;
+    visibility: visible !important;
+    height: auto !important;
+    max-height: min(65vh, calc(100vh - 280px)) !important;
+    overflow: auto !important;
+    margin: 0;
+    padding: 0;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.cg-page.cg-mode-cards .cg-cm-table-wrap {
+    display: none !important;
 }
 
 .cg-cm-table {
-    width: 100%;
-    min-width: 1180px;
+    width: 100% !important;
+    min-width: 100%;
     border-collapse: separate;
     border-spacing: 0;
     font-size: 0.8rem;
+    table-layout: auto;
 }
 
 .cg-cm-table thead th {
@@ -1365,6 +1391,7 @@ body.layout-modulo .container-fluid {
     padding: 0.65rem 0.5rem;
     border-bottom: 2px solid rgba(255, 255, 255, 0.1);
     white-space: nowrap;
+    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.35);
 }
 
 .cg-cm-th-grp {
@@ -1576,8 +1603,11 @@ body.layout-modulo .container-fluid {
         grid-template-columns: repeat(4, minmax(0, 1fr));
     }
 
-    .cg-cm-table-wrap {
-        max-height: none;
+    .cg-cm-table-wrap,
+    .cg-page.cg-mode-table .cg-cm-table-wrap,
+    .cg-page.cg-mode-auto .cg-cm-table-wrap,
+    .fg-page .cg-cm-table-wrap {
+        max-height: min(55vh, calc(100vh - 220px)) !important;
     }
 
     .cg-tabs-scroll .nav-link span {

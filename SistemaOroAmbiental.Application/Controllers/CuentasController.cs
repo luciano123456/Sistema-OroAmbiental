@@ -32,7 +32,8 @@ namespace SistemaOroAmbiental.Application.Controllers
                     Id = x.Id,
                     IdCombo = x.IdSucursal,
                     Nombre = x.Nombre,
-                    NombreCombo = x.IdSucursalNavigation.Nombre
+                    NombreCombo = x.IdSucursalNavigation.Nombre,
+                    Codigo = x.TipoCuenta
                 })
                 .ToListAsync();
 
@@ -45,7 +46,8 @@ namespace SistemaOroAmbiental.Application.Controllers
             var entity = new Cuenta
             {
                 Nombre = model.Nombre ?? "",
-                IdSucursal = model.IdCombo
+                IdSucursal = model.IdCombo,
+                TipoCuenta = NormalizarTipoCuenta(model.Codigo)
             };
 
             _db.Cuentas.Add(entity);
@@ -63,6 +65,7 @@ namespace SistemaOroAmbiental.Application.Controllers
 
             entity.Nombre = model.Nombre ?? "";
             entity.IdSucursal = model.IdCombo;
+            entity.TipoCuenta = NormalizarTipoCuenta(model.Codigo);
 
             await _db.SaveChangesAsync();
             return Ok(new { valor = true });
@@ -108,8 +111,12 @@ namespace SistemaOroAmbiental.Application.Controllers
                 Id = entity.Id,
                 IdCombo = entity.IdSucursal,
                 Nombre = entity.Nombre,
-                NombreCombo = entity.IdSucursalNavigation.Nombre
+                NombreCombo = entity.IdSucursalNavigation.Nombre,
+                Codigo = entity.TipoCuenta
             });
         }
+
+        private static string NormalizarTipoCuenta(string? tipo)
+            => string.Equals(tipo, "Banco", StringComparison.OrdinalIgnoreCase) ? "Banco" : "Efectivo";
     }
 }

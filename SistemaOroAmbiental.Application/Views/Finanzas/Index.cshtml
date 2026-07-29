@@ -1,0 +1,264 @@
+@{
+    Layout = "_LayoutModulo";
+    ViewData["Title"] = "Finanzas";
+
+    decimal saldoEfectivo = ViewBag.SaldoEfectivo ?? 0m;
+    decimal saldoBanco = ViewBag.SaldoBanco ?? 0m;
+    decimal saldoTotal = ViewBag.SaldoTotal ?? 0m;
+    decimal ingEfe = ViewBag.IngresosEfectivo ?? 0m;
+    decimal egrEfe = ViewBag.EgresosEfectivo ?? 0m;
+    decimal ingBan = ViewBag.IngresosBanco ?? 0m;
+    decimal egrBan = ViewBag.EgresosBanco ?? 0m;
+    decimal ingMes = ViewBag.IngresosMes ?? 0m;
+    decimal egrMes = ViewBag.EgresosMes ?? 0m;
+    decimal netoMes = ViewBag.NetoMes ?? 0m;
+    string tabInicial = (ViewBag.TabInicial as string) ?? "resumen";
+
+    var mesLabel = System.Globalization.CultureInfo.CreateSpecificCulture("es-AR")
+        .DateTimeFormat.GetMonthName(DateTime.Today.Month);
+    mesLabel = char.ToUpper(mesLabel[0]) + mesLabel.Substring(1);
+}
+
+@section Estilos {
+    <link href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css" rel="stylesheet" />
+    <link href="https://cdn.datatables.net/buttons/2.2.2/css/buttons.dataTables.min.css" rel="stylesheet" />
+    <link href="https://cdn.datatables.net/fixedheader/3.2.2/css/fixedHeader.dataTables.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link href="~/css/Productora.css?v=5.2" rel="stylesheet" />
+    <link href="~/css/disenopantallas.css?v=8.2" rel="stylesheet" />
+    <link href="~/css/M_Generico.css?v=5.2" rel="stylesheet" />
+    <link href="~/css/Ventas.css?v=5.2" rel="stylesheet" />
+    <link href="~/css/Caja.css?v=5.2" rel="stylesheet" />
+    <link href="~/css/Gastos.css?v=5.2" rel="stylesheet" />
+    <link href="~/css/LibroDiario.css?v=6.2" rel="stylesheet" />
+    <link href="~/css/ClientesGestion.css?v=10.6" rel="stylesheet" />
+    <link href="~/css/FinanzasGestion.css?v=2.6" rel="stylesheet" />
+}
+
+<div class="cg-page fg-page">
+
+    <div class="cg-header cc-header cg-header-hero fg-header-hero shadow-lg rounded-4 p-3 mb-3">
+        <div class="d-flex align-items-center gap-3 flex-wrap w-100">
+            <span class="cc-badge fg-badge"><i class="fa fa-bank"></i></span>
+            <div class="flex-grow-1 min-w-0">
+                <h2 class="m-0 fw-800 text-truncate">Finanzas</h2>
+            </div>
+            <div class="fg-period-badge d-none d-md-flex">
+                <i class="fa fa-calendar"></i>
+                <span>@mesLabel @DateTime.Today.Year</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="card-glass p-0 cg-card fg-card">
+
+        <div class="rp-tabs-shell cg-tabs-shell fg-tabs-shell">
+            <ul class="nav rp-tabs-modern cg-tabs-scroll fg-tabs-scroll" id="fgTabsNav" role="tablist">
+                <li class="nav-item">
+                    <button class="nav-link active" type="button" data-fg-tab="resumen">
+                        <i class="fa fa-dashboard"></i><span>Resumen</span>
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link" type="button" data-fg-tab="efectivo">
+                        <i class="fa fa-money"></i><span>Efectivo</span>
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link" type="button" data-fg-tab="bancos">
+                        <i class="fa fa-university"></i><span>Bancos</span>
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link" type="button" data-fg-tab="tesoreria">
+                        <i class="fa fa-bank"></i><span>Tesoreria</span>
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link" type="button" data-fg-tab="gastos">
+                        <i class="fa fa-minus-circle"></i><span>Gastos</span>
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link" type="button" data-fg-tab="controlMensual">
+                        <i class="fa fa-calendar"></i><span>Control mensual</span>
+                    </button>
+                </li>
+                @* Libro diario oculto por ahora — reactivar quitando hidden *@
+                <li class="nav-item" hidden>
+                    <button class="nav-link" type="button" data-fg-tab="libroDiario">
+                        <i class="fa fa-book"></i><span>Libro diario</span>
+                    </button>
+                </li>
+            </ul>
+        </div>
+
+        <div class="cg-tab-content fg-tab-content">
+
+            <!-- RESUMEN -->
+            <section class="fg-section active" id="fgSectionResumen">
+
+                <div class="cg-cc-hero fg-hero-kpis mb-3">
+                    <div class="cg-cc-kpi cg-cc-kpi--neutral fg-kpi">
+                        <span class="cg-cc-kpi-icon"><i class="fa fa-money"></i></span>
+                        <div><span>Saldo efectivo</span><strong id="fgKpiSaldoEfectivo">@saldoEfectivo.ToString("C")</strong></div>
+                    </div>
+                    <div class="cg-cc-kpi cg-cc-kpi--haber fg-kpi">
+                        <span class="cg-cc-kpi-icon"><i class="fa fa-university"></i></span>
+                        <div><span>Saldo banco</span><strong id="fgKpiSaldoBanco">@saldoBanco.ToString("C")</strong></div>
+                    </div>
+                    <div class="cg-cc-kpi cg-cc-kpi--total fg-kpi fg-kpi--total">
+                        <span class="cg-cc-kpi-icon"><i class="fa fa-balance-scale"></i></span>
+                        <div><span>Saldo total</span><strong id="fgKpiSaldoTotal">@saldoTotal.ToString("C")</strong></div>
+                    </div>
+                    <div class="cg-cc-kpi cg-cc-kpi--debe fg-kpi">
+                        <span class="cg-cc-kpi-icon"><i class="fa fa-line-chart"></i></span>
+                        <div><span>Neto del mes</span><strong id="fgKpiNetoMes">@netoMes.ToString("C")</strong></div>
+                    </div>
+                </div>
+
+                <div class="fg-mini-kpis mb-3">
+                    <div class="fg-mini-kpi">
+                        <span><i class="fa fa-arrow-down text-success"></i> Ing. efectivo</span>
+                        <strong id="fgKpiIngEfectivo">@ingEfe.ToString("C")</strong>
+                    </div>
+                    <div class="fg-mini-kpi">
+                        <span><i class="fa fa-arrow-up text-danger"></i> Egr. efectivo</span>
+                        <strong id="fgKpiEgrEfectivo">@egrEfe.ToString("C")</strong>
+                    </div>
+                    <div class="fg-mini-kpi">
+                        <span><i class="fa fa-arrow-down text-success"></i> Ing. banco</span>
+                        <strong id="fgKpiIngBanco">@ingBan.ToString("C")</strong>
+                    </div>
+                    <div class="fg-mini-kpi">
+                        <span><i class="fa fa-arrow-up text-danger"></i> Egr. banco</span>
+                        <strong id="fgKpiEgrBanco">@egrBan.ToString("C")</strong>
+                    </div>
+                    <div class="fg-mini-kpi fg-mini-kpi--strong">
+                        <span><i class="fa fa-plus-square text-success"></i> Ingresos mes</span>
+                        <strong id="fgKpiIngresosMes">@ingMes.ToString("C")</strong>
+                    </div>
+                    <div class="fg-mini-kpi fg-mini-kpi--strong">
+                        <span><i class="fa fa-minus-square text-danger"></i> Egresos mes</span>
+                        <strong id="fgKpiEgresosMes">@egrMes.ToString("C")</strong>
+                    </div>
+                </div>
+
+                <div class="fg-dash-grid mb-3">
+                    <div class="fg-dash-card">
+                        <div class="fg-dash-title"><i class="fa fa-pie-chart"></i> Composicion de saldos</div>
+                        <div class="fg-dash-chart"><canvas id="fgChartSaldos"></canvas></div>
+                    </div>
+                    <div class="fg-dash-card">
+                        <div class="fg-dash-title"><i class="fa fa-bar-chart"></i> Flujo del mes</div>
+                        <div class="fg-dash-chart"><canvas id="fgChartFlujo"></canvas></div>
+                    </div>
+                    <div class="fg-dash-card fg-dash-card--wide">
+                        <div class="fg-dash-title"><i class="fa fa-minus-circle"></i> Gastos del mes por categoria</div>
+                        <div class="fg-dash-chart fg-dash-chart--wide"><canvas id="fgChartGastos"></canvas></div>
+                    </div>
+                </div>
+
+                <div class="fg-actions-grid">
+                    <button type="button" class="fg-action-card fg-action-card--gold" data-fg-goto="efectivo">
+                        <div class="fg-action-ico"><i class="fa fa-money"></i></div>
+                        <div class="fg-action-body">
+                            <div class="fg-action-title">Caja efectivo</div>
+                            <div class="fg-action-sub">Movimientos y gastos en efectivo</div>
+                        </div>
+                        <i class="fa fa-arrow-right fg-action-arrow"></i>
+                    </button>
+                    <button type="button" class="fg-action-card fg-action-card--blue" data-fg-goto="bancos">
+                        <div class="fg-action-ico"><i class="fa fa-university"></i></div>
+                        <div class="fg-action-body">
+                            <div class="fg-action-title">Bancos</div>
+                            <div class="fg-action-sub">Movimientos por cuenta bancaria</div>
+                        </div>
+                        <i class="fa fa-arrow-right fg-action-arrow"></i>
+                    </button>
+                    <button type="button" class="fg-action-card fg-action-card--indigo" data-fg-goto="tesoreria">
+                        <div class="fg-action-ico"><i class="fa fa-bank"></i></div>
+                        <div class="fg-action-body">
+                            <div class="fg-action-title">Tesoreria</div>
+                            <div class="fg-action-sub">Consolidado efectivo + banco</div>
+                        </div>
+                        <i class="fa fa-arrow-right fg-action-arrow"></i>
+                    </button>
+                    <button type="button" class="fg-action-card fg-action-card--rose" data-fg-goto="gastos">
+                        <div class="fg-action-ico"><i class="fa fa-minus-circle"></i></div>
+                        <div class="fg-action-body">
+                            <div class="fg-action-title">Gastos</div>
+                            <div class="fg-action-sub">ABM completo + analisis</div>
+                        </div>
+                        <i class="fa fa-arrow-right fg-action-arrow"></i>
+                    </button>
+                    <button type="button" class="fg-action-card fg-action-card--teal" data-fg-goto="controlMensual">
+                        <div class="fg-action-ico"><i class="fa fa-calendar"></i></div>
+                        <div class="fg-action-body">
+                            <div class="fg-action-title">Control mensual</div>
+                            <div class="fg-action-sub">Cuadro por mes: efectivo, bancos y gastos</div>
+                        </div>
+                        <i class="fa fa-arrow-right fg-action-arrow"></i>
+                    </button>
+                </div>
+
+            </section>
+
+            <!-- CAJA -->
+            <section class="fg-section" id="fgSectionCaja" hidden>
+                @await Html.PartialAsync("_CajaPanel")
+            </section>
+
+            <!-- GASTOS NATIVO -->
+            <section class="fg-section" id="fgSectionGastos" hidden>
+                @await Html.PartialAsync("_GastosPanel")
+            </section>
+
+            <!-- CONTROL MENSUAL -->
+            <section class="fg-section" id="fgSectionControl" hidden>
+                @await Html.PartialAsync("_ControlMensualPanel")
+            </section>
+
+            <!-- LIBRO NATIVO (oculto) -->
+            <section class="fg-section" id="fgSectionLibro" hidden>
+                @await Html.PartialAsync("_LibroDiarioPanel")
+            </section>
+
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
+    <script src="https://cdn.datatables.net/fixedheader/3.2.2/js/dataTables.fixedHeader.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="~/js/Utils/moment.js?v=5.2"></script>
+    <script src="~/js/Entities/M_Gastos.js?v=5.3"></script>
+    <script>
+        window.CAJA_HUB_MODE = true;
+        window.CAJA_MODO = 'TESORERIA';
+        window.LD_HUB_MODE = true;
+        window.FG_TAB_INICIAL = '@tabInicial';
+        window.FG_RESUMEN = {
+            saldoEfectivo: @saldoEfectivo.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            saldoBanco: @saldoBanco.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            ingEfe: @ingEfe.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            egrEfe: @egrEfe.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            ingBan: @ingBan.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            egrBan: @egrBan.ToString(System.Globalization.CultureInfo.InvariantCulture)
+        };
+    </script>
+    <script src="~/js/Caja.js?v=5.9"></script>
+    <script src="~/js/FinanzasGastos.js?v=1.4"></script>
+    <script src="~/js/LibroDiario.js?v=6.0"></script>
+    <script src="~/js/FinanzasControlMensual.js?v=1.1"></script>
+    <script src="~/js/FinanzasGestion.js?v=2.4"></script>
+}
