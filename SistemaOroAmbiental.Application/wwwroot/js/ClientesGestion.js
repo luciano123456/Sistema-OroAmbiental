@@ -411,6 +411,7 @@ async function cargarRecoleccionPrincipalCg() {
 
         CG.idDiaRecoleccionLegacy = r.IdDiaRecoleccion || 0;
         $("#cgEstId").val(r.IdEstablecimiento);
+        $("#cgIdEstablecimientoCliente").val(r.IdEstablecimientoCliente || "");
         $("#cgDiasHorarios").val(r.DiasHorarios || "");
 
         if (r.IdSemanaRecoleccion) $("#cgRecSemana").val(String(r.IdSemanaRecoleccion)).trigger("change");
@@ -437,7 +438,7 @@ async function cargarRecoleccionPrincipalCg() {
 }
 
 function limpiarRecoleccionCg() {
-    $("#cgEstId, #cgDiasHorarios, #cgOrdenRecorrido, #cgEstKilos").val("");
+    $("#cgEstId, #cgIdEstablecimientoCliente, #cgDiasHorarios, #cgOrdenRecorrido, #cgEstKilos").val("");
     CG_REC_CAMION_SELECTORS.forEach(sel => $(sel).val("").trigger("change"));
     ["#cgRecSemana", "#cgRecListaPrecio"].forEach(sel => $(sel).val("").trigger("change"));
     CG.idDiaRecoleccionLegacy = 0;
@@ -474,6 +475,7 @@ function obtenerModeloRecoleccionCg() {
     return {
         IdCliente: CG.id,
         IdEstablecimiento: parseInt($("#cgEstId").val(), 10) || 0,
+        IdEstablecimientoCliente: ($("#cgIdEstablecimientoCliente").val() || "").trim() || null,
         IdDiaRecoleccion: idDia || 0,
         IdSemanaRecoleccion: intOrNullCg("#cgRecSemana") || 0,
         IdCamion: idCamion,
@@ -490,7 +492,7 @@ function obtenerModeloRecoleccionCg() {
 function tieneDatosRecoleccionCg() {
     const m = obtenerModeloRecoleccionCg();
     return !!(m.DiasSemana?.length || m.IdSemanaRecoleccion || m.IdListaPrecio
-        || m.DiasHorarios || m.OrdenRecorrido || m.Kilos != null || m.IdTipoGenerador);
+        || m.DiasHorarios || m.IdEstablecimientoCliente || m.OrdenRecorrido || m.Kilos != null || m.IdTipoGenerador);
 }
 
 function marcarDiasEnRutaCg(items) {
@@ -1075,6 +1077,7 @@ async function cargarTabEstablecimientos() {
             eliminar: "eliminarEstablecimientoCg"
         }, "Establecimientos"),
         columnaGridId(),
+        { data: "IdEstablecimientoCliente", defaultContent: "" },
         { data: "Nombre" },
         { data: "Domicilio" },
         { data: "Localidad" },

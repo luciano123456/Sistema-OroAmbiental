@@ -49,6 +49,7 @@ namespace SistemaOroAmbiental.Application.Controllers
             {
                 Id = e.Id,
                 IdCliente = e.IdCliente,
+                IdEstablecimientoCliente = e.IdEstablecimientoCliente,
                 Nombre = e.Nombre,
                 Cuit = e.Cuit,
                 IdCondicionIva = e.IdCondicionIva,
@@ -101,6 +102,7 @@ namespace SistemaOroAmbiental.Application.Controllers
             {
                 e.Id,
                 e.IdCliente,
+                e.IdEstablecimientoCliente,
                 e.Nombre,
                 e.Cuit,
                 e.IdCondicionIva,
@@ -190,6 +192,7 @@ namespace SistemaOroAmbiental.Application.Controllers
             {
                 Id = model.Id,
                 IdCliente = model.IdCliente,
+                IdEstablecimientoCliente = NormalizarIdEstablecimientoCliente(model.IdEstablecimientoCliente),
                 Nombre = model.Nombre?.Trim() ?? "",
                 Cuit = model.Cuit,
                 IdCondicionIva = model.IdCondicionIva,
@@ -255,6 +258,13 @@ namespace SistemaOroAmbiental.Application.Controllers
             var hasta = ParseHora(model.HorarioRecoleccionHasta);
             if (hasta > desde) return hasta;
             return new TimeSpan(18, 0, 0);
+        }
+
+        private static string? NormalizarIdEstablecimientoCliente(string? valor)
+        {
+            if (string.IsNullOrWhiteSpace(valor)) return null;
+            var txt = valor.Trim();
+            return txt.Length > 8 ? txt[..8] : txt;
         }
     }
 }

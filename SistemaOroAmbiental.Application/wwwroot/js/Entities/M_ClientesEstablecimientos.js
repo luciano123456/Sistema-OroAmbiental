@@ -991,6 +991,7 @@
 
             this._setFieldValue("txtIdEst", modelo.Id || "");
             this._setFieldValue("txtNombreEst", modelo.Nombre || "");
+            this._setFieldValue("txtIdEstablecimientoClienteEst", modelo.IdEstablecimientoCliente || "");
             this._setFieldValue("txtCuitEst", modelo.Cuit || "");
             this._setFieldValue("txtCalleEst", modelo.Calle || modelo.Domicilio || "");
             this._setFieldValue("txtNumeroEst", modelo.Numero || "");
@@ -1103,6 +1104,7 @@
                 Id: id !== "" ? parseInt(id, 10) : 0,
                 IdCliente: this._getIntOrNull("cmbClienteEst"),
                 Nombre: this._getFieldValue("txtNombreEst"),
+                IdEstablecimientoCliente: (this._getFieldValue("txtIdEstablecimientoClienteEst") || "").trim() || null,
                 Cuit: this._getFieldValue("txtCuitEst") || null,
                 IdCondicionIva: this._getIntOrNull("cmbCondicionIvaEst"),
                 ImpuestoIva: !!this._getFieldValue("chkImpuestoIvaEst"),

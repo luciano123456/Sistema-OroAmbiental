@@ -605,6 +605,9 @@ public partial class SistemaOroAmbientalContext : DbContext
             entity.Property(e => e.Nombre)
                 .HasMaxLength(100)
                 .IsUnicode(false);
+            entity.Property(e => e.IdEstablecimientoCliente)
+                .HasMaxLength(8)
+                .IsUnicode(false);
 
             entity.HasOne(d => d.IdClienteNavigation).WithMany(p => p.ClientesEstablecimientos)
                 .HasForeignKey(d => d.IdCliente)

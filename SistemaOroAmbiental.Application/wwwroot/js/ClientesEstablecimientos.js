@@ -2,14 +2,15 @@ let gridEstablecimientos;
 let establecimientoModal;
 
 const columnConfigEst = [
-    { index: 2, filterType: 'select', fetchDataFunc: listaClientesFilterEst },
-    { index: 3, filterType: 'text' },
+    { index: 2, filterType: 'text' },
+    { index: 3, filterType: 'select', fetchDataFunc: listaClientesFilterEst },
     { index: 4, filterType: 'text' },
-    { index: 5, filterType: 'select', fetchDataFunc: listaProvinciasFilterEst },
-    { index: 6, filterType: 'select', fetchDataFunc: listaDiasFilterEst },
-    { index: 7, filterType: 'select', fetchDataFunc: listaSemanasFilterEst },
-    { index: 8, filterType: 'select', fetchDataFunc: listaListasPrecioFilterEst },
-    { index: 9, filterType: 'text' }
+    { index: 5, filterType: 'text' },
+    { index: 6, filterType: 'select', fetchDataFunc: listaProvinciasFilterEst },
+    { index: 7, filterType: 'select', fetchDataFunc: listaDiasFilterEst },
+    { index: 8, filterType: 'select', fetchDataFunc: listaSemanasFilterEst },
+    { index: 9, filterType: 'select', fetchDataFunc: listaListasPrecioFilterEst },
+    { index: 10, filterType: 'text' }
 ];
 
 registrarFiltrosGrilla('grd_Establecimientos', columnConfigEst, {
@@ -124,6 +125,7 @@ async function configurarDataTableEst(data) {
                     eliminar: "eliminarEstablecimiento"
                 }, "Clientes"),
                 columnaGridId(),
+                { data: "IdEstablecimientoCliente", defaultContent: "" },
                 { data: "Cliente" },
                 { data: "Nombre" },
                 { data: "Cuit" },

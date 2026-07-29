@@ -9,6 +9,8 @@ public partial class ClientesEstablecimiento
 
     public int IdCliente { get; set; }
 
+    public string? IdEstablecimientoCliente { get; set; }
+
     public string Nombre { get; set; } = null!;
 
     public string? Cuit { get; set; }

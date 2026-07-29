@@ -145,6 +145,7 @@ namespace SistemaOroAmbiental.Application.Controllers
             {
                 IdCliente = idCliente,
                 IdEstablecimiento = est.Id,
+                IdEstablecimientoCliente = est.IdEstablecimientoCliente,
                 IdDiaRecoleccion = est.IdDiaRecoleccion,
                 IdSemanaRecoleccion = est.IdSemanaRecoleccion,
                 IdCamion = est.IdCamion,
@@ -238,6 +239,7 @@ namespace SistemaOroAmbiental.Application.Controllers
             est.IdListaPrecio = model.IdListaPrecio > 0 ? model.IdListaPrecio : est.IdListaPrecio;
             est.IdCamion = idCamionPrincipal;
             est.DiasHorarios = string.IsNullOrWhiteSpace(model.DiasHorarios) ? null : model.DiasHorarios.Trim();
+            est.IdEstablecimientoCliente = NormalizarIdEstablecimientoClienteRec(model.IdEstablecimientoCliente);
 
             if (est.HorarioRecoleccionHasta <= est.HorarioRecoleccionDesde)
             {
@@ -353,6 +355,13 @@ namespace SistemaOroAmbiental.Application.Controllers
 
         private static string FormatearHoraRec(TimeSpan t)
             => $"{(int)t.TotalHours:D2}:{t.Minutes:D2}";
+
+        private static string? NormalizarIdEstablecimientoClienteRec(string? valor)
+        {
+            if (string.IsNullOrWhiteSpace(valor)) return null;
+            var txt = valor.Trim();
+            return txt.Length > 8 ? txt[..8] : txt;
+        }
 
         private static TimeSpan ParseHoraRec(string? valor)
         {

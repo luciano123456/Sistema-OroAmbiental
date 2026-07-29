@@ -56,6 +56,9 @@ namespace SistemaOroAmbiental.DAL.Repository
                 entity.HorarioRecoleccionDesde = model.HorarioRecoleccionDesde;
                 entity.HorarioRecoleccionHasta = model.HorarioRecoleccionHasta;
                 entity.DiasHorarios = string.IsNullOrWhiteSpace(model.DiasHorarios) ? null : model.DiasHorarios.Trim();
+                entity.IdEstablecimientoCliente = string.IsNullOrWhiteSpace(model.IdEstablecimientoCliente)
+                    ? null
+                    : model.IdEstablecimientoCliente.Trim();
                 entity.IdUsuarioModifica = model.IdUsuarioModifica;
                 entity.FechaUsuarioModifica = model.FechaUsuarioModifica;
 

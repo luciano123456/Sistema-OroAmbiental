@@ -342,9 +342,10 @@
                         </div>
                         <div id="cgRecoleccionBody" class="collapse">
                         <div class="row g-3 cg-form-section-body">
+                            <input type="hidden" id="cgEstId" />
                             <div class="col-md-3">
                                 <label class="form-label">Id establecimiento</label>
-                                <input id="cgEstId" class="form-control" readonly placeholder="-" />
+                                <input id="cgIdEstablecimientoCliente" class="form-control" maxlength="8" />
                             </div>
                             <div class="col-md-9">
                                 <label class="form-label">Tipo generador</label>
@@ -521,6 +522,7 @@
                             <tr>
                                 <th></th>
                                 <th>Id</th>
+                                <th>Id establecimiento</th>
                                 <th>Nombre</th>
                                 <th>Domicilio</th>
                                 <th>Localidad</th>
@@ -933,8 +935,8 @@
     </script>
     <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-    <script src="~/js/Entities/M_ClientesEstablecimientos.js?v=5.4"></script>
+    <script src="~/js/Entities/M_ClientesEstablecimientos.js?v=5.5"></script>
     <script src="~/js/ContratosDocumentos.js?v=5.3"></script>
     <script src="~/js/Entities/M_Contratos.js?v=5.4"></script>
-    <script src="~/js/ClientesGestion.js?v=11.5"></script>
+    <script src="~/js/ClientesGestion.js?v=11.6"></script>
 }

@@ -4,6 +4,7 @@ namespace SistemaOroAmbiental.Application.Models.ViewModels
     {
         public int IdCliente { get; set; }
         public int IdEstablecimiento { get; set; }
+        public string? IdEstablecimientoCliente { get; set; }
         public int IdDiaRecoleccion { get; set; }
         public int IdSemanaRecoleccion { get; set; }
         public int? IdCamion { get; set; }
