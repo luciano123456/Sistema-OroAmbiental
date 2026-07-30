@@ -264,7 +264,7 @@
             const guardarBtn = this._id("btnGuardarContrato");
             if (guardarBtn) {
                 guardarBtn.removeAttribute("onclick");
-                guardarBtn.addEventListener("click", () => this.guardar());
+                guardarBtn.addEventListener("click", () => withBusy(guardarBtn, () => this.guardar()));
             }
 
             const elimBtn = this._id("btnEliminarContrato");
@@ -457,7 +457,7 @@
             const btnGuardarRenov = this._id("btnGuardarRenovContrato");
             if (btnGuardarRenov) {
                 btnGuardarRenov.removeAttribute("onclick");
-                btnGuardarRenov.addEventListener("click", () => this.guardarRenovacion());
+                btnGuardarRenov.addEventListener("click", () => withBusy(btnGuardarRenov, () => this.guardarRenovacion()));
             }
 
             const btnNuevoRenov = this._id("btnNuevoRenovContrato");

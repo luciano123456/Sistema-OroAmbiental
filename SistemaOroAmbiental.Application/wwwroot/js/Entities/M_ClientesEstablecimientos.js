@@ -1550,7 +1550,7 @@
             const guardarBtn = this._id("btnGuardarEst");
             if (guardarBtn) {
                 guardarBtn.removeAttribute("onclick");
-                guardarBtn.addEventListener("click", () => this.guardar());
+                guardarBtn.addEventListener("click", () => withBusy(guardarBtn, () => this.guardar()));
             }
 
             const cerrarErrorBtn = this.modalEl.querySelector("#errorCamposEst .rp-error-close");
@@ -1628,11 +1628,13 @@
     }
 
     window.guardarEstablecimiento = function () {
-        return window.establecimientoModal?.guardar?.();
+        const btn = document.getElementById("btnGuardarEst");
+        return withBusy(btn, () => window.establecimientoModal?.guardar?.());
     };
 
     window.guardarContactoEstablecimiento = function () {
-        return window.establecimientoModal?.guardarContacto?.();
+        const btn = document.getElementById("btnGuardarContactoEst");
+        return withBusy(btn, () => window.establecimientoModal?.guardarContacto?.());
     };
 
     window.nuevoContactoEstablecimiento = function () {

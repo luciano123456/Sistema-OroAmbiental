@@ -13,12 +13,19 @@ const CG = {
     contratoModal: null,
     modalCobro: null,
     modalControlMensual: null,
+    modalContacto: null,
     controlAnual: null,
     controlFiltrado: null,
     controlAnio: new Date().getFullYear(),
     controlAnualError: false,
     cuentas: [],
     controlFiltros: { anios: [], meses: [] },
+    hubMesSel: null,
+    stockCliente: [],
+    entregasHub: [],
+    entregasDetalleCache: {},
+    entregaHubExpandida: 0,
+    secMoving: false,
     viewPref: "auto",
     listMeta: {},
     geoCache: { provincias: [] },
@@ -70,6 +77,7 @@ const API_CG = {
     cuentas: "/Cuentas/Lista",
     entregaNuevoModif: (idEntrega, idCliente) =>
         `/ClientesEntregas/NuevoModif?id=${idEntrega || 0}&idCliente=${idCliente || 0}`,
+    entregaEditarInfo: id => `/ClientesEntregas/EditarInfo?id=${id}`,
     controlAnual: (idCliente, anio) =>
         `/ClientesOperativo/ControlAnual?idCliente=${idCliente}&anio=${anio}`,
     controlMensual: (idCliente, anios, meses) => {
@@ -90,15 +98,9 @@ const API_CG = {
 };
 
 const CG_TAB_LABELS = {
-    contactos: "Contactos",
     establecimientos: "Establecimientos",
     contratos: "Contratos",
-    entregas: "Entregas",
-    recorridos: "Recorridos",
-    controlMensual: "Control mensual",
-    stockCliente: "Stock del cliente",
-    cuentaCorriente: "Cuenta corriente",
-    cobros: "Cobros"
+    cuentaCorriente: "Cuenta corriente"
 };
 
 const authCg = () => ({
@@ -112,6 +114,7 @@ $(document).ready(async () => {
     initModalesCg();
     wireEventosCg();
     initSelect2Cg();
+    initSeccionesPlegablesCg();
 
     await cargarCombosDatosCg();
     await cargarCombosRecoleccionCg();
@@ -120,11 +123,265 @@ $(document).ready(async () => {
         await cargarClienteCg(CG.id);
         await cargarRecoleccionPrincipalCg();
         habilitarTabsRelacionados(true);
+        await cargarHubDatosCg(true);
     } else {
         actualizarHeaderCg("Nuevo cliente", "Complete los datos y registre el cliente");
         habilitarTabsRelacionados(false);
+        $("#cgHubOperativo").prop("hidden", true);
+        $("#btnNuevoContactoCg").prop("disabled", true);
     }
 });
+
+const CG_SECCIONES_KEY = "cg.secciones.v1";
+const CG_ORDEN_KEY = "cg.secciones.orden.v1";
+const CG_SECCIONES_DEFAULT = {
+    identificacion: true,
+    domicilio: true,
+    comunicacion: true,
+    recoleccion: true,
+    controlPagos: true,
+    stockCliente: true,
+    planillaMensual: true,
+    entregasRecientes: true
+};
+const CG_ORDEN_DEFAULT = [
+    "identificacion",
+    "domicilio",
+    "comunicacion",
+    "recoleccion",
+    "controlPagos"
+];
+
+function leerSeccionesPlegablesCg() {
+    try {
+        const raw = localStorage.getItem(CG_SECCIONES_KEY);
+        if (!raw) return { ...CG_SECCIONES_DEFAULT };
+        const parsed = JSON.parse(raw);
+        return { ...CG_SECCIONES_DEFAULT, ...(parsed && typeof parsed === "object" ? parsed : {}) };
+    } catch {
+        return { ...CG_SECCIONES_DEFAULT };
+    }
+}
+
+function guardarSeccionPlegableCg(key, abierta) {
+    if (!key) return;
+    const state = leerSeccionesPlegablesCg();
+    state[key] = !!abierta;
+    try {
+        localStorage.setItem(CG_SECCIONES_KEY, JSON.stringify(state));
+    } catch (e) {
+        console.warn("No se pudo guardar preferencia de seccion:", e);
+    }
+}
+
+function leerOrdenSeccionesCg() {
+    try {
+        const raw = localStorage.getItem(CG_ORDEN_KEY);
+        if (!raw) return [...CG_ORDEN_DEFAULT];
+        const parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed) || !parsed.length) return [...CG_ORDEN_DEFAULT];
+        const clean = parsed.filter(k => CG_ORDEN_DEFAULT.includes(k));
+        CG_ORDEN_DEFAULT.forEach(k => {
+            if (!clean.includes(k)) clean.push(k);
+        });
+        return clean;
+    } catch {
+        return [...CG_ORDEN_DEFAULT];
+    }
+}
+
+function guardarOrdenSeccionesCg(orden) {
+    try {
+        localStorage.setItem(CG_ORDEN_KEY, JSON.stringify(orden));
+    } catch (e) {
+        console.warn("No se pudo guardar orden de secciones:", e);
+    }
+}
+
+function aplicarOrdenSeccionesCg() {
+    const $stack = $("#cgSeccionesStack");
+    if (!$stack.length) return;
+
+    const orden = leerOrdenSeccionesCg();
+    orden.forEach(key => {
+        const $sec = $stack.children(`[data-cg-section="${key}"][data-cg-sortable="1"]`);
+        if ($sec.length) $stack.append($sec);
+    });
+    actualizarBotonesOrdenCg();
+}
+
+function obtenerOrdenActualSeccionesCg() {
+    return $("#cgSeccionesStack")
+        .children("[data-cg-sortable='1']")
+        .map(function () { return $(this).data("cgSection"); })
+        .get()
+        .filter(Boolean);
+}
+
+function actualizarBotonesOrdenCg() {
+    const $items = $("#cgSeccionesStack").children("[data-cg-sortable='1']");
+    $items.each(function (idx) {
+        const $sec = $(this);
+        $sec.find("> .cg-form-section-toggle .cg-sec-move[data-dir='up'], > .cg-hub-head .cg-sec-move[data-dir='up']")
+            .prop("disabled", idx === 0);
+        $sec.find("> .cg-form-section-toggle .cg-sec-move[data-dir='down'], > .cg-hub-head .cg-sec-move[data-dir='down']")
+            .prop("disabled", idx === $items.length - 1);
+    });
+}
+
+function moverSeccionCg($sec, dir) {
+    if (!$sec?.length || CG.secMoving) return;
+    const $target = dir === "up" ? $sec.prevAll("[data-cg-sortable='1']").first() : $sec.nextAll("[data-cg-sortable='1']").first();
+    if (!$target.length) return;
+
+    const secEl = $sec[0];
+    const targetEl = $target[0];
+    const reduceMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
+    const firstSec = secEl.getBoundingClientRect();
+    const firstTarget = targetEl.getBoundingClientRect();
+
+    if (dir === "up") $sec.insertBefore($target);
+    else $sec.insertAfter($target);
+
+    guardarOrdenSeccionesCg(obtenerOrdenActualSeccionesCg());
+    actualizarBotonesOrdenCg();
+
+    if (reduceMotion) {
+        $sec.add($target).addClass("cg-sec-swap-pulse");
+        setTimeout(() => $sec.add($target).removeClass("cg-sec-swap-pulse"), 450);
+        return;
+    }
+
+    const lastSec = secEl.getBoundingClientRect();
+    const lastTarget = targetEl.getBoundingClientRect();
+    const dySec = firstSec.top - lastSec.top;
+    const dyTarget = firstTarget.top - lastTarget.top;
+
+    if (!dySec && !dyTarget) {
+        $sec.add($target).addClass("cg-sec-swap-pulse");
+        setTimeout(() => $sec.add($target).removeClass("cg-sec-swap-pulse"), 450);
+        return;
+    }
+
+    CG.secMoving = true;
+    let done = false;
+    let fallback = 0;
+
+    $sec.add($target).addClass("cg-sec-swap-active");
+
+    secEl.style.transition = "none";
+    targetEl.style.transition = "none";
+    secEl.style.transform = `translateY(${dySec}px)`;
+    targetEl.style.transform = `translateY(${dyTarget}px)`;
+    void secEl.offsetHeight;
+
+    const cleanup = () => {
+        if (done) return;
+        done = true;
+        clearTimeout(fallback);
+        secEl.removeEventListener("transitionend", onEnd);
+        secEl.style.transition = "";
+        targetEl.style.transition = "";
+        secEl.style.transform = "";
+        targetEl.style.transform = "";
+        $sec.add($target).removeClass("cg-sec-swap-active cg-sec-swap-pulse");
+        CG.secMoving = false;
+        actualizarBotonesOrdenCg();
+    };
+
+    const onEnd = (ev) => {
+        if (ev.target !== secEl || ev.propertyName !== "transform") return;
+        cleanup();
+    };
+
+    requestAnimationFrame(() => {
+        secEl.style.transition = "transform 0.32s cubic-bezier(0.22, 1, 0.36, 1)";
+        targetEl.style.transition = "transform 0.32s cubic-bezier(0.22, 1, 0.36, 1)";
+        secEl.style.transform = "translateY(0)";
+        targetEl.style.transform = "translateY(0)";
+        $sec.add($target).addClass("cg-sec-swap-pulse");
+        secEl.addEventListener("transitionend", onEnd);
+    });
+
+    fallback = setTimeout(cleanup, 450);
+}
+
+function initSeccionesPlegablesCg() {
+    const state = leerSeccionesPlegablesCg();
+
+    $("[data-cg-section]").each(function () {
+        const key = $(this).data("cgSection");
+        if (!key) return;
+
+        const $toggle = $(this).find("> .cg-form-section-toggle, > .cg-hub-head.cg-form-section-toggle").first();
+        const targetSel = $toggle.attr("data-cg-collapse-target") || $toggle.attr("data-bs-target");
+        if (!targetSel) return;
+
+        const $body = $(targetSel);
+        if (!$body.length) return;
+
+        const abierta = state[key] !== false;
+        $toggle.attr("aria-expanded", abierta ? "true" : "false");
+        $body.toggleClass("show", abierta);
+        $(this).toggleClass("is-collapsed", !abierta);
+    });
+
+    // Sub-bloques del hub (stock / planilla / entregas)
+    $("#cgHubOperativo .cg-hub-block-title.cg-form-section-toggle").each(function () {
+        const $toggle = $(this);
+        const $section = $toggle.closest("[data-cg-section]");
+        const key = $section.data("cgSection");
+        const targetSel = $toggle.attr("data-cg-collapse-target");
+        if (!key || !targetSel) return;
+        const $body = $(targetSel);
+        const abierta = state[key] !== false;
+        $toggle.attr("aria-expanded", abierta ? "true" : "false");
+        $body.toggleClass("show", abierta);
+        $section.toggleClass("is-collapsed", !abierta);
+    });
+
+    aplicarOrdenSeccionesCg();
+
+    $(document).on("click", ".cg-form-section-toggle[data-cg-collapse-target]", function (e) {
+        if ($(e.target).closest("a, button, input, select, textarea, .cg-sec-reorder, .cg-sec-move").length) {
+            return;
+        }
+        e.preventDefault();
+        toggleSeccionCollapseCg($(this));
+    });
+
+    $(document).on("click", "#cgSeccionesStack .cg-sec-move", function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        const $sec = $(this).closest("[data-cg-sortable='1']");
+        moverSeccionCg($sec, $(this).data("dir") === "up" ? "up" : "down");
+    });
+}
+
+function toggleSeccionCollapseCg($toggle) {
+    const targetSel = $toggle.attr("data-cg-collapse-target");
+    if (!targetSel) return;
+    const $body = $(targetSel);
+    if (!$body.length) return;
+
+    const $section = $toggle.closest("[data-cg-section]");
+    const key = $section.data("cgSection");
+    const abrir = !$body.hasClass("show");
+
+    $body.toggleClass("show", abrir);
+    $toggle.attr("aria-expanded", abrir ? "true" : "false");
+    if ($section.length) {
+        $section.toggleClass("is-collapsed", !abrir);
+        if (key) guardarSeccionPlegableCg(key, abrir);
+        if ($section.is("[data-cg-sortable='1']")) actualizarBotonesOrdenCg();
+    }
+
+    if (abrir && targetSel === "#cgRecoleccionBody") {
+        ["#cgTipoGenerador", ...CG_REC_CAMION_SELECTORS, "#cgRecSemana", "#cgRecListaPrecio"]
+            .forEach(sel => refreshSelect2Cg($(sel)));
+    }
+}
 
 function initModalesCg() {
     if (typeof initEstablecimientoModal === "function") {
@@ -146,11 +403,15 @@ function initModalesCg() {
             token: token,
             onSaved: async () => {
                 CG.tabsLoaded.contratos = false;
-                if ($("#tabContratos").hasClass("active")) await cargarTabContratos();
+                if ($("#tabContratos").hasClass("active") || $("#tabContratos").hasClass("show")) {
+                    await cargarTabContratos();
+                }
             },
             onDeleted: async () => {
                 CG.tabsLoaded.contratos = false;
-                if ($("#tabContratos").hasClass("active")) await cargarTabContratos();
+                if ($("#tabContratos").hasClass("active") || $("#tabContratos").hasClass("show")) {
+                    await cargarTabContratos();
+                }
             }
         });
     }
@@ -161,12 +422,15 @@ function initModalesCg() {
     const modalCmEl = document.getElementById("modalControlMensualCg");
     if (modalCmEl) CG.modalControlMensual = new bootstrap.Modal(modalCmEl);
 
+    const modalContactoEl = document.getElementById("modalContactoCg");
+    if (modalContactoEl) CG.modalContacto = new bootstrap.Modal(modalContactoEl);
+
     $("#cgCmSinEntrega").on("change", syncSinEntregaUiCg);
 }
 
 function wireEventosCg() {
-    $("#btnGuardarClienteCg").on("click", guardarClienteCg);
-    $("#btnEliminarClienteCg").on("click", eliminarClienteCg);
+    $("#btnGuardarClienteCg").on("click", busyHandler(guardarClienteCg));
+    $("#btnEliminarClienteCg").on("click", busyHandler(eliminarClienteCg));
     $("#btnCerrarErrorCg").on("click", cerrarErrorCg);
 
     $("#cgActivo").on("change", function () {
@@ -179,11 +443,6 @@ function wireEventosCg() {
 
     $("#cgProvincia").on("change", actualizarCodigoProvinciaCg);
 
-    $("#cgRecoleccionBody").on("shown.bs.collapse", function () {
-        ["#cgTipoGenerador", ...CG_REC_CAMION_SELECTORS, "#cgRecSemana", "#cgRecListaPrecio"]
-            .forEach(sel => refreshSelect2Cg($(sel)));
-    });
-
     $('button[data-cg-tab]').on("shown.bs.tab", async function () {
         const tab = $(this).data("cgTab");
         await cargarTabCg(tab);
@@ -192,8 +451,8 @@ function wireEventosCg() {
         }
     });
 
-    $("#btnGuardarContactoCg").on("click", guardarContactoCg);
-    $("#btnNuevoContactoCg").on("click", limpiarFormContactoCg);
+    $("#btnGuardarContactoCg").on("click", busyHandler(guardarContactoCg));
+    $("#btnNuevoContactoCg").on("click", abrirModalNuevoContactoCg);
 
     $("#cgListaContactos").on("click", function (e) {
         const btnDel = e.target.closest(".btn-eliminar-contacto-cg");
@@ -202,18 +461,21 @@ function wireEventosCg() {
             eliminarContactoCg(Number(btnDel.dataset.id));
             return;
         }
-        const item = e.target.closest(".rp-contact-item");
-        if (item) seleccionarContactoCg(Number(item.dataset.id));
+        const btnEdit = e.target.closest(".btn-editar-contacto-cg");
+        if (btnEdit) {
+            e.stopPropagation();
+            abrirModalEditarContactoCg(Number(btnEdit.dataset.id));
+            return;
+        }
     });
 
     $("#btnNuevoEstablecimientoCg, #btnNuevoEstTab").on("click", abrirNuevoEstablecimientoCg);
     $("#btnNuevoContratoCg, #btnNuevoContratoTab").on("click", abrirNuevoContratoCg);
     $("#btnRegistrarCobroCg, #btnRegistrarCobroTab").on("click", abrirModalCobroCg);
-    $("#btnConfirmarCobroCg").on("click", confirmarCobroCg);
+    $("#btnConfirmarCobroCg").on("click", busyHandler(confirmarCobroCg));
     $("#btnRefreshCcCg").on("click", () => cargarTabCuentaCorriente(true));
-    $("#btnRefreshControlMensual").on("click", () => cargarTabControlMensual(true));
-    $("#btnRefreshStockCliente").on("click", () => cargarTabStockCliente(true));
-    $("#tabControlMensual").on("click", ".cg-cm-chip", function () {
+    $("#btnRefreshControlMensual").on("click", () => cargarHubDatosCg(true));
+    $("#cgHubOperativo").on("click", ".cg-cm-chip", function () {
         toggleFiltroControlCg($(this).data("tipo"), parseInt($(this).data("val"), 10));
     });
     $(".cg-preset-meses").on("click", function () {
@@ -224,9 +486,30 @@ function wireEventosCg() {
         aplicarPresetAniosRecientesCg();
         cargarTabControlMensual(true);
     });
-    $("#btnGuardarControlMensualCg").on("click", guardarControlMensualCg);
+    $("#btnGuardarControlMensualCg").on("click", busyHandler(guardarControlMensualCg));
     $("#cgControlMensualBody").on("click", "tr[data-mes]", function () {
-        abrirModalControlMensual(Number($(this).data("anio")), Number($(this).data("mes")));
+        const anio = Number($(this).data("anio"));
+        const mes = Number($(this).data("mes"));
+        mostrarDetalleMesHub(anio, mes);
+    });
+    $("#cgCards_controlMensual").on("click", "article[data-mes]", function () {
+        const anio = Number($(this).data("anio"));
+        const mes = Number($(this).data("mes"));
+        mostrarDetalleMesHub(anio, mes);
+    });
+    $("#btnCerrarMesDetail").on("click", () => {
+        $("#cgHubMesDetail").prop("hidden", true);
+        CG.hubMesSel = null;
+        $("#cgControlMensualBody tr").removeClass("is-selected");
+    });
+    $("#btnEditarMesHub").on("click", () => {
+        if (CG.hubMesSel) abrirModalControlMensual(CG.hubMesSel.anio, CG.hubMesSel.mes);
+    });
+
+    $("#cgHubEntregasList").on("click", ".cg-hub-entrega-toggle", function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        toggleHubEntregaDetalle(Number($(this).closest(".cg-hub-entrega-row").data("id")));
     });
 
     initFiltrosControlCg();
@@ -604,16 +887,17 @@ function actualizarHeaderCg(titulo, subtitulo) {
 function actualizarEnlacesAccionCg() {
     if (CG.id <= 0) return;
     const urlEntrega = API_CG.entregaNuevoModif(0, CG.id);
-    $("#btnNuevaEntregaCg, #btnNuevaEntregaTab").attr("href", urlEntrega).prop("hidden", false);
+    $("#btnNuevaEntregaCg, #btnNuevaEntregaHub")
+        .attr("href", urlEntrega)
+        .removeAttr("hidden")
+        .prop("hidden", false);
     $("#btnNuevoEstablecimientoCg, #btnNuevoContratoCg").prop("hidden", false);
+    $("#btnNuevoContactoCg").prop("disabled", false);
+    $("#cgHubOperativo").prop("hidden", false);
 }
 
 function habilitarTabsRelacionados(habilitar) {
-    const tabs = [
-        "contactos", "establecimientos", "contratos", "entregas",
-        "recorridos", "controlMensual", "stockCliente",
-        "cuentaCorriente", "cobros"
-    ];
+    const tabs = ["establecimientos", "contratos", "cuentaCorriente"];
     tabs.forEach(t => {
         $(`button[data-cg-tab="${t}"]`).prop("disabled", !habilitar);
     });
@@ -817,19 +1101,16 @@ function cerrarErrorCg() {
 
 async function cargarTabCg(tab) {
     if (CG.id <= 0) return;
-    if (CG.tabsLoaded[tab] && tab !== "cuentaCorriente" && tab !== "controlMensual") return;
+    if (CG.tabsLoaded[tab] && tab !== "cuentaCorriente") return;
 
     try {
         switch (tab) {
-            case "contactos": await cargarTabContactos(); break;
             case "establecimientos": await cargarTabEstablecimientos(); break;
             case "contratos": await cargarTabContratos(); break;
-            case "entregas": await cargarTabEntregas(); break;
-            case "recorridos": await cargarTabRecorridos(); break;
-            case "controlMensual": await cargarTabControlMensual(true); break;
-            case "stockCliente": await cargarTabStockCliente(); break;
-            case "cuentaCorriente": await cargarTabCuentaCorriente(); break;
-            case "cobros": await cargarTabCobros(); break;
+            case "cuentaCorriente":
+                await cargarTabCuentaCorriente(true);
+                await cargarTabCobros();
+                break;
         }
     } catch (e) {
         console.error(`Error cargando tab ${tab}:`, e);
@@ -840,11 +1121,22 @@ async function cargarTabCg(tab) {
     }
 }
 
+async function cargarHubDatosCg(force) {
+    if (CG.id <= 0) return;
+    $("#cgHubOperativo").prop("hidden", false);
+    $("#btnNuevoContactoCg").prop("disabled", false);
+    await Promise.all([
+        cargarTabContactos(),
+        cargarTabControlMensual(!!force),
+        cargarHubStockCg(!!force),
+        cargarHubEntregasCg(!!force)
+    ]);
+}
+
 /* ---- Contactos ---- */
 
 async function cargarTabContactos() {
     CG.contactos = await fetchJsonCg(API_CG.contactosLista(CG.id), { headers: authCg() }) || [];
-    limpiarFormContactoCg();
     renderContactosCg();
     CG.tabsLoaded.contactos = true;
 }
@@ -855,25 +1147,29 @@ function renderContactosCg() {
     const cont = $("#cgListaContactos");
 
     if (!items.length) {
-        cont.html(`<div class="rp-contact-empty">No hay contactos cargados.</div>`);
+        cont.html(`<div class="cg-contact-empty">Sin personas de contacto. Agrega quien atiende en planta o cobranza.</div>`);
         return;
     }
 
     cont.html(items.map(c => {
-        const meta = [c.Telefono, c.Email].filter(Boolean).join(" · ");
-        const active = c.Id === CG.contactoSelId ? " active" : "";
-        return `<div class="rp-contact-item${active}" data-id="${c.Id}">
-            <div class="flex-grow-1">
-                <div class="rp-contact-item-main"><strong>${escapeCg(c.Nombre)}</strong>
-                ${c.Puesto ? `<small>${escapeCg(c.Puesto)}</small>` : ""}</div>
-                ${meta ? `<div class="rp-contact-item-meta">${escapeCg(meta)}</div>` : ""}
+        const phones = [c.Telefono, c.TelefonoAlt].filter(Boolean).join(" · ");
+        return `<article class="cg-contact-card" data-id="${c.Id}">
+            <div class="cg-contact-card-avatar"><i class="fa fa-user"></i></div>
+            <div class="cg-contact-card-body">
+                <div class="cg-contact-card-name">${escapeCg(c.Nombre)}</div>
+                ${c.Puesto ? `<div class="cg-contact-card-role">${escapeCg(c.Puesto)}</div>` : ""}
+                ${phones ? `<div class="cg-contact-card-meta"><i class="fa fa-phone"></i> ${escapeCg(phones)}</div>` : ""}
+                ${c.Email ? `<div class="cg-contact-card-meta"><i class="fa fa-envelope"></i> ${escapeCg(c.Email)}</div>` : ""}
             </div>
-            <div class="rp-contact-item-actions">
-                <button type="button" class="btn btn-sm btn-outline-danger btn-eliminar-contacto-cg" data-id="${c.Id}">
+            <div class="cg-contact-card-actions">
+                <button type="button" class="btn btn-sm btn-outline-light btn-editar-contacto-cg" data-id="${c.Id}" title="Editar">
+                    <i class="fa fa-pencil"></i>
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-danger btn-eliminar-contacto-cg" data-id="${c.Id}" title="Eliminar">
                     <i class="fa fa-trash"></i>
                 </button>
             </div>
-        </div>`;
+        </article>`;
     }).join(""));
 }
 
@@ -885,10 +1181,18 @@ function limpiarFormContactoCg() {
     CG.contactoSelId = 0;
     $("#cgContactoId, #cgContactoNombre, #cgContactoPuesto, #cgContactoTelefono, #cgContactoTelefonoAlt, #cgContactoEmail").val("");
     $("#cgContactoFormTitulo").text("Nuevo contacto");
-    renderContactosCg();
 }
 
-function seleccionarContactoCg(id) {
+function abrirModalNuevoContactoCg() {
+    if (CG.id <= 0) {
+        errorModal("Guarda el cliente antes de agregar contactos.");
+        return;
+    }
+    limpiarFormContactoCg();
+    CG.modalContacto?.show();
+}
+
+function abrirModalEditarContactoCg(id) {
     const c = (CG.contactos || []).find(x => x.Id === id);
     if (!c) return;
     CG.contactoSelId = id;
@@ -899,7 +1203,11 @@ function seleccionarContactoCg(id) {
     $("#cgContactoTelefonoAlt").val(c.TelefonoAlt || "");
     $("#cgContactoEmail").val(c.Email || "");
     $("#cgContactoFormTitulo").text("Editar contacto");
-    renderContactosCg();
+    CG.modalContacto?.show();
+}
+
+function seleccionarContactoCg(id) {
+    abrirModalEditarContactoCg(id);
 }
 
 async function guardarContactoCg() {
@@ -926,9 +1234,9 @@ async function guardarContactoCg() {
 
     if (!data?.valor) { errorModal(data?.mensaje || "No se pudo guardar."); return; }
     exitoModal(data.mensaje || "Contacto guardado.");
+    CG.modalContacto?.hide();
     CG.tabsLoaded.contactos = false;
     await cargarTabContactos();
-    if (esNuevo && data.id) seleccionarContactoCg(data.id);
 }
 
 async function eliminarContactoCg(id) {
@@ -1013,9 +1321,11 @@ async function abrirNuevoContratoCg() {
     window.jQuery("#cmbClienteContrato").val(String(CG.id)).trigger("change");
 }
 
-/* ---- Entregas ---- */
+/* ---- Entregas (hub) ---- */
 
-async function cargarTabEntregas() {
+async function cargarHubEntregasCg(force) {
+    if (force) CG.tabsLoaded.entregas = false;
+
     const hoy = new Date();
     const desde = new Date();
     desde.setFullYear(desde.getFullYear() - 2);
@@ -1032,31 +1342,166 @@ async function cargarTabEntregas() {
         body: JSON.stringify(body)
     }) || [];
 
-    configurarGrillaCg("entregas", "#grd_EntregasCg", data, [
-        columnaGridAcciones(null, "Entregas", (id) =>
-            `<a class="btn btn-sm btn-outline-light" href="${API_CG.entregaNuevoModif(id, CG.id)}" title="Editar"><i class="fa fa-pencil"></i></a>`),
-        columnaGridId(),
-        { data: "Fecha", render: d => formatearFechaCortaCg(d) },
-        { data: "Establecimiento" },
-        { data: "Estado", defaultContent: "" },
-        { data: "ImporteTotal", render: d => fmtMoneyCg(d) },
-        { data: "ImporteAbonado", render: d => fmtMoneyCg(d) },
-        { data: "Saldo", render: d => fmtMoneyCg(d) }
-    ]);
+    CG.entregasHub = Array.isArray(data) ? data : [];
+    if (force) {
+        CG.entregasDetalleCache = {};
+        CG.entregaHubExpandida = 0;
+    }
+    renderHubEntregasCg(CG.entregasHub);
     CG.tabsLoaded.entregas = true;
 }
 
-/* ---- Recorridos ---- */
+function renderHubEntregasCg(items) {
+    const cont = $("#cgHubEntregasList");
+    if (!cont.length) return;
+
+    const list = (items || [])
+        .slice()
+        .sort((a, b) => new Date(b.Fecha) - new Date(a.Fecha))
+        .slice(0, 12);
+
+    if (!list.length) {
+        cont.html(`<div class="cg-hub-stock-empty">Sin entregas cargadas para este cliente.</div>`);
+        return;
+    }
+
+    cont.html(list.map(e => {
+        const saldo = Number(e.Saldo) || 0;
+        const saldoCls = saldo > 0 ? "is-deuda" : (saldo < 0 ? "is-ok" : "");
+        const open = CG.entregaHubExpandida === e.Id;
+        const cached = CG.entregasDetalleCache[e.Id];
+        return `<div class="cg-hub-entrega-row ${saldoCls}${open ? " is-open" : ""}" data-id="${e.Id}">
+            <div class="cg-hub-entrega-item">
+                <div class="cg-hub-entrega-main">
+                    <strong>#${e.Id}</strong>
+                    <span>${formatearFechaCortaCg(e.Fecha)}</span>
+                    <small>${escapeCg(e.Establecimiento || e.Estado || "")}</small>
+                </div>
+                <div class="cg-hub-entrega-money">
+                    <span>Total ${fmtMoneyCg(e.ImporteTotal)}</span>
+                    <strong>Saldo ${fmtMoneyCg(e.Saldo)}</strong>
+                </div>
+                <button type="button" class="cg-hub-entrega-toggle" title="${open ? "Ocultar detalle" : "Ver productos"}" aria-expanded="${open}">
+                    <i class="fa fa-chevron-${open ? "down" : "right"}"></i>
+                </button>
+            </div>
+            <div class="cg-hub-entrega-detail"${open ? "" : " hidden"}>
+                ${open ? (cached ? buildHubEntregaDetalleHtml(cached) : `<div class="cg-hub-entrega-loading"><i class="fa fa-spinner fa-spin"></i> Cargando...</div>`) : ""}
+            </div>
+        </div>`;
+    }).join(""));
+}
+
+async function toggleHubEntregaDetalle(idEntrega) {
+    if (!idEntrega) return;
+
+    if (CG.entregaHubExpandida === idEntrega) {
+        CG.entregaHubExpandida = 0;
+        renderHubEntregasCg(CG.entregasHub);
+        return;
+    }
+
+    CG.entregaHubExpandida = idEntrega;
+    renderHubEntregasCg(CG.entregasHub);
+
+    if (!CG.entregasDetalleCache[idEntrega]) {
+        try {
+            const det = await fetchJsonCg(API_CG.entregaEditarInfo(idEntrega), { headers: authCg() });
+            CG.entregasDetalleCache[idEntrega] = det;
+        } catch (err) {
+            console.warn("No se pudo cargar detalle de entrega:", err);
+            CG.entregasDetalleCache[idEntrega] = { _error: true };
+        }
+        if (CG.entregaHubExpandida === idEntrega) {
+            renderHubEntregasCg(CG.entregasHub);
+        }
+    }
+}
+
+function tipoMovimientoEntregaLabel(tipo) {
+    const t = Number(tipo) || 0;
+    if (t === 2) return "Retiro";
+    if (t === 3) return "Recuperado";
+    return "Entrega";
+}
+
+function buildHubEntregaDetalleHtml(det) {
+    if (!det || det._error) {
+        return `<div class="cg-hub-stock-empty">No se pudo cargar el detalle de la entrega.</div>`;
+    }
+
+    const lineas = Array.isArray(det.Lineas) ? det.Lineas : [];
+    const recuperadas = Array.isArray(det.LineasRecuperadas) ? det.LineasRecuperadas : [];
+    const meta = [
+        det.Estado ? `Estado: ${escapeCg(det.Estado)}` : "",
+        det.Camion ? `Unidad: ${escapeCg(det.Camion)}` : "",
+        det.Establecimiento ? `Est.: ${escapeCg(det.Establecimiento)}` : ""
+    ].filter(Boolean).join(" · ");
+
+    let body = "";
+    if (!lineas.length && !recuperadas.length) {
+        body = `<div class="cg-hub-stock-empty">Esta entrega no tiene productos cargados.</div>`;
+    } else {
+        const rows = [
+            ...lineas.map(l => ({ ...l, _tipoLabel: tipoMovimientoEntregaLabel(l.TipoMovimiento) })),
+            ...recuperadas.map(l => ({ ...l, _tipoLabel: "Recuperado" }))
+        ];
+        body = `<div class="cg-hub-prod-table-wrap">
+            <table class="cg-hub-prod-table">
+                <thead>
+                    <tr>
+                        <th>Tipo</th>
+                        <th>Producto</th>
+                        <th class="text-end">Cant.</th>
+                        <th class="text-end">P. unit.</th>
+                        <th class="text-end">Subtotal</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${rows.map(l => `<tr>
+                        <td><span class="cg-hub-tipo-badge cg-hub-tipo-${(l._tipoLabel || "").toLowerCase()}">${escapeCg(l._tipoLabel)}</span></td>
+                        <td>${escapeCg(l.Producto)}${l.Medida ? ` <small class="text-muted">(${escapeCg(l.Medida)})</small>` : ""}</td>
+                        <td class="text-end">${fmtQtyCg(l.Cantidad)}</td>
+                        <td class="text-end">${fmtMoneyCg(l.PrecioVenta)}</td>
+                        <td class="text-end">${fmtMoneyCg(l.SubtotalFinal)}</td>
+                    </tr>`).join("")}
+                </tbody>
+            </table>
+        </div>`;
+    }
+
+    const notas = [det.NotaCliente, det.NotaInterna].filter(Boolean);
+    return `<div class="cg-hub-entrega-detail-inner">
+        ${meta ? `<div class="cg-hub-entrega-meta">${meta}</div>` : ""}
+        ${body}
+        <div class="cg-hub-entrega-foot">
+            <div class="cg-hub-entrega-totales">
+                <span>Abonado ${fmtMoneyCg(det.ImporteAbonado)}</span>
+                <strong>Total ${fmtMoneyCg(det.ImporteTotal)}</strong>
+            </div>
+            <a class="cg-btn cg-btn--ghost cg-btn--sm" href="${API_CG.entregaNuevoModif(det.Id, CG.id)}">
+                <i class="fa fa-external-link"></i> Abrir entrega
+            </a>
+        </div>
+        ${notas.length ? `<div class="cg-hub-entrega-notas">${notas.map(n => `<div>${escapeCg(n)}</div>`).join("")}</div>` : ""}
+    </div>`;
+}
+
+async function cargarTabEntregas() {
+    await cargarHubEntregasCg(true);
+}
+
+/* ---- Recorridos (inline en recoleccion) ---- */
 
 async function cargarTabRecorridos() {
     try {
         const items = await fetchJsonCg(API_CG.recorridosPorCliente(CG.id), { headers: authCg() });
         marcarDiasEnRutaCg(items || []);
-        renderRecorridosCg(items || [], false);
+        renderRecorridosCg(items || [], false, "#cgRecorridosAsignados");
     } catch (e) {
         console.warn("Recorridos no disponibles:", e);
         marcarDiasEnRutaCg([]);
-        renderRecorridosCg([], true);
+        renderRecorridosCg([], true, "#cgRecorridosAsignados");
     }
     CG.tabsLoaded.recorridos = true;
 }
@@ -1273,7 +1718,11 @@ function renderControlMensualCg(data) {
     const mostrarAnio = anios.length > 1 || aniosUnicos.length > 1;
 
     $("#cgControlStockActual").text(fmtQtyCg(data?.StockActual));
-    $("#cgControlSaldoAnual").text(fmtMoneyCg(data?.TotalSaldo));
+    const totalSaldo = Number(data?.TotalSaldo) || 0;
+    $("#cgControlSaldoAnual")
+        .text(fmtMoneyCg(totalSaldo))
+        .removeClass("rp-money-pos rp-money-neg rp-money-zero")
+        .addClass(typeof clsSaldoMoney === "function" ? clsSaldoMoney(totalSaldo) : "");
     $("#cgControlError").toggleClass("d-none", !(data?.DatosParciales || CG.controlAnualError));
     $("#cgControlCount").text(filas.length
         ? String(filas.length)
@@ -1292,9 +1741,12 @@ function renderControlMensualCg(data) {
         const rowClass = m.SinEntrega ? "cg-cm-sin-entrega" : "";
         const anio = m.Anio || CG.controlAnio;
         const saldo = Number(m.Saldo) || 0;
-        const saldoClass = saldo > 0 ? "cg-cm-saldo-neg" : (saldo < 0 ? "cg-cm-saldo-pos" : "cg-cm-saldo-cero");
+        const saldoClass = typeof clsSaldoMoney === "function"
+            ? clsSaldoMoney(saldo)
+            : (saldo > 0 ? "cg-cm-saldo-pos" : (saldo < 0 ? "cg-cm-saldo-neg" : "cg-cm-saldo-cero"));
+        const sel = CG.hubMesSel && CG.hubMesSel.anio === anio && CG.hubMesSel.mes === m.Mes ? " is-selected" : "";
 
-        return `<tr class="${rowClass}" data-anio="${anio}" data-mes="${m.Mes}">
+        return `<tr class="${rowClass}${sel}" data-anio="${anio}" data-mes="${m.Mes}">
             <td class="cg-col-anio cg-cm-mes">${anio}</td>
             <td class="cg-cm-mes">${escapeCg(m.MesNombre)}</td>
             <td class="cg-cm-date">${formatearFechaCortaCg(m.FechaVisita)}</td>
@@ -1316,6 +1768,63 @@ function renderControlMensualCg(data) {
     }).join(""));
 
     renderControlMensualCardsCg(filas, mostrarAnio);
+
+    if (CG.hubMesSel) {
+        const still = filas.find(f => Number(f.Anio || CG.controlAnio) === CG.hubMesSel.anio && Number(f.Mes) === CG.hubMesSel.mes);
+        if (still) mostrarDetalleMesHub(CG.hubMesSel.anio, CG.hubMesSel.mes, true);
+        else {
+            $("#cgHubMesDetail").prop("hidden", true);
+            CG.hubMesSel = null;
+        }
+    }
+}
+
+function mostrarDetalleMesHub(anio, mes, keepScroll) {
+    const filas = CG.controlFiltrado?.Filas || [];
+    const m = filas.find(x => Number(x.Mes) === mes && Number(x.Anio || CG.controlAnio) === anio);
+    if (!m) return;
+
+    CG.hubMesSel = { anio, mes };
+    $("#cgControlMensualBody tr").removeClass("is-selected");
+    $(`#cgControlMensualBody tr[data-anio="${anio}"][data-mes="${mes}"]`).addClass("is-selected");
+
+    $("#cgHubMesDetailTitulo").text(`${m.MesNombre} ${anio} — productos`);
+    const prods = Array.isArray(m.Productos) ? m.Productos : [];
+    const wrap = $("#cgHubMesProductos");
+
+    if (!prods.length) {
+        wrap.html(`<div class="cg-hub-stock-empty">Sin lineas de producto en entregas de este mes. Podes editar visita, abonos y observaciones.</div>`);
+    } else {
+        wrap.html(`<table class="cg-hub-prod-table">
+            <thead>
+                <tr>
+                    <th>Producto</th>
+                    <th class="text-end">Entregadas</th>
+                    <th class="text-end">P.u. ent.</th>
+                    <th class="text-end">Sub. ent.</th>
+                    <th class="text-end">Retiradas</th>
+                    <th class="text-end">P.u. ret.</th>
+                    <th class="text-end">Sub. ret.</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${prods.map(p => `<tr>
+                    <td>${escapeCg(p.Producto)}</td>
+                    <td class="text-end">${fmtQtyCg(p.Entregadas)}</td>
+                    <td class="text-end">${fmtMoneyCg(p.PrecioUnitarioEntrega)}</td>
+                    <td class="text-end">${fmtMoneyCg(p.SubtotalEntregas)}</td>
+                    <td class="text-end">${fmtQtyCg(p.Retiradas)}</td>
+                    <td class="text-end">${fmtMoneyCg(p.PrecioUnitarioRetiro)}</td>
+                    <td class="text-end">${fmtMoneyCg(p.SubtotalRetiros)}</td>
+                </tr>`).join("")}
+            </tbody>
+        </table>`);
+    }
+
+    $("#cgHubMesDetail").prop("hidden", false);
+    if (!keepScroll) {
+        document.getElementById("cgHubMesDetail")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
 }
 
 function truncarCg(txt, max) {
@@ -1329,17 +1838,40 @@ function syncSinEntregaUiCg() {
     $("#cgCmSinEntregaBox").toggleClass("is-active", activo);
 }
 
+function setImporteInputCg(selector, valor) {
+    const n = Number(valor) || 0;
+    const $el = $(selector);
+    if (n === 0) {
+        $el.val("");
+        return;
+    }
+    $el.val(n.toLocaleString("es-AR", {
+        minimumFractionDigits: Number.isInteger(n) ? 0 : 2,
+        maximumFractionDigits: 2
+    }));
+}
+
+function leerImporteInputCg(selector) {
+    const raw = $(selector).val();
+    if (raw == null || String(raw).trim() === "") return 0;
+    if (typeof parseNumero === "function") return parseNumero(raw) || 0;
+    if (typeof formatearSinMiles === "function") return formatearSinMiles(raw) || 0;
+    const n = parseFloat(String(raw).replace(/\./g, "").replace(",", "."));
+    return Number.isFinite(n) ? n : 0;
+}
+
 function abrirModalControlMensual(anio, mes) {
     const filas = CG.controlFiltrado?.Filas || CG.controlAnual?.Meses || [];
     const m = filas.find(x => Number(x.Mes) === mes && Number(x.Anio || CG.controlAnio) === anio);
     if (!m) return;
 
+    $("#cgCmIdControl").val(m.IdControl || 0);
     $("#cgCmAnio").val(anio);
     $("#cgCmMes").val(m.Mes);
     $("#cgCmMesTitulo").text(`${m.MesNombre} ${anio}`);
     $("#cgCmFechaVisita").val(fechaInputCg(m.FechaVisita));
-    $("#cgCmAbonoEfectivo").val(m.AbonoEfectivo || "");
-    $("#cgCmAbonoTransferencia").val(m.AbonoTransferencia || "");
+    setImporteInputCg("#cgCmAbonoEfectivo", m.AbonoEfectivo);
+    setImporteInputCg("#cgCmAbonoTransferencia", m.AbonoTransferencia);
     $("#cgCmFechaTransferencia").val(fechaInputCg(m.FechaTransferencia));
     $("#cgCmCajasAFavor").val(m.CajasAFavor ?? 0);
     $("#cgCmSinEntrega").prop("checked", !!m.SinEntrega);
@@ -1353,12 +1885,12 @@ async function guardarControlMensualCg() {
     const anio = parseInt($("#cgCmAnio").val(), 10);
     if (!mes || !anio) return;
 
-    const filas = CG.controlFiltrado?.Filas || CG.controlAnual?.Meses || [];
-    const mesData = filas.find(x => Number(x.Mes) === mes && Number(x.Anio || CG.controlAnio) === anio);
-    const parseNum = v => typeof parseNumero === "function" ? parseNumero(v) : parseFloat(v) || 0;
+    const idControl = parseInt($("#cgCmIdControl").val(), 10) || 0;
+    const abonoEfectivo = leerImporteInputCg("#cgCmAbonoEfectivo");
+    const abonoTransferencia = leerImporteInputCg("#cgCmAbonoTransferencia");
 
     const modelo = {
-        Id: mesData?.IdControl || 0,
+        Id: idControl,
         IdCliente: CG.id,
         Anio: anio,
         Mes: mes,
@@ -1366,16 +1898,22 @@ async function guardarControlMensualCg() {
         SinEntrega: $("#cgCmSinEntrega").is(":checked"),
         CajasAFavor: parseInt($("#cgCmCajasAFavor").val(), 10) || 0,
         Observaciones: ($("#cgCmObservaciones").val() || "").trim() || null,
-        AbonoEfectivo: parseNum($("#cgCmAbonoEfectivo").val()),
-        AbonoTransferencia: parseNum($("#cgCmAbonoTransferencia").val()),
+        AbonoEfectivo: abonoEfectivo,
+        AbonoTransferencia: abonoTransferencia,
         FechaTransferencia: parseFechaCg($("#cgCmFechaTransferencia").val())
     };
 
-    const data = await fetchJsonCg(API_CG.guardarControlMensual, {
-        method: "POST",
-        headers: authCg(),
-        body: JSON.stringify(modelo)
-    });
+    let data;
+    try {
+        data = await fetchJsonCg(API_CG.guardarControlMensual, {
+            method: "POST",
+            headers: authCg(),
+            body: JSON.stringify(modelo)
+        });
+    } catch (e) {
+        errorModal("No se pudo guardar el control mensual.");
+        return;
+    }
 
     if (!data?.valor) {
         errorModal(data?.mensaje || "No se pudo guardar.");
@@ -1386,29 +1924,46 @@ async function guardarControlMensualCg() {
     CG.modalControlMensual?.hide();
     CG.tabsLoaded.controlMensual = false;
     await cargarTabControlMensual(true);
+    await cargarHubStockCg(true);
 }
 
-/* ---- Stock cliente ---- */
+/* ---- Stock cliente (hub) ---- */
 
-async function cargarTabStockCliente(force) {
+async function cargarHubStockCg(force) {
     if (force) CG.tabsLoaded.stockCliente = false;
 
     const data = await fetchJsonCg(API_CG.stockCliente(CG.id), { headers: authCg() }) || [];
-
-    configurarGrillaCg("stockCliente", "#grd_StockClienteCg", data, [
-        { data: "Producto" },
-        { data: "Entregadas", className: "text-end", render: d => fmtQtyCg(d) },
-        { data: "Retiradas", className: "text-end", render: d => fmtQtyCg(d) },
-        { data: "EnPoderCliente", className: "text-end", render: d => fmtQtyCg(d) }
-    ], {
-        paging: false,
-        searching: false,
-        info: false,
-        dom: "t",
-        order: [[0, "asc"]]
-    });
-
+    CG.stockCliente = Array.isArray(data) ? data : [];
+    renderHubStockCg(CG.stockCliente);
     CG.tabsLoaded.stockCliente = true;
+}
+
+function renderHubStockCg(items) {
+    const cont = $("#cgHubStockCards");
+    if (!cont.length) return;
+
+    const list = (items || []).filter(x => (Number(x.Entregadas) || 0) !== 0 || (Number(x.Retiradas) || 0) !== 0);
+    if (!list.length) {
+        cont.html(`<div class="cg-hub-stock-empty">Todavia no hay cajas en poder del cliente.</div>`);
+        return;
+    }
+
+    cont.html(list.map(s => {
+        const enPoder = Number(s.EnPoderCliente) || 0;
+        const tone = enPoder > 0 ? "has-stock" : (enPoder < 0 ? "neg-stock" : "");
+        return `<div class="cg-hub-stock-card ${tone}">
+            <div class="cg-hub-stock-name">${escapeCg(s.Producto)}</div>
+            <div class="cg-hub-stock-nums">
+                <span><small>Entreg.</small><strong>${fmtQtyCg(s.Entregadas)}</strong></span>
+                <span><small>Retir.</small><strong>${fmtQtyCg(s.Retiradas)}</strong></span>
+                <span class="cg-hub-stock-poder"><small>En poder</small><strong>${fmtQtyCg(enPoder)}</strong></span>
+            </div>
+        </div>`;
+    }).join(""));
+}
+
+async function cargarTabStockCliente(force) {
+    await cargarHubStockCg(force);
 }
 
 function fmtQtyCg(n) {
@@ -1433,10 +1988,10 @@ async function cargarTabCuentaCorriente(force) {
     ]);
 
     if (res) {
-        $("#cgSaldoAnterior").text(fmtMoneyCg(res.SaldoAnterior));
-        $("#cgDebe").text(fmtMoneyCg(res.Debe));
-        $("#cgHaber").text(fmtMoneyCg(res.Haber));
-        $("#cgSaldoActual").text(fmtMoneyCg(res.SaldoActual));
+        $("#cgSaldoAnterior").text(fmtMoneyCg(res.SaldoAnterior)).attr("class", "val " + (typeof clsSaldoMoney === "function" ? clsSaldoMoney(res.SaldoAnterior) : ""));
+        $("#cgDebe").text(fmtMoneyCg(res.Debe)).attr("class", "val rp-money-out");
+        $("#cgHaber").text(fmtMoneyCg(res.Haber)).attr("class", "val rp-money-in");
+        $("#cgSaldoActual").text(fmtMoneyCg(res.SaldoActual)).attr("class", "val " + (typeof clsSaldoMoney === "function" ? clsSaldoMoney(res.SaldoActual) : ""));
     }
 
     const data = (movs || []).filter(x => x.TipoMovimiento !== "SALDO_ANTERIOR" && x.Id > 0);
@@ -1450,9 +2005,19 @@ async function cargarTabCuentaCorriente(force) {
         { data: "Fecha", render: d => formatearFechaCortaCg(d) },
         { data: "TipoMovimiento" },
         { data: "Concepto" },
-        { data: "Debe", render: d => fmtMoneyCg(d) },
-        { data: "Haber", render: d => fmtMoneyCg(d) },
-        { data: "Saldo", render: d => fmtMoneyCg(d) }
+        { data: "Debe", className: "text-end", render: d => {
+            const n = Number(d || 0);
+            return n ? `<span class="rp-money-out">${fmtMoneyCg(n)}</span>` : fmtMoneyCg(n);
+        }},
+        { data: "Haber", className: "text-end", render: d => {
+            const n = Number(d || 0);
+            return n ? `<span class="rp-money-in">${fmtMoneyCg(n)}</span>` : fmtMoneyCg(n);
+        }},
+        { data: "Saldo", className: "text-end", render: d => {
+            const n = Number(d || 0);
+            const cls = typeof clsSaldoMoney === "function" ? clsSaldoMoney(n) : "rp-money-zero";
+            return `<strong class="${cls}">${fmtMoneyCg(n)}</strong>`;
+        }}
     ]);
 
     CG.tabsLoaded.cuentaCorriente = true;
@@ -1529,8 +2094,10 @@ async function confirmarCobroCg() {
     CG.modalCobro?.hide();
     CG.tabsLoaded.cuentaCorriente = false;
     CG.tabsLoaded.cobros = false;
-    if ($("#tabCuentaCorriente").hasClass("active")) await cargarTabCuentaCorriente(true);
-    if ($("#tabCobros").hasClass("active")) await cargarTabCobros();
+    if ($("#tabCuentaCorriente").hasClass("active") || $("#tabCuentaCorriente").hasClass("show")) {
+        await cargarTabCuentaCorriente(true);
+        await cargarTabCobros();
+    }
 }
 
 /* ---- Vista tabla / cards ---- */
@@ -1577,7 +2144,7 @@ const CG_CARD_SCHEMAS = {
             { label: "Estado", value: r => r.Estado || "-" },
             { label: "Total", value: r => fmtMoneyCg(r.ImporteTotal), cls: "cg-val-neutral" },
             { label: "Pagado", value: r => fmtMoneyCg(r.ImporteAbonado), cls: "cg-val-haber" },
-            { label: "Saldo", value: r => fmtMoneyCg(r.Saldo), cls: "cg-val-saldo" }
+            { label: "Saldo", value: r => fmtMoneyCg(r.Saldo), cls: r => typeof clsSaldoMoney === "function" ? clsSaldoMoney(r.Saldo) : "cg-val-saldo" }
         ],
         actions: r => `<a class="cg-card-btn" href="${API_CG.entregaNuevoModif(r.Id, CG.id)}"><i class="fa fa-pencil"></i> Ver / editar</a>`
     },
@@ -1600,7 +2167,7 @@ const CG_CARD_SCHEMAS = {
             { label: "Concepto", value: r => r.Concepto, full: true },
             { label: "Debe", value: r => fmtMoneyCg(r.Debe), cls: "cg-val-debe" },
             { label: "Haber", value: r => fmtMoneyCg(r.Haber), cls: "cg-val-haber" },
-            { label: "Saldo", value: r => fmtMoneyCg(r.Saldo), cls: "cg-val-saldo" }
+            { label: "Saldo", value: r => fmtMoneyCg(r.Saldo), cls: r => typeof clsSaldoMoney === "function" ? clsSaldoMoney(r.Saldo) : "cg-val-saldo" }
         ],
         actions: r => r.PuedeEliminar
             ? `<button type="button" class="cg-card-btn cg-card-btn--danger" onclick="eliminarMovCcCg(${r.Id})"><i class="fa fa-trash"></i> Eliminar</button>`
@@ -1682,7 +2249,7 @@ function buildCardHtmlCg(row, schema) {
     const fields = (schema.fields || []).map(f => `
         <div class="cg-card-field ${f.full ? "cg-card-field--full" : ""}">
             <span>${f.label}</span>
-            <strong class="${f.cls || ""}">${escapeCg(typeof f.value === "function" ? f.value(row) : row[f.value])}</strong>
+            <strong class="${typeof f.cls === "function" ? (f.cls(row) || "") : (f.cls || "")}">${escapeCg(typeof f.value === "function" ? f.value(row) : row[f.value])}</strong>
         </div>`).join("");
 
     const tone = schema.tone ? schema.tone(row) : "";
@@ -1716,7 +2283,9 @@ function renderControlMensualCardsCg(filas, mostrarAnio) {
     $grid.html(filas.map(m => {
         const anio = m.Anio || CG.controlAnio;
         const saldo = Number(m.Saldo) || 0;
-        const saldoCls = saldo > 0 ? "cg-val-debe" : (saldo < 0 ? "cg-val-haber" : "");
+        const saldoCls = typeof clsSaldoMoney === "function"
+            ? clsSaldoMoney(saldo)
+            : (saldo > 0 ? "cg-val-saldo-pos" : (saldo < 0 ? "cg-val-saldo-neg" : "cg-val-saldo-cero"));
         return `
             <article class="cg-data-card cg-data-card--cm rp-card-selectable ${m.SinEntrega ? "is-warn" : ""}"
                      data-anio="${anio}" data-mes="${m.Mes}" tabindex="0" role="button">

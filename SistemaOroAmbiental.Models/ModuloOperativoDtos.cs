@@ -77,6 +77,18 @@ public class RecorridoSugeridoDto
     public bool YaEnRecorrido { get; set; }
 }
 
+public class ClienteControlProductoMesDto
+{
+    public int IdProducto { get; set; }
+    public string Producto { get; set; } = "";
+    public decimal Entregadas { get; set; }
+    public decimal Retiradas { get; set; }
+    public decimal PrecioUnitarioEntrega { get; set; }
+    public decimal PrecioUnitarioRetiro { get; set; }
+    public decimal SubtotalEntregas { get; set; }
+    public decimal SubtotalRetiros { get; set; }
+}
+
 public class ClienteControlMensualDto
 {
     public int? IdControl { get; set; }
@@ -99,6 +111,7 @@ public class ClienteControlMensualDto
     public bool SinEntrega { get; set; }
     public string? Observaciones { get; set; }
     public bool TieneOverride { get; set; }
+    public List<ClienteControlProductoMesDto> Productos { get; set; } = new();
 }
 
 public class ClienteControlAnualDto

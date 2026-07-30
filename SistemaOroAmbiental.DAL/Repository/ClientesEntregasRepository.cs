@@ -260,30 +260,14 @@ namespace SistemaOroAmbiental.DAL.Repository
             int idUsuario,
             DateTime ahora)
         {
-            var producto = await _db.Productos.FirstAsync(x => x.Id == linea.IdProducto);
-
-            var inv = await _invRepo.ObtenerOCrearInventario(idSucursal, linea.IdProducto);
-
+            // Retiro: baja el "en poder del cliente" (entregadas - retiradas) pero NO vuelve al
+            // inventario vendible. Esas cajas van a tratamiento; si se recuperan, se cargan
+            // manualmente / en la solapa Productos recuperados (InventarioRecuperado).
             if (EsRetiro(linea))
-            {
-                var movRetiro = new InventarioMovimiento
-                {
-                    IdInventario = inv.Id,
-                    TipoMovimiento = InventarioRepository.TIPO_ENTREGA,
-                    IdMovimiento = idEntrega,
-                    Fecha = fecha,
-                    Concepto = $"Retiro #{idEntrega} - {producto.Nombre}",
-                    Entrada = linea.Cantidad,
-                    Salida = 0,
-                    IdUsuarioRegistra = idUsuario,
-                    FechaUsuarioRegistra = ahora
-                };
-
-                _db.InventarioMovimientos.Add(movRetiro);
-                inv.Stock += linea.Cantidad;
-                await _db.SaveChangesAsync();
                 return;
-            }
+
+            var producto = await _db.Productos.FirstAsync(x => x.Id == linea.IdProducto);
+            var inv = await _invRepo.ObtenerOCrearInventario(idSucursal, linea.IdProducto);
 
             if (inv.Stock < linea.Cantidad)
                 throw new InvalidOperationException(
@@ -434,10 +418,23 @@ namespace SistemaOroAmbiental.DAL.Repository
                     linea.IdUsuarioRegistra = idUsuario;
                     linea.FechaUsuarioRegistra = ahora;
                     RecalcularLinea(linea);
-
                     _db.ClientesEntregasProductos.Add(linea);
+                }
+
+                foreach (var lineaRec in lineasRecuperadas)
+                {
+                    lineaRec.IdEntrega = entrega.Id;
+                    lineaRec.IdUsuarioRegistra = idUsuario;
+                    lineaRec.FechaUsuarioRegistra = ahora;
+                    RecalcularLineaRecuperado(lineaRec);
+                    _db.ClientesEntregasProductosRecuperados.Add(lineaRec);
+                }
+
+                if (lineas.Count > 0 || lineasRecuperadas.Count > 0)
                     await _db.SaveChangesAsync();
 
+                foreach (var linea in lineas)
+                {
                     await RegistrarStockEntrega(
                         entrega.Id,
                         idSucursal,
@@ -449,14 +446,6 @@ namespace SistemaOroAmbiental.DAL.Repository
 
                 foreach (var lineaRec in lineasRecuperadas)
                 {
-                    lineaRec.IdEntrega = entrega.Id;
-                    lineaRec.IdUsuarioRegistra = idUsuario;
-                    lineaRec.FechaUsuarioRegistra = ahora;
-                    RecalcularLineaRecuperado(lineaRec);
-
-                    _db.ClientesEntregasProductosRecuperados.Add(lineaRec);
-                    await _db.SaveChangesAsync();
-
                     await RegistrarStockRecuperadoEntrega(
                         entrega.Id,
                         idSucursal,

@@ -931,7 +931,7 @@
             const guardarBtn = this._id("btnGuardar");
             if (guardarBtn) {
                 guardarBtn.removeAttribute("onclick");
-                guardarBtn.addEventListener("click", () => this.guardar());
+                guardarBtn.addEventListener("click", () => withBusy(guardarBtn, () => this.guardar()));
             }
 
             const cerrarErrorBtn = this.modalEl.querySelector("#errorCampos .rp-error-close");

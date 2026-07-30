@@ -568,7 +568,7 @@
             const btn = this._id("btnGuardar");
             if (btn) {
                 btn.removeAttribute("onclick");
-                btn.addEventListener("click", () => this.guardar());
+                btn.addEventListener("click", () => withBusy(btn, () => this.guardar()));
             }
 
             const cerrarBtn = this.modalEl.querySelector("#errorCampos .rp-error-close");

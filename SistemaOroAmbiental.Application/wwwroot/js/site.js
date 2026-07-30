@@ -280,6 +280,116 @@ function showToast(texto, tipo = "success", duracionMs) {
 
 window.showToast = showToast;
 
+/* =========================================================
+   Busy lock (anti doble-submit) — estilo Mercado Pago
+   Uso:
+     await withBusy(btn, async () => { ... });
+     await withBusy('#btnGuardar', async () => { ... });
+     $("#btnX").on("click", busyHandler(fn));
+     onclick="withBusy(this, () => guardarX())"
+========================================================= */
+
+function resolveBusyEl(btn) {
+    if (!btn) return null;
+    if (typeof btn === "string") {
+        try { return document.querySelector(btn); } catch { return null; }
+    }
+    if (btn.jquery) return btn[0] || null;
+    if (btn instanceof Element) return btn;
+    return null;
+}
+
+function isBusy(btn) {
+    const el = resolveBusyEl(btn);
+    return !!(el && el.dataset.busyActive === "1");
+}
+
+function setBusyButton(btn, loading, opts = {}) {
+    const el = resolveBusyEl(btn);
+    if (!el) return;
+
+    if (loading) {
+        if (el.dataset.busyActive === "1") return;
+        el.dataset.busyActive = "1";
+        el.dataset.busyPrevDisabled = el.disabled ? "1" : "0";
+        el.dataset.busyPrevHtml = el.innerHTML;
+        el.disabled = true;
+        el.setAttribute("aria-busy", "true");
+        el.classList.add("is-busy");
+        if (opts.loadingHtml !== false) {
+            const label = opts.label || "Guardando...";
+            el.innerHTML = opts.loadingHtml
+                || `<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>${label}`;
+        }
+        return;
+    }
+
+    if (el.dataset.busyActive !== "1") return;
+    el.dataset.busyActive = "0";
+    el.disabled = el.dataset.busyPrevDisabled === "1";
+    el.removeAttribute("aria-busy");
+    el.classList.remove("is-busy");
+    if (el.dataset.busyPrevHtml != null) {
+        el.innerHTML = el.dataset.busyPrevHtml;
+    }
+    delete el.dataset.busyPrevDisabled;
+    delete el.dataset.busyPrevHtml;
+}
+
+/**
+ * Bloquea el boton hasta que termine la promesa. Si ya esta ocupado, no vuelve a ejecutar.
+ * @returns {Promise<*>} resultado de fn, o undefined si se ignoro por busy
+ */
+async function withBusy(btn, fn, opts = {}) {
+    if (typeof fn !== "function") return;
+
+    const el = resolveBusyEl(btn);
+    if (el && el.dataset.busyActive === "1") return;
+
+    setBusyButton(el, true, opts);
+    try {
+        return await fn();
+    } finally {
+        setBusyButton(el, false);
+    }
+}
+
+/** Handler de click que aplica withBusy sobre e.currentTarget / this */
+function busyHandler(fn, opts = {}) {
+    return async function (e) {
+        const btn = opts.button
+            || (e && e.currentTarget instanceof Element ? e.currentTarget : null)
+            || (this instanceof Element ? this : null);
+        return withBusy(btn, () => fn.call(this, e), opts);
+    };
+}
+
+window.resolveBusyEl = resolveBusyEl;
+window.isBusy = isBusy;
+window.setBusyButton = setBusyButton;
+window.withBusy = withBusy;
+window.busyHandler = busyHandler;
+
+/** Clase CSS para saldo/total: + verde, - rojo, 0 amarillo */
+function clsSaldoMoney(n) {
+    const v = Number(n || 0);
+    if (v > 0) return "rp-money-pos";
+    if (v < 0) return "rp-money-neg";
+    return "rp-money-zero";
+}
+window.clsSaldoMoney = clsSaldoMoney;
+
+// Seguridad global: si el boton ya esta busy, bloquear clicks adicionales (capture).
+if (!window._rpBusyClickGuard) {
+    window._rpBusyClickGuard = true;
+    document.addEventListener("click", function (e) {
+        const btn = e.target?.closest?.("button, input[type='submit'], a.btn");
+        if (!btn || btn.dataset.busyActive !== "1") return;
+        e.preventDefault();
+        e.stopImmediatePropagation();
+    }, true);
+}
+
 /** @deprecated Usar showToast - alias global para compatibilidad */
 function exitoModal(texto) {
     showToast(texto || "Guardado correctamente.", "success");

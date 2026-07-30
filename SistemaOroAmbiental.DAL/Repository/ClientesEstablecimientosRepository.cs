@@ -168,11 +168,17 @@ namespace SistemaOroAmbiental.DAL.Repository
                 .OrderBy(x => x.Nombre);
         }
 
-        public async Task<ClientesEstablecimiento?> BuscarDuplicado(int? idExcluir, int idCliente, string nombre)
+        public async Task<ClientesEstablecimiento?> BuscarDuplicado(int? idExcluir, string? idEstablecimientoCliente)
         {
+            // Unicidad por Id del ministerio de Salud (no por nombre ni por cliente).
+            var idMin = (idEstablecimientoCliente ?? "").Trim();
+            if (string.IsNullOrWhiteSpace(idMin))
+                return null;
+
             var query = _db.ClientesEstablecimientos
                 .AsNoTracking()
-                .Where(x => x.IdCliente == idCliente && x.Nombre == nombre);
+                .Where(x => x.IdEstablecimientoCliente != null
+                            && x.IdEstablecimientoCliente.Trim() == idMin);
 
             if (idExcluir.HasValue)
                 query = query.Where(x => x.Id != idExcluir.Value);

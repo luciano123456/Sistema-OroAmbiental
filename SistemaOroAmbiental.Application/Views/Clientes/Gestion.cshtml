@@ -11,7 +11,7 @@
     <link href="~/css/Productora.css?v=6.2" rel="stylesheet" />
     <link href="~/css/disenopantallas.css?v=6.2" rel="stylesheet" />
     <link href="~/css/M_Generico.css?v=6.2" rel="stylesheet" />
-    <link href="~/css/ClientesGestion.css?v=10.6" rel="stylesheet" />
+    <link href="~/css/ClientesGestion.css?v=13.0" rel="stylesheet" />
     <link href="~/css/ClientesEstablecimientos.css?v=5.4" rel="stylesheet" />
     <link href="~/css/ContratosModal.css?v=5.4" rel="stylesheet" />
 }
@@ -59,12 +59,7 @@
             <ul class="nav rp-tabs-modern cg-tabs-scroll" id="cgTabsNav" role="tablist">
                 <li class="nav-item">
                     <button class="nav-link active" id="tabBtnDatos" data-bs-toggle="tab" data-bs-target="#tabDatos" type="button" data-cg-tab="datos">
-                        <i class="fa fa-id-card"></i><span>Datos</span>
-                    </button>
-                </li>
-                <li class="nav-item">
-                    <button class="nav-link" id="tabBtnContactos" data-bs-toggle="tab" data-bs-target="#tabContactos" type="button" data-cg-tab="contactos" disabled>
-                        <i class="fa fa-address-book"></i><span>Contactos</span>
+                        <i class="fa fa-id-card"></i><span>Cliente</span>
                     </button>
                 </li>
                 <li class="nav-item">
@@ -78,33 +73,8 @@
                     </button>
                 </li>
                 <li class="nav-item">
-                    <button class="nav-link" id="tabBtnEntregas" data-bs-toggle="tab" data-bs-target="#tabEntregas" type="button" data-cg-tab="entregas" disabled>
-                        <i class="fa fa-truck"></i><span>Entregas</span>
-                    </button>
-                </li>
-                <li class="nav-item">
-                    <button class="nav-link" id="tabBtnRecorridos" data-bs-toggle="tab" data-bs-target="#tabRecorridos" type="button" data-cg-tab="recorridos" disabled>
-                        <i class="fa fa-road"></i><span>Recorridos</span>
-                    </button>
-                </li>
-                <li class="nav-item">
-                    <button class="nav-link" id="tabBtnControlMensual" data-bs-toggle="tab" data-bs-target="#tabControlMensual" type="button" data-cg-tab="controlMensual" disabled>
-                        <i class="fa fa-calendar"></i><span>Control mensual</span>
-                    </button>
-                </li>
-                <li class="nav-item">
-                    <button class="nav-link" id="tabBtnStockCliente" data-bs-toggle="tab" data-bs-target="#tabStockCliente" type="button" data-cg-tab="stockCliente" disabled>
-                        <i class="fa fa-cubes"></i><span>Stock cliente</span>
-                    </button>
-                </li>
-                <li class="nav-item">
                     <button class="nav-link" id="tabBtnCuentaCorriente" data-bs-toggle="tab" data-bs-target="#tabCuentaCorriente" type="button" data-cg-tab="cuentaCorriente" disabled>
-                        <i class="fa fa-credit-card"></i><span>Cuenta Corriente</span>
-                    </button>
-                </li>
-                <li class="nav-item">
-                    <button class="nav-link" id="tabBtnCobros" data-bs-toggle="tab" data-bs-target="#tabCobros" type="button" data-cg-tab="cobros" disabled>
-                        <i class="fa fa-money"></i><span>Cobros</span>
+                        <i class="fa fa-credit-card"></i><span>Cuenta corriente</span>
                     </button>
                 </li>
             </ul>
@@ -128,11 +98,24 @@
                 <input type="hidden" id="cgId" value="@id" />
 
                 <div class="cg-form-panel">
-                <form class="row g-3 cg-form" id="formDatosCliente">
+                <form class="cg-form" id="formDatosCliente">
+                <div id="cgSeccionesStack" class="row g-3 cg-secciones-stack">
 
-                    <div class="col-12 cg-form-section">
-                        <div class="cg-form-section-title">Identificacion</div>
-                        <div class="row g-3">
+                    <div class="col-12 cg-form-section" data-cg-section="identificacion" data-cg-sortable="1">
+                        <div class="cg-form-section-toggle"
+                             data-cg-collapse-target="#cgSecIdentificacion" aria-expanded="true"
+                             aria-controls="cgSecIdentificacion">
+                            <div class="cg-form-section-title mb-0">Identificacion</div>
+                            <div class="cg-sec-actions">
+                                <div class="cg-sec-reorder" >
+                                    <button type="button" class="cg-sec-move" data-dir="up" title="Subir seccion"><i class="fa fa-arrow-up"></i></button>
+                                    <button type="button" class="cg-sec-move" data-dir="down" title="Bajar seccion"><i class="fa fa-arrow-down"></i></button>
+                                </div>
+                                <i class="fa fa-chevron-down cg-form-section-chev" aria-hidden="true"></i>
+                            </div>
+                        </div>
+                        <div id="cgSecIdentificacion" class="collapse show">
+                        <div class="row g-3 cg-form-section-body">
                             <div class="col-md-4">
                                 <label class="form-label">Nombre</label>
                                 <input id="cgNombre" class="form-control" required />
@@ -210,11 +193,24 @@
                                 </small>
                             </div>
                         </div>
+                        </div>
                     </div>
 
-                    <div class="col-12 cg-form-section">
-                        <div class="cg-form-section-title">Domicilio y ubicacion</div>
-                        <div class="row g-3">
+                    <div class="col-12 cg-form-section" data-cg-section="domicilio" data-cg-sortable="1">
+                        <div class="cg-form-section-toggle"
+                             data-cg-collapse-target="#cgSecDomicilio" aria-expanded="true"
+                             aria-controls="cgSecDomicilio">
+                            <div class="cg-form-section-title mb-0">Domicilio y ubicacion</div>
+                            <div class="cg-sec-actions">
+                                <div class="cg-sec-reorder" >
+                                    <button type="button" class="cg-sec-move" data-dir="up" title="Subir seccion"><i class="fa fa-arrow-up"></i></button>
+                                    <button type="button" class="cg-sec-move" data-dir="down" title="Bajar seccion"><i class="fa fa-arrow-down"></i></button>
+                                </div>
+                                <i class="fa fa-chevron-down cg-form-section-chev" aria-hidden="true"></i>
+                            </div>
+                        </div>
+                        <div id="cgSecDomicilio" class="collapse show">
+                        <div class="row g-3 cg-form-section-body">
                             <div class="col-md-5">
                                 <label class="form-label">Calle</label>
                                 <input id="cgCalle" class="form-control" />
@@ -247,68 +243,107 @@
                                 <input id="cgCodProvincia" class="form-control" readonly placeholder="-" />
                             </div>
                         </div>
-                    </div>
-
-                    <div class="col-12 cg-form-section">
-                        <div class="cg-form-section-title">Contacto y fiscal</div>
-                        <div class="row g-3">
-                            <div class="col-md-4">
-                                <label class="form-label">Telefono</label>
-                                <input id="cgTelefono" class="form-control" />
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label">Telefono alternativo</label>
-                                <input id="cgTelefonoAlt" class="form-control" />
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label">Email</label>
-                                <input id="cgEmail" class="form-control" type="email" />
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label">Profesion</label>
-                                <div class="rp-select-plus">
-                                    <select id="cgProfesion" class="form-control"></select>
-                                    <button type="button" class="rp-btn-plus" title="Agregar profesion"
-                                            data-config-nombre="Profesiones de Clientes" data-config-controller="ClientesProfesiones">
-                                        <i class="fa fa-plus"></i>
-                                    </button>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label">Condicion IVA</label>
-                                <div class="rp-select-plus">
-                                    <select id="cgCondicionIva" class="form-control"></select>
-                                    <button type="button" class="rp-btn-plus" title="Agregar condicion IVA"
-                                            data-config-nombre="Condiciones IVA" data-config-controller="CondicionesIva">
-                                        <i class="fa fa-plus"></i>
-                                    </button>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="rp-activo-box h-100">
-                                    <div class="rp-activo-box-head">
-                                        <span class="rp-activo-box-title">Estado del registro</span>
-                                    </div>
-                                    <label class="rp-switch mb-0 rp-switch-block">
-                                        <input type="checkbox" id="cgActivo" class="rp-switch-input" checked>
-                                        <span class="rp-switch-slider"></span>
-                                        <span class="rp-activo-estado-text" id="lblActivoCg">Activo</span>
-                                    </label>
-                                </div>
-                            </div>
                         </div>
                     </div>
 
-                    <div class="col-12 cg-form-section cg-form-section--recoleccion">
+                    <div class="col-12 cg-form-section cg-form-section--comms" data-cg-section="comunicacion" data-cg-sortable="1">
                         <div class="cg-form-section-toggle"
-                             data-bs-toggle="collapse"
-                             data-bs-target="#cgRecoleccionBody"
-                             aria-expanded="false"
+                             data-cg-collapse-target="#cgSecComunicacion" aria-expanded="true"
+                             aria-controls="cgSecComunicacion">
+                            <div class="cg-form-section-title mb-0">Comunicacion y contactos</div>
+                            <div class="cg-sec-actions">
+                                <div class="cg-sec-reorder" >
+                                    <button type="button" class="cg-sec-move" data-dir="up" title="Subir seccion"><i class="fa fa-arrow-up"></i></button>
+                                    <button type="button" class="cg-sec-move" data-dir="down" title="Bajar seccion"><i class="fa fa-arrow-down"></i></button>
+                                </div>
+                                <i class="fa fa-chevron-down cg-form-section-chev" aria-hidden="true"></i>
+                            </div>
+                        </div>
+                        <div id="cgSecComunicacion" class="collapse show">
+                        <div class="cg-comms-layout cg-form-section-body">
+                            <div class="cg-comms-fiscal">
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label">Telefono</label>
+                                        <input id="cgTelefono" class="form-control" />
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Telefono alternativo</label>
+                                        <input id="cgTelefonoAlt" class="form-control" />
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label">Email</label>
+                                        <input id="cgEmail" class="form-control" type="email" />
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Profesion</label>
+                                        <div class="rp-select-plus">
+                                            <select id="cgProfesion" class="form-control"></select>
+                                            <button type="button" class="rp-btn-plus" title="Agregar profesion"
+                                                    data-config-nombre="Profesiones de Clientes" data-config-controller="ClientesProfesiones">
+                                                <i class="fa fa-plus"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Condicion IVA</label>
+                                        <div class="rp-select-plus">
+                                            <select id="cgCondicionIva" class="form-control"></select>
+                                            <button type="button" class="rp-btn-plus" title="Agregar condicion IVA"
+                                                    data-config-nombre="Condiciones IVA" data-config-controller="CondicionesIva">
+                                                <i class="fa fa-plus"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="col-12">
+                                        <div class="rp-activo-box">
+                                            <div class="rp-activo-box-head">
+                                                <span class="rp-activo-box-title">Estado del registro</span>
+                                            </div>
+                                            <label class="rp-switch mb-0 rp-switch-block">
+                                                <input type="checkbox" id="cgActivo" class="rp-switch-input" checked>
+                                                <span class="rp-switch-slider"></span>
+                                                <span class="rp-activo-estado-text" id="lblActivoCg">Activo</span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="cg-comms-people" id="sectionContactosCg">
+                                <div class="cg-comms-people-head">
+                                    <div>
+                                        <div class="cg-comms-people-title"><i class="fa fa-address-book"></i> Personas de contacto</div>
+                                        <div class="cg-comms-people-hint">Quienes atienden recoleccion o pagos</div>
+                                    </div>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span class="cg-comms-count" id="cgContactoCantidad">0</span>
+                                        <button type="button" id="btnNuevoContactoCg" class="cg-btn cg-btn--success cg-btn--sm" disabled>
+                                            <i class="fa fa-plus"></i> Agregar
+                                        </button>
+                                    </div>
+                                </div>
+                                <div id="cgListaContactos" class="cg-contact-cards">
+                                    <div class="cg-contact-empty">Guarda el cliente para cargar contactos.</div>
+                                </div>
+                            </div>
+                        </div>
+                        </div>
+                    </div>
+
+                    <div class="col-12 cg-form-section cg-form-section--recoleccion" data-cg-section="recoleccion" data-cg-sortable="1">
+                        <div class="cg-form-section-toggle"
+                             data-cg-collapse-target="#cgRecoleccionBody" aria-expanded="true"
                              aria-controls="cgRecoleccionBody">
                             <div class="cg-form-section-title mb-0">Recoleccion y recorrido</div>
-                            <i class="fa fa-chevron-down cg-form-section-chev" aria-hidden="true"></i>
+                            <div class="cg-sec-actions">
+                                <div class="cg-sec-reorder" >
+                                    <button type="button" class="cg-sec-move" data-dir="up" title="Subir seccion"><i class="fa fa-arrow-up"></i></button>
+                                    <button type="button" class="cg-sec-move" data-dir="down" title="Bajar seccion"><i class="fa fa-arrow-down"></i></button>
+                                </div>
+                                <i class="fa fa-chevron-down cg-form-section-chev" aria-hidden="true"></i>
+                            </div>
                         </div>
-                        <div id="cgRecoleccionBody" class="collapse">
+                        <div id="cgRecoleccionBody" class="collapse show">
                         <div class="row g-3 cg-form-section-body">
                             <input type="hidden" id="cgEstId" />
                             <div class="col-md-3">
@@ -396,79 +431,203 @@
                             </div>
 
                             <div class="col-12">
-                                <label class="form-label mb-2">Recorridos asignados</label>
+                                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+                                    <label class="form-label mb-0">Recorridos asignados</label>
+                                    <a href="/Recorridos/Index" class="btn btn-outline-light btn-sm" target="_blank">
+                                        <i class="fa fa-external-link me-1"></i> Gestionar recorridos
+                                    </a>
+                                </div>
                                 <div id="cgRecorridosAsignados" class="cg-recorridos-inline"></div>
                             </div>
                         </div>
                         </div>
                     </div>
 
+                <!-- Hub operativo: stock + control mensual + entregas -->
+                <div class="col-12 cg-hub" id="cgHubOperativo" hidden data-cg-section="controlPagos" data-cg-sortable="1">
+                    <div class="cg-hub-head cg-form-section-toggle"
+                         data-cg-collapse-target="#cgSecControlPagos" aria-expanded="true"
+                         aria-controls="cgSecControlPagos">
+                        <div>
+                            <h5 class="cg-hub-title mb-0"><i class="fa fa-calendar-check-o"></i> Control de pagos y stock</h5>
+                            <p class="cg-hub-sub">Visitas, abonos y cajas en poder del cliente. El inventario del depósito se descuenta al registrar una <strong>Entrega</strong> (no al editar solo abonos).</p>
+                        </div>
+                        <div class="d-flex gap-2 flex-wrap align-items-center" >
+                            <a id="btnNuevaEntregaHub" class="cg-btn cg-btn--success cg-btn--sm" href="#">
+                                <i class="fa fa-truck"></i> Nueva entrega
+                            </a>
+                            <button type="button" id="btnRefreshControlMensual" class="cg-btn cg-btn--ghost cg-btn--sm">
+                                <i class="fa fa-refresh"></i> Actualizar
+                            </button>
+                        </div>
+                        <div class="cg-sec-actions">
+                            <div class="cg-sec-reorder" >
+                                <button type="button" class="cg-sec-move" data-dir="up" title="Subir seccion"><i class="fa fa-arrow-up"></i></button>
+                                <button type="button" class="cg-sec-move" data-dir="down" title="Bajar seccion"><i class="fa fa-arrow-down"></i></button>
+                            </div>
+                            <i class="fa fa-chevron-down cg-form-section-chev" aria-hidden="true"></i>
+                        </div>
+                    </div>
+
+                    <div id="cgSecControlPagos" class="collapse show">
+                    <div class="cg-hub-body">
+
+                    <div class="cg-hub-kpis">
+                        <div class="cg-hub-kpi">
+                            <span>Stock actual</span>
+                            <strong id="cgControlStockActual">0</strong>
+                            <small>unidades en poder</small>
+                        </div>
+                        <div class="cg-hub-kpi cg-hub-kpi--saldo">
+                            <span>Saldo del periodo</span>
+                            <strong id="cgControlSaldoAnual">$ 0</strong>
+                            <small id="cgControlFiltroResumen">-</small>
+                        </div>
+                        <div class="cg-hub-kpi">
+                            <span>Periodos</span>
+                            <strong id="cgControlCount">-</strong>
+                            <small>meses filtrados</small>
+                        </div>
+                    </div>
+
+                    <div id="cgControlError" class="cg-cm-alert d-none" role="alert">
+                        <i class="fa fa-exclamation-triangle"></i>
+                        <span>Algunos datos no se pudieron calcular. Podes editar los meses manualmente.</span>
+                    </div>
+
+                    <div class="cg-hub-stock cg-hub-block" data-cg-section="stockCliente">
+                        <div class="cg-hub-block-title cg-form-section-toggle"
+                             data-cg-collapse-target="#cgSecStockCliente" aria-expanded="true"
+                             aria-controls="cgSecStockCliente">
+                            <span><i class="fa fa-cubes"></i> Stock en poder del cliente</span>
+                            <i class="fa fa-chevron-down cg-form-section-chev" aria-hidden="true"></i>
+                        </div>
+                        <div id="cgSecStockCliente" class="collapse show">
+                        <div id="cgHubStockCards" class="cg-hub-stock-grid">
+                            <div class="cg-hub-stock-empty">Sin movimientos de stock.</div>
+                        </div>
+                        </div>
+                    </div>
+
+                    <div class="cg-cm-shell cg-hub-cm cg-hub-block" data-cg-section="planillaMensual">
+                        <div class="cg-hub-block-title cg-form-section-toggle"
+                             data-cg-collapse-target="#cgSecPlanillaMensual" aria-expanded="true"
+                             aria-controls="cgSecPlanillaMensual">
+                            <span><i class="fa fa-table"></i> Planilla mensual</span>
+                            <i class="fa fa-chevron-down cg-form-section-chev" aria-hidden="true"></i>
+                        </div>
+                        <div id="cgSecPlanillaMensual" class="collapse show">
+                        <div class="cg-cm-filtros">
+                            <div class="cg-cm-filtros-top">
+                                <div>
+                                    <h6 class="cg-cm-filtros-title">Periodo a consultar</h6>
+                                </div>
+                            </div>
+
+                            <div class="row g-3">
+                                <div class="col-lg-6">
+                                    <div class="cg-cm-picker">
+                                        <div class="cg-cm-picker-head">
+                                            <label class="form-label mb-0">Anos</label>
+                                            <small class="cg-cm-picker-hint">Toca para marcar o desmarcar</small>
+                                        </div>
+                                        <div class="cg-cm-chips cg-cm-chips--years" id="cgControlAniosChips"></div>
+                                    </div>
+                                </div>
+                                <div class="col-lg-6">
+                                    <div class="cg-cm-picker">
+                                        <div class="cg-cm-picker-head">
+                                            <label class="form-label mb-0">Meses</label>
+                                            <small class="cg-cm-picker-hint">Vacio = todos los meses</small>
+                                        </div>
+                                        <div class="cg-cm-chips cg-cm-chips--months" id="cgControlMesesChips"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="cg-cm-presets">
+                                <span class="cg-cm-presets-label">Atajos</span>
+                                <button type="button" class="cg-cm-preset cg-preset-meses" data-meses="1,2,3">Ene-Mar</button>
+                                <button type="button" class="cg-cm-preset cg-preset-meses" data-meses="4,5,6">Abr-Jun</button>
+                                <button type="button" class="cg-cm-preset cg-preset-meses" data-meses="7,8,9">Jul-Sep</button>
+                                <button type="button" class="cg-cm-preset cg-preset-meses" data-meses="10,11,12">Oct-Dic</button>
+                                <button type="button" class="cg-cm-preset cg-preset-meses" data-meses="all">Todos los meses</button>
+                                <button type="button" class="cg-cm-preset" id="btnControlAniosRecientes">Ultimos 3 anos</button>
+                            </div>
+                        </div>
+
+                        <div class="cg-cards-grid cg-cm-cards-grid" id="cgCards_controlMensual"></div>
+
+                        <div class="cg-cm-table-wrap">
+                            <table class="cg-cm-table" id="tblControlMensual">
+                                <thead>
+                                    <tr>
+                                        <th class="cg-col-anio cg-cm-th-periodo">Ano</th>
+                                        <th class="cg-cm-th-periodo">Mes</th>
+                                        <th class="cg-cm-th-periodo">Visita</th>
+                                        <th class="cg-cm-th-num cg-cm-th-grp-start">Entreg.</th>
+                                        <th class="cg-cm-th-num">Retir.</th>
+                                        <th class="cg-cm-th-num">Stock</th>
+                                        <th class="cg-cm-th-num cg-cm-th-grp-start">Sub. ent.</th>
+                                        <th class="cg-cm-th-num">Sub. ret.</th>
+                                        <th class="cg-cm-th-num cg-cm-th-grp-start">Efectivo</th>
+                                        <th class="cg-cm-th-num">Transfer.</th>
+                                        <th class="cg-cm-th-date">F. transf.</th>
+                                        <th class="cg-cm-th-num cg-cm-th-grp-start">Debe</th>
+                                        <th class="cg-cm-th-num">Haber</th>
+                                        <th class="cg-cm-th-num cg-cm-th-saldo">Saldo</th>
+                                        <th class="cg-cm-th-num">Cajas</th>
+                                        <th class="cg-cm-th-flag">S/E</th>
+                                        <th class="cg-cm-th-obs">Obs.</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="cgControlMensualBody"></tbody>
+                            </table>
+                        </div>
+
+                        <div class="cg-hub-mes-detail" id="cgHubMesDetail" hidden>
+                            <div class="cg-hub-mes-detail-head">
+                                <strong id="cgHubMesDetailTitulo">Detalle del mes</strong>
+                                <button type="button" class="cg-btn cg-btn--ghost cg-btn--sm" id="btnCerrarMesDetail">
+                                    <i class="fa fa-times"></i>
+                                </button>
+                            </div>
+                            <div id="cgHubMesProductos" class="cg-hub-prod-table-wrap"></div>
+                            <div class="cg-hub-mes-actions">
+                                <button type="button" class="cg-btn cg-btn--success cg-btn--sm" id="btnEditarMesHub">
+                                    <i class="fa fa-pencil"></i> Editar visita / abonos
+                                </button>
+                            </div>
+                        </div>
+                        </div>
+                    </div>
+
+                    <div class="cg-hub-entregas cg-hub-block" data-cg-section="entregasRecientes">
+                        <div class="cg-hub-block-title cg-form-section-toggle"
+                             data-cg-collapse-target="#cgSecEntregasRecientes" aria-expanded="true"
+                             aria-controls="cgSecEntregasRecientes">
+                            <span><i class="fa fa-truck"></i> Entregas recientes</span>
+                            <a id="btnVerTodasEntregas" class="cg-hub-link" href="/ClientesEntregas/Index" target="_blank" >Ver modulo entregas</a>
+                            <i class="fa fa-chevron-down cg-form-section-chev" aria-hidden="true"></i>
+                        </div>
+                        <div id="cgSecEntregasRecientes" class="collapse show">
+                        <div id="cgHubEntregasList" class="cg-hub-entregas-list">
+                            <div class="cg-hub-stock-empty">Sin entregas cargadas.</div>
+                        </div>
+                        </div>
+                    </div>
+
+                    </div>
+                    </div>
+                </div>
+
+                </div>
                 </form>
                 </div>
 
                 <div class="rp-auditoria d-none mt-3" id="cgAuditoria">
                     <div id="cgInfoRegistro"></div>
                     <div id="cgInfoModificacion"></div>
-                </div>
-            </div>
-
-            <!-- CONTACTOS -->
-            <div class="tab-pane fade" id="tabContactos">
-                <div class="rp-contact-page" id="sectionContactosCg">
-                    <div class="rp-contact-hero mb-3">
-                        <div>
-                            <div class="text-muted small">Contactos del cliente</div>
-                            <div class="rp-contact-hero-hint">
-                                <i class="fa fa-info-circle"></i> Administra los contactos asociados.
-                            </div>
-                        </div>
-                        <div class="rp-kpi-card-mini">
-                            <span>Contactos</span>
-                            <strong id="cgContactoCantidad">0</strong>
-                        </div>
-                    </div>
-                    <div class="rp-contact-layout">
-                        <div class="rp-contact-list-panel">
-                            <h6><i class="fa fa-list"></i> Listado</h6>
-                            <div id="cgListaContactos" class="rp-contact-list">
-                                <div class="rp-contact-empty">Sin contactos cargados.</div>
-                            </div>
-                        </div>
-                        <div class="rp-contact-form-panel">
-                            <h6><i class="fa fa-user-plus"></i> <span id="cgContactoFormTitulo">Nuevo contacto</span></h6>
-                            <input type="hidden" id="cgContactoId" />
-                            <div class="row g-2">
-                                <div class="col-md-12">
-                                    <label class="form-label">Nombre</label>
-                                    <input id="cgContactoNombre" class="form-control" maxlength="100" />
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label">Puesto</label>
-                                    <input id="cgContactoPuesto" class="form-control" maxlength="100" />
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label">Telefono</label>
-                                    <input id="cgContactoTelefono" class="form-control" maxlength="50" />
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label">Telefono alternativo</label>
-                                    <input id="cgContactoTelefonoAlt" class="form-control" maxlength="50" />
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label">Email</label>
-                                    <input id="cgContactoEmail" class="form-control" type="email" maxlength="100" />
-                                </div>
-                            </div>
-                            <div class="d-flex flex-wrap gap-2 mt-3">
-                                <button type="button" id="btnGuardarContactoCg" class="btn btn-primary btn-sm">
-                                    <i class="fa fa-check"></i> Guardar contacto
-                                </button>
-                                <button type="button" id="btnNuevoContactoCg" class="btn btn-outline-secondary btn-sm">
-                                    <i class="fa fa-plus"></i> Nuevo
-                                </button>
-                            </div>
-                        </div>
-                    </div>
                 </div>
             </div>
 
@@ -541,176 +700,6 @@
                 </div>
             </div>
 
-            <!-- ENTREGAS -->
-            <div class="tab-pane fade" id="tabEntregas">
-                <div class="cg-list-panel" data-cg-list="entregas">
-                    <div class="cg-list-toolbar">
-                        <div class="cg-list-toolbar-info">
-                            <h6 class="cg-list-title"><i class="fa fa-truck"></i> Entregas</h6>
-                        </div>
-                        <a id="btnNuevaEntregaTab" class="cg-btn cg-btn--success cg-btn--sm" href="#">
-                            <i class="fa fa-plus"></i> Nueva
-                        </a>
-                    </div>
-                    <div class="cg-cards-grid" id="cgCards_entregas"></div>
-                    <div class="dt-dark-wrap cg-table-wrap">
-                        <table class="dt-dark display nowrap compact" id="grd_EntregasCg" style="width:100%">
-                        <thead>
-                            <tr>
-                                <th></th>
-                                <th>Id</th>
-                                <th>Fecha</th>
-                                <th>Establecimiento</th>
-                                <th>Estado</th>
-                                <th>Total</th>
-                                <th>Pagado</th>
-                                <th>Saldo</th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-                    </div>
-                </div>
-            </div>
-
-            <!-- RECORRIDOS -->
-            <div class="tab-pane fade" id="tabRecorridos">
-                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
-                    <div class="text-muted small">Rutas de recoleccion asignadas a este cliente</div>
-                    <a href="/Recorridos/Index" class="btn btn-outline-light btn-sm" target="_blank">
-                        <i class="fa fa-plus me-1"></i> Gestionar recorridos
-                    </a>
-                </div>
-                <div id="cgListaRecorridos" class="cg-recorridos-list"></div>
-            </div>
-
-            <!-- CONTROL MENSUAL -->
-            <div class="tab-pane fade" id="tabControlMensual">
-                <div class="cg-cm-shell">
-                    <div class="cg-cm-filtros">
-                        <div class="cg-cm-filtros-top">
-                            <div>
-                                <h6 class="cg-cm-filtros-title">Periodo a consultar</h6>
-                            </div>
-                            <button type="button" id="btnRefreshControlMensual" class="btn btn-success btn-sm cg-cm-btn-refresh">
-                                <i class="fa fa-refresh me-1"></i> Actualizar
-                            </button>
-                        </div>
-
-                        <div class="row g-3">
-                            <div class="col-lg-5">
-                                <div class="cg-cm-picker">
-                                    <div class="cg-cm-picker-head">
-                                        <label class="form-label mb-0">Anos</label>
-                                        <small class="cg-cm-picker-hint">Toca para marcar o desmarcar</small>
-                                    </div>
-                                    <div class="cg-cm-chips cg-cm-chips--years" id="cgControlAniosChips"></div>
-                                </div>
-                            </div>
-                            <div class="col-lg-5">
-                                <div class="cg-cm-picker">
-                                    <div class="cg-cm-picker-head">
-                                        <label class="form-label mb-0">Meses</label>
-                                        <small class="cg-cm-picker-hint">Vacio = todos los meses</small>
-                                    </div>
-                                    <div class="cg-cm-chips cg-cm-chips--months" id="cgControlMesesChips"></div>
-                                </div>
-                            </div>
-                            <div class="col-lg-2">
-                                <div class="cg-cm-count-box">
-                                    <span class="cg-cm-count-label">Periodos</span>
-                                    <strong id="cgControlCount">-</strong>
-                                    <small class="cg-cm-count-sub" id="cgControlFiltroResumen">-</small>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="cg-cm-presets">
-                            <span class="cg-cm-presets-label">Atajos</span>
-                            <button type="button" class="cg-cm-preset cg-preset-meses" data-meses="1,2,3">Ene-Mar</button>
-                            <button type="button" class="cg-cm-preset cg-preset-meses" data-meses="4,5,6">Abr-Jun</button>
-                            <button type="button" class="cg-cm-preset cg-preset-meses" data-meses="7,8,9">Jul-Sep</button>
-                            <button type="button" class="cg-cm-preset cg-preset-meses" data-meses="10,11,12">Oct-Dic</button>
-                            <button type="button" class="cg-cm-preset cg-preset-meses" data-meses="all">Todos los meses</button>
-                            <button type="button" class="cg-cm-preset" id="btnControlAniosRecientes">Ultimos 3 anos</button>
-                        </div>
-                    </div>
-
-                    <div class="cg-cm-kpis">
-                        <div class="cg-cm-kpi">
-                            <span>Stock actual</span>
-                            <strong id="cgControlStockActual">0</strong>
-                        </div>
-                        <div class="cg-cm-kpi cg-cm-kpi-saldo">
-                            <span>Saldo del periodo</span>
-                            <strong id="cgControlSaldoAnual">$ 0</strong>
-                        </div>
-                    </div>
-
-                    <div id="cgControlError" class="cg-cm-alert d-none" role="alert">
-                        <i class="fa fa-exclamation-triangle"></i>
-                        <span>Algunos datos no se pudieron calcular. Podes editar los meses manualmente.</span>
-                    </div>
-
-                    <div class="cg-cards-grid cg-cm-cards-grid" id="cgCards_controlMensual"></div>
-
-                    <div class="cg-cm-table-wrap">
-                        <table class="cg-cm-table" id="tblControlMensual">
-                            <thead>
-                                <tr>
-                                    <th class="cg-col-anio cg-cm-th-periodo">Ano</th>
-                                    <th class="cg-cm-th-periodo">Mes</th>
-                                    <th class="cg-cm-th-periodo">Visita</th>
-                                    <th class="cg-cm-th-num cg-cm-th-grp-start">Entreg.</th>
-                                    <th class="cg-cm-th-num">Retir.</th>
-                                    <th class="cg-cm-th-num">Stock</th>
-                                    <th class="cg-cm-th-num cg-cm-th-grp-start">Sub. ent.</th>
-                                    <th class="cg-cm-th-num">Sub. ret.</th>
-                                    <th class="cg-cm-th-num cg-cm-th-grp-start">Efectivo</th>
-                                    <th class="cg-cm-th-num">Transfer.</th>
-                                    <th class="cg-cm-th-date">F. transf.</th>
-                                    <th class="cg-cm-th-num cg-cm-th-grp-start">Debe</th>
-                                    <th class="cg-cm-th-num">Haber</th>
-                                    <th class="cg-cm-th-num cg-cm-th-saldo">Saldo</th>
-                                    <th class="cg-cm-th-num">Cajas</th>
-                                    <th class="cg-cm-th-flag">S/E</th>
-                                    <th class="cg-cm-th-obs">Obs.</th>
-                                </tr>
-                            </thead>
-                            <tbody id="cgControlMensualBody"></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <!-- STOCK CLIENTE -->
-            <div class="tab-pane fade" id="tabStockCliente">
-                <div class="cg-list-panel" data-cg-list="stockCliente">
-                    <div class="cg-list-toolbar">
-                        <div class="cg-list-toolbar-info">
-                            <h6 class="cg-list-title"><i class="fa fa-cubes"></i> Stock en poder del cliente</h6>
-                        </div>
-                        <button type="button" id="btnRefreshStockCliente" class="cg-btn cg-btn--ghost cg-btn--sm">
-                            <i class="fa fa-refresh"></i> Actualizar
-                        </button>
-                    </div>
-                    <div class="cg-cards-grid" id="cgCards_stockCliente"></div>
-                    <div class="dt-dark-wrap cg-table-wrap">
-                        <table class="dt-dark display nowrap compact" id="grd_StockClienteCg" style="width:100%">
-                        <thead>
-                            <tr>
-                                <th>Producto</th>
-                                <th class="text-end">Entregadas</th>
-                                <th class="text-end">Retiradas</th>
-                                <th class="text-end">En poder</th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-                    </div>
-                </div>
-            </div>
-
             <!-- CUENTA CORRIENTE -->
             <div class="tab-pane fade" id="tabCuentaCorriente">
                 <div class="cg-cc-hero mb-3" id="cgCcResumen">
@@ -764,11 +753,8 @@
                     </table>
                     </div>
                 </div>
-            </div>
 
-            <!-- COBROS -->
-            <div class="tab-pane fade" id="tabCobros">
-                <div class="cg-list-panel" data-cg-list="cobros">
+                <div class="cg-list-panel mt-3" data-cg-list="cobros">
                     <div class="cg-list-toolbar">
                         <div class="cg-list-toolbar-info">
                             <h6 class="cg-list-title"><i class="fa fa-money"></i> Cobros registrados</h6>
@@ -799,6 +785,49 @@
     </div>
 </div>
 
+<!-- Modal contacto -->
+<div class="modal fade rp-modal" id="modalContactoCg" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rp-modal-content">
+            <div class="modal-header rp-modal-header">
+                <div>
+                    <div class="rp-modal-title"><i class="fa fa-user"></i> <span id="cgContactoFormTitulo">Nuevo contacto</span></div>
+                </div>
+                <button type="button" class="btn-close rp-btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="cgContactoId" />
+                <div class="row g-3">
+                    <div class="col-12">
+                        <label class="form-label">Nombre</label>
+                        <input id="cgContactoNombre" class="form-control" maxlength="100" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Puesto</label>
+                        <input id="cgContactoPuesto" class="form-control" maxlength="100" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Telefono</label>
+                        <input id="cgContactoTelefono" class="form-control" maxlength="50" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Telefono alternativo</label>
+                        <input id="cgContactoTelefonoAlt" class="form-control" maxlength="50" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Email</label>
+                        <input id="cgContactoEmail" class="form-control" type="email" maxlength="100" />
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer rp-modal-footer">
+                <button class="rp-btn rp-btn-soft" data-bs-dismiss="modal"><i class="fa fa-times"></i> Cancelar</button>
+                <button class="rp-btn rp-btn-primary" id="btnGuardarContactoCg" type="button"><i class="fa fa-check"></i> Guardar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Modal editar control mensual -->
 <div class="modal fade rp-modal" id="modalControlMensualCg" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered modal-lg">
@@ -812,6 +841,7 @@
             <div class="modal-body">
                 <input type="hidden" id="cgCmAnio" />
                 <input type="hidden" id="cgCmMes" />
+                <input type="hidden" id="cgCmIdControl" />
                 <div class="row g-3">
                     <div class="col-md-4">
                         <label class="form-label">Fecha visita</label>
@@ -819,11 +849,11 @@
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Abono efectivo</label>
-                        <input type="text" id="cgCmAbonoEfectivo" class="form-control Inputmiles" />
+                        <input type="text" id="cgCmAbonoEfectivo" class="form-control Inputmiles" inputmode="decimal" autocomplete="off" />
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Abono transferencia</label>
-                        <input type="text" id="cgCmAbonoTransferencia" class="form-control Inputmiles" />
+                        <input type="text" id="cgCmAbonoTransferencia" class="form-control Inputmiles" inputmode="decimal" autocomplete="off" />
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Fecha transferencia</label>
@@ -909,5 +939,5 @@
     <script src="~/js/Entities/M_ClientesEstablecimientos.js?v=5.8"></script>
     <script src="~/js/ContratosDocumentos.js?v=5.3"></script>
     <script src="~/js/Entities/M_Contratos.js?v=5.4"></script>
-    <script src="~/js/ClientesGestion.js?v=11.8"></script>
+    <script src="~/js/ClientesGestion.js?v=13.0"></script>
 }

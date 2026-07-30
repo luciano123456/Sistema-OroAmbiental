@@ -143,15 +143,18 @@ table.fixedHeader-locked thead tr.filters {
     }
 
 .saldo-deuda {
-    color: #8ff0b6;
+    color: #86efac !important;
+    font-weight: 700;
 }
 
 .saldo-favor {
-    color: #ff9aa8;
+    color: #fca5a5 !important;
+    font-weight: 700;
 }
 
 .saldo-cero {
-    color: #d7dcec;
+    color: #fbbf24 !important;
+    font-weight: 700;
 }
 
 @media (max-width: 1100px) {

@@ -148,6 +148,7 @@ function fmtMoneyFgCm(n) {
 }
 
 function clsSaldoFgCm(n) {
+    if (typeof clsSaldoMoney === "function") return clsSaldoMoney(n);
     const v = Number(n || 0);
     if (v > 0) return "cg-cm-saldo-pos";
     if (v < 0) return "cg-cm-saldo-neg";
@@ -212,10 +213,10 @@ async function cargarControlMensualFg() {
 
 function renderControlMensualFg(data) {
     const payload = data || {};
-    $("#fgCmKpiIngresos").text(fmtMoneyFgCm(payload.TotalIngresos));
-    $("#fgCmKpiEgresos").text(fmtMoneyFgCm(payload.TotalEgresos));
-    $("#fgCmKpiGastos").text(fmtMoneyFgCm(payload.TotalGastos));
-    $("#fgCmKpiNeto").text(fmtMoneyFgCm(payload.NetoPeriodo));
+    $("#fgCmKpiIngresos").text(fmtMoneyFgCm(payload.TotalIngresos)).attr("class", "val rp-money-in");
+    $("#fgCmKpiEgresos").text(fmtMoneyFgCm(payload.TotalEgresos)).attr("class", "val rp-money-out");
+    $("#fgCmKpiGastos").text(fmtMoneyFgCm(payload.TotalGastos)).attr("class", "val rp-money-out");
+    $("#fgCmKpiNeto").text(fmtMoneyFgCm(payload.NetoPeriodo)).attr("class", "val " + clsSaldoFgCm(payload.NetoPeriodo));
 
     const filas = (payload.Filas || []).filter(filaTieneMovimientoFgCm);
     const $body = $("#fgCmBody").empty();
@@ -230,13 +231,13 @@ function renderControlMensualFg(data) {
             <tr>
                 <td>${f.Anio}</td>
                 <td class="cg-cm-mes">${f.MesNombre || ""}</td>
-                <td class="cg-cm-num fg-cm-col-efe">${fmtMoneyFgCm(f.IngEfectivo)}</td>
-                <td class="cg-cm-num fg-cm-col-efe">${fmtMoneyFgCm(f.EgrEfectivo)}</td>
-                <td class="cg-cm-num fg-cm-col-ban">${fmtMoneyFgCm(f.IngBanco)}</td>
-                <td class="cg-cm-num fg-cm-col-ban">${fmtMoneyFgCm(f.EgrBanco)}</td>
-                <td class="cg-cm-num fg-cm-col-gas">${fmtMoneyFgCm(f.Gastos)}</td>
-                <td class="cg-cm-num cg-cm-debe">${fmtMoneyFgCm(f.Ingresos)}</td>
-                <td class="cg-cm-num cg-cm-haber">${fmtMoneyFgCm(f.Egresos)}</td>
+                <td class="cg-cm-num fg-cm-col-efe rp-money-in">${fmtMoneyFgCm(f.IngEfectivo)}</td>
+                <td class="cg-cm-num fg-cm-col-efe rp-money-out">${fmtMoneyFgCm(f.EgrEfectivo)}</td>
+                <td class="cg-cm-num fg-cm-col-ban rp-money-in">${fmtMoneyFgCm(f.IngBanco)}</td>
+                <td class="cg-cm-num fg-cm-col-ban rp-money-out">${fmtMoneyFgCm(f.EgrBanco)}</td>
+                <td class="cg-cm-num fg-cm-col-gas rp-money-out">${fmtMoneyFgCm(f.Gastos)}</td>
+                <td class="cg-cm-num rp-money-in">${fmtMoneyFgCm(f.Ingresos)}</td>
+                <td class="cg-cm-num rp-money-out">${fmtMoneyFgCm(f.Egresos)}</td>
                 <td class="cg-cm-num ${clsSaldoFgCm(f.Neto)}">${fmtMoneyFgCm(f.Neto)}</td>
                 <td class="cg-cm-num ${clsSaldoFgCm(f.Saldo)}"><strong>${fmtMoneyFgCm(f.Saldo)}</strong></td>
             </tr>

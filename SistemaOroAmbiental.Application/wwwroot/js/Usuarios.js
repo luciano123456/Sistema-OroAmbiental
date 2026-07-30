@@ -71,6 +71,7 @@ async function guardarCambios() {
 
     if (!validarCampos()) return false;
 
+    return withBusy("#btnGuardar", async () => {
     const idUsuario = $("#txtId").val();
 
     const nuevoModelo = {
@@ -183,6 +184,7 @@ async function guardarCambios() {
         console.error(err);
         errorModal("Error al guardar usuario y permisos.");
     }
+    });
 }
 function nuevoUsuario() {
     limpiarModal();

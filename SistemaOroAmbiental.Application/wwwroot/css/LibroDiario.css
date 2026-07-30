@@ -43,9 +43,12 @@
     .ld-kpis { grid-template-columns: 1fr; }
 }
 
-.ld-val-debe { color: #6ee7b7 !important; }
-.ld-val-haber { color: #fca5a5 !important; }
-.ld-val-saldo { color: #fcd34d !important; }
+.ld-val-debe { color: #fca5a5 !important; }
+.ld-val-haber { color: #86efac !important; }
+.ld-val-saldo { color: #fbbf24 !important; }
+.ld-val-saldo-pos { color: #86efac !important; font-weight: 700; }
+.ld-val-saldo-neg { color: #fca5a5 !important; font-weight: 700; }
+.ld-val-saldo-cero { color: #fbbf24 !important; font-weight: 700; }
 
 .ld-grid-card {
     border-radius: 16px;

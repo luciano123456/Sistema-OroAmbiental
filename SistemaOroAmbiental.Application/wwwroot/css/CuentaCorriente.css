@@ -299,20 +299,20 @@
     }
 
 
-/* SALDOS */
-
+/* SALDOS: + verde | - rojo | 0 amarillo */
 .saldo-deuda {
-    color: #ff5c5c;
+    color: #86efac !important;
     font-weight: 700;
 }
 
 .saldo-favor {
-    color: #1bdc9b;
+    color: #fca5a5 !important;
     font-weight: 700;
 }
 
 .saldo-cero {
-    color: #9aa4c7;
+    color: #fbbf24 !important;
+    font-weight: 700;
 }
 
 .cc-actions {

@@ -168,7 +168,7 @@
     }
 
     function wireEventosEntrega() {
-        $("#btnGuardarEntrega").on("click", guardarEntrega);
+    $("#btnGuardarEntrega").on("click", busyHandler(guardarEntrega));
         $("#btnEliminarEntrega").on("click", eliminarEntregaActual);
         $("#btnAgregarLinea").on("click", () => agregarLinea({ TipoMovimiento: TIPO_LINEA_ENTREGA }));
         $("#btnAgregarRecuperado").on("click", () => agregarLinea({ TipoMovimiento: TIPO_LINEA_RECUPERADO }));

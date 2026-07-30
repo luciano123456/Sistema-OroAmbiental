@@ -178,7 +178,7 @@ $(document).ready(async () => {
         $("#listaSugeridosRecorrido .rec-sugerido-check:not(:disabled)").prop("checked", checked);
         actualizarResumenSugeridos();
     });
-    $("#btnGuardarClienteRecorrido").on("click", () => guardarClienteRecorrido());
+    $("#btnGuardarClienteRecorrido").on("click", busyHandler(guardarClienteRecorrido));
 
     $("#crCliente").on("change", async function () {
         await cargarEstablecimientosCliente(parseInt($(this).val(), 10));
