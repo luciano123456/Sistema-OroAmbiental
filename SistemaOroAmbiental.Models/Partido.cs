@@ -14,7 +14,5 @@ public partial class Partido
 
     public virtual ICollection<Localidad> Localidades { get; set; } = new List<Localidad>();
 
-    public virtual ICollection<Cliente> Clientes { get; set; } = new List<Cliente>();
-
     public virtual ICollection<ClientesEstablecimiento> ClientesEstablecimientos { get; set; } = new List<ClientesEstablecimiento>();
 }

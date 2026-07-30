@@ -56,7 +56,6 @@ namespace SistemaOroAmbiental.DAL.Repository
                 entity.Domicilio = model.Domicilio;
                 entity.IdTipoGenerador = model.IdTipoGenerador;
                 entity.IdProvincia = model.IdProvincia;
-                entity.Localidad = model.Localidad;
                 entity.CodPostal = model.CodPostal;
                 entity.IdCondicionIva = model.IdCondicionIva;
                 entity.Email = model.Email;
@@ -66,8 +65,6 @@ namespace SistemaOroAmbiental.DAL.Repository
                 entity.IdMotivo = model.IdMotivo;
                 entity.MotivoDetalle = model.MotivoDetalle;
                 entity.IdCalificacion = model.IdCalificacion;
-                entity.IdLocalidad = model.IdLocalidad;
-                entity.IdPartido = model.IdPartido;
                 entity.NumeroCliente = model.NumeroCliente;
                 entity.FechaInicio = model.FechaInicio;
                 entity.FechaLicenciaDesde = model.FechaLicenciaDesde;
@@ -138,8 +135,6 @@ namespace SistemaOroAmbiental.DAL.Repository
                 .Include(x => x.IdMotivoNavigation)
                 .Include(x => x.IdCalificacionNavigation)
                 .Include(x => x.IdTipoGeneradorNavigation)
-                .Include(x => x.IdLocalidadNavigation)
-                .Include(x => x.IdPartidoNavigation)
                 .Include(x => x.IdUsuarioRegistraNavigation)
                 .Include(x => x.IdUsuarioModificaNavigation)
                 .FirstOrDefaultAsync(x => x.Id == id);
@@ -157,8 +152,6 @@ namespace SistemaOroAmbiental.DAL.Repository
                 .Include(x => x.IdMotivoNavigation)
                 .Include(x => x.IdCalificacionNavigation)
                 .Include(x => x.IdTipoGeneradorNavigation)
-                .Include(x => x.IdLocalidadNavigation)
-                .Include(x => x.IdPartidoNavigation)
                 .Include(x => x.IdUsuarioRegistraNavigation)
                 .Include(x => x.IdUsuarioModificaNavigation)
                 .AsQueryable();

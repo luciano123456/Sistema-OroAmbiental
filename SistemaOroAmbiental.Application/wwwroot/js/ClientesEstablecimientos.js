@@ -7,10 +7,14 @@ const columnConfigEst = [
     { index: 4, filterType: 'text' },
     { index: 5, filterType: 'text' },
     { index: 6, filterType: 'select', fetchDataFunc: listaProvinciasFilterEst },
-    { index: 7, filterType: 'select', fetchDataFunc: listaDiasFilterEst },
-    { index: 8, filterType: 'select', fetchDataFunc: listaSemanasFilterEst },
-    { index: 9, filterType: 'select', fetchDataFunc: listaListasPrecioFilterEst },
-    { index: 10, filterType: 'text' }
+    { index: 7, filterType: 'select', fetchDataFunc: listaPartidosFilterEst },
+    { index: 8, filterType: 'text' },
+    { index: 9, filterType: 'select', fetchDataFunc: listaLocalidadesFilterEst },
+    { index: 10, filterType: 'text' },
+    { index: 11, filterType: 'select', fetchDataFunc: listaDiasFilterEst },
+    { index: 12, filterType: 'select', fetchDataFunc: listaSemanasFilterEst },
+    { index: 13, filterType: 'select', fetchDataFunc: listaListasPrecioFilterEst },
+    { index: 14, filterType: 'text' }
 ];
 
 registrarFiltrosGrilla('grd_Establecimientos', columnConfigEst, {
@@ -130,6 +134,10 @@ async function configurarDataTableEst(data) {
                 { data: "Nombre" },
                 { data: "Cuit" },
                 { data: "Provincia" },
+                { data: "Partido", defaultContent: "" },
+                { data: "CodigoPartido", defaultContent: "" },
+                { data: "Localidad", defaultContent: "" },
+                { data: "CodigoLocalidad", defaultContent: "" },
                 { data: "DiaRecoleccion" },
                 { data: "SemanaRecoleccion" },
                 { data: "ListaPrecio" },
@@ -171,6 +179,16 @@ async function listaClientesFilterEst() {
 
 async function listaProvinciasFilterEst() {
     const r = await fetch("/Provincias/Lista", { headers: { Authorization: "Bearer " + token } });
+    return await r.json();
+}
+
+async function listaPartidosFilterEst() {
+    const r = await fetch("/Partidos/Lista", { headers: { Authorization: "Bearer " + token } });
+    return await r.json();
+}
+
+async function listaLocalidadesFilterEst() {
+    const r = await fetch("/Localidades/Lista", { headers: { Authorization: "Bearer " + token } });
     return await r.json();
 }
 

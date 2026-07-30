@@ -453,7 +453,7 @@ namespace SistemaOroAmbiental.DAL.Repository
                     : establecimiento.Nombre.Trim() + " — " + domicilio;
             }
 
-            var localidad = (establecimiento?.Localidad ?? cliente.Localidad ?? "").Trim();
+            var localidad = (establecimiento?.Localidad ?? "").Trim();
             var telefono = ObtenerTelefonoParada(cliente, establecimiento);
             var horario = FormatearHorarioRecoleccion(establecimiento);
             var observacion = string.IsNullOrWhiteSpace(recorrido.Observacion)
@@ -597,7 +597,7 @@ namespace SistemaOroAmbiental.DAL.Repository
                     e.PisoDepartamento,
                     DomicilioEst = e.Domicilio,
                     DomicilioCli = c.Domicilio,
-                    Localidad = e.Localidad ?? c.Localidad,
+                    Localidad = e.Localidad,
                     e.DiasHorarios,
                     e.HorarioRecoleccionDesde,
                     e.HorarioRecoleccionHasta
@@ -775,7 +775,7 @@ namespace SistemaOroAmbiental.DAL.Repository
                        IdEstablecimiento = r.IdEstablecimiento,
                        Establecimiento = e != null ? e.Nombre : null,
                        Domicilio = (e != null ? e.Domicilio : null) ?? cl.Domicilio,
-                       Localidad = e != null ? (e.Localidad ?? cl.Localidad) : cl.Localidad,
+                       Localidad = e != null ? e.Localidad : null,
                        IdCamion = r.IdCamion,
                        Camion = c.Nombre,
                        IdSemana = r.IdSemana,

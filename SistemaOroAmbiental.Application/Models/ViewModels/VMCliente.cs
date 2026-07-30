@@ -28,8 +28,6 @@ namespace SistemaOroAmbiental.Application.Models.ViewModels
 
         public int? IdProvincia { get; set; }
 
-        public string? Localidad { get; set; }
-
         public string? CodPostal { get; set; }
 
         public int? IdCondicionIva { get; set; }
@@ -68,17 +66,11 @@ namespace SistemaOroAmbiental.Application.Models.ViewModels
 
         public int? IdCalificacion { get; set; }
 
-        public int? IdLocalidad { get; set; }
-
-        public int? IdPartido { get; set; }
-
         public string? Estado { get; set; }
 
         public string? Motivo { get; set; }
 
         public string? Calificacion { get; set; }
-
-        public string? Partido { get; set; }
 
         public int? NumeroCliente { get; set; }
 

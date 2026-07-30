@@ -29,8 +29,6 @@ public partial class Cliente
 
     public int? IdProvincia { get; set; }
 
-    public string? Localidad { get; set; }
-
     public string? CodPostal { get; set; }
 
     public int? IdCondicionIva { get; set; }
@@ -56,10 +54,6 @@ public partial class Cliente
     public string? MotivoDetalle { get; set; }
 
     public int? IdCalificacion { get; set; }
-
-    public int? IdLocalidad { get; set; }
-
-    public int? IdPartido { get; set; }
 
     public int? NumeroCliente { get; set; }
 
@@ -98,10 +92,6 @@ public partial class Cliente
     public virtual ClientesCalificacion? IdCalificacionNavigation { get; set; }
 
     public virtual ClientesTipoGenerador? IdTipoGeneradorNavigation { get; set; }
-
-    public virtual Localidad? IdLocalidadNavigation { get; set; }
-
-    public virtual Partido? IdPartidoNavigation { get; set; }
 
     public virtual Sucursal IdSucursalNavigation { get; set; } = null!;
 

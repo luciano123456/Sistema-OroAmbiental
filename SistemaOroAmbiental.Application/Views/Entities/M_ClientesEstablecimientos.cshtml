@@ -115,8 +115,39 @@
                             </div>
 
                             <div class="col-md-4">
+                                <label class="form-label">Partido</label>
+                                <div class="rp-select-plus">
+                                    <select id="cmbPartidoEst" class="form-control"></select>
+                                    <button type="button" class="rp-btn-plus" title="Agregar partido"
+                                            data-config-nombre="Partidos" data-config-controller="Partidos"
+                                            data-config-combo-nombre="Provincias" data-config-combo-controller="Provincias"
+                                            data-config-combo-label="Provincia">
+                                        <i class="fa fa-plus"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="col-md-2">
+                                <label class="form-label">Codigo partido</label>
+                                <input id="txtCodigoPartidoEst" class="form-control" readonly disabled autocomplete="off" placeholder="-" />
+                            </div>
+
+                            <div class="col-md-4">
                                 <label class="form-label">Localidad</label>
-                                <input id="txtLocalidadEst" class="form-control" maxlength="200" />
+                                <div class="rp-select-plus">
+                                    <select id="cmbLocalidadEst" class="form-control"></select>
+                                    <button type="button" class="rp-btn-plus" title="Agregar localidad"
+                                            data-config-nombre="Localidades" data-config-controller="Localidades"
+                                            data-config-combo-nombre="Provincias" data-config-combo-controller="Provincias"
+                                            data-config-combo-label="Provincia">
+                                        <i class="fa fa-plus"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="col-md-2">
+                                <label class="form-label">Codigo localidad</label>
+                                <input id="txtCodigoLocalidadEst" class="form-control" readonly disabled autocomplete="off" placeholder="-" />
                             </div>
 
                             <div class="col-md-5">

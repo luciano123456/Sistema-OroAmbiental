@@ -273,14 +273,18 @@ function aplicarPrefillGeoAtajo() {
     if (!perfil) return Promise.resolve();
 
     if (perfil.provincia) {
-        const idProvincia = document.getElementById("cgProvincia")?.value || "";
+        const idProvincia = document.getElementById("cmbProvinciaEst")?.value
+            || document.getElementById("cgProvincia")?.value
+            || "";
         const cmbProvincia = document.getElementById("cmbConfiguracion");
         if (cmbProvincia && idProvincia) {
             cmbProvincia.value = idProvincia;
             if (perfil.partido) {
                 return llenarComboPartidoConfiguracion(
                     idProvincia,
-                    document.getElementById("cgPartido")?.value || null
+                    document.getElementById("cmbPartidoEst")?.value
+                        || document.getElementById("cgPartido")?.value
+                        || null
                 );
             }
         }
@@ -594,13 +598,21 @@ async function llenarComboConfiguracion() {
 function validarCamposConfiguracion() {
     const perfil = getPerfilConfigGeo(controllerConfiguracion);
     const nombre = ($("#txtNombreConfiguracion").val() || "").trim();
+    const codigo = ($("#txtCodigoConfiguracion").val() || "").trim();
     const combo = $("#cmbConfiguracion").val();
+    const partido = $("#cmbConfiguracionPartido").val();
 
-    const camposValidos = nombre !== "";
+    const nombreValido = nombre !== "";
+    const codigoValido = !perfil?.codigo || codigo !== "";
     const selectValido = combo !== "" && combo != null;
+    const partidoValido = !perfil?.partido || (partido !== "" && partido != null);
 
-    $("#lblNombreConfiguracion").css("color", camposValidos ? "" : "red");
-    $("#txtNombreConfiguracion").css("border-color", camposValidos ? "" : "red");
+    $("#lblNombreConfiguracion").css("color", nombreValido ? "" : "red");
+    $("#txtNombreConfiguracion").css("border-color", nombreValido ? "" : "red");
+    $("#txtCodigoConfiguracion").css(
+        "border-color",
+        perfil?.codigo && !codigoValido ? "red" : ""
+    );
 
     if (comboNombre != null || perfil?.provincia) {
         $("#cmbConfiguracion").css("border-color", selectValido ? "" : "red");
@@ -608,15 +620,15 @@ function validarCamposConfiguracion() {
         $("#cmbConfiguracion").css("border-color", "");
     }
 
-    if (perfil?.provincia) {
-        return camposValidos && selectValido;
+    if (perfil?.partido) {
+        $("#cmbConfiguracionPartido").css("border-color", partidoValido ? "" : "red");
+    } else {
+        $("#cmbConfiguracionPartido").css("border-color", "");
     }
 
-    if (comboNombre != null) {
-        return camposValidos && selectValido;
-    }
-
-    return camposValidos;
+    const provinciaValida = !perfil?.provincia || selectValido;
+    const comboValido = comboNombre == null || selectValido;
+    return nombreValido && codigoValido && provinciaValida && comboValido && partidoValido;
 }
 
 function guardarCambiosConfiguracion() {
@@ -781,6 +793,8 @@ function agregarConfiguracion() {
     if (controllerConfiguracion === "Cuentas") {
         document.getElementById("cmbConfiguracionTipoCuenta").value = "Efectivo";
     }
+
+    validarCamposConfiguracion();
 }
 
 function obtenerPrefVistaListados() {

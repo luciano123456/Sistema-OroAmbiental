@@ -251,8 +251,6 @@ namespace SistemaOroAmbiental.DAL.Repository
         private async Task<string?> PartidoAsync(int id)
         {
             var partes = new List<string>();
-            var cli = await _db.Clientes.CountAsync(x => x.IdPartido == id);
-            if (cli > 0) partes.Add($"{cli} cliente(s)");
             var est = await _db.ClientesEstablecimientos.CountAsync(x => x.IdPartido == id);
             if (est > 0) partes.Add($"{est} establecimiento(s)");
             var loc = await _db.Localidades.CountAsync(x => x.IdPartido == id);
@@ -263,8 +261,6 @@ namespace SistemaOroAmbiental.DAL.Repository
         private async Task<string?> LocalidadAsync(int id)
         {
             var partes = new List<string>();
-            var cli = await _db.Clientes.CountAsync(x => x.IdLocalidad == id);
-            if (cli > 0) partes.Add($"{cli} cliente(s)");
             var est = await _db.ClientesEstablecimientos.CountAsync(x => x.IdLocalidad == id);
             if (est > 0) partes.Add($"{est} establecimiento(s)");
             return Mensaje("esta localidad", partes);

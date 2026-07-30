@@ -138,7 +138,7 @@
                                 <input id="cgNombre" class="form-control" required />
                             </div>
                             <div class="col-md-2">
-                                <label class="form-label">N? cliente</label>
+                                <label class="form-label">Nro cliente</label>
                                 <input id="cgNumeroCliente" class="form-control" type="number" min="1" placeholder="Auto" />
                             </div>
                             <div class="col-md-3">
@@ -232,7 +232,7 @@
                                 <input id="cgCodPostal" class="form-control" />
                             </div>
 
-                            <div class="col-md-4">
+                            <div class="col-md-10">
                                 <label class="form-label">Provincia</label>
                                 <div class="rp-select-plus">
                                     <select id="cgProvincia" class="form-control"></select>
@@ -245,38 +245,6 @@
                             <div class="col-md-2">
                                 <label class="form-label">Cod. provincia</label>
                                 <input id="cgCodProvincia" class="form-control" readonly placeholder="-" />
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label">Partido</label>
-                                <div class="rp-select-plus">
-                                    <select id="cgPartido" class="form-control"></select>
-                                    <button type="button" class="rp-btn-plus" title="Agregar partido"
-                                            data-config-nombre="Partidos" data-config-controller="Partidos"
-                                            data-config-combo-nombre="Provincias" data-config-combo-controller="Provincias"
-                                            data-config-combo-label="Provincia">
-                                        <i class="fa fa-plus"></i>
-                                    </button>
-                                </div>
-                            </div>
-                            <div class="col-md-2">
-                                <label class="form-label">Cod. partido</label>
-                                <input id="cgCodPartido" class="form-control" readonly placeholder="-" />
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label">Localidad</label>
-                                <div class="rp-select-plus">
-                                    <select id="cgLocalidad" class="form-control"></select>
-                                    <button type="button" class="rp-btn-plus" title="Agregar localidad"
-                                            data-config-nombre="Localidades" data-config-controller="Localidades"
-                                            data-config-combo-nombre="Provincias" data-config-combo-controller="Provincias"
-                                            data-config-combo-label="Provincia">
-                                        <i class="fa fa-plus"></i>
-                                    </button>
-                                </div>
-                            </div>
-                            <div class="col-md-2">
-                                <label class="form-label">Cod. localidad</label>
-                                <input id="cgCodLocalidad" class="form-control" readonly placeholder="-" />
                             </div>
                         </div>
                     </div>
@@ -525,7 +493,10 @@
                                 <th>Id establecimiento</th>
                                 <th>Nombre</th>
                                 <th>Domicilio</th>
+                                <th>Partido</th>
+                                <th>Cod. partido</th>
                                 <th>Localidad</th>
+                                <th>Cod. localidad</th>
                                 <th>Unidad</th>
                                 <th>Dia rec.</th>
                                 <th>Semana rec.</th>
@@ -935,8 +906,8 @@
     </script>
     <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-    <script src="~/js/Entities/M_ClientesEstablecimientos.js?v=5.5"></script>
+    <script src="~/js/Entities/M_ClientesEstablecimientos.js?v=5.8"></script>
     <script src="~/js/ContratosDocumentos.js?v=5.3"></script>
     <script src="~/js/Entities/M_Contratos.js?v=5.4"></script>
-    <script src="~/js/ClientesGestion.js?v=11.7"></script>
+    <script src="~/js/ClientesGestion.js?v=11.8"></script>
 }

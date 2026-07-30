@@ -21,7 +21,7 @@ const CG = {
     controlFiltros: { anios: [], meses: [] },
     viewPref: "auto",
     listMeta: {},
-    geoCache: { provincias: [], partidos: [], localidades: [] },
+    geoCache: { provincias: [] },
     idDiaRecoleccionLegacy: 0
 };
 
@@ -50,9 +50,6 @@ const API_CG = {
     dependencias: id => `/Clientes/DependenciasEliminar?id=${id}`,
     sucursales: "/Sucursales/Lista",
     provincias: "/Provincias/Lista",
-    partidosPorProvincia: id => `/Partidos/ListaPorProvincia?idProvincia=${id}`,
-    localidadesPorPartido: id => `/Localidades/ListaPorPartido?idPartido=${id}`,
-    localidadesPorProvincia: id => `/Localidades/ListaPorProvincia?idProvincia=${id}`,
     condicionesIva: "/CondicionesIva/Lista",
     profesiones: "/ClientesProfesiones/Lista",
     estados: "/ClientesEstados/Lista",
@@ -133,23 +130,6 @@ function initModalesCg() {
     if (typeof initEstablecimientoModal === "function") {
         CG.establecimientoModal = initEstablecimientoModal({
             token: token,
-            onOpen: async (modo, modal) => {
-                if (modo !== "nuevo" || !CG.modelo || CG.id <= 0) return;
-                const all = await fetchJsonCg(API_CG.establecimientosLista, { headers: authCg() }) || [];
-                if (all.some(x => x.IdCliente === CG.id)) return;
-
-                const c = CG.modelo;
-                modal._setFieldValue("txtNombreEst", c.Nombre || "");
-                modal._setFieldValue("txtCuitEst", c.Cuit || "");
-                if (c.IdCondicionIva) modal._setFieldValue("cmbCondicionIvaEst", c.IdCondicionIva, true);
-                modal._setFieldValue("txtCalleEst", c.Calle || c.Domicilio || "");
-                modal._setFieldValue("txtNumeroEst", c.Numero || "");
-                modal._setFieldValue("txtPisoDeptoEst", c.PisoDepartamento || "");
-                modal._setFieldValue("txtLocalidadEst", localidadTextoCg() || c.Localidad || "");
-                modal._setFieldValue("txtCodPostalEst", c.CodPostal || "");
-                if (c.IdProvincia) modal._setFieldValue("cmbProvinciaEst", c.IdProvincia, true);
-                if (c.IdTipoGenerador) modal._setFieldValue("cmbTipoGeneradorEst", c.IdTipoGenerador, true);
-            },
             onSaved: async () => {
                 CG.tabsLoaded.establecimientos = false;
                 await cargarTabEstablecimientos();
@@ -197,17 +177,7 @@ function wireEventosCg() {
         $("#wrapMotivoDetalle").prop("hidden", !$(this).val());
     });
 
-    $("#cgProvincia").on("change", async function () {
-        await cargarPartidosCg($(this).val());
-        actualizarCodigosGeoCg();
-    });
-
-    $("#cgPartido").on("change", async function () {
-        await cargarLocalidadesCg($(this).val());
-        actualizarCodigosGeoCg();
-    });
-
-    $("#cgLocalidad").on("change", actualizarCodigosGeoCg);
+    $("#cgProvincia").on("change", actualizarCodigoProvinciaCg);
 
     $("#cgRecoleccionBody").on("shown.bs.collapse", function () {
         ["#cgTipoGenerador", ...CG_REC_CAMION_SELECTORS, "#cgRecSemana", "#cgRecListaPrecio"]
@@ -266,16 +236,6 @@ function wireEventosCg() {
         const tipo = e.detail?.tipo;
         const nuevoId = e.detail?.nuevoId;
 
-        if (tipo === "Partidos") {
-            await cargarPartidosCg($("#cgProvincia").val(), nuevoId);
-            return;
-        }
-
-        if (tipo === "Localidades") {
-            await cargarLocalidadesCg($("#cgPartido").val(), nuevoId);
-            return;
-        }
-
         const map = {
             Sucursales: "#cgSucursal",
             Provincias: "#cgProvincia",
@@ -296,7 +256,7 @@ function wireEventosCg() {
 
 function initSelect2Cg() {
     const opts = { width: "100%", allowClear: true, placeholder: "Seleccionar" };
-    ["#cgSucursal", "#cgProvincia", "#cgPartido", "#cgLocalidad", "#cgProfesion",
+    ["#cgSucursal", "#cgProvincia", "#cgProfesion",
         "#cgCondicionIva", "#cgEstado", "#cgMotivo", "#cgCalificacion", "#cgTipoGenerador", "#cgCobroCuenta",
         ...CG_REC_CAMION_SELECTORS,
         "#cgRecSemana", "#cgRecListaPrecio"].forEach(sel => {
@@ -340,18 +300,10 @@ function poblarSelectCamionesCg($sel, camiones, selectedId) {
     else $sel.val("").trigger("change");
 }
 
-function actualizarCodigosGeoCg() {
+function actualizarCodigoProvinciaCg() {
     const idProv = intOrNullCg("#cgProvincia");
-    const idPart = intOrNullCg("#cgPartido");
-    const idLoc = intOrNullCg("#cgLocalidad");
-
     const prov = (CG.geoCache.provincias || []).find(x => x.Id === idProv);
-    const part = (CG.geoCache.partidos || []).find(x => x.Id === idPart);
-    const loc = (CG.geoCache.localidades || []).find(x => x.Id === idLoc);
-
     $("#cgCodProvincia").val(prov?.Codigo ?? "");
-    $("#cgCodPartido").val(part?.Codigo ?? "");
-    $("#cgCodLocalidad").val(loc?.Codigo ?? "");
 }
 
 async function recargarComboCg(selector, nuevoId, textField = "Nombre") {
@@ -585,67 +537,6 @@ function refreshSelect2Cg($el) {
     if ($el.data("select2")) $el.trigger("change.select2");
 }
 
-async function cargarPartidosCg(idProvincia, selectedPartidoId, selectedLocalidadId) {
-    const $p = $("#cgPartido");
-    $p.empty().append(new Option("Seleccionar", ""));
-    CG.geoCache.partidos = [];
-    CG.geoCache.localidades = [];
-
-    if (!idProvincia) {
-        refreshSelect2Cg($p);
-        await cargarLocalidadesCg(null);
-        actualizarCodigosGeoCg();
-        return;
-    }
-
-    const data = await fetchJsonCg(API_CG.partidosPorProvincia(idProvincia), { headers: authCg() });
-    CG.geoCache.partidos = data || [];
-    const seen = new Set();
-    (data || []).forEach(x => {
-        if (seen.has(x.Id)) return;
-        seen.add(x.Id);
-        $p.append(new Option(x.Nombre, x.Id));
-    });
-
-    if (selectedPartidoId) $p.val(String(selectedPartidoId));
-    refreshSelect2Cg($p);
-    await cargarLocalidadesCg(selectedPartidoId || null, selectedLocalidadId);
-    actualizarCodigosGeoCg();
-}
-
-async function cargarLocalidadesCg(idPartido, selectedId) {
-    const $l = $("#cgLocalidad");
-    $l.empty().append(new Option("Seleccionar", ""));
-    CG.geoCache.localidades = [];
-
-    if (!idPartido) {
-        refreshSelect2Cg($l);
-        actualizarCodigosGeoCg();
-        return;
-    }
-
-    let data = await fetchJsonCg(API_CG.localidadesPorPartido(idPartido), { headers: authCg() });
-
-    if ((!data || !data.length) && $("#cgProvincia").val()) {
-        data = await fetchJsonCg(
-            API_CG.localidadesPorProvincia($("#cgProvincia").val()),
-            { headers: authCg() }
-        );
-    }
-
-    CG.geoCache.localidades = data || [];
-    const seen = new Set();
-    (data || []).forEach(x => {
-        if (seen.has(x.Id)) return;
-        seen.add(x.Id);
-        $l.append(new Option(x.Nombre, x.Id));
-    });
-
-    if (selectedId) $l.val(String(selectedId));
-    refreshSelect2Cg($l);
-    actualizarCodigosGeoCg();
-}
-
 async function cargarClienteCg(id) {
     try {
         const m = await fetchJsonCg(API_CG.editar(id), { headers: authCg() });
@@ -684,10 +575,8 @@ async function cargarClienteCg(id) {
         if (m.IdProvincia) {
             $("#cgProvincia").val(String(m.IdProvincia));
             refreshSelect2Cg($("#cgProvincia"));
-            await cargarPartidosCg(m.IdProvincia, m.IdPartido, m.IdLocalidad);
-        } else {
-            actualizarCodigosGeoCg();
         }
+        actualizarCodigoProvinciaCg();
 
         setAuditoriaCg(m);
         actualizarHeaderCg(m.Nombre || "Cliente", m.Cuit ? `CUIT ${m.Cuit}` : "");
@@ -811,7 +700,6 @@ function obtenerModeloCg() {
         Numero: ($("#cgNumero").val() || "").trim() || null,
         PisoDepartamento: ($("#cgPisoDepto").val() || "").trim() || null,
         IdTipoGenerador: intOrNullCg("#cgTipoGenerador"),
-        Localidad: localidadTextoCg(),
         CodPostal: $("#cgCodPostal").val() || null,
         IdProvincia: intOrNullCg("#cgProvincia"),
         IdProfesion: intOrNullCg("#cgProfesion"),
@@ -820,8 +708,6 @@ function obtenerModeloCg() {
         IdMotivo: intOrNullCg("#cgMotivo"),
         MotivoDetalle: ($("#cgMotivoDetalle").val() || "").trim() || null,
         IdCalificacion: intOrNullCg("#cgCalificacion"),
-        IdPartido: intOrNullCg("#cgPartido"),
-        IdLocalidad: intOrNullCg("#cgLocalidad"),
         NumeroCliente: intOrNullCg("#cgNumeroCliente"),
         FechaInicio: parseFechaCg($("#cgFechaInicio").val()),
         FechaLicenciaDesde: parseFechaCg($("#cgFechaLicenciaDesde").val()),
@@ -835,14 +721,6 @@ function intOrNullCg(sel) {
     if (!v) return null;
     const n = parseInt(v, 10);
     return Number.isNaN(n) ? null : n;
-}
-
-function localidadTextoCg() {
-    const $l = $("#cgLocalidad");
-    const val = $l.val();
-    if (!val) return null;
-    const txt = ($l.find("option:selected").text() || "").trim();
-    return txt && txt !== "Seleccionar" ? txt : null;
 }
 
 function validarDatosCg() {
@@ -1080,7 +958,10 @@ async function cargarTabEstablecimientos() {
         { data: "IdEstablecimientoCliente", defaultContent: "" },
         { data: "Nombre" },
         { data: "Domicilio" },
+        { data: "Partido", defaultContent: "" },
+        { data: "CodigoPartido", defaultContent: "" },
         { data: "Localidad" },
+        { data: "CodigoLocalidad", defaultContent: "" },
         { data: "Camion" },
         { data: "DiaRecoleccion" },
         { data: "SemanaRecoleccion" },
@@ -1101,8 +982,7 @@ window.eliminarEstablecimientoCg = eliminarEstablecimientoCg;
 
 async function abrirNuevoEstablecimientoCg() {
     if (!CG.establecimientoModal) return;
-    await CG.establecimientoModal.abrirNuevo();
-    CG.establecimientoModal._setFieldValue("cmbClienteEst", CG.id, true);
+    await CG.establecimientoModal.abrirNuevo(CG.id);
 }
 
 /* ---- Contratos ---- */
@@ -1664,7 +1544,10 @@ const CG_CARD_SCHEMAS = {
         badge: r => r.Camion || "Sin unidad",
         tone: () => "cg-data-card--blue",
         fields: [
+            { label: "Partido", value: r => r.Partido },
+            { label: "Cod. partido", value: r => r.CodigoPartido },
             { label: "Localidad", value: r => r.Localidad },
+            { label: "Cod. localidad", value: r => r.CodigoLocalidad },
             { label: "Dia rec.", value: r => r.DiaRecoleccion },
             { label: "Semana", value: r => r.SemanaRecoleccion },
             { label: "Lista precio", value: r => r.ListaPrecio, full: true }

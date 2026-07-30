@@ -19,7 +19,10 @@
                     actualizar: "/ClientesEstablecimientos/Actualizar",
                     eliminar: "/ClientesEstablecimientos/Eliminar?id={id}",
                     clientes: "/Clientes/Lista",
+                    clienteEditar: "/Clientes/EditarInfo?id={id}",
                     provincias: "/Provincias/Lista",
+                    partidosPorProvincia: "/Partidos/ListaPorProvincia?idProvincia={idProvincia}",
+                    localidadesPorPartido: "/Localidades/ListaPorPartido?idPartido={idPartido}",
                     condicionesIva: "/CondicionesIva/Lista",
                     dias: "/Dias/Lista",
                     semanas: "/Semanas/Lista",
@@ -58,6 +61,11 @@
             this._productosCache = [];
             this._productoSeleccionadoId = 0;
             this._cargarCombosSeq = 0;
+            this._cargarPartidosSeq = 0;
+            this._cargarLocalidadesSeq = 0;
+            this._localidadesCargando = false;
+            this._geoCache = { partidos: [], localidades: [] };
+            this._localidadLegacy = null;
 
             this._camposObligatorios = [
                 "cmbClienteEst", "txtNombreEst", "cmbDiaEst", "cmbSemanaEst",
@@ -81,6 +89,8 @@
             this._comboPorController = {
                 CondicionesIva: { selectId: "cmbCondicionIvaEst", url: this.options.endpoints.condicionesIva },
                 Provincias: { selectId: "cmbProvinciaEst", url: this.options.endpoints.provincias },
+                Partidos: { selectId: "cmbPartidoEst", dependent: true },
+                Localidades: { selectId: "cmbLocalidadEst", dependent: true },
                 Dias: { selectId: "cmbDiaEst", url: this.options.endpoints.dias },
                 Semanas: { selectId: "cmbSemanaEst", url: this.options.endpoints.semanas },
                 ListasPrecios: { selectId: "cmbListaPrecioEst", url: this.options.endpoints.listasPrecios },
@@ -230,7 +240,8 @@
                 placeholder: "Seleccionar"
             };
             [
-                "cmbClienteEst", "cmbCondicionIvaEst", "cmbProvinciaEst", "cmbTipoGeneradorEst",
+                "cmbClienteEst", "cmbCondicionIvaEst", "cmbProvinciaEst", "cmbPartidoEst",
+                "cmbLocalidadEst", "cmbTipoGeneradorEst",
                 "cmbDiaEst", "cmbSemanaEst", "cmbListaPrecioEst", "cmbCamionEst", "cmbProductoEst"
             ].forEach(id => {
                 this.ensureSelect2(window.jQuery(this._id(id)), opts);
@@ -243,8 +254,9 @@
 
             this.modalEl.querySelectorAll("input, select, textarea").forEach(el => {
                 if (el.id === "txtIdEst") return;
-                el.disabled = disabled;
-                if (el.type !== "checkbox") el.readOnly = disabled;
+                const esCodigoGeo = el.id === "txtCodigoPartidoEst" || el.id === "txtCodigoLocalidadEst";
+                el.disabled = disabled || esCodigoGeo;
+                if (el.type !== "checkbox") el.readOnly = disabled || esCodigoGeo;
             });
 
             const btnGuardar = this._id("btnGuardarEst");
@@ -262,6 +274,9 @@
                     $el.trigger("change.select2");
                 }
             });
+            this._setLocalidadDisabled(
+                disabled || this._localidadesCargando || !this._getIntOrNull("cmbPartidoEst")
+            );
 
             const idEst = this.getId();
             this.bloquearControlesContactos(disabled || !idEst);
@@ -502,6 +517,34 @@
                 if (typeof errorModal === "function") {
                     errorModal("Ha ocurrido un error al guardar el contacto.");
                 }
+            }
+        }
+
+        async _guardarContactoInicial(idEstablecimiento) {
+            const telefono = (this._getFieldValue("txtContactoEstTelefono") || "").trim();
+            const telefonoAlt = (this._getFieldValue("txtContactoEstTelefonoAlt") || "").trim();
+            const email = (this._getFieldValue("txtContactoEstEmail") || "").trim();
+            if (!idEstablecimiento || (!telefono && !telefonoAlt && !email)) return;
+
+            const modelo = {
+                Id: 0,
+                IdEstablecimiento: idEstablecimiento,
+                Nombre: (this._getFieldValue("txtContactoEstNombre")
+                    || this._getFieldValue("txtNombreEst")
+                    || "Contacto principal").trim(),
+                Puesto: "Contacto principal",
+                Telefono: telefono || null,
+                TelefonoAlt: telefonoAlt || null,
+                Email: email || null
+            };
+
+            const data = await this._fetchJson(this.options.endpoints.contactosInsertar, {
+                method: "POST",
+                headers: this._headers(true),
+                body: JSON.stringify(modelo)
+            });
+            if (!data?.valor) {
+                throw new Error(data?.mensaje || "No se pudo copiar el contacto principal.");
             }
         }
 
@@ -900,6 +943,7 @@
             try {
                 this._ultimoModo = "nuevo";
                 this._modeloActual = null;
+                this._localidadLegacy = null;
 
                 if (typeof this.options.onBeforeOpen === "function") {
                     await this.options.onBeforeOpen("nuevo", this);
@@ -914,6 +958,9 @@
 
                 if (idClientePreseleccionado) {
                     this._setFieldValue("cmbClienteEst", idClientePreseleccionado, true);
+                    await this.prefillDesdeCliente(idClientePreseleccionado);
+                } else {
+                    await this.limpiarGeoEspecifico();
                 }
 
                 if (!this._tieneClientesEnCombo()) {
@@ -996,14 +1043,22 @@
             this._setFieldValue("txtCalleEst", modelo.Calle || modelo.Domicilio || "");
             this._setFieldValue("txtNumeroEst", modelo.Numero || "");
             this._setFieldValue("txtPisoDeptoEst", modelo.PisoDepartamento || "");
-            this._setFieldValue("txtLocalidadEst", modelo.Localidad || "");
             this._setFieldValue("txtCodPostalEst", modelo.CodPostal || "");
             this._setFieldValue("chkImpuestoIvaEst", !!modelo.ImpuestoIva);
                 this._setFieldValue("txtDiasHorariosEst", modelo.DiasHorarios || "");
 
             if (modelo.IdCliente) this._setFieldValue("cmbClienteEst", modelo.IdCliente, true);
             if (modelo.IdCondicionIva) this._setFieldValue("cmbCondicionIvaEst", modelo.IdCondicionIva, true);
-            if (modelo.IdProvincia) this._setFieldValue("cmbProvinciaEst", modelo.IdProvincia, true);
+            if (modelo.IdProvincia) {
+                this._setFieldValue("cmbProvinciaEst", modelo.IdProvincia, true);
+                await this.cargarPartidos(modelo.IdProvincia, modelo.IdPartido, modelo.IdLocalidad);
+            }
+            if (!modelo.IdLocalidad && modelo.Localidad) {
+                this._localidadLegacy = modelo.Localidad;
+                const localidad = this._id("cmbLocalidadEst");
+                localidad.options[0].text = `${modelo.Localidad} (sin catalogo)`;
+                this._refreshSelect2Field("cmbLocalidadEst");
+            }
             if (modelo.IdTipoGenerador) this._setFieldValue("cmbTipoGeneradorEst", modelo.IdTipoGenerador, true);
             if (modelo.IdDiaRecoleccion) this._setFieldValue("cmbDiaEst", modelo.IdDiaRecoleccion, true);
             if (modelo.IdSemanaRecoleccion) this._setFieldValue("cmbSemanaEst", modelo.IdSemanaRecoleccion, true);
@@ -1045,6 +1100,115 @@
             this._refreshSelect2Field(id);
         }
 
+        _actualizarCodigosGeo() {
+            const partido = this._id("cmbPartidoEst")?.selectedOptions?.[0];
+            const localidad = this._id("cmbLocalidadEst")?.selectedOptions?.[0];
+            this._setFieldValue("txtCodigoPartidoEst", partido?.value ? (partido.dataset.codigo || "") : "");
+            this._setFieldValue("txtCodigoLocalidadEst", localidad?.value ? (localidad.dataset.codigo || "") : "");
+        }
+
+        _setLocalidadDisabled(disabled) {
+            const select = this._id("cmbLocalidadEst");
+            if (!select) return;
+            select.disabled = !!disabled;
+            if (!window.jQuery) return;
+            const $select = window.jQuery(select);
+            if ($select.data("select2")) {
+                $select.prop("disabled", select.disabled);
+                $select.trigger("change.select2");
+            }
+        }
+
+        async cargarPartidos(idProvincia, selectedPartidoId = null, selectedLocalidadId = null) {
+            const seq = ++this._cargarPartidosSeq;
+            ++this._cargarLocalidadesSeq;
+            this._localidadesCargando = false;
+            this.resetSelect("cmbPartidoEst", "Seleccionar");
+            this.resetSelect("cmbLocalidadEst", "Seleccionar");
+            this._geoCache.partidos = [];
+            this._geoCache.localidades = [];
+            this._actualizarCodigosGeo();
+            this._setLocalidadDisabled(true);
+            if (!idProvincia) return;
+
+            const url = this._replaceUrl(this.options.endpoints.partidosPorProvincia, { idProvincia });
+            const data = await this._fetchJson(url, { headers: this._headers(false) });
+            if (seq !== this._cargarPartidosSeq) return;
+
+            this._geoCache.partidos = Array.isArray(data) ? data : [];
+            const select = this._id("cmbPartidoEst");
+            this._geoCache.partidos.forEach(x => {
+                const option = new Option(x.Nombre, x.Id);
+                option.dataset.codigo = x.Codigo || "";
+                select.append(option);
+            });
+            if (selectedPartidoId) this._setFieldValue("cmbPartidoEst", selectedPartidoId, true);
+            await this.cargarLocalidades(selectedPartidoId, selectedLocalidadId);
+            if (seq !== this._cargarPartidosSeq) return;
+            this._actualizarCodigosGeo();
+        }
+
+        async cargarLocalidades(idPartido, selectedLocalidadId = null) {
+            const seq = ++this._cargarLocalidadesSeq;
+            this._localidadesCargando = !!idPartido;
+            this.resetSelect("cmbLocalidadEst", "Seleccionar");
+            this._geoCache.localidades = [];
+            this._actualizarCodigosGeo();
+            this._setLocalidadDisabled(true);
+            if (!idPartido) {
+                this._localidadesCargando = false;
+                return;
+            }
+
+            try {
+                const url = this._replaceUrl(this.options.endpoints.localidadesPorPartido, { idPartido });
+                const data = await this._fetchJson(url, { headers: this._headers(false) });
+                if (seq !== this._cargarLocalidadesSeq) return;
+
+                this._geoCache.localidades = Array.isArray(data) ? data : [];
+                const select = this._id("cmbLocalidadEst");
+                this._geoCache.localidades.forEach(x => {
+                    const option = new Option(x.Nombre, x.Id);
+                    option.dataset.codigo = x.Codigo || "";
+                    select.append(option);
+                });
+                if (selectedLocalidadId) this._setFieldValue("cmbLocalidadEst", selectedLocalidadId, true);
+                this._actualizarCodigosGeo();
+            } finally {
+                if (seq === this._cargarLocalidadesSeq) {
+                    this._localidadesCargando = false;
+                    this._setLocalidadDisabled(this.isSoloLectura() || !this._getIntOrNull("cmbPartidoEst"));
+                }
+            }
+        }
+
+        async limpiarGeoEspecifico() {
+            this._localidadLegacy = null;
+            return await this.cargarPartidos(this._getIntOrNull("cmbProvinciaEst"));
+        }
+
+        async prefillDesdeCliente(idCliente) {
+            if (this._ultimoModo !== "nuevo" || !idCliente) return;
+            const url = this._replaceUrl(this.options.endpoints.clienteEditar, { id: idCliente });
+            const c = await this._fetchJson(url, { headers: this._headers(false) });
+
+            this._setFieldValue("txtNombreEst", c.Nombre || "");
+            this._setFieldValue("txtCuitEst", c.Cuit || "");
+            this._setFieldValue("txtCalleEst", c.Calle || c.Domicilio || "");
+            this._setFieldValue("txtNumeroEst", c.Numero || "");
+            this._setFieldValue("txtPisoDeptoEst", c.PisoDepartamento || "");
+            this._setFieldValue("txtCodPostalEst", c.CodPostal || "");
+            this._setFieldValue("txtContactoEstNombre", c.Nombre || "");
+            this._setFieldValue("txtContactoEstTelefono", c.Telefono || "");
+            this._setFieldValue("txtContactoEstTelefonoAlt", c.TelefonoAlt || "");
+            this._setFieldValue("txtContactoEstEmail", c.Email || "");
+            if (c.IdCondicionIva) this._setFieldValue("cmbCondicionIvaEst", c.IdCondicionIva, true);
+            if (c.IdProvincia) this._setFieldValue("cmbProvinciaEst", c.IdProvincia, true);
+            if (c.IdTipoGenerador) this._setFieldValue("cmbTipoGeneradorEst", c.IdTipoGenerador, true);
+            await this.limpiarGeoEspecifico();
+            this.actualizarBadgeEstablecimiento();
+        }
+
         async _llenarCombo(selectId, url, seq, textField = "Nombre") {
             const data = await this._fetchJson(url, { headers: this._headers(false) });
             if (seq !== this._cargarCombosSeq) return;
@@ -1071,12 +1235,15 @@
             this.resetSelect("cmbClienteEst", "Seleccionar");
             this.resetSelect("cmbCondicionIvaEst", "Seleccionar");
             this.resetSelect("cmbProvinciaEst", "Seleccionar");
+            this.resetSelect("cmbPartidoEst", "Seleccionar");
+            this.resetSelect("cmbLocalidadEst", "Seleccionar");
             this.resetSelect("cmbTipoGeneradorEst", "Seleccionar");
             this.resetSelect("cmbDiaEst", "Seleccionar");
             this.resetSelect("cmbSemanaEst", "Seleccionar");
             this.resetSelect("cmbListaPrecioEst", "Seleccionar");
             this.resetSelect("cmbCamionEst", "Seleccionar");
             this.resetSelect("cmbProductoEst", "Seleccionar");
+            this._setLocalidadDisabled(true);
 
             await Promise.all([
                 this._llenarCombo("cmbClienteEst", this.options.endpoints.clientes, seq),
@@ -1113,7 +1280,11 @@
                 PisoDepartamento: (this._getFieldValue("txtPisoDeptoEst") || "").trim() || null,
                 IdTipoGenerador: this._getIntOrNull("cmbTipoGeneradorEst"),
                 IdProvincia: this._getIntOrNull("cmbProvinciaEst"),
-                Localidad: this._getFieldValue("txtLocalidadEst") || null,
+                IdPartido: this._getIntOrNull("cmbPartidoEst"),
+                IdLocalidad: this._getIntOrNull("cmbLocalidadEst"),
+                Localidad: this._getIntOrNull("cmbLocalidadEst")
+                    ? (this._id("cmbLocalidadEst")?.selectedOptions?.[0]?.text || "").trim() || null
+                    : this._localidadLegacy,
                 CodPostal: this._getFieldValue("txtCodPostalEst") || null,
                 IdDiaRecoleccion: this._getIntOrNull("cmbDiaEst") ?? 0,
                 IdSemanaRecoleccion: this._getIntOrNull("cmbSemanaEst") ?? 0,
@@ -1148,6 +1319,13 @@
                 }
 
                 this.cerrarErrorCampos();
+                if (esNuevo && data.id) {
+                    try {
+                        await this._guardarContactoInicial(data.id);
+                    } catch (contactoError) {
+                        console.warn("El establecimiento se guardo, pero no se pudo copiar el contacto principal.", contactoError);
+                    }
+                }
                 if (typeof exitoModal === "function") {
                     exitoModal(data.mensaje || (esNuevo
                         ? "Establecimiento registrado correctamente"
@@ -1219,6 +1397,7 @@
 
         limpiarModal() {
             this.setSoloLecturaAttribute(false);
+            this._localidadLegacy = null;
             this.modalEl.querySelectorAll("input, select, textarea").forEach(el => {
                 if (el.id === "txtIdEst") { el.value = ""; return; }
                 if (el.type === "checkbox") { el.checked = false; return; }
@@ -1269,6 +1448,17 @@
         async _onConfiguracionActualizada(detail) {
             const cfg = this._comboPorController[detail?.tipo];
             if (!cfg) return;
+
+            if (detail?.tipo === "Partidos") {
+                this._localidadLegacy = null;
+                await this.cargarPartidos(this._getIntOrNull("cmbProvinciaEst"), detail.nuevoId || null);
+                return;
+            }
+            if (detail?.tipo === "Localidades") {
+                this._localidadLegacy = null;
+                await this.cargarLocalidades(this._getIntOrNull("cmbPartidoEst"), detail.nuevoId || null);
+                return;
+            }
 
             await this._recargarCombo(cfg.selectId, cfg.url, cfg.textField || "Nombre");
 
@@ -1379,6 +1569,54 @@
             const btnCli = this._id("btnAgregarClienteEst");
             if (btnCli) {
                 btnCli.addEventListener("click", () => this._abrirNuevoCliente());
+            }
+
+            const cliente = this._id("cmbClienteEst");
+            if (cliente) {
+                cliente.addEventListener("change", () => {
+                    const id = this._getIntOrNull("cmbClienteEst");
+                    if (id && this._ultimoModo === "nuevo") {
+                        this.prefillDesdeCliente(id).catch(console.error);
+                    }
+                });
+            }
+
+            const provincia = this._id("cmbProvinciaEst");
+            if (provincia) {
+                window.jQuery(provincia)
+                    .off("change.geoEst")
+                    .on("change.geoEst", () => {
+                    this._localidadLegacy = null;
+                    this.resetSelect("cmbPartidoEst", "Seleccionar");
+                    this.resetSelect("cmbLocalidadEst", "Seleccionar");
+                    this._actualizarCodigosGeo();
+                    this._setLocalidadDisabled(true);
+                    this.cargarPartidos(this._getIntOrNull("cmbProvinciaEst")).catch(console.error);
+                });
+            }
+
+            const partido = this._id("cmbPartidoEst");
+            if (partido) {
+                window.jQuery(partido)
+                    .off("change.geoEst")
+                    .on("change.geoEst", () => {
+                    this._localidadLegacy = null;
+                    this._actualizarCodigosGeo();
+                    this.resetSelect("cmbLocalidadEst", "Seleccionar");
+                    this._actualizarCodigosGeo();
+                    this._setLocalidadDisabled(true);
+                    this.cargarLocalidades(this._getIntOrNull("cmbPartidoEst")).catch(console.error);
+                });
+            }
+
+            const localidad = this._id("cmbLocalidadEst");
+            if (localidad) {
+                window.jQuery(localidad)
+                    .off("change.geoEst")
+                    .on("change.geoEst", () => {
+                    this._localidadLegacy = null;
+                    this._actualizarCodigosGeo();
+                });
             }
         }
 

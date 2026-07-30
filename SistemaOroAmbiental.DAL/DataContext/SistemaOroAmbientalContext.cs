@@ -249,9 +249,6 @@ public partial class SistemaOroAmbientalContext : DbContext
                 .IsUnicode(false);
             entity.Property(e => e.FechaUsuarioModifica).HasColumnType("datetime");
             entity.Property(e => e.FechaUsuarioRegistra).HasColumnType("datetime");
-            entity.Property(e => e.Localidad)
-                .HasMaxLength(200)
-                .IsUnicode(false);
             entity.Property(e => e.Nombre)
                 .HasMaxLength(100)
                 .IsUnicode(false);
@@ -295,14 +292,6 @@ public partial class SistemaOroAmbientalContext : DbContext
             entity.HasOne(d => d.IdTipoGeneradorNavigation).WithMany(p => p.Clientes)
                 .HasForeignKey(d => d.IdTipoGenerador)
                 .HasConstraintName("FK_Clientes_ClientesTiposGenerador");
-
-            entity.HasOne(d => d.IdLocalidadNavigation).WithMany(p => p.Clientes)
-                .HasForeignKey(d => d.IdLocalidad)
-                .HasConstraintName("FK_Clientes_Localidades");
-
-            entity.HasOne(d => d.IdPartidoNavigation).WithMany(p => p.Clientes)
-                .HasForeignKey(d => d.IdPartido)
-                .HasConstraintName("FK_Clientes_Partidos");
 
             entity.HasOne(d => d.IdSucursalNavigation).WithMany(p => p.Clientes)
                 .HasForeignKey(d => d.IdSucursal)

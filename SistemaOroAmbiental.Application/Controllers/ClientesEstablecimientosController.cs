@@ -11,10 +11,17 @@ namespace SistemaOroAmbiental.Application.Controllers
     public class ClientesEstablecimientosController : Controller
     {
         private readonly IClientesEstablecimientosService _service;
+        private readonly ILocalidadesService _localidadesService;
+        private readonly IPartidosService _partidosService;
 
-        public ClientesEstablecimientosController(IClientesEstablecimientosService service)
+        public ClientesEstablecimientosController(
+            IClientesEstablecimientosService service,
+            ILocalidadesService localidadesService,
+            IPartidosService partidosService)
         {
             _service = service;
+            _localidadesService = localidadesService;
+            _partidosService = partidosService;
         }
 
         [AllowAnonymous]
@@ -59,6 +66,8 @@ namespace SistemaOroAmbiental.Application.Controllers
                 PisoDepartamento = e.PisoDepartamento,
                 IdTipoGenerador = e.IdTipoGenerador,
                 IdProvincia = e.IdProvincia,
+                IdPartido = e.IdPartido,
+                IdLocalidad = e.IdLocalidad,
                 Localidad = e.Localidad,
                 CodPostal = e.CodPostal,
                 ImpuestoIva = e.ImpuestoIva,
@@ -73,6 +82,9 @@ namespace SistemaOroAmbiental.Application.Controllers
                 DiasHorarios = e.DiasHorarios,
                 Cliente = e.IdClienteNavigation?.Nombre ?? "",
                 Provincia = e.IdProvinciaNavigation?.Nombre ?? "",
+                Partido = e.IdPartidoNavigation?.Nombre ?? "",
+                CodigoPartido = e.IdPartidoNavigation?.Codigo ?? "",
+                CodigoLocalidad = e.IdLocalidadNavigation?.Codigo ?? "",
                 CondicionIva = e.IdCondicionIvaNavigation?.Nombre ?? "",
                 TipoGenerador = e.IdTipoGeneradorNavigation != null
                     ? e.IdTipoGeneradorNavigation.Codigo + " - " + e.IdTipoGeneradorNavigation.Nombre
@@ -112,7 +124,12 @@ namespace SistemaOroAmbiental.Application.Controllers
                 Domicilio = DomicilioHelper.Componer(e.Calle, e.Numero, e.PisoDepartamento, e.Domicilio),
                 e.IdTipoGenerador,
                 e.IdProvincia,
+                e.IdPartido,
+                e.IdLocalidad,
                 e.Localidad,
+                Partido = e.IdPartidoNavigation?.Nombre,
+                CodigoPartido = e.IdPartidoNavigation?.Codigo,
+                CodigoLocalidad = e.IdLocalidadNavigation?.Codigo,
                 e.CodPostal,
                 e.ImpuestoIva,
                 e.IdDiaRecoleccion,
@@ -136,6 +153,10 @@ namespace SistemaOroAmbiental.Application.Controllers
         {
             int idUsuario = int.Parse(User.FindFirst("Id")!.Value);
 
+            var geoError = await NormalizarGeo(model);
+            if (geoError != null)
+                return Ok(new { valor = false, mensaje = geoError, tipo = "validacion" });
+
             var entity = MapearEntidad(model, idUsuario, esNuevo: true);
 
             ServiceResult result = await _service.Insertar(entity);
@@ -154,6 +175,10 @@ namespace SistemaOroAmbiental.Application.Controllers
         public async Task<IActionResult> Actualizar([FromBody] VMClienteEstablecimiento model)
         {
             int idUsuario = int.Parse(User.FindFirst("Id")!.Value);
+
+            var geoError = await NormalizarGeo(model);
+            if (geoError != null)
+                return Ok(new { valor = false, mensaje = geoError, tipo = "validacion" });
 
             var entity = MapearEntidad(model, idUsuario, esNuevo: false);
 
@@ -202,7 +227,9 @@ namespace SistemaOroAmbiental.Application.Controllers
                 Domicilio = DomicilioHelper.Componer(calle, numero, piso, model.Domicilio),
                 IdTipoGenerador = model.IdTipoGenerador,
                 IdProvincia = model.IdProvincia,
-                Localidad = model.Localidad,
+                IdPartido = model.IdPartido,
+                IdLocalidad = model.IdLocalidad,
+                Localidad = string.IsNullOrWhiteSpace(model.Localidad) ? null : model.Localidad.Trim(),
                 CodPostal = model.CodPostal,
                 ImpuestoIva = model.ImpuestoIva,
                 IdDiaRecoleccion = model.IdDiaRecoleccion,
@@ -228,6 +255,46 @@ namespace SistemaOroAmbiental.Application.Controllers
             }
 
             return entity;
+        }
+
+        private async Task<string?> NormalizarGeo(VMClienteEstablecimiento model)
+        {
+            if (model.IdLocalidad.HasValue)
+            {
+                var localidad = await _localidadesService.Obtener(model.IdLocalidad.Value);
+                if (localidad == null)
+                    return "La localidad seleccionada no existe.";
+
+                if (model.IdPartido.HasValue && localidad.IdPartido != model.IdPartido)
+                    return "La localidad seleccionada no pertenece al partido indicado.";
+
+                if (model.IdProvincia.HasValue && localidad.IdProvincia != model.IdProvincia)
+                    return "La localidad seleccionada no pertenece a la provincia indicada.";
+
+                model.IdPartido = localidad.IdPartido;
+                model.IdProvincia = localidad.IdProvincia;
+                model.Localidad = localidad.Nombre;
+            }
+            else
+            {
+                model.Localidad = string.IsNullOrWhiteSpace(model.Localidad)
+                    ? null
+                    : model.Localidad.Trim();
+            }
+
+            if (model.IdPartido.HasValue)
+            {
+                var partido = await _partidosService.Obtener(model.IdPartido.Value);
+                if (partido == null)
+                    return "El partido seleccionado no existe.";
+
+                if (model.IdProvincia.HasValue && partido.IdProvincia != model.IdProvincia)
+                    return "El partido seleccionado no pertenece a la provincia indicada.";
+
+                model.IdProvincia = partido.IdProvincia;
+            }
+
+            return null;
         }
 
         private static string FormatearHora(TimeSpan t)

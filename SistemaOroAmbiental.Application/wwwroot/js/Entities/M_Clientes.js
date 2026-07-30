@@ -613,7 +613,6 @@
             this._setFieldValue("txtTelefonoAlt", modelo.TelefonoAlt || "");
             this._setFieldValue("txtEmail", modelo.Email || "");
             this._setFieldValue("txtDomicilio", modelo.Domicilio || "");
-            this._setFieldValue("txtLocalidad", modelo.Localidad || "");
             this._setFieldValue("txtCodPostal", modelo.CodPostal || "");
 
             if (modelo.IdSucursal) this._setFieldValue("cmbSucursal", modelo.IdSucursal, true);
@@ -712,7 +711,6 @@
                 TelefonoAlt: this._getFieldValue("txtTelefonoAlt"),
                 Email: this._getFieldValue("txtEmail"),
                 Domicilio: this._getFieldValue("txtDomicilio"),
-                Localidad: this._getFieldValue("txtLocalidad"),
                 CodPostal: this._getFieldValue("txtCodPostal"),
                 IdProvincia: this._getIntOrNull("cmbProvincia"),
                 IdProfesion: this._getIntOrNull("cmbProfesion"),
