@@ -1530,7 +1530,7 @@ function renderRecorridosCg(items, huboError, containerSelector) {
     }
 
     cont.html(items.map(r => `
-        <div class="cg-recorrido-item ${r.Activo ? "" : "cg-recorrido-inactivo"}">
+        <div class="cg-recorrido-item ${r.Activo ? "" : "cg-recorrido-inactivo"}" data-id="${r.Id}">
             <div class="cg-recorrido-main">
                 <i class="fa fa-truck me-2"></i>
                 <strong>${escapeCg(r.RecorridoTexto || `${r.Camion} ${r.Semana} ${r.Dia}`)}</strong>
@@ -1541,7 +1541,73 @@ function renderRecorridosCg(items, huboError, containerSelector) {
                 ${r.Zona ? `<span class="badge bg-secondary">${escapeCg(r.Zona)}</span>` : ""}
                 ${r.Activo ? "" : `<span class="badge bg-dark">Inactivo</span>`}
             </div>
+            <div class="cg-recorrido-obs">
+                <label class="cg-recorrido-obs-label">Observacion hoja de ruta</label>
+                <textarea class="form-control form-control-sm cg-recorrido-obs-input"
+                          rows="2"
+                          maxlength="500"
+                          data-id="${r.Id}"
+                          data-id-cliente="${r.IdCliente}"
+                          data-id-establecimiento="${r.IdEstablecimiento ?? ""}"
+                          data-id-camion="${r.IdCamion}"
+                          data-id-semana="${r.IdSemana}"
+                          data-id-dia="${r.IdDia}"
+                          data-posicion="${r.Posicion ?? 1}"
+                          data-activo="${r.Activo ? "1" : "0"}"
+                          placeholder="Indicaciones para el chofer (se ven en la hoja de ruta)">${escapeCg(r.Observacion || "")}</textarea>
+            </div>
         </div>`).join(""));
+
+    cont.find(".cg-recorrido-obs-input").off("blur.cgObs").on("blur.cgObs", function () {
+        guardarObservacionRecorridoCg(this);
+    });
+}
+
+async function guardarObservacionRecorridoCg(el) {
+    const $el = $(el);
+    const id = parseInt($el.data("id"), 10) || 0;
+    if (!id) return;
+
+    const valor = ($el.val() || "").trim();
+    const prev = ($el.data("prev") ?? $el.prop("defaultValue") ?? "").toString().trim();
+    if (valor === prev) return;
+
+    const payload = {
+        Id: id,
+        IdCliente: parseInt($el.data("id-cliente"), 10) || CG.id,
+        IdEstablecimiento: (() => {
+            const v = parseInt($el.data("id-establecimiento"), 10);
+            return v > 0 ? v : null;
+        })(),
+        IdCamion: parseInt($el.data("id-camion"), 10),
+        IdSemana: parseInt($el.data("id-semana"), 10),
+        IdDia: parseInt($el.data("id-dia"), 10),
+        Posicion: parseInt($el.data("posicion"), 10) || 1,
+        Activo: String($el.data("activo")) === "1",
+        Observacion: valor || null
+    };
+
+    try {
+        const data = await fetchJsonCg("/Recorridos/ActualizarClienteRecorrido", {
+            method: "PUT",
+            headers: authCg(),
+            body: JSON.stringify(payload)
+        });
+
+        if (!(data?.valor ?? data?.Valor)) {
+            errorModal(data?.mensaje ?? data?.Mensaje ?? "No se pudo guardar la observacion.");
+            $el.val(prev);
+            return;
+        }
+
+        $el.data("prev", valor);
+        $el.prop("defaultValue", valor);
+        if (typeof showToast === "function") showToast("Observacion guardada.", "success");
+    } catch (e) {
+        console.error(e);
+        errorModal("Error al guardar la observacion.");
+        $el.val(prev);
+    }
 }
 
 /* ---- Control mensual ---- */

@@ -266,6 +266,11 @@ public class HojaRutaParadaDto
     public decimal AbonoEfectivo { get; set; }
     public decimal AbonoTransferencia { get; set; }
     public string? Observacion { get; set; }
+    /// <summary>Texto de saldo para imprimir (debe / a favor).</summary>
+    public string? SaldoResumen { get; set; }
+    public decimal SaldoActual { get; set; }
+    /// <summary>debe | favor | cero</summary>
+    public string SaldoTone { get; set; } = "cero";
     public string AlertaTipo { get; set; } = "normal";
     public bool Activo { get; set; } = true;
 }

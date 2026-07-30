@@ -619,6 +619,7 @@ namespace SistemaOroAmbiental.DAL.Repository
                     Zona = zona,
                     Posicion = r.Posicion,
                     Activo = r.Activo,
+                    Observacion = r.Observacion,
                     RecorridoTexto = recorridoTexto
                 };
             }).ToList();

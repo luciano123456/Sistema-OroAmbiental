@@ -7,10 +7,12 @@ namespace SistemaOroAmbiental.DAL.Repository
     public class RecorridosRepository : IRecorridosRepository
     {
         private readonly SistemaOroAmbientalContext _db;
+        private readonly IClientesOperativoRepository _operativo;
 
-        public RecorridosRepository(SistemaOroAmbientalContext context)
+        public RecorridosRepository(SistemaOroAmbientalContext context, IClientesOperativoRepository operativo)
         {
             _db = context;
+            _operativo = operativo;
         }
 
         public async Task<List<RecorridosMatrizDto>> ObtenerMatriz(int? idCamion)
@@ -366,10 +368,12 @@ namespace SistemaOroAmbiental.DAL.Repository
                         c.Mes == fecha.Month)
                     .ToDictionaryAsync(c => c.IdCliente);
 
+            var saldos = await ObtenerSaldosHojaRuta(idsClientes, fecha);
+
             var preciosReferencia = await ObtenerPreciosDescartadoresReferencia();
 
             var titulo = ConstruirTituloHojaRuta(semana.Nombre, dia.Nombre, camion.Nombre, zona);
-            var paradas = items.Select(r => ConstruirParadaHojaRuta(r, fecha, controles)).ToList();
+            var paradas = items.Select(r => ConstruirParadaHojaRuta(r, fecha, controles, saldos)).ToList();
 
             return new HojaRutaDto
             {
@@ -428,14 +432,82 @@ namespace SistemaOroAmbiental.DAL.Repository
             return titulo.ToUpperInvariant();
         }
 
+        private async Task<Dictionary<int, (decimal Saldo, string Resumen, string Tone)>> ObtenerSaldosHojaRuta(
+            IReadOnlyList<int> idsClientes,
+            DateTime fecha)
+        {
+            var result = new Dictionary<int, (decimal Saldo, string Resumen, string Tone)>();
+            if (idsClientes == null || idsClientes.Count == 0)
+                return result;
+
+            var anios = new List<int> { fecha.Year };
+            if (fecha.Year > 2000)
+                anios.Add(fecha.Year - 1);
+
+            var meses = Enumerable.Range(1, 12).ToList();
+
+            foreach (var idCliente in idsClientes.Distinct())
+            {
+                try
+                {
+                    var ctrl = await _operativo.ObtenerControlMensualFiltrado(idCliente, anios, meses);
+                    result[idCliente] = FormatearSaldoHoja(ctrl);
+                }
+                catch
+                {
+                    result[idCliente] = (0, "", "cero");
+                }
+            }
+
+            return result;
+        }
+
+        private static (decimal Saldo, string Resumen, string Tone) FormatearSaldoHoja(ClienteControlFiltradoDto? ctrl)
+        {
+            if (ctrl == null)
+                return (0, "", "cero");
+
+            var total = Math.Round(ctrl.TotalSaldo, 2);
+            if (Math.Abs(total) < 0.01m)
+                return (0, "SALDO: $ 0", "cero");
+
+            if (total < 0)
+            {
+                var favor = Math.Abs(total);
+                return (total, $"SALDO: $ {favor:N0} A FAVOR", "favor");
+            }
+
+            var partes = (ctrl.Filas ?? new List<ClienteControlMensualDto>())
+                .Select(f => new { f.Anio, f.Mes, f.MesNombre, Neto = f.Debe - f.Haber })
+                .Where(f => f.Neto > 0.01m)
+                .OrderBy(f => f.Anio)
+                .ThenBy(f => f.Mes)
+                .Select(f =>
+                {
+                    var mes = string.IsNullOrWhiteSpace(f.MesNombre)
+                        ? $"MES {f.Mes}"
+                        : f.MesNombre.Trim().ToUpperInvariant();
+                    return $"{mes} {f.Anio} {f.Neto:N0}";
+                })
+                .ToList();
+
+            var resumen = partes.Count > 0
+                ? $"SALDO: DEBE {string.Join(" + ", partes)} TOTAL ADEUDADO $ {total:N0}"
+                : $"SALDO: TOTAL ADEUDADO $ {total:N0}";
+
+            return (total, resumen, "debe");
+        }
+
         private static HojaRutaParadaDto ConstruirParadaHojaRuta(
             ClientesRecorrido recorrido,
             DateTime fecha,
-            Dictionary<int, ClientesControlMensual> controles)
+            Dictionary<int, ClientesControlMensual> controles,
+            Dictionary<int, (decimal Saldo, string Resumen, string Tone)> saldos)
         {
             var cliente = recorrido.IdClienteNavigation;
             var establecimiento = recorrido.IdEstablecimientoNavigation;
             controles.TryGetValue(recorrido.IdCliente, out var control);
+            saldos.TryGetValue(recorrido.IdCliente, out var saldoInfo);
 
             var abonoEfectivo = control?.AbonoEfectivo ?? 0;
             var abonoTransferencia = control?.AbonoTransferencia ?? 0;
@@ -482,6 +554,9 @@ namespace SistemaOroAmbiental.DAL.Repository
                 AbonoEfectivo = abonoEfectivo,
                 AbonoTransferencia = abonoTransferencia,
                 Observacion = observacion,
+                SaldoResumen = string.IsNullOrWhiteSpace(saldoInfo.Resumen) ? null : saldoInfo.Resumen,
+                SaldoActual = saldoInfo.Saldo,
+                SaldoTone = string.IsNullOrWhiteSpace(saldoInfo.Tone) ? "cero" : saldoInfo.Tone,
                 AlertaTipo = alertaTipo,
                 Activo = recorrido.Activo
             };
