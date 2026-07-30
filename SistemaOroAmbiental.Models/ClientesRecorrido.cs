@@ -21,6 +21,8 @@ public partial class ClientesRecorrido
 
     public bool Activo { get; set; } = true;
 
+    public string? Observacion { get; set; }
+
     public int IdUsuarioRegistra { get; set; }
 
     public DateTime FechaUsuarioRegistra { get; set; }

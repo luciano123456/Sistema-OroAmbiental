@@ -348,7 +348,7 @@ async function seleccionarProveedor(id) {
         ACC.movimientosOriginal = [];
         ACC.movimientosMap = new Map();
 
-        $("#lblFiltroProveedor").text("Seleccioná un proveedor");
+        $("#lblFiltroProveedor").text("Selecciona un proveedor");
 
         renderProveedores();
         mostrarEstadoSinSeleccion();
@@ -398,7 +398,7 @@ async function aplicarFiltrosProvCC() {
     actualizarEstadoFiltrosProvCC();
 
     if (!ACC.ProveedorSel) {
-        return errorModal("Seleccioná un proveedor para aplicar filtros.");
+        return errorModal("Selecciona un proveedor para aplicar filtros.");
     }
 
     await cargarCuentaCorrienteProveedor();
@@ -895,7 +895,7 @@ function initValidacionesProvCC() {
         if (!okBase || reglas.length) {
             const errores = [...validacionAjusteProvCC._listarErrores(), ...reglas];
             if (errores.length) {
-                const msg = `Revisá los siguientes campos/reglas:<br><strong>${[...new Set(errores)].join(", ")}</strong>`;
+                const msg = `Revisa los siguientes campos/reglas:<br><strong>${[...new Set(errores)].join(", ")}</strong>`;
                 validacionAjusteProvCC.cancelarPanelExito?.();
                 if (typeof mostrarErrorPanelRp === "function") {
                     mostrarErrorPanelRp("#errorCamposAjuste", msg);
@@ -913,13 +913,13 @@ function initValidacionesProvCC() {
 function abrirModalPagoProveedor() {
 
     if (!Permisos.tiene("PROVEEDORES CC", "Crear")) {
-        errorModal("No tenés permisos.");
+        errorModal("No tenes permisos.");
         return;
     }
 
 
     if (!ACC.ProveedorSel) {
-        return errorModal("Seleccioná un proveedor.");
+        return errorModal("Selecciona un proveedor.");
     }
 
     validacionPagoProvCC?.reset();
@@ -947,7 +947,7 @@ function validarPagoProveedor() {
 async function guardarPago() {
 
     if (!ACC.ProveedorSel) {
-        return errorModal("Seleccioná un proveedor.");
+        return errorModal("Selecciona un proveedor.");
     }
 
     if (!validarPagoProveedor()) return;
@@ -1014,13 +1014,13 @@ function mostrarErrorCamposPagoProv(mensaje) {
 function abrirModalAjusteProveedor() {
 
     if (!Permisos.tiene("PROVEEDORES CC", "Crear")) {
-        errorModal("No tenés permisos.");
+        errorModal("No tenes permisos.");
         return;
     }
 
 
     if (!ACC.ProveedorSel) {
-        return errorModal("Seleccioná un proveedor.");
+        return errorModal("Selecciona un proveedor.");
     }
 
     validacionAjusteProvCC?.reset();
@@ -1049,7 +1049,7 @@ function validarAjuste() {
 async function guardarAjusteProveedor() {
 
     if (!ACC.ProveedorSel) {
-        return errorModal("Seleccioná un proveedor.");
+        return errorModal("Selecciona un proveedor.");
     }
 
     if (!validarAjuste()) return;
@@ -1118,11 +1118,11 @@ function mostrarErrorCamposAjuste(mensaje) {
 ========================================================= */
 
 function exportarEstadoCuentaPdf() {
-    errorModal("Exportación PDF pendiente de implementar.");
+    errorModal("Exportacion PDF pendiente de implementar.");
     return;
 
     if (!ACC.ProveedorSel) {
-        return errorModal("Seleccioná un proveedor.");
+        return errorModal("Selecciona un proveedor.");
     }
 
     const nombreProveedor = ACC.ProveedorSel.Nombre || "Proveedor";

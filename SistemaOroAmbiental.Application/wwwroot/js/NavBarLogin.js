@@ -57,7 +57,7 @@ document.addEventListener("DOMContentLoaded", function () {
         //    document.getElementById("seccionOperaciones").removeAttribute("hidden");
         //    document.getElementById("seccionGastos").removeAttribute("hidden");
         //}
-        // Si el usuario está en el localStorage, actualizar el texto del enlace
+        // Si el usuario esta en el localStorage, actualizar el texto del enlace
         var userFullName = (userSession.Nombre + ' ' + userSession.Apellido).trim();
         $("#userName").text(userFullName || "Usuario");
 
@@ -66,7 +66,7 @@ document.addEventListener("DOMContentLoaded", function () {
     initNavbarDropdowns();
 });
 
-/** Dropdowns del navbar con Popper fixed (quedan por encima de tablas/modales de página). */
+/** Dropdowns del navbar con Popper fixed (quedan por encima de tablas/modales de pagina). */
 function initNavbarDropdowns() {
     if (!window.bootstrap?.Dropdown) return;
 
@@ -86,7 +86,7 @@ function mostrarMenuCompleto() {
     });
 }
 
-/** Resalta el ítem del menú según la URL actual. */
+/** Resalta el item del menu segun la URL actual. */
 function marcarNavActivo() {
     const path = (window.location.pathname || "").toLowerCase().replace(/\/+$/, "") || "/";
 
@@ -123,6 +123,8 @@ function getPerfilConfigGeo(controller) {
             return { codigo: true, provincia: true };
         case "Localidades":
             return { codigo: true, provincia: true, partido: true };
+        case "ClientesTiposGenerador":
+            return { codigo: true };
         default:
             return null;
     }
@@ -181,7 +183,7 @@ function formatearNombreConfigGeo(configuracion) {
     }
 
     if (configuracion.NombreCombo) {
-        nombreConfig += " — " + configuracion.NombreCombo;
+        nombreConfig += " - " + configuracion.NombreCombo;
         return nombreConfig;
     }
 
@@ -190,10 +192,10 @@ function formatearNombreConfigGeo(configuracion) {
         const partido = nombrePartidoConfigGeo(configuracion.IdPartido);
         const provincia = nombreProvinciaConfigGeo(configuracion.IdProvincia);
         const extra = [partido, provincia].filter(Boolean).join(" / ");
-        if (extra) nombreConfig += " — " + extra;
+        if (extra) nombreConfig += " - " + extra;
     } else if (perfil?.provincia) {
         const provincia = nombreProvinciaConfigGeo(configuracion.IdProvincia);
-        if (provincia) nombreConfig += " — " + provincia;
+        if (provincia) nombreConfig += " - " + provincia;
     }
 
     return nombreConfig;
@@ -207,14 +209,26 @@ function configurarPanelGeo() {
     if (!perfil) {
         divCodigo?.setAttribute("hidden", "hidden");
         divPartido?.setAttribute("hidden", "hidden");
-        return;
+    } else {
+        divCodigo?.removeAttribute("hidden");
+        if (perfil.partido) {
+            divPartido?.removeAttribute("hidden");
+        } else {
+            divPartido?.setAttribute("hidden", "hidden");
+        }
     }
 
-    divCodigo?.removeAttribute("hidden");
-    if (perfil.partido) {
-        divPartido?.removeAttribute("hidden");
+    configurarPanelCuentas();
+}
+
+function configurarPanelCuentas() {
+    const div = document.getElementById("divConfiguracionTipoCuenta");
+    if (!div) return;
+
+    if (controllerConfiguracion === "Cuentas") {
+        div.removeAttribute("hidden");
     } else {
-        divPartido?.setAttribute("hidden", "hidden");
+        div.setAttribute("hidden", "hidden");
     }
 }
 
@@ -253,21 +267,30 @@ function limpiarCamposGeoConfiguracion() {
 }
 
 function aplicarPrefillGeoAtajo() {
-    if (!window.esModoAtajo) return;
+    if (!window.esModoAtajo) return Promise.resolve();
 
     const perfil = getPerfilConfigGeo(controllerConfiguracion);
-    if (!perfil) return;
+    if (!perfil) return Promise.resolve();
 
     if (perfil.provincia) {
-        const idProvincia = document.getElementById("cgProvincia")?.value || "";
+        const idProvincia = document.getElementById("cmbProvinciaEst")?.value
+            || document.getElementById("cgProvincia")?.value
+            || "";
         const cmbProvincia = document.getElementById("cmbConfiguracion");
         if (cmbProvincia && idProvincia) {
             cmbProvincia.value = idProvincia;
             if (perfil.partido) {
-                llenarComboPartidoConfiguracion(idProvincia, document.getElementById("cgPartido")?.value || null);
+                return llenarComboPartidoConfiguracion(
+                    idProvincia,
+                    document.getElementById("cmbPartidoEst")?.value
+                        || document.getElementById("cgPartido")?.value
+                        || null
+                );
             }
         }
     }
+
+    return Promise.resolve();
 }
 
 async function listaConfiguracion() {
@@ -340,7 +363,7 @@ async function abrirConfiguracion(
 
             // abrir directamente en "nuevo"
             agregarConfiguracion();
-            aplicarPrefillGeoAtajo();
+            await aplicarPrefillGeoAtajo();
 
         } else {
 
@@ -360,6 +383,7 @@ async function abrirConfiguracion(
             validarCamposConfiguracion();
         });
         $('#cmbConfiguracionPartido').off('change').on('change', validarCamposConfiguracion);
+        $('#cmbConfiguracionTipoCuenta').off('change').on('change', validarCamposConfiguracion);
         $('#txtBuscarConfiguracion').off('input').on('input', filtrarConfiguraciones);
 
         document.getElementById("modalConfiguracionLabel").innerText =
@@ -409,6 +433,10 @@ async function editarConfiguracion(id) {
         } else if (comboNombre != null) {
             document.getElementById("lblConfiguracionCombo").innerText = lblComboNombre;
             document.getElementById("cmbConfiguracion").value = dataJson.IdCombo || "";
+        }
+
+        if (controllerConfiguracion === "Cuentas") {
+            document.getElementById("cmbConfiguracionTipoCuenta").value = dataJson.Codigo || "Efectivo";
         }
 
         validarCamposConfiguracion();
@@ -570,13 +598,21 @@ async function llenarComboConfiguracion() {
 function validarCamposConfiguracion() {
     const perfil = getPerfilConfigGeo(controllerConfiguracion);
     const nombre = ($("#txtNombreConfiguracion").val() || "").trim();
+    const codigo = ($("#txtCodigoConfiguracion").val() || "").trim();
     const combo = $("#cmbConfiguracion").val();
+    const partido = $("#cmbConfiguracionPartido").val();
 
-    const camposValidos = nombre !== "";
+    const nombreValido = nombre !== "";
+    const codigoValido = !perfil?.codigo || codigo !== "";
     const selectValido = combo !== "" && combo != null;
+    const partidoValido = !perfil?.partido || (partido !== "" && partido != null);
 
-    $("#lblNombreConfiguracion").css("color", camposValidos ? "" : "red");
-    $("#txtNombreConfiguracion").css("border-color", camposValidos ? "" : "red");
+    $("#lblNombreConfiguracion").css("color", nombreValido ? "" : "red");
+    $("#txtNombreConfiguracion").css("border-color", nombreValido ? "" : "red");
+    $("#txtCodigoConfiguracion").css(
+        "border-color",
+        perfil?.codigo && !codigoValido ? "red" : ""
+    );
 
     if (comboNombre != null || perfil?.provincia) {
         $("#cmbConfiguracion").css("border-color", selectValido ? "" : "red");
@@ -584,17 +620,16 @@ function validarCamposConfiguracion() {
         $("#cmbConfiguracion").css("border-color", "");
     }
 
-    if (perfil?.provincia) {
-        return camposValidos && selectValido;
+    if (perfil?.partido) {
+        $("#cmbConfiguracionPartido").css("border-color", partidoValido ? "" : "red");
+    } else {
+        $("#cmbConfiguracionPartido").css("border-color", "");
     }
 
-    if (comboNombre != null) {
-        return camposValidos && selectValido;
-    }
-
-    return camposValidos;
+    const provinciaValida = !perfil?.provincia || selectValido;
+    const comboValido = comboNombre == null || selectValido;
+    return nombreValido && codigoValido && provinciaValida && comboValido && partidoValido;
 }
-
 
 function guardarCambiosConfiguracion() {
     if (!validarCamposConfiguracion()) {
@@ -629,6 +664,10 @@ function guardarCambiosConfiguracion() {
             IdCombo: comboNombre != null ? idCombo : 0,
             Nombre: $("#txtNombreConfiguracion").val()
         };
+
+        if (controllerConfiguracion === "Cuentas") {
+            nuevoModelo.Codigo = $("#cmbConfiguracionTipoCuenta").val() || "Efectivo";
+        }
     }
 
     const url = idConfiguracion === "" ? "/" + controllerConfiguracion + "/Insertar" : "/" + controllerConfiguracion + "/Actualizar";
@@ -750,6 +789,12 @@ function agregarConfiguracion() {
     if (perfil?.partido) {
         document.getElementById("cmbConfiguracionPartido").value = "";
     }
+
+    if (controllerConfiguracion === "Cuentas") {
+        document.getElementById("cmbConfiguracionTipoCuenta").value = "Efectivo";
+    }
+
+    validarCamposConfiguracion();
 }
 
 function obtenerPrefVistaListados() {
@@ -773,7 +818,7 @@ function guardarPrefVistaListados(pref) {
     if (window.RpGridView) {
         RpGridView.setPref(val);
     } else {
-        $(".cg-page, .cl-page, .page-99")
+        $(".cg-page, .cl-page, .page-99, .ld-index")
             .removeClass("rp-view-mode-auto rp-view-mode-table rp-view-mode-cards cg-mode-auto cg-mode-table cg-mode-cards")
             .addClass(`rp-view-mode-${val} cg-mode-${val}`);
         $(document).trigger("rpGridViewChanged", [val]);
@@ -985,7 +1030,7 @@ async function subirPlantillaContrato(idTipoContrato) {
         const file = input?.files?.[0];
 
         if (!file) {
-            errorModal("Seleccioná un .docx para subir.");
+            errorModal("Selecciona un .docx para subir.");
             return;
         }
         if (!file.name.toLowerCase().endsWith(".docx")) {

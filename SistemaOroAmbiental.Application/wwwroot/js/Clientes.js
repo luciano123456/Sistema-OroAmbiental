@@ -3,18 +3,35 @@ let gridClientes;
 const columnConfig = [
     { index: 2, filterType: 'text' },
     { index: 3, filterType: 'text' },
-    { index: 4, filterType: 'select', fetchDataFunc: listaSucursalesFilter, sucursalDt: true },
-    { index: 5, filterType: 'select', fetchDataFunc: listaProvinciasFilter },
-    { index: 6, filterType: 'select', fetchDataFunc: listaProfesionesFilter },
-    { index: 7, filterType: 'select', fetchDataFunc: listaCondicionesIvaFilter },
+    { index: 4, filterType: 'select', sucursalDt: true },
+    { index: 5, filterType: 'select_local' },
+    { index: 6, filterType: 'select_local' },
+    { index: 7, filterType: 'select_local' },
     { index: 8, filterType: 'text' },
-    { index: 9, filterType: 'text' }
+    { index: 9, filterType: 'text' },
+    { index: 10, filterType: 'activo' }
 ];
 
 registrarFiltrosGrilla('grd_Clientes', columnConfig, {
     defaultActivoModo: 'todos',
     initSelect2: ($el) => inicializarSelect2Filtro($el)
 });
+
+function columnDefsClientesGrid() {
+    return [
+        { targets: 0, className: "rp-col-acciones", width: "118px", orderable: false },
+        { targets: 1, className: "rp-col-id", width: "88px" },
+        { targets: 2, className: "rp-col-nombre", width: "260px" },
+        { targets: 3, className: "rp-col-cuit", width: "145px" },
+        { targets: 4, className: "rp-col-sucursal", width: "165px" },
+        { targets: 5, className: "rp-col-provincia", width: "155px" },
+        { targets: 6, className: "rp-col-profesion", width: "170px" },
+        { targets: 7, className: "rp-col-iva", width: "170px" },
+        { targets: 8, className: "rp-col-tel", width: "135px" },
+        { targets: 9, className: "rp-col-email", width: "280px" },
+        { targets: 10, className: "rp-col-activo", width: "108px" }
+    ];
+}
 
 const URL_GESTION_CLIENTE = id => id > 0 ? `/Clientes/Gestion?id=${id}` : "/Clientes/Gestion";
 
@@ -105,7 +122,7 @@ function actualizarDashboardKpis(d) {
                     <span class="cl-alerta-fecha">Vence el ${fecha}</span>
                 </div>
             </div>
-            <span class="cl-alerta-badge">${dias} día${dias === 1 ? "" : "s"}</span>
+            <span class="cl-alerta-badge">${dias} dia${dias === 1 ? "" : "s"}</span>
         </article>`;
     }).join(""));
 }
@@ -141,7 +158,7 @@ function navegarAFilaCliente(id) {
         && window.irAFilaGrilla("grd_Clientes", id, { scroll: true, flash: true, limpiarFiltros: true });
 
     if (!ok && typeof errorModal === "function") {
-        errorModal("No se encontró el cliente en el listado.");
+        errorModal("No se encontro el cliente en el listado.");
     }
 }
 
@@ -151,7 +168,7 @@ function escapeHtmlCl(t) {
 
 async function eliminarClienteIndex(id) {
     if (typeof ejecutarEliminacionEntidad !== "function") {
-        errorModal("No está disponible el asistente de eliminación.");
+        errorModal("No esta disponible el asistente de eliminacion.");
         return;
     }
 
@@ -227,7 +244,7 @@ async function configurarDataTable(data) {
                 url: "//cdn.datatables.net/plug-ins/2.0.7/i18n/es-MX.json"
             },
             autoWidth: false,
-            columnDefs: typeof columnDefsGridLista === "function" ? columnDefsGridLista() : [],
+            columnDefs: columnDefsClientesGrid(),
             scrollX: true,
             scrollCollapse: true,
             columns: [
@@ -237,15 +254,15 @@ async function configurarDataTable(data) {
                     eliminar: "eliminarCliente"
                 }, "Clientes"),
                 columnaGridId(),
-                { data: 'Nombre' },
-                { data: 'Cuit' },
-                { data: 'Sucursal' },
-                { data: 'Provincia' },
-                { data: 'Profesion' },
-                { data: 'CondicionIva' },
-                { data: 'Telefono' },
-                { data: 'Email' },
-                typeof columnaGridActivo === "function" ? columnaGridActivo("Clientes") : { data: "Activo" },
+                { data: 'Nombre', className: 'rp-col-nombre' },
+                { data: 'Cuit', className: 'rp-col-cuit' },
+                { data: 'Sucursal', className: 'rp-col-sucursal' },
+                { data: 'Provincia', className: 'rp-col-provincia' },
+                { data: 'Profesion', className: 'rp-col-profesion' },
+                { data: 'CondicionIva', className: 'rp-col-iva' },
+                { data: 'Telefono', className: 'rp-col-tel' },
+                { data: 'Email', className: 'rp-col-email' },
+                typeof columnaGridActivo === "function" ? columnaGridActivo("Clientes") : { data: "Activo", className: "rp-col-activo" },
             ],
             createdRow: function (row, data) {
                 if (typeof createdRowEstiloActivoGrilla === "function") {
@@ -258,13 +275,18 @@ async function configurarDataTable(data) {
             fixedHeader: true,
             initComplete: async function () {
                 const api = this.api();
-                await armarFiltrosGrillaLista(api, '#grd_Clientes', columnConfig, {
+                await initFiltrosGrillaListaEnInitComplete(api, '#grd_Clientes', columnConfig, {
                     defaultActivoModo: 'todos',
                     initSelect2: ($el) => inicializarSelect2Filtro($el)
+                }, {
+                    afterFilters: () => {
+                        configurarOpcionesColumnas();
+                        actualizarKpis(data);
+                    },
+                    afterAdjust: () => {
+                        setTimeout(() => ajustarColumnasGrillaLista(api, '#grd_Clientes'), 200);
+                    }
                 });
-                configurarOpcionesColumnas();
-                actualizarKpis(data);
-                api.draw(false);
             }
         });
 

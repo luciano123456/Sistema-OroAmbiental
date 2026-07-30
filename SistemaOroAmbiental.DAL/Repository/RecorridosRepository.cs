@@ -30,7 +30,8 @@ namespace SistemaOroAmbiental.DAL.Repository
                                 Semana = s.Nombre,
                                 IdDia = m.IdDia,
                                 Dia = d.Nombre,
-                                Zona = m.Zona
+                                Zona = m.Zona,
+                                HorarioSalida = m.HorarioSalida
                             };
 
                 if (idCamion.HasValue && idCamion > 0)
@@ -80,6 +81,9 @@ namespace SistemaOroAmbiental.DAL.Repository
                 else
                 {
                     entity.Zona = model.Zona;
+                    entity.HorarioSalida = string.IsNullOrWhiteSpace(model.HorarioSalida)
+                        ? null
+                        : model.HorarioSalida.Trim();
                     entity.IdUsuarioModifica = model.IdUsuarioModifica;
                     entity.FechaUsuarioModifica = model.FechaUsuarioModifica;
                 }
@@ -218,6 +222,9 @@ namespace SistemaOroAmbiental.DAL.Repository
                 entity.IdDia = model.IdDia;
                 entity.Posicion = model.Posicion;
                 entity.Activo = model.Activo;
+                entity.Observacion = string.IsNullOrWhiteSpace(model.Observacion)
+                    ? null
+                    : model.Observacion.Trim();
                 entity.IdUsuarioModifica = model.IdUsuarioModifica;
                 entity.FechaUsuarioModifica = model.FechaUsuarioModifica;
 
@@ -301,6 +308,7 @@ namespace SistemaOroAmbiental.DAL.Repository
                     Semana = hoja.Semana,
                     Dia = hoja.Dia,
                     Zona = hoja.Zona,
+                    Salida = hoja.Salida,
                     Paradas = hoja.Paradas
                 });
             }
@@ -313,7 +321,7 @@ namespace SistemaOroAmbiental.DAL.Repository
                 IdCamion = idCamion,
                 Camion = camion.Nombre,
                 Titulo = ConstruirTituloHojaRutaCombinada(camion.Nombre, secciones),
-                Fecha = fecha.Date,
+                FechaReferencia = fecha.Date,
                 PrecioDescartadorGrande = preciosReferencia.grande,
                 PrecioDescartadorChico = preciosReferencia.chico,
                 Secciones = secciones
@@ -329,18 +337,18 @@ namespace SistemaOroAmbiental.DAL.Repository
             if (camion == null || semana == null || dia == null)
                 return null;
 
-            var zona = await _db.RecorridosMatriz.AsNoTracking()
+            var matriz = await _db.RecorridosMatriz.AsNoTracking()
                 .Where(m => m.IdCamion == idCamion && m.IdSemana == idSemana && m.IdDia == idDia)
-                .Select(m => m.Zona)
-                .FirstOrDefaultAsync() ?? "";
+                .Select(m => new { m.Zona, m.HorarioSalida })
+                .FirstOrDefaultAsync();
+
+            var zona = matriz?.Zona ?? "";
+            var salida = matriz?.HorarioSalida?.Trim();
 
             var items = await _db.ClientesRecorridos.AsNoTracking()
                 .Include(r => r.IdClienteNavigation)
-                    .ThenInclude(c => c.IdEstadoNavigation)
                 .Include(r => r.IdEstablecimientoNavigation)
                     .ThenInclude(e => e!.ClientesEstablecimientosContactos)
-                .Include(r => r.IdEstablecimientoNavigation)
-                    .ThenInclude(e => e!.ClientesEstablecimientosExcepciones)
                 .Where(r =>
                     r.IdCamion == idCamion &&
                     r.IdSemana == idSemana &&
@@ -373,7 +381,8 @@ namespace SistemaOroAmbiental.DAL.Repository
                 Dia = dia.Nombre,
                 Zona = zona,
                 Titulo = titulo,
-                Fecha = fecha.Date,
+                FechaReferencia = fecha.Date,
+                Salida = salida,
                 PrecioDescartadorGrande = preciosReferencia.grande,
                 PrecioDescartadorChico = preciosReferencia.chico,
                 Paradas = paradas
@@ -431,7 +440,11 @@ namespace SistemaOroAmbiental.DAL.Repository
             var abonoEfectivo = control?.AbonoEfectivo ?? 0;
             var abonoTransferencia = control?.AbonoTransferencia ?? 0;
 
-            var domicilio = (establecimiento?.Domicilio ?? cliente.Domicilio ?? "").Trim();
+            var domicilio = ComponerDomicilio(
+                establecimiento?.Calle ?? cliente.Calle,
+                establecimiento?.Numero ?? cliente.Numero,
+                establecimiento?.PisoDepartamento ?? cliente.PisoDepartamento,
+                establecimiento?.Domicilio ?? cliente.Domicilio);
             if (!string.IsNullOrWhiteSpace(establecimiento?.Nombre) &&
                 !string.Equals(establecimiento.Nombre.Trim(), cliente.Nombre.Trim(), StringComparison.OrdinalIgnoreCase))
             {
@@ -440,11 +453,13 @@ namespace SistemaOroAmbiental.DAL.Repository
                     : establecimiento.Nombre.Trim() + " — " + domicilio;
             }
 
-            var localidad = (establecimiento?.Localidad ?? cliente.Localidad ?? "").Trim();
+            var localidad = (establecimiento?.Localidad ?? "").Trim();
             var telefono = ObtenerTelefonoParada(cliente, establecimiento);
             var horario = FormatearHorarioRecoleccion(establecimiento);
-
-            var (observacion, alertaTipo) = ConstruirObservacionParada(cliente, establecimiento, control, fecha);
+            var observacion = string.IsNullOrWhiteSpace(recorrido.Observacion)
+                ? null
+                : recorrido.Observacion.Trim();
+            var alertaTipo = "normal";
 
             if (!recorrido.Activo)
             {
@@ -505,83 +520,14 @@ namespace SistemaOroAmbiental.DAL.Repository
             if (establecimiento == null)
                 return "";
 
+            if (!string.IsNullOrWhiteSpace(establecimiento.DiasHorarios))
+                return establecimiento.DiasHorarios.Trim();
+
+            if (establecimiento.HorarioRecoleccionDesde == default
+                && establecimiento.HorarioRecoleccionHasta == default)
+                return "";
+
             return $"{establecimiento.HorarioRecoleccionDesde:hh\\:mm} a {establecimiento.HorarioRecoleccionHasta:hh\\:mm}";
-        }
-
-        private static (string? observacion, string alertaTipo) ConstruirObservacionParada(
-            Cliente cliente,
-            ClientesEstablecimiento? establecimiento,
-            ClientesControlMensual? control,
-            DateTime fecha)
-        {
-            var partes = new List<string>();
-            var alertaTipo = "normal";
-            var fechaDia = fecha.Date;
-
-            if (EstaEnLicencia(cliente, fechaDia))
-            {
-                var licencia = "Licencia";
-                if (cliente.FechaLicenciaDesde.HasValue || cliente.FechaLicenciaHasta.HasValue)
-                {
-                    var desde = cliente.FechaLicenciaDesde?.ToString("dd/MM/yyyy") ?? "?";
-                    var hasta = cliente.FechaLicenciaHasta?.ToString("dd/MM/yyyy") ?? "?";
-                    licencia += $" ({desde} al {hasta})";
-                }
-
-                if (!string.IsNullOrWhiteSpace(cliente.MotivoDetalle))
-                    licencia += ". " + cliente.MotivoDetalle.Trim();
-
-                partes.Add(licencia);
-                alertaTipo = "alerta";
-            }
-
-            var excepcion = establecimiento?.ClientesEstablecimientosExcepciones
-                .Where(x => fechaDia >= x.FechaDesde.Date && fechaDia <= x.FechaHasta.Date)
-                .OrderByDescending(x => x.FechaHasta)
-                .FirstOrDefault();
-
-            if (excepcion != null)
-            {
-                partes.Add(excepcion.NotaInterna.Trim());
-                alertaTipo = "alerta";
-            }
-
-            if (control != null)
-            {
-                if (control.SinEntrega)
-                {
-                    partes.Add("Sin entrega este mes.");
-                    alertaTipo = "alerta";
-                }
-
-                if (!string.IsNullOrWhiteSpace(control.Observaciones))
-                    partes.Add(control.Observaciones.Trim());
-            }
-
-            if (partes.Count == 0)
-                return (null, alertaTipo);
-
-            return (string.Join(" ", partes), alertaTipo);
-        }
-
-        private static bool EstaEnLicencia(Cliente cliente, DateTime fecha)
-        {
-            var estado = cliente.IdEstadoNavigation?.Nombre ?? "";
-            var porEstado = estado.Contains("Licencia", StringComparison.OrdinalIgnoreCase);
-
-            var desde = cliente.FechaLicenciaDesde?.Date;
-            var hasta = cliente.FechaLicenciaHasta?.Date;
-
-            if (desde.HasValue && hasta.HasValue)
-                return fecha >= desde.Value && fecha <= hasta.Value;
-
-            if (desde.HasValue && !hasta.HasValue)
-                return fecha >= desde.Value;
-
-            if (!desde.HasValue && hasta.HasValue)
-                return fecha <= hasta.Value;
-
-            return porEstado;
         }
 
         private async Task<(decimal grande, decimal chico)> ObtenerPreciosDescartadoresReferencia()
@@ -646,8 +592,13 @@ namespace SistemaOroAmbiental.DAL.Repository
                     e.IdCliente,
                     Cliente = c.Nombre,
                     Establecimiento = e.Nombre,
-                    Domicilio = e.Domicilio ?? c.Domicilio,
-                    Localidad = e.Localidad ?? c.Localidad,
+                    e.Calle,
+                    e.Numero,
+                    e.PisoDepartamento,
+                    DomicilioEst = e.Domicilio,
+                    DomicilioCli = c.Domicilio,
+                    Localidad = e.Localidad,
+                    e.DiasHorarios,
                     e.HorarioRecoleccionDesde,
                     e.HorarioRecoleccionHasta
                 }).ToListAsync();
@@ -658,9 +609,13 @@ namespace SistemaOroAmbiental.DAL.Repository
                 IdCliente = x.IdCliente,
                 Cliente = x.Cliente,
                 Establecimiento = x.Establecimiento,
-                Domicilio = x.Domicilio,
+                Domicilio = ComponerDomicilio(x.Calle, x.Numero, x.PisoDepartamento, x.DomicilioEst ?? x.DomicilioCli),
                 Localidad = x.Localidad,
-                Horario = $"{x.HorarioRecoleccionDesde:hh\\:mm} a {x.HorarioRecoleccionHasta:hh\\:mm}",
+                Horario = !string.IsNullOrWhiteSpace(x.DiasHorarios)
+                    ? x.DiasHorarios.Trim()
+                    : (x.HorarioRecoleccionDesde == default && x.HorarioRecoleccionHasta == default
+                        ? ""
+                        : $"{x.HorarioRecoleccionDesde:hh\\:mm} a {x.HorarioRecoleccionHasta:hh\\:mm}"),
                 YaEnRecorrido = EstaEnRecorrido(x.IdCliente, x.Id, enRutaPairs)
             }).ToList();
         }
@@ -691,16 +646,65 @@ namespace SistemaOroAmbiental.DAL.Repository
                     .Select(r => (int?)r.Posicion)
                     .MaxAsync() ?? 0;
 
+                var posicionesOcupadas = await _db.ClientesRecorridos
+                    .Where(r => r.IdCamion == idCamion && r.IdSemana == idSemana && r.IdDia == idDia)
+                    .Select(r => r.Posicion)
+                    .ToListAsync();
+                var ocupadas = new HashSet<int>(posicionesOcupadas);
+
+                var estIds = items
+                    .Where(x => x.IdEstablecimiento.HasValue && x.IdEstablecimiento > 0)
+                    .Select(x => x.IdEstablecimiento!.Value)
+                    .Distinct()
+                    .ToList();
+
+                var ordenPorEst = estIds.Count == 0
+                    ? new Dictionary<int, int?>()
+                    : await _db.ClientesEstablecimientos
+                        .AsNoTracking()
+                        .Where(e => estIds.Contains(e.Id))
+                        .ToDictionaryAsync(e => e.Id, e => e.OrdenRecorrido);
+
+                var itemsOrdenados = items
+                    .Select(item =>
+                    {
+                        int? orden = null;
+                        if (item.IdEstablecimiento.HasValue && item.IdEstablecimiento > 0
+                            && ordenPorEst.TryGetValue(item.IdEstablecimiento.Value, out var o))
+                        {
+                            orden = o;
+                        }
+
+                        return new { Item = item, Orden = orden };
+                    })
+                    .OrderBy(x => x.Orden.HasValue ? 0 : 1)
+                    .ThenBy(x => x.Orden ?? int.MaxValue)
+                    .ThenBy(x => x.Item.IdCliente)
+                    .ToList();
+
                 var pos = maxPos;
                 var insertados = 0;
                 var ahora = DateTime.Now;
 
-                foreach (var item in items)
+                foreach (var entry in itemsOrdenados)
                 {
+                    var item = entry.Item;
                     if (EstaEnRecorrido(item.IdCliente, item.IdEstablecimiento, enRutaPairs))
                         continue;
 
-                    pos++;
+                    int posicion;
+                    if (entry.Orden.HasValue && entry.Orden > 0 && !ocupadas.Contains(entry.Orden.Value))
+                    {
+                        posicion = entry.Orden.Value;
+                    }
+                    else
+                    {
+                        pos++;
+                        posicion = pos;
+                    }
+
+                    ocupadas.Add(posicion);
+
                     var entity = new ClientesRecorrido
                     {
                         IdCliente = item.IdCliente,
@@ -708,7 +712,7 @@ namespace SistemaOroAmbiental.DAL.Repository
                         IdCamion = idCamion,
                         IdSemana = idSemana,
                         IdDia = idDia,
-                        Posicion = pos,
+                        Posicion = posicion,
                         Activo = true,
                         IdUsuarioRegistra = idUsuario,
                         FechaUsuarioRegistra = ahora
@@ -770,6 +774,8 @@ namespace SistemaOroAmbiental.DAL.Repository
                        Cliente = cl.Nombre,
                        IdEstablecimiento = r.IdEstablecimiento,
                        Establecimiento = e != null ? e.Nombre : null,
+                       Domicilio = (e != null ? e.Domicilio : null) ?? cl.Domicilio,
+                       Localidad = e != null ? e.Localidad : null,
                        IdCamion = r.IdCamion,
                        Camion = c.Nombre,
                        IdSemana = r.IdSemana,
@@ -779,8 +785,22 @@ namespace SistemaOroAmbiental.DAL.Repository
                        Zona = m != null ? m.Zona : "",
                        Posicion = r.Posicion,
                        Activo = r.Activo,
+                       Observacion = r.Observacion,
                        RecorridoTexto = s.Nombre + " " + d.Nombre
                    };
+        }
+
+        private static string ComponerDomicilio(string? calle, string? numero, string? pisoDepartamento, string? legacy)
+        {
+            var partes = new List<string>();
+            if (!string.IsNullOrWhiteSpace(calle)) partes.Add(calle.Trim());
+            if (!string.IsNullOrWhiteSpace(numero)) partes.Add(numero.Trim());
+            if (!string.IsNullOrWhiteSpace(pisoDepartamento)) partes.Add(pisoDepartamento.Trim());
+
+            if (partes.Count > 0)
+                return string.Join(" ", partes);
+
+            return string.IsNullOrWhiteSpace(legacy) ? "" : legacy.Trim();
         }
     }
 }

@@ -1,0 +1,233 @@
+@{
+    var esBancario = false;
+}
+
+<div class="fg-panel-toolbar mb-3">
+    <div>
+        <h4 class="m-0 fw-800" id="ldTitulo">Libro diario operativo</h4>
+        <small class="text-muted-cc">Control operativo diario. La caja real esta en Efectivo / Bancos / Tesoreria.</small>
+    </div>
+    <div class="d-flex gap-2 flex-wrap align-items-center">
+        <ul class="nav ld-tabs" id="ldTabsTipo" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button type="button" class="nav-link active" id="btnLdEfectivo" data-ld-tipo="0">
+                    <i class="fa fa-money me-1"></i> Operativo efectivo
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button type="button" class="nav-link" id="btnLdBancario" data-ld-tipo="1">
+                    <i class="fa fa-university me-1"></i> Operativo bancario
+                </button>
+            </li>
+        </ul>
+        <button id="btnNuevoLd" class="btn btn-success vi-btn" type="button">
+            <i class="fa fa-plus me-2"></i> Nuevo
+        </button>
+        <button id="btnRefreshLd" class="btn btn-outline-light vi-btn" type="button">
+            <i class="fa fa-refresh me-2"></i> Actualizar
+        </button>
+    </div>
+</div>
+
+<div class="ld-index" data-es-bancario="@(esBancario ? "1" : "0")">
+
+    <div class="rp-filtros-wrap mb-3">
+        <div class="rp-filtros-head" data-bs-toggle="collapse" data-bs-target="#panelFiltrosLd" aria-expanded="true">
+            <div class="title">
+                <i class="fa fa-filter"></i>
+                <span>Filtros</span>
+            </div>
+            <i class="fa fa-chevron-down chev"></i>
+        </div>
+        <div id="panelFiltrosLd" class="collapse show">
+            <div class="rp-filtros-body">
+                <div class="row g-3">
+                    <div class="col-md-2">
+                        <div class="rp-filter-label">Fecha desde</div>
+                        <input type="date" id="fDesdeLd" class="rp-filter-input" />
+                    </div>
+                    <div class="col-md-2">
+                        <div class="rp-filter-label">Fecha hasta</div>
+                        <input type="date" id="fHastaLd" class="rp-filter-input" />
+                    </div>
+                    <div class="col-md-4">
+                        <div class="rp-filter-label">Buscar</div>
+                        <input type="text" id="fTextoLd" class="rp-filter-input" placeholder="Concepto, cliente, proveedor, recorrido..." />
+                    </div>
+                </div>
+                <div class="rp-filtros-actions mt-3">
+                    <button class="btn btn-outline-light vi-btn" type="button" id="btnLimpiarLd">
+                        <i class="fa fa-eraser"></i> Limpiar
+                    </button>
+                    <button class="btn btn-primary vi-btn" type="button" id="btnFiltrarLd">
+                        <i class="fa fa-check"></i> Aplicar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="vi-kpis mb-3 ld-kpis">
+        <div class="vi-kpiCard">
+            <div class="lbl"><i class="fa fa-history me-1"></i> Saldo anterior</div>
+            <div class="val" id="kpiSaldoAnteriorLd">$ 0</div>
+        </div>
+        <div class="vi-kpiCard">
+            <div class="lbl"><i class="fa fa-arrow-down me-1"></i> Total Debe</div>
+            <div class="val ld-val-debe" id="kpiTotalDebeLd">$ 0</div>
+        </div>
+        <div class="vi-kpiCard">
+            <div class="lbl"><i class="fa fa-arrow-up me-1"></i> Total Haber</div>
+            <div class="val ld-val-haber" id="kpiTotalHaberLd">$ 0</div>
+        </div>
+        <div class="vi-kpiCard">
+            <div class="lbl"><i class="fa fa-line-chart me-1"></i> Saldo final</div>
+            <div class="val ld-val-saldo" id="kpiSaldoFinalLd">$ 0</div>
+        </div>
+        <div class="vi-kpiCard">
+            <div class="lbl"><i class="fa fa-list me-1"></i> Movimientos</div>
+            <div class="val" id="kpiCantidadLd">0</div>
+        </div>
+    </div>
+
+    <div class="cc-card ld-grid-card rp-grid-panel-wrap fg-caja-card">
+        <div class="cc-card-body p-0">
+            <div class="ld-table-wrap rp-table-wrap">
+                <table class="ld-table" id="tblLibroDiario">
+                    <thead>
+                        <tr>
+                            <th class="ld-col-acc"></th>
+                            <th>Fecha</th>
+                            <th>Concepto</th>
+                            <th>Cliente / Proveedor</th>
+                            <th>Recorrido</th>
+                            <th class="ld-num">Unid.</th>
+                            <th class="ld-num">P.U.</th>
+                            <th class="ld-num">Debe</th>
+                            <th class="ld-num">Haber</th>
+                            <th class="ld-num">IVA%</th>
+                            <th class="ld-num">IVA</th>
+                            <th class="ld-num">Ot.Imp</th>
+                            <th class="ld-num">Total</th>
+                            <th class="ld-num ld-col-saldo">Saldo</th>
+                            <th>Forma pago</th>
+                        </tr>
+                        <tr class="ld-filters">
+                            <th class="ld-col-acc"></th>
+                            <th><input type="text" class="rp-filter-input rp-filter-thead ld-col-filter" data-col="1" placeholder="Fecha..." autocomplete="off" /></th>
+                            <th><input type="text" class="rp-filter-input rp-filter-thead ld-col-filter" data-col="2" placeholder="Concepto..." autocomplete="off" /></th>
+                            <th><input type="text" class="rp-filter-input rp-filter-thead ld-col-filter" data-col="3" placeholder="Cliente / prov..." autocomplete="off" /></th>
+                            <th><input type="text" class="rp-filter-input rp-filter-thead ld-col-filter" data-col="4" placeholder="Recorrido..." autocomplete="off" /></th>
+                            <th><input type="text" class="rp-filter-input rp-filter-thead ld-col-filter ld-num" data-col="5" placeholder="Unid." autocomplete="off" /></th>
+                            <th><input type="text" class="rp-filter-input rp-filter-thead ld-col-filter ld-num" data-col="6" placeholder="P.U." autocomplete="off" /></th>
+                            <th><input type="text" class="rp-filter-input rp-filter-thead ld-col-filter ld-num" data-col="7" placeholder="Debe" autocomplete="off" /></th>
+                            <th><input type="text" class="rp-filter-input rp-filter-thead ld-col-filter ld-num" data-col="8" placeholder="Haber" autocomplete="off" /></th>
+                            <th><input type="text" class="rp-filter-input rp-filter-thead ld-col-filter ld-num" data-col="9" placeholder="IVA%" autocomplete="off" /></th>
+                            <th><input type="text" class="rp-filter-input rp-filter-thead ld-col-filter ld-num" data-col="10" placeholder="IVA" autocomplete="off" /></th>
+                            <th><input type="text" class="rp-filter-input rp-filter-thead ld-col-filter ld-num" data-col="11" placeholder="Ot.Imp" autocomplete="off" /></th>
+                            <th><input type="text" class="rp-filter-input rp-filter-thead ld-col-filter ld-num" data-col="12" placeholder="Total" autocomplete="off" /></th>
+                            <th><input type="text" class="rp-filter-input rp-filter-thead ld-col-filter ld-num" data-col="13" placeholder="Saldo" autocomplete="off" /></th>
+                            <th><input type="text" class="rp-filter-input rp-filter-thead ld-col-filter" data-col="14" placeholder="Forma pago..." autocomplete="off" /></th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbodyLibroDiario"></tbody>
+                    <tfoot id="tfootLibroDiario"></tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalLibroDiario" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+        <div class="modal-content rp-modal-shell">
+            <div class="modal-header colorEncabezado">
+                <h5 class="modal-title" id="modalLdTitulo">Movimiento</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="mIdLd" value="0" />
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Fecha</label>
+                        <input type="date" id="mFechaLd" class="form-control" autocomplete="off" />
+                    </div>
+                    <div class="col-md-8">
+                        <label class="form-label">Concepto</label>
+                        <div class="ld-ac-wrap">
+                            <input type="text" id="mConceptoLd" class="form-control" autocomplete="off" placeholder="Preset o texto libre..." />
+                            <input type="hidden" id="mIdConceptoLd" value="" />
+                            <div id="mConceptoSugLd" class="ld-ac-list d-none"></div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Cliente</label>
+                        <div class="ld-ac-wrap">
+                            <input type="text" id="mClienteLd" class="form-control" autocomplete="off" placeholder="Buscar cliente..." />
+                            <input type="hidden" id="mIdClienteLd" value="" />
+                            <div id="mClienteSugLd" class="ld-ac-list d-none"></div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Proveedor</label>
+                        <div class="ld-ac-wrap">
+                            <input type="text" id="mProveedorLd" class="form-control" autocomplete="off" placeholder="Buscar proveedor..." />
+                            <input type="hidden" id="mIdProveedorLd" value="" />
+                            <div id="mProveedorSugLd" class="ld-ac-list d-none"></div>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Recorrido (informativo)</label>
+                        <input type="text" id="mRecorridoLd" class="form-control" autocomplete="off" placeholder="Ej: 3 JUEVES" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Unidades</label>
+                        <input type="text" id="mUnidadesLd" class="form-control Inputmiles" autocomplete="off" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">P. unitario</label>
+                        <input type="text" id="mPrecioLd" class="form-control Inputmiles" autocomplete="off" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Debe</label>
+                        <input type="text" id="mDebeLd" class="form-control Inputmiles" autocomplete="off" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Haber</label>
+                        <input type="text" id="mHaberLd" class="form-control Inputmiles" autocomplete="off" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">IVA %</label>
+                        <input type="text" id="mPorcIvaLd" class="form-control Inputmiles" autocomplete="off" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">IVA</label>
+                        <input type="text" id="mIvaLd" class="form-control Inputmiles" autocomplete="off" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Otros imp.</label>
+                        <input type="text" id="mOtrosImpLd" class="form-control Inputmiles" autocomplete="off" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Total</label>
+                        <input type="text" id="mTotalLd" class="form-control Inputmiles" autocomplete="off" readonly />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Forma de pago</label>
+                        <select id="mFormaPagoLd" class="form-select">
+                            <option value="">-</option>
+                            <option value="Efectivo">Efectivo</option>
+                            <option value="Transferencia banco">Transferencia banco</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-success" id="btnGuardarLd">
+                    <i class="fa fa-check"></i> Guardar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

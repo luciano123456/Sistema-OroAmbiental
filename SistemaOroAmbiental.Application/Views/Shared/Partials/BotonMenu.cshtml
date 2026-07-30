@@ -1,11 +1,11 @@
-﻿@* =========================================================
-   Botón flotante tipo FAB (Home dinámico según menú)
+@* =========================================================
+   Bot�n flotante tipo FAB (Home din�mico seg�n men�)
 ========================================================= *@
 
-<link href="~/css/BotonMenu.css?v=5.1" rel="stylesheet" />
+<link href="~/css/BotonMenu.css?v=5.2" rel="stylesheet" />
 
 <div class="fab-wrap" data-fab>
-    <!-- Botón principal (Home dinámico) -->
+    <!-- Bot�n principal (Home din�mico) -->
     <a class="fab-main"
        href="javascript:void(0)"
        title="Inicio"
@@ -19,17 +19,17 @@
 
 <script>
     /* =========================================================
-       CONFIGURACIÓN
+       CONFIGURACI�N
     ========================================================= */
     const LS_MENU_TYPE = 'menu_tipo'; // 'clasico' | 'personalizado'
 
     /* =========================================================
-       NAVEGACIÓN HOME SEGÚN MENÚ
+       NAVEGACI�N HOME SEG�N MEN�
     ========================================================= */
     function irHomeSegunMenu() {
         const menu = localStorage.getItem(LS_MENU_TYPE);
 
-        // Si no existe configuración aún, default clásico
+        // Si no existe configuraci�n a�n, default cl�sico
         if (!menu || menu === 'clasico') {
             window.location.href = '/Home';
             return;
@@ -45,14 +45,14 @@
     }
 
     /* =========================================================
-       TOOLTIPS BOOTSTRAP 5 (MISMO QUE TENÍAS)
+       TOOLTIPS BOOTSTRAP 5 (MISMO QUE TEN�AS)
     ========================================================= */
     document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => {
         try { new bootstrap.Tooltip(el); } catch (_) {}
     });
 
     /* =========================================================
-       FAB MOBILE BEHAVIOR (MISMO CÓDIGO ORIGINAL)
+       FAB MOBILE BEHAVIOR (MISMO C�DIGO ORIGINAL)
     ========================================================= */
     (function () {
         const fab = document.querySelector('[data-fab]');
@@ -61,7 +61,7 @@
         const main = fab.querySelector('.fab-main');
 
         main.addEventListener('click', function (e) {
-            // Si tiene dock con items, toggle; si está vacío navega normal
+            // Si tiene dock con items, toggle; si est� vac�o navega normal
             const hasItems = fab.querySelectorAll('.fab-dock .fab-item').length > 0;
             if (window.matchMedia('(hover: none)').matches && hasItems) {
                 e.preventDefault();

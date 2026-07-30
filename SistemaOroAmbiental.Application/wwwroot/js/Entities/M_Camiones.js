@@ -30,7 +30,7 @@
                 : this.root.querySelector("[data-camion-modal]");
 
             if (!this.modalEl) {
-                throw new Error("No se encontró [data-camion-modal].");
+                throw new Error("No se encontro [data-camion-modal].");
             }
 
             this.bsModal = new bootstrap.Modal(this.modalEl);
@@ -132,7 +132,7 @@
                 if (chkActivo) chkActivo.checked = true;
                 if (lblActivo) lblActivo.textContent = "Activo";
 
-                this._id("modalEdicionLabel").textContent = "Nuevo Camión";
+                this._id("modalEdicionLabel").textContent = "Nuevo Camion";
                 this._id("btnGuardar").innerHTML = `<i class="fa fa-check"></i> Registrar`;
 
                 this.bsModal.show();
@@ -201,7 +201,7 @@
 
             this._setAuditoria(modelo);
 
-            this._id("modalEdicionLabel").textContent = soloLectura ? "Ver Camión" : "Editar Camión";
+            this._id("modalEdicionLabel").textContent = soloLectura ? "Ver Camion" : "Editar Camion";
             this._id("btnGuardar").innerHTML = `<i class="fa fa-check"></i> Guardar`;
 
             this.bsModal.show();
@@ -246,7 +246,7 @@
 
                 this.cerrarErrorCampos();
                 this.cerrar();
-                exitoModal(data.mensaje || (esNuevo ? "Camión registrado correctamente" : "Camión modificado correctamente"));
+                exitoModal(data.mensaje || (esNuevo ? "Camion registrado correctamente" : "Camion modificado correctamente"));
 
                 if (typeof this.options.onSaved === "function") {
                     await this.options.onSaved(data, modelo, this);
@@ -262,8 +262,8 @@
 
         async eliminar(id) {
             const confirmado = typeof confirmarModal === "function"
-                ? await confirmarModal("¿Desea eliminar este camión?")
-                : window.confirm("¿Desea eliminar este camión?");
+                ? await confirmarModal("¿Desea eliminar este camion?")
+                : window.confirm("¿Desea eliminar este camion?");
 
             if (!confirmado) return false;
 
@@ -285,7 +285,7 @@
                 }
 
                 if (typeof exitoModal === "function") {
-                    exitoModal(data.mensaje || "Camión eliminado correctamente");
+                    exitoModal(data.mensaje || "Camion eliminado correctamente");
                 }
 
                 if (typeof this.options.onDeleted === "function") {

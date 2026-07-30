@@ -2,14 +2,19 @@ let gridEstablecimientos;
 let establecimientoModal;
 
 const columnConfigEst = [
-    { index: 2, filterType: 'select', fetchDataFunc: listaClientesFilterEst },
-    { index: 3, filterType: 'text' },
+    { index: 2, filterType: 'text' },
+    { index: 3, filterType: 'select', fetchDataFunc: listaClientesFilterEst },
     { index: 4, filterType: 'text' },
-    { index: 5, filterType: 'select', fetchDataFunc: listaProvinciasFilterEst },
-    { index: 6, filterType: 'select', fetchDataFunc: listaDiasFilterEst },
-    { index: 7, filterType: 'select', fetchDataFunc: listaSemanasFilterEst },
-    { index: 8, filterType: 'select', fetchDataFunc: listaListasPrecioFilterEst },
-    { index: 9, filterType: 'text' }
+    { index: 5, filterType: 'text' },
+    { index: 6, filterType: 'select', fetchDataFunc: listaProvinciasFilterEst },
+    { index: 7, filterType: 'select', fetchDataFunc: listaPartidosFilterEst },
+    { index: 8, filterType: 'text' },
+    { index: 9, filterType: 'select', fetchDataFunc: listaLocalidadesFilterEst },
+    { index: 10, filterType: 'text' },
+    { index: 11, filterType: 'select', fetchDataFunc: listaDiasFilterEst },
+    { index: 12, filterType: 'select', fetchDataFunc: listaSemanasFilterEst },
+    { index: 13, filterType: 'select', fetchDataFunc: listaListasPrecioFilterEst },
+    { index: 14, filterType: 'text' }
 ];
 
 registrarFiltrosGrilla('grd_Establecimientos', columnConfigEst, {
@@ -37,7 +42,7 @@ function initModalClienteEstablecimientos() {
 $(document).ready(() => {
     const modalEl = document.querySelector("[data-establecimiento-modal]");
     if (!modalEl) {
-        console.error("No se encontró [data-establecimiento-modal].");
+        console.error("No se encontro [data-establecimiento-modal].");
         return;
     }
 
@@ -124,19 +129,26 @@ async function configurarDataTableEst(data) {
                     eliminar: "eliminarEstablecimiento"
                 }, "Clientes"),
                 columnaGridId(),
+                { data: "IdEstablecimientoCliente", defaultContent: "" },
                 { data: "Cliente" },
                 { data: "Nombre" },
                 { data: "Cuit" },
                 { data: "Provincia" },
+                { data: "Partido", defaultContent: "" },
+                { data: "CodigoPartido", defaultContent: "" },
+                { data: "Localidad", defaultContent: "" },
+                { data: "CodigoLocalidad", defaultContent: "" },
                 { data: "DiaRecoleccion" },
                 { data: "SemanaRecoleccion" },
                 { data: "ListaPrecio" },
                 {
-                    data: null,
-                    render: function (row) {
-                        const d = row.HorarioRecoleccionDesde || "";
-                        const h = row.HorarioRecoleccionHasta || "";
-                        return d && h ? `${d} - ${h}` : "";
+                    data: "DiasHorarios",
+                    defaultContent: "",
+                    render: function (d, type, row) {
+                        if (d) return d;
+                        const desde = row.HorarioRecoleccionDesde || "";
+                        const hasta = row.HorarioRecoleccionHasta || "";
+                        return desde && hasta ? `${desde} - ${hasta}` : "";
                     }
                 }
             ],
@@ -167,6 +179,16 @@ async function listaClientesFilterEst() {
 
 async function listaProvinciasFilterEst() {
     const r = await fetch("/Provincias/Lista", { headers: { Authorization: "Bearer " + token } });
+    return await r.json();
+}
+
+async function listaPartidosFilterEst() {
+    const r = await fetch("/Partidos/Lista", { headers: { Authorization: "Bearer " + token } });
+    return await r.json();
+}
+
+async function listaLocalidadesFilterEst() {
+    const r = await fetch("/Localidades/Lista", { headers: { Authorization: "Bearer " + token } });
     return await r.json();
 }
 

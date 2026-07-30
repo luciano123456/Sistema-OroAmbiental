@@ -1,0 +1,115 @@
+<div class="cg-cm-shell fg-cm-shell">
+    <div class="cg-cm-filtros">
+        <div class="cg-cm-filtros-top">
+            <div>
+                <h6 class="cg-cm-filtros-title">Control mensual</h6>
+            </div>
+            <button type="button" id="fgCmBtnRefresh" class="btn btn-success btn-sm cg-cm-btn-refresh">
+                <i class="fa fa-refresh me-1"></i> Actualizar
+            </button>
+        </div>
+
+        <div class="fg-cm-fuentes mb-3">
+            <span class="fg-cm-fuentes-label">Que queres ver</span>
+            <div class="fg-cm-fuentes-chips">
+                <button type="button" class="fg-cm-fuente is-active" data-fuente="efectivo">
+                    <i class="fa fa-money"></i> Efectivo
+                </button>
+                <button type="button" class="fg-cm-fuente is-active" data-fuente="bancos">
+                    <i class="fa fa-university"></i> Bancos
+                </button>
+                <button type="button" class="fg-cm-fuente is-active" data-fuente="gastos">
+                    <i class="fa fa-minus-circle"></i> Gastos
+                </button>
+            </div>
+        </div>
+
+        <div class="row g-3">
+            <div class="col-lg-5">
+                <div class="cg-cm-picker">
+                    <div class="cg-cm-picker-head">
+                        <label class="form-label mb-0">Anos</label>
+                        <small class="cg-cm-picker-hint">Toca para marcar o desmarcar</small>
+                    </div>
+                    <div class="cg-cm-chips cg-cm-chips--years" id="fgCmAniosChips"></div>
+                </div>
+            </div>
+            <div class="col-lg-5">
+                <div class="cg-cm-picker">
+                    <div class="cg-cm-picker-head">
+                        <label class="form-label mb-0">Meses</label>
+                        <small class="cg-cm-picker-hint">Vacio = todos los meses</small>
+                    </div>
+                    <div class="cg-cm-chips cg-cm-chips--months" id="fgCmMesesChips"></div>
+                </div>
+            </div>
+            <div class="col-lg-2">
+                <div class="cg-cm-count-box">
+                    <span class="cg-cm-count-label">Periodos</span>
+                    <strong id="fgCmCount">-</strong>
+                    <small class="cg-cm-count-sub" id="fgCmFiltroResumen">-</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="cg-cm-presets">
+            <span class="cg-cm-presets-label">Atajos</span>
+            <button type="button" class="cg-cm-preset fg-cm-preset-meses" data-meses="1,2,3">Ene-Mar</button>
+            <button type="button" class="cg-cm-preset fg-cm-preset-meses" data-meses="4,5,6">Abr-Jun</button>
+            <button type="button" class="cg-cm-preset fg-cm-preset-meses" data-meses="7,8,9">Jul-Sep</button>
+            <button type="button" class="cg-cm-preset fg-cm-preset-meses" data-meses="10,11,12">Oct-Dic</button>
+            <button type="button" class="cg-cm-preset fg-cm-preset-meses" data-meses="all">Todos los meses</button>
+            <button type="button" class="cg-cm-preset" id="fgCmAniosRecientes">Ultimos 3 anos</button>
+        </div>
+    </div>
+
+    <div class="cg-cm-kpis fg-cm-kpis">
+        <div class="cg-cm-kpi">
+            <span>Ingresos</span>
+            <strong id="fgCmKpiIngresos">$ 0</strong>
+        </div>
+        <div class="cg-cm-kpi">
+            <span>Egresos</span>
+            <strong id="fgCmKpiEgresos">$ 0</strong>
+        </div>
+        <div class="cg-cm-kpi">
+            <span>Gastos</span>
+            <strong id="fgCmKpiGastos">$ 0</strong>
+        </div>
+        <div class="cg-cm-kpi cg-cm-kpi-saldo">
+            <span>Neto del periodo</span>
+            <strong id="fgCmKpiNeto">$ 0</strong>
+        </div>
+    </div>
+
+    <div class="cg-cm-table-wrap">
+        <table class="cg-cm-table" id="fgTblControlMensual">
+            <thead>
+                <tr>
+                    <th class="cg-cm-th-periodo">Ano</th>
+                    <th class="cg-cm-th-periodo">Mes</th>
+                    <th class="cg-cm-th-num fg-cm-col-efe">Ing. efect.</th>
+                    <th class="cg-cm-th-num fg-cm-col-efe">Egr. efect.</th>
+                    <th class="cg-cm-th-num fg-cm-col-ban">Ing. banco</th>
+                    <th class="cg-cm-th-num fg-cm-col-ban">Egr. banco</th>
+                    <th class="cg-cm-th-num fg-cm-col-gas">Gastos</th>
+                    <th class="cg-cm-th-num">Ingresos</th>
+                    <th class="cg-cm-th-num">Egresos</th>
+                    <th class="cg-cm-th-num">Neto</th>
+                    <th class="cg-cm-th-num">Saldo</th>
+                </tr>
+            </thead>
+            <tbody id="fgCmBody">
+                <tr class="cg-cm-empty">
+                    <td colspan="11">
+                        <div class="fg-cm-empty">
+                            <i class="fa fa-inbox"></i>
+                            <strong>No hay registros</strong>
+                            <small>Seleccioná un periodo y actualizá.</small>
+                        </div>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>

@@ -40,6 +40,7 @@ public class RecorridosMatrizDto
     public int IdDia { get; set; }
     public string Dia { get; set; } = "";
     public string Zona { get; set; } = "";
+    public string? HorarioSalida { get; set; }
 }
 
 public class ClientesRecorridoDto
@@ -49,6 +50,8 @@ public class ClientesRecorridoDto
     public string Cliente { get; set; } = "";
     public int? IdEstablecimiento { get; set; }
     public string? Establecimiento { get; set; }
+    public string? Domicilio { get; set; }
+    public string? Localidad { get; set; }
     public int IdCamion { get; set; }
     public string Camion { get; set; } = "";
     public int IdSemana { get; set; }
@@ -58,6 +61,7 @@ public class ClientesRecorridoDto
     public string Zona { get; set; } = "";
     public int Posicion { get; set; }
     public bool Activo { get; set; }
+    public string? Observacion { get; set; }
     public string RecorridoTexto { get; set; } = "";
 }
 
@@ -134,6 +138,36 @@ public class ClienteStockDto
     public decimal EnPoderCliente { get; set; }
 }
 
+public class ProveedorControlMensualDto
+{
+    public int? IdControl { get; set; }
+    public int Anio { get; set; }
+    public int Mes { get; set; }
+    public string MesNombre { get; set; } = "";
+    public int CantCompras { get; set; }
+    public decimal TotalCompras { get; set; }
+    public decimal TotalPagos { get; set; }
+    public decimal Debe { get; set; }
+    public decimal Haber { get; set; }
+    public decimal Saldo { get; set; }
+    public bool SinCompra { get; set; }
+    public string? Observaciones { get; set; }
+    public bool TieneOverride { get; set; }
+}
+
+public class ProveedorControlFiltradoDto
+{
+    public int IdProveedor { get; set; }
+    public string Proveedor { get; set; } = "";
+    public string? Cuit { get; set; }
+    public decimal SaldoActual { get; set; }
+    public decimal TotalDebe { get; set; }
+    public decimal TotalHaber { get; set; }
+    public decimal TotalSaldo { get; set; }
+    public bool DatosParciales { get; set; }
+    public List<ProveedorControlMensualDto> Filas { get; set; } = new();
+}
+
 public class LibroDiarioFiltroDto
 {
     public DateTime? FechaDesde { get; set; }
@@ -188,7 +222,7 @@ public class HojaRutaDto
     public string Dia { get; set; } = "";
     public string Zona { get; set; } = "";
     public string Titulo { get; set; } = "";
-    public DateTime Fecha { get; set; }
+    public DateTime? FechaReferencia { get; set; }
     public string? Salida { get; set; }
     public decimal PrecioDescartadorGrande { get; set; }
     public decimal PrecioDescartadorChico { get; set; }
@@ -202,6 +236,7 @@ public class HojaRutaSeccionDto
     public string Semana { get; set; } = "";
     public string Dia { get; set; } = "";
     public string Zona { get; set; } = "";
+    public string? Salida { get; set; }
     public List<HojaRutaParadaDto> Paradas { get; set; } = new();
 }
 

@@ -9,6 +9,8 @@ public partial class ClientesEstablecimiento
 
     public int IdCliente { get; set; }
 
+    public string? IdEstablecimientoCliente { get; set; }
+
     public string Nombre { get; set; } = null!;
 
     public string? Cuit { get; set; }
@@ -16,6 +18,14 @@ public partial class ClientesEstablecimiento
     public int? IdCondicionIva { get; set; }
 
     public string? Domicilio { get; set; }
+
+    public string? Calle { get; set; }
+
+    public string? Numero { get; set; }
+
+    public string? PisoDepartamento { get; set; }
+
+    public int? IdTipoGenerador { get; set; }
 
     public int? IdProvincia { get; set; }
 
@@ -35,7 +45,13 @@ public partial class ClientesEstablecimiento
 
     public TimeSpan HorarioRecoleccionHasta { get; set; }
 
+    public string? DiasHorarios { get; set; }
+
     public int? IdCamion { get; set; }
+
+    public int? OrdenRecorrido { get; set; }
+
+    public decimal? Kilos { get; set; }
 
     public int? IdLocalidad { get; set; }
 
@@ -62,6 +78,8 @@ public partial class ClientesEstablecimiento
     public virtual Cliente IdClienteNavigation { get; set; } = null!;
 
     public virtual CondicionesIva? IdCondicionIvaNavigation { get; set; }
+
+    public virtual ClientesTipoGenerador? IdTipoGeneradorNavigation { get; set; }
 
     public virtual Dia IdDiaRecoleccionNavigation { get; set; } = null!;
 

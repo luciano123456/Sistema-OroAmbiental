@@ -55,7 +55,7 @@ function initModalesAtajosContratos() {
 $(document).ready(() => {
     const modalEl = document.querySelector("[data-contrato-modal]");
     if (!modalEl) {
-        console.error("No se encontró [data-contrato-modal].");
+        console.error("No se encontro [data-contrato-modal].");
         return;
     }
 

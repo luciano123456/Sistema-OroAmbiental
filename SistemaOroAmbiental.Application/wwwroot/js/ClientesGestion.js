@@ -1,5 +1,5 @@
 /* =========================================================
-   CLIENTES GESTIÓN — Hub unificado por cliente
+   CLIENTES GESTION - Hub unificado por cliente
 ========================================================= */
 
 const CG = {
@@ -20,8 +20,22 @@ const CG = {
     cuentas: [],
     controlFiltros: { anios: [], meses: [] },
     viewPref: "auto",
-    listMeta: {}
+    listMeta: {},
+    geoCache: { provincias: [] },
+    idDiaRecoleccionLegacy: 0
 };
+
+const CG_DIAS_SEMANA = [
+    { id: 1, nombre: "Lunes" },
+    { id: 2, nombre: "Martes" },
+    { id: 3, nombre: "Miercoles" },
+    { id: 4, nombre: "Jueves" },
+    { id: 5, nombre: "Viernes" },
+    { id: 6, nombre: "Sabado" },
+    { id: 7, nombre: "Domingo" }
+];
+
+const CG_REC_CAMION_SELECTORS = CG_DIAS_SEMANA.map(d => `#cgRecCamion${d.id}`);
 
 const MES_NOMBRES_CG = [
     "", "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
@@ -36,13 +50,12 @@ const API_CG = {
     dependencias: id => `/Clientes/DependenciasEliminar?id=${id}`,
     sucursales: "/Sucursales/Lista",
     provincias: "/Provincias/Lista",
-    partidosPorProvincia: id => `/Partidos/ListaPorProvincia?idProvincia=${id}`,
-    localidadesPorPartido: id => `/Localidades/ListaPorPartido?idPartido=${id}`,
     condicionesIva: "/CondicionesIva/Lista",
     profesiones: "/ClientesProfesiones/Lista",
     estados: "/ClientesEstados/Lista",
     motivos: "/ClientesMotivos/Lista",
     calificaciones: "/ClientesCalificaciones/Lista",
+    tiposGenerador: "/ClientesTiposGenerador/Lista",
     contactosLista: id => `/ClientesContactos/ListaPorCliente?idCliente=${id}`,
     contactosInsertar: "/ClientesContactos/Insertar",
     contactosActualizar: "/ClientesContactos/Actualizar",
@@ -67,7 +80,13 @@ const API_CG = {
     },
     recorridosPorCliente: idCliente => `/Recorridos/PorCliente?idCliente=${idCliente}`,
     stockCliente: idCliente => `/ClientesOperativo/StockCliente?idCliente=${idCliente}`,
-    guardarControlMensual: "/ClientesOperativo/GuardarControlMensual"
+    guardarControlMensual: "/ClientesOperativo/GuardarControlMensual",
+    recoleccionPrincipal: id => `/Clientes/RecoleccionPrincipal?idCliente=${id}`,
+    recoleccionPrincipalGuardar: "/Clientes/RecoleccionPrincipal",
+    dias: "/Dias/Lista",
+    semanas: "/Semanas/Lista",
+    listasPrecios: "/ListasPrecios/Lista",
+    camiones: "/Camiones/Lista?soloActivos=true"
 };
 
 const CG_TAB_LABELS = {
@@ -95,9 +114,11 @@ $(document).ready(async () => {
     initSelect2Cg();
 
     await cargarCombosDatosCg();
+    await cargarCombosRecoleccionCg();
 
     if (CG.id > 0) {
         await cargarClienteCg(CG.id);
+        await cargarRecoleccionPrincipalCg();
         habilitarTabsRelacionados(true);
     } else {
         actualizarHeaderCg("Nuevo cliente", "Complete los datos y registre el cliente");
@@ -111,11 +132,11 @@ function initModalesCg() {
             token: token,
             onSaved: async () => {
                 CG.tabsLoaded.establecimientos = false;
-                if ($("#tabEstablecimientos").hasClass("active")) await cargarTabEstablecimientos();
+                await cargarTabEstablecimientos();
             },
             onDeleted: async () => {
                 CG.tabsLoaded.establecimientos = false;
-                if ($("#tabEstablecimientos").hasClass("active")) await cargarTabEstablecimientos();
+                await cargarTabEstablecimientos();
             }
         });
     }
@@ -156,20 +177,11 @@ function wireEventosCg() {
         $("#wrapMotivoDetalle").prop("hidden", !$(this).val());
     });
 
-    $("#cgProvincia").on("change", async function () {
-        await cargarPartidosCg($(this).val());
-        await cargarLocalidadesCg(null);
-    });
+    $("#cgProvincia").on("change", actualizarCodigoProvinciaCg);
 
-    $("#cgPartido").on("change", async function () {
-        await cargarLocalidadesCg($(this).val());
-    });
-
-    $("#cgLocalidad").on("change", function () {
-        const txt = $(this).find("option:selected").text();
-        if ($(this).val() && txt !== "Seleccionar") {
-            $("#cgLocalidadTexto").val(txt);
-        }
+    $("#cgRecoleccionBody").on("shown.bs.collapse", function () {
+        ["#cgTipoGenerador", ...CG_REC_CAMION_SELECTORS, "#cgRecSemana", "#cgRecListaPrecio"]
+            .forEach(sel => refreshSelect2Cg($(sel)));
     });
 
     $('button[data-cg-tab]').on("shown.bs.tab", async function () {
@@ -224,16 +236,6 @@ function wireEventosCg() {
         const tipo = e.detail?.tipo;
         const nuevoId = e.detail?.nuevoId;
 
-        if (tipo === "Partidos") {
-            await cargarPartidosCg($("#cgProvincia").val(), nuevoId);
-            return;
-        }
-
-        if (tipo === "Localidades") {
-            await cargarLocalidadesCg($("#cgPartido").val(), nuevoId);
-            return;
-        }
-
         const map = {
             Sucursales: "#cgSucursal",
             Provincias: "#cgProvincia",
@@ -241,17 +243,23 @@ function wireEventosCg() {
             CondicionesIva: "#cgCondicionIva",
             ClientesEstados: "#cgEstado",
             ClientesMotivos: "#cgMotivo",
-            ClientesCalificaciones: "#cgCalificacion"
+            ClientesCalificaciones: "#cgCalificacion",
+            ClientesTiposGenerador: "#cgTipoGenerador"
         };
         const sel = map[tipo];
-        if (sel) await recargarComboCg(sel, nuevoId);
+        if (sel) {
+            await recargarComboCg(sel, nuevoId, tipo === "ClientesTiposGenerador" ? "Etiqueta" : "Nombre");
+            return;
+        }
     });
 }
 
 function initSelect2Cg() {
     const opts = { width: "100%", allowClear: true, placeholder: "Seleccionar" };
-    ["#cgSucursal", "#cgProvincia", "#cgPartido", "#cgLocalidad", "#cgProfesion",
-        "#cgCondicionIva", "#cgEstado", "#cgMotivo", "#cgCalificacion", "#cgCobroCuenta"].forEach(sel => {
+    ["#cgSucursal", "#cgProvincia", "#cgProfesion",
+        "#cgCondicionIva", "#cgEstado", "#cgMotivo", "#cgCalificacion", "#cgTipoGenerador", "#cgCobroCuenta",
+        ...CG_REC_CAMION_SELECTORS,
+        "#cgRecSemana", "#cgRecListaPrecio"].forEach(sel => {
         ensureSelect2Cg($(sel), opts);
     });
 }
@@ -268,21 +276,37 @@ async function fetchJsonCg(url, options = {}) {
     return await r.json();
 }
 
-async function llenarComboCg(selector, url, selectedId) {
+async function llenarComboCg(selector, url, selectedId, textField = "Nombre", cacheKey = null) {
     const $sel = $(selector);
     $sel.empty().append(new Option("Seleccionar", ""));
     try {
         const data = await fetchJsonCg(url, { headers: authCg() });
-        (data || []).forEach(x => $sel.append(new Option(x.Nombre, x.Id)));
+        if (cacheKey) {
+            CG.geoCache[cacheKey] = data || [];
+        }
+        (data || []).forEach(x => $sel.append(new Option(x[textField] || x.Nombre, x.Id)));
     } catch (e) {
         console.warn(`No se pudo cargar combo ${selector}:`, e);
-        $sel.append(new Option("—", ""));
+        $sel.append(new Option("-", ""));
     }
     if (selectedId) $sel.val(String(selectedId)).trigger("change");
     else $sel.trigger("change");
 }
 
-async function recargarComboCg(selector, nuevoId) {
+function poblarSelectCamionesCg($sel, camiones, selectedId) {
+    $sel.empty().append(new Option("Sin asignar", ""));
+    (camiones || []).forEach(x => $sel.append(new Option(x.Nombre, x.Id)));
+    if (selectedId) $sel.val(String(selectedId)).trigger("change");
+    else $sel.val("").trigger("change");
+}
+
+function actualizarCodigoProvinciaCg() {
+    const idProv = intOrNullCg("#cgProvincia");
+    const prov = (CG.geoCache.provincias || []).find(x => x.Id === idProv);
+    $("#cgCodProvincia").val(prov?.Codigo ?? "");
+}
+
+async function recargarComboCg(selector, nuevoId, textField = "Nombre") {
     const mapUrl = {
         "#cgSucursal": API_CG.sucursales,
         "#cgProvincia": API_CG.provincias,
@@ -290,23 +314,206 @@ async function recargarComboCg(selector, nuevoId) {
         "#cgCondicionIva": API_CG.condicionesIva,
         "#cgEstado": API_CG.estados,
         "#cgMotivo": API_CG.motivos,
-        "#cgCalificacion": API_CG.calificaciones
+        "#cgCalificacion": API_CG.calificaciones,
+        "#cgTipoGenerador": API_CG.tiposGenerador
     };
     const url = mapUrl[selector];
     if (!url) return;
     const val = $(selector).val();
-    await llenarComboCg(selector, url, nuevoId || val);
+    await llenarComboCg(selector, url, nuevoId || val, textField);
+}
+
+async function cargarCombosRecoleccionCg() {
+    const emptyOpt = { placeholder: "Seleccionar", allowClear: true };
+    let camiones = [];
+    try {
+        camiones = await fetchJsonCg(API_CG.camiones, { headers: authCg() }) || [];
+    } catch (e) {
+        console.warn("No se pudo cargar camiones:", e);
+    }
+
+    CG_REC_CAMION_SELECTORS.forEach(sel => poblarSelectCamionesCg($(sel), camiones));
+    await Promise.all([
+        llenarComboCg("#cgRecSemana", API_CG.semanas, null, "Nombre"),
+        llenarComboCg("#cgRecListaPrecio", API_CG.listasPrecios, null, "Nombre")
+    ]);
+    [...CG_REC_CAMION_SELECTORS, "#cgRecSemana", "#cgRecListaPrecio"].forEach(sel => {
+        ensureSelect2Cg($(sel), sel.startsWith("#cgRecCamion") ? { placeholder: "Sin asignar", allowClear: true } : emptyOpt);
+    });
+}
+
+function parseHorarioCg(val) {
+    if (!val) return "";
+    const s = String(val);
+    return s.length >= 5 ? s.substring(0, 5) : s;
+}
+
+async function cargarRecoleccionPrincipalCg() {
+    if (CG.id <= 0) return;
+
+    limpiarRecoleccionCg();
+    CG.idDiaRecoleccionLegacy = 0;
+
+    try {
+        const [r] = await Promise.all([
+            fetchJsonCg(API_CG.recoleccionPrincipal(CG.id), { headers: authCg() }),
+            cargarRecorridosAsignadosCg()
+        ]);
+        if (!r?.IdEstablecimiento) return;
+
+        CG.idDiaRecoleccionLegacy = r.IdDiaRecoleccion || 0;
+        $("#cgEstId").val(r.IdEstablecimiento);
+        $("#cgIdEstablecimientoCliente").val(r.IdEstablecimientoCliente || "");
+        $("#cgDiasHorarios").val(r.DiasHorarios || "");
+
+        if (r.IdSemanaRecoleccion) $("#cgRecSemana").val(String(r.IdSemanaRecoleccion)).trigger("change");
+        if (r.IdListaPrecio) $("#cgRecListaPrecio").val(String(r.IdListaPrecio)).trigger("change");
+        if (r.OrdenRecorrido != null) $("#cgOrdenRecorrido").val(r.OrdenRecorrido);
+        if (r.Kilos != null) $("#cgEstKilos").val(r.Kilos);
+        if (r.IdTipoGenerador) $("#cgTipoGenerador").val(String(r.IdTipoGenerador)).trigger("change");
+
+        const diasMap = {};
+        (r.DiasSemana || r.DiasAdicionales || []).forEach(d => {
+            if (d?.IdDia >= 1 && d.IdDia <= 7) diasMap[d.IdDia] = d.IdCamion;
+        });
+        if (r.IdDiaRecoleccion >= 1 && r.IdDiaRecoleccion <= 7 && r.IdCamion) {
+            diasMap[r.IdDiaRecoleccion] = r.IdCamion;
+        }
+
+        CG_DIAS_SEMANA.forEach(d => {
+            const camionId = diasMap[d.id];
+            if (camionId) $(`#cgRecCamion${d.id}`).val(String(camionId)).trigger("change");
+        });
+    } catch (e) {
+        console.warn("No se pudo cargar recoleccion principal:", e);
+    }
+}
+
+function limpiarRecoleccionCg() {
+    $("#cgEstId, #cgIdEstablecimientoCliente, #cgDiasHorarios, #cgOrdenRecorrido, #cgEstKilos").val("");
+    CG_REC_CAMION_SELECTORS.forEach(sel => $(sel).val("").trigger("change"));
+    ["#cgRecSemana", "#cgRecListaPrecio"].forEach(sel => $(sel).val("").trigger("change"));
+    CG.idDiaRecoleccionLegacy = 0;
+}
+
+function obtenerDiasSemanaRecoleccionCg() {
+    const dias = [];
+    CG_DIAS_SEMANA.forEach(d => {
+        const idCamion = intOrNullCg(`#cgRecCamion${d.id}`);
+        if (idCamion) dias.push({ IdDia: d.id, IdCamion: idCamion });
+    });
+    return dias;
+}
+
+function resolverDiaPrincipalRecoleccionCg(diasSemana) {
+    if (!diasSemana.length) {
+        return { idDia: CG.idDiaRecoleccionLegacy || 0, idCamion: null, extras: [] };
+    }
+
+    const ordenados = [...diasSemana].sort((a, b) => a.IdDia - b.IdDia);
+    const legacy = ordenados.find(d => d.IdDia === CG.idDiaRecoleccionLegacy);
+    const principal = legacy || ordenados[0];
+    const extras = ordenados.filter(d => d.IdDia !== principal.IdDia);
+    return { idDia: principal.IdDia, idCamion: principal.IdCamion, extras };
+}
+
+function obtenerModeloRecoleccionCg() {
+    const diasSemana = obtenerDiasSemanaRecoleccionCg();
+    const { idDia, idCamion, extras } = resolverDiaPrincipalRecoleccionCg(diasSemana);
+
+    const kilosVal = ($("#cgEstKilos").val() || "").trim();
+    const kilos = kilosVal === "" ? null : parseFloat(kilosVal.replace(",", "."));
+
+    return {
+        IdCliente: CG.id,
+        IdEstablecimiento: parseInt($("#cgEstId").val(), 10) || 0,
+        IdEstablecimientoCliente: ($("#cgIdEstablecimientoCliente").val() || "").trim() || null,
+        IdDiaRecoleccion: idDia || 0,
+        IdSemanaRecoleccion: intOrNullCg("#cgRecSemana") || 0,
+        IdCamion: idCamion,
+        IdListaPrecio: intOrNullCg("#cgRecListaPrecio") || 0,
+        DiasHorarios: ($("#cgDiasHorarios").val() || "").trim() || null,
+        OrdenRecorrido: intOrNullCg("#cgOrdenRecorrido"),
+        Kilos: Number.isNaN(kilos) ? null : kilos,
+        IdTipoGenerador: intOrNullCg("#cgTipoGenerador"),
+        DiasSemana: diasSemana,
+        DiasAdicionales: extras
+    };
+}
+
+function tieneDatosRecoleccionCg() {
+    const m = obtenerModeloRecoleccionCg();
+    return !!(m.DiasSemana?.length || m.IdSemanaRecoleccion || m.IdListaPrecio
+        || m.DiasHorarios || m.IdEstablecimientoCliente || m.OrdenRecorrido || m.Kilos != null || m.IdTipoGenerador);
+}
+
+function marcarDiasEnRutaCg(items) {
+    const diasEnRuta = new Set(
+        (items || []).filter(r => r.Activo !== false).map(r => r.IdDia)
+    );
+
+    CG_DIAS_SEMANA.forEach(d => {
+        const $el = $(`#cgRecEnRuta${d.id}`);
+        if (!$el.length) return;
+        $el.html(diasEnRuta.has(d.id)
+            ? '<span class="badge bg-success">Si</span>'
+            : '<span class="text-muted">No</span>');
+    });
+}
+
+async function cargarRecorridosAsignadosCg() {
+    if (CG.id <= 0) {
+        marcarDiasEnRutaCg([]);
+        renderRecorridosCg([], false, "#cgRecorridosAsignados");
+        return;
+    }
+
+    try {
+        const items = await fetchJsonCg(API_CG.recorridosPorCliente(CG.id), { headers: authCg() });
+        marcarDiasEnRutaCg(items || []);
+        renderRecorridosCg(items || [], false, "#cgRecorridosAsignados");
+    } catch (e) {
+        console.warn("Recorridos asignados no disponibles:", e);
+        marcarDiasEnRutaCg([]);
+        renderRecorridosCg([], true, "#cgRecorridosAsignados");
+    }
+}
+
+async function guardarRecoleccionPrincipalCg() {
+    if (CG.id <= 0 || !tieneDatosRecoleccionCg()) return { ok: true };
+
+    try {
+        const data = await fetchJsonCg(API_CG.recoleccionPrincipalGuardar, {
+            method: "PUT",
+            headers: authCg(),
+            body: JSON.stringify(obtenerModeloRecoleccionCg())
+        });
+
+        if (data?.idEstablecimiento) {
+            $("#cgEstId").val(data.idEstablecimiento);
+        }
+
+        if (data?.valor) {
+            await cargarRecorridosAsignadosCg();
+        }
+
+        return { ok: !!data?.valor, mensaje: data?.mensaje };
+    } catch (e) {
+        console.warn("No se pudo guardar recoleccion principal:", e);
+        return { ok: false, mensaje: "No se pudo guardar la recoleccion del establecimiento principal." };
+    }
 }
 
 async function cargarCombosDatosCg() {
     await Promise.all([
         llenarComboCg("#cgSucursal", API_CG.sucursales),
-        llenarComboCg("#cgProvincia", API_CG.provincias),
+        llenarComboCg("#cgProvincia", API_CG.provincias, null, "Nombre", "provincias"),
         llenarComboCg("#cgProfesion", API_CG.profesiones),
         llenarComboCg("#cgCondicionIva", API_CG.condicionesIva),
         llenarComboCg("#cgEstado", API_CG.estados),
         llenarComboCg("#cgMotivo", API_CG.motivos),
-        llenarComboCg("#cgCalificacion", API_CG.calificaciones)
+        llenarComboCg("#cgCalificacion", API_CG.calificaciones),
+        llenarComboCg("#cgTipoGenerador", API_CG.tiposGenerador, null, "Etiqueta")
     ]);
 
     const $suc = $("#cgSucursal");
@@ -325,22 +532,9 @@ async function cargarCombosDatosCg() {
     }
 }
 
-async function cargarPartidosCg(idProvincia, selectedId) {
-    const $p = $("#cgPartido").empty().append(new Option("Seleccionar", ""));
-    if (!idProvincia) { $p.trigger("change"); return; }
-    const data = await fetchJsonCg(API_CG.partidosPorProvincia(idProvincia), { headers: authCg() });
-    (data || []).forEach(x => $p.append(new Option(x.Nombre, x.Id)));
-    if (selectedId) $p.val(String(selectedId)).trigger("change");
-    else $p.trigger("change");
-}
-
-async function cargarLocalidadesCg(idPartido, selectedId) {
-    const $l = $("#cgLocalidad").empty().append(new Option("Seleccionar", ""));
-    if (!idPartido) { $l.trigger("change"); return; }
-    const data = await fetchJsonCg(API_CG.localidadesPorPartido(idPartido), { headers: authCg() });
-    (data || []).forEach(x => $l.append(new Option(x.Nombre, x.Id)));
-    if (selectedId) $l.val(String(selectedId)).trigger("change");
-    else $l.trigger("change");
+function refreshSelect2Cg($el) {
+    if (!$el?.length) return;
+    if ($el.data("select2")) $el.trigger("change.select2");
 }
 
 async function cargarClienteCg(id) {
@@ -355,8 +549,9 @@ async function cargarClienteCg(id) {
         $("#cgTelefono").val(m.Telefono || "");
         $("#cgTelefonoAlt").val(m.TelefonoAlt || "");
         $("#cgEmail").val(m.Email || "");
-        $("#cgDomicilio").val(m.Domicilio || "");
-        $("#cgLocalidadTexto").val(m.Localidad || "");
+        $("#cgCalle").val(m.Calle || m.Domicilio || "");
+        $("#cgNumero").val(m.Numero || "");
+        $("#cgPisoDepto").val(m.PisoDepartamento || "");
         $("#cgCodPostal").val(m.CodPostal || "");
         $("#cgMotivoDetalle").val(m.MotivoDetalle || "");
         $("#cgNumeroCliente").val(m.NumeroCliente ?? "");
@@ -375,12 +570,13 @@ async function cargarClienteCg(id) {
             $("#wrapMotivoDetalle").prop("hidden", false);
         }
         if (m.IdCalificacion) $("#cgCalificacion").val(String(m.IdCalificacion)).trigger("change");
+        if (m.IdTipoGenerador) $("#cgTipoGenerador").val(String(m.IdTipoGenerador)).trigger("change");
 
         if (m.IdProvincia) {
-            $("#cgProvincia").val(String(m.IdProvincia)).trigger("change");
-            await cargarPartidosCg(m.IdProvincia, m.IdPartido);
-            if (m.IdPartido) await cargarLocalidadesCg(m.IdPartido, m.IdLocalidad);
+            $("#cgProvincia").val(String(m.IdProvincia));
+            refreshSelect2Cg($("#cgProvincia"));
         }
+        actualizarCodigoProvinciaCg();
 
         setAuditoriaCg(m);
         actualizarHeaderCg(m.Nombre || "Cliente", m.Cuit ? `CUIT ${m.Cuit}` : "");
@@ -390,7 +586,7 @@ async function cargarClienteCg(id) {
     } catch (e) {
         console.error(e);
         if (typeof errorModal === "function") {
-            errorModal("No se pudo cargar la información del cliente. Intente nuevamente o vuelva al listado.");
+            errorModal("No se pudo cargar la informacion del cliente. Intente nuevamente o vuelva al listado.");
         }
     }
 }
@@ -432,7 +628,7 @@ function setAuditoriaCg(m) {
     if (m.UsuarioModifica && m.FechaUsuarioModifica) {
         $("#cgInfoModificacion").html(`
             <div class="rp-auditoria-item"><i class="fa fa-edit"></i>
-            Última modificación por <strong>${m.UsuarioModifica}</strong>
+            Ultima modificacion por <strong>${m.UsuarioModifica}</strong>
             el <strong>${formatearFechaCg(m.FechaUsuarioModifica)}</strong></div>`);
         wrap.removeClass("d-none");
     } else if (m.UsuarioRegistra && m.FechaUsuarioRegistra) {
@@ -500,8 +696,10 @@ function obtenerModeloCg() {
         Telefono: $("#cgTelefono").val() || null,
         TelefonoAlt: $("#cgTelefonoAlt").val() || null,
         Email: $("#cgEmail").val() || null,
-        Domicilio: $("#cgDomicilio").val() || null,
-        Localidad: $("#cgLocalidadTexto").val() || null,
+        Calle: ($("#cgCalle").val() || "").trim() || null,
+        Numero: ($("#cgNumero").val() || "").trim() || null,
+        PisoDepartamento: ($("#cgPisoDepto").val() || "").trim() || null,
+        IdTipoGenerador: intOrNullCg("#cgTipoGenerador"),
         CodPostal: $("#cgCodPostal").val() || null,
         IdProvincia: intOrNullCg("#cgProvincia"),
         IdProfesion: intOrNullCg("#cgProfesion"),
@@ -510,8 +708,6 @@ function obtenerModeloCg() {
         IdMotivo: intOrNullCg("#cgMotivo"),
         MotivoDetalle: ($("#cgMotivoDetalle").val() || "").trim() || null,
         IdCalificacion: intOrNullCg("#cgCalificacion"),
-        IdPartido: intOrNullCg("#cgPartido"),
-        IdLocalidad: intOrNullCg("#cgLocalidad"),
         NumeroCliente: intOrNullCg("#cgNumeroCliente"),
         FechaInicio: parseFechaCg($("#cgFechaInicio").val()),
         FechaLicenciaDesde: parseFechaCg($("#cgFechaLicenciaDesde").val()),
@@ -559,18 +755,22 @@ async function guardarClienteCg() {
         cerrarErrorCg();
 
         if (esNuevo && data.id) {
+            CG.id = data.id;
+            await guardarRecoleccionPrincipalCg();
             window.location.href = `/Clientes/Gestion?id=${data.id}`;
             return;
         }
 
         await cargarClienteCg(m.Id);
+        await guardarRecoleccionPrincipalCg();
+        await cargarRecorridosAsignadosCg();
 
         if (typeof modalGuardadoConSalida === "function") {
             await modalGuardadoConSalida({
                 titulo: "Cliente actualizado",
                 mensaje: data.mensaje || "Cliente modificado correctamente",
-                pregunta: "¿Deseás volver al listado de clientes?",
-                btnSalir: "Sí, ir a Clientes",
+                pregunta: "¿Deseas volver al listado de clientes?",
+                btnSalir: "Si, ir a Clientes",
                 btnQuedarse: "No, seguir editando",
                 urlSalida: "/Clientes/Index"
             });
@@ -586,7 +786,7 @@ async function guardarClienteCg() {
 async function eliminarClienteCg() {
     if (CG.id <= 0) return;
     if (typeof ejecutarEliminacionEntidad !== "function") {
-        errorModal("No está disponible el asistente de eliminación.");
+        errorModal("No esta disponible el asistente de eliminacion.");
         return;
     }
 
@@ -617,7 +817,7 @@ function cerrarErrorCg() {
 
 async function cargarTabCg(tab) {
     if (CG.id <= 0) return;
-    if (CG.tabsLoaded[tab] && tab !== "cuentaCorriente") return;
+    if (CG.tabsLoaded[tab] && tab !== "cuentaCorriente" && tab !== "controlMensual") return;
 
     try {
         switch (tab) {
@@ -626,7 +826,7 @@ async function cargarTabCg(tab) {
             case "contratos": await cargarTabContratos(); break;
             case "entregas": await cargarTabEntregas(); break;
             case "recorridos": await cargarTabRecorridos(); break;
-            case "controlMensual": await cargarTabControlMensual(); break;
+            case "controlMensual": await cargarTabControlMensual(true); break;
             case "stockCliente": await cargarTabStockCliente(); break;
             case "cuentaCorriente": await cargarTabCuentaCorriente(); break;
             case "cobros": await cargarTabCobros(); break;
@@ -634,7 +834,7 @@ async function cargarTabCg(tab) {
     } catch (e) {
         console.error(`Error cargando tab ${tab}:`, e);
         if (typeof errorModal === "function") {
-            const nombre = CG_TAB_LABELS[tab] || "esta sección";
+            const nombre = CG_TAB_LABELS[tab] || "esta seccion";
             errorModal(`No se pudo cargar ${nombre}. Intente nuevamente.`);
         }
     }
@@ -750,10 +950,19 @@ async function cargarTabEstablecimientos() {
     const all = await fetchJsonCg(API_CG.establecimientosLista, { headers: authCg() }) || [];
     const data = all.filter(x => x.IdCliente === CG.id);
     configurarGrillaCg("establecimientos", "#grd_EstablecimientosCg", data, [
-        columnaGridAcciones({ editar: "editarEstablecimientoCg" }, "Establecimientos"),
+        columnaGridAcciones({
+            editar: "editarEstablecimientoCg",
+            eliminar: "eliminarEstablecimientoCg"
+        }, "Establecimientos"),
         columnaGridId(),
+        { data: "IdEstablecimientoCliente", defaultContent: "" },
         { data: "Nombre" },
-        { data: "Provincia" },
+        { data: "Domicilio" },
+        { data: "Partido", defaultContent: "" },
+        { data: "CodigoPartido", defaultContent: "" },
+        { data: "Localidad" },
+        { data: "CodigoLocalidad", defaultContent: "" },
+        { data: "Camion" },
         { data: "DiaRecoleccion" },
         { data: "SemanaRecoleccion" },
         { data: "ListaPrecio" }
@@ -766,10 +975,14 @@ function editarEstablecimientoCg(id) {
 }
 window.editarEstablecimientoCg = editarEstablecimientoCg;
 
+async function eliminarEstablecimientoCg(id) {
+    if (CG.establecimientoModal) await CG.establecimientoModal.eliminar(id);
+}
+window.eliminarEstablecimientoCg = eliminarEstablecimientoCg;
+
 async function abrirNuevoEstablecimientoCg() {
     if (!CG.establecimientoModal) return;
-    await CG.establecimientoModal.abrirNuevo();
-    CG.establecimientoModal._setFieldValue("cmbClienteEst", CG.id, true);
+    await CG.establecimientoModal.abrirNuevo(CG.id);
 }
 
 /* ---- Contratos ---- */
@@ -784,7 +997,7 @@ async function cargarTabContratos() {
         { data: "FechaContrato", render: d => formatearFechaCortaCg(d) },
         { data: "FechaInicio", render: d => formatearFechaCortaCg(d) },
         { data: "FechaVencimiento", render: d => formatearFechaCortaCg(d) },
-        { data: "Vigente", render: v => v ? "Sí" : "No" }
+        { data: "Vigente", render: v => v ? "Si" : "No" }
     ]);
     CG.tabsLoaded.contratos = true;
 }
@@ -838,23 +1051,25 @@ async function cargarTabEntregas() {
 async function cargarTabRecorridos() {
     try {
         const items = await fetchJsonCg(API_CG.recorridosPorCliente(CG.id), { headers: authCg() });
+        marcarDiasEnRutaCg(items || []);
         renderRecorridosCg(items || [], false);
     } catch (e) {
         console.warn("Recorridos no disponibles:", e);
+        marcarDiasEnRutaCg([]);
         renderRecorridosCg([], true);
     }
     CG.tabsLoaded.recorridos = true;
 }
 
-function renderRecorridosCg(items, huboError) {
-    const cont = $("#cgListaRecorridos");
+function renderRecorridosCg(items, huboError, containerSelector) {
+    const cont = $(containerSelector || "#cgListaRecorridos");
 
     if (huboError) {
         cont.html(`
             <div class="cg-empty-state cg-empty-state--warn">
                 <span class="cg-empty-icon"><i class="fa fa-exclamation-circle"></i></span>
                 <p class="cg-empty-title">No pudimos mostrar los recorridos</p>
-                <p class="cg-empty-hint">Intente actualizar la página. Si el problema continúa, contacte al administrador del sistema.</p>
+                <p class="cg-empty-hint">Intente actualizar la pagina. Si el problema continua, contacte al administrador del sistema.</p>
             </div>`);
         return;
     }
@@ -864,7 +1079,7 @@ function renderRecorridosCg(items, huboError) {
             <div class="cg-empty-state">
                 <span class="cg-empty-icon"><i class="fa fa-road"></i></span>
                 <p class="cg-empty-title">Sin recorridos asignados</p>
-                <p class="cg-empty-hint">Este cliente aún no está en ninguna ruta de recolección. Use <strong>Gestionar recorridos</strong> para asignarlo a una unidad, día y posición.</p>
+                <p class="cg-empty-hint">Este cliente aun no esta en ninguna ruta de recoleccion. Use <strong>Gestionar recorridos</strong> para asignarlo a una unidad, dia y posicion.</p>
             </div>`);
         return;
     }
@@ -954,8 +1169,8 @@ function toggleFiltroControlCg(tipo, val) {
 function actualizarResumenFiltrosCg() {
     const { anios, meses } = CG.controlFiltros;
     const txtAnios = anios.length
-        ? `${anios.length} año${anios.length === 1 ? "" : "s"}`
-        : "Sin años";
+        ? `${anios.length} ano${anios.length === 1 ? "" : "s"}`
+        : "Sin anos";
     const txtMeses = meses.length
         ? `${meses.length} mes${meses.length === 1 ? "" : "es"}`
         : "Todos los meses";
@@ -1064,7 +1279,7 @@ function renderControlMensualCg(data) {
         ? String(filas.length)
         : "0");
 
-    $(".cg-col-anio").toggle(mostrarAnio);
+    $(".cg-cm-table").toggleClass("cg-cm-show-anio", !!mostrarAnio);
 
     if (!filas.length) {
         tbody.html(`<tr class="cg-cm-empty"><td colspan="17" class="text-center py-4">
@@ -1080,7 +1295,7 @@ function renderControlMensualCg(data) {
         const saldoClass = saldo > 0 ? "cg-cm-saldo-neg" : (saldo < 0 ? "cg-cm-saldo-pos" : "cg-cm-saldo-cero");
 
         return `<tr class="${rowClass}" data-anio="${anio}" data-mes="${m.Mes}">
-            <td class="cg-col-anio cg-cm-mes"${mostrarAnio ? "" : ' style="display:none"'}>${anio}</td>
+            <td class="cg-col-anio cg-cm-mes">${anio}</td>
             <td class="cg-cm-mes">${escapeCg(m.MesNombre)}</td>
             <td class="cg-cm-date">${formatearFechaCortaCg(m.FechaVisita)}</td>
             <td class="cg-cm-num cg-cm-grp-start">${fmtQtyCg(m.Entregadas)}</td>
@@ -1325,15 +1540,21 @@ const CG_CARD_BREAKPOINT = 992;
 const CG_CARD_SCHEMAS = {
     establecimientos: {
         title: r => r.Nombre,
-        subtitle: r => r.Provincia || "Sin provincia",
-        badge: r => `#${r.Id}`,
+        subtitle: r => r.Domicilio || "Sin domicilio",
+        badge: r => r.Camion || "Sin unidad",
         tone: () => "cg-data-card--blue",
         fields: [
-            { label: "Día rec.", value: r => r.DiaRecoleccion },
+            { label: "Partido", value: r => r.Partido },
+            { label: "Cod. partido", value: r => r.CodigoPartido },
+            { label: "Localidad", value: r => r.Localidad },
+            { label: "Cod. localidad", value: r => r.CodigoLocalidad },
+            { label: "Dia rec.", value: r => r.DiaRecoleccion },
             { label: "Semana", value: r => r.SemanaRecoleccion },
             { label: "Lista precio", value: r => r.ListaPrecio, full: true }
         ],
-        actions: r => `<button type="button" class="cg-card-btn" onclick="editarEstablecimientoCg(${r.Id})"><i class="fa fa-pencil"></i> Editar</button>`
+        actions: r => `
+            <button type="button" class="cg-card-btn" onclick="editarEstablecimientoCg(${r.Id})"><i class="fa fa-pencil"></i> Editar</button>
+            <button type="button" class="cg-card-btn cg-card-btn--danger" onclick="eliminarEstablecimientoCg(${r.Id})"><i class="fa fa-trash"></i> Eliminar</button>`
     },
     contratos: {
         title: r => r.Establecimiento || "Contrato",
@@ -1353,7 +1574,7 @@ const CG_CARD_SCHEMAS = {
         badge: r => `#${r.Id}`,
         tone: r => (Number(r.Saldo) || 0) > 0 ? "cg-data-card--warn" : "cg-data-card--teal",
         fields: [
-            { label: "Estado", value: r => r.Estado || "—" },
+            { label: "Estado", value: r => r.Estado || "-" },
             { label: "Total", value: r => fmtMoneyCg(r.ImporteTotal), cls: "cg-val-neutral" },
             { label: "Pagado", value: r => fmtMoneyCg(r.ImporteAbonado), cls: "cg-val-haber" },
             { label: "Saldo", value: r => fmtMoneyCg(r.Saldo), cls: "cg-val-saldo" }
@@ -1502,7 +1723,7 @@ function renderControlMensualCardsCg(filas, mostrarAnio) {
                 <div class="cg-data-card-head">
                     <div class="cg-data-card-head-text">
                         <div class="cg-data-card-title">${escapeCg(m.MesNombre)}${mostrarAnio ? ` ${anio}` : ""}</div>
-                        <div class="cg-data-card-sub">Visita: ${formatearFechaCortaCg(m.FechaVisita) || "—"}</div>
+                        <div class="cg-data-card-sub">Visita: ${formatearFechaCortaCg(m.FechaVisita) || "-"}</div>
                     </div>
                     ${m.SinEntrega ? `<span class="cg-data-card-badge cg-data-card-badge--warn">Sin entrega</span>` : ""}
                 </div>
@@ -1528,21 +1749,35 @@ function initDataTableCg(key) {
     if (!meta?.selector || CG.grids[key]) return;
 
     const opts = meta.opts || {};
+    const tableId = $(meta.selector).attr("id") || "";
+    if (tableId.startsWith("grd_")) {
+        registrarFiltrosGrilla(tableId, meta.columnConfig || [], meta.filterOpts || {});
+    }
+
     CG.grids[key] = $(meta.selector).DataTable({
         data: meta.data,
         columns: meta.columns,
         language: { url: "//cdn.datatables.net/plug-ins/2.0.7/i18n/es-MX.json" },
         autoWidth: false,
         scrollX: true,
+        scrollCollapse: true,
+        orderCellsTop: true,
+        fixedHeader: true,
         pageLength: opts.pageLength ?? 10,
         paging: opts.paging !== false,
         searching: opts.searching !== false,
         info: opts.info !== false,
         dom: opts.dom || "frtip",
-        order: opts.order || [[1, "desc"]]
+        order: opts.order || [[1, "desc"]],
+        columnDefs: typeof columnDefsGridLista === "function" ? columnDefsGridLista() : [],
+        initComplete: async function () {
+            const api = this.api();
+            if (tableId.startsWith("grd_") && typeof armarFiltrosGrillaLista === "function") {
+                await armarFiltrosGrillaLista(api, meta.selector, meta.columnConfig || [], meta.filterOpts || {});
+            }
+            programarAjusteGrillasCg();
+        }
     });
-
-    programarAjusteGrillasCg();
 }
 
 function programarAjusteGrillasCg() {

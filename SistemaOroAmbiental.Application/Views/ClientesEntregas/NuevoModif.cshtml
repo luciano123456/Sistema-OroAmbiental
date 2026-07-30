@@ -8,11 +8,11 @@
 @section Estilos {
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
-    <link href="~/css/disenopantallas.css?v=5.1" rel="stylesheet" />
-    <link href="~/css/M_Generico.css?v=5.1" rel="stylesheet" />
-    <link href="~/css/VentasNuevoModif.css?v=5.1" rel="stylesheet" />
-    <link href="~/css/ClientesEntregas.css?v=5.1" rel="stylesheet" />
-    <link href="~/css/ContratosModal.css?v=5.3" rel="stylesheet" />
+    <link href="~/css/disenopantallas.css?v=8.1" rel="stylesheet" />
+    <link href="~/css/M_Generico.css?v=5.2" rel="stylesheet" />
+    <link href="~/css/VentasNuevoModif.css?v=5.2" rel="stylesheet" />
+    <link href="~/css/ClientesEntregas.css?v=5.2" rel="stylesheet" />
+    <link href="~/css/ContratosModal.css?v=5.4" rel="stylesheet" />
 }
 
 <div class="ventanew entregas-nuevo">
@@ -86,12 +86,12 @@
 
                 <div id="alertEntregaCobros" class="vn-alert-warning mb-3" hidden>
                     <i class="fa fa-info-circle"></i>
-                    Esta entrega tiene cobros. Podés editarlos en la pestaña Cobros; los cambios se aplican al guardar (caja y cuenta corriente).
+                    Esta entrega tiene cobros. Podes editarlos en la pestana Cobros; los cambios se aplican al guardar (caja y cuenta corriente).
                 </div>
 
                 <div id="alertProductoEntregaRecuperado" class="vn-alert-warning mb-3" hidden>
                     <i class="fa fa-exclamation-triangle"></i>
-                    Algunos productos figuran en <strong>Productos</strong> (entrega/retiro) y en <strong>Productos recuperados</strong>. Podés guardar igual; revisá que las cantidades sean las correctas.
+                    Algunos productos figuran en <strong>Productos</strong> (entrega/retiro) y en <strong>Productos recuperados</strong>. Podes guardar igual; revisa que las cantidades sean las correctas.
                 </div>
 
                 <input type="hidden" id="Entrega_Id" value="@id" />
@@ -131,10 +131,10 @@
                             </div>
                         </div>
                         <div class="col-md-4">
-                            <label class="form-label vn-label">Camión</label>
+                            <label class="form-label vn-label">Camion</label>
                             <div class="vn-select-plus">
                                 <select id="cCamion" class="form-select vn-input"></select>
-                                <button type="button" class="vn-btn-plus" title="Agregar camión" onclick="abrirConfiguracion('Camiones', 'Camiones'); return false;">
+                                <button type="button" class="vn-btn-plus" title="Agregar camion" onclick="abrirConfiguracion('Camiones', 'Camiones'); return false;">
                                     <i class="fa fa-plus"></i>
                                 </button>
                             </div>
@@ -157,14 +157,14 @@
                         <div class="i"><i class="fa fa-cubes"></i></div>
                         <div class="txt">
                             <div class="t1">Productos</div>
-                            <div class="t2">Entrega o retiro — afectan el inventario vendible</div>
+                            <div class="t2">Entrega o retiro - afectan el inventario vendible</div>
                         </div>
                     </div>
 
                     <div class="d-flex gap-2 flex-wrap align-items-center mb-3">
                         <div class="vn-agregar-wrap" id="wrapAgregarLinea">
                             <span class="vn-agregar-arrow" aria-hidden="true">
-                                <i class="fa fa-long-arrow-down"></i> Agregá productos acá
+                                <i class="fa fa-long-arrow-down"></i> Agrega productos aca
                             </span>
                             <button class="btn btn-outline-light vn-btn vn-btn-agregar-hint" id="btnAgregarLinea" type="button">
                                 <i class="fa fa-plus"></i> Agregar producto
@@ -196,7 +196,7 @@
                     <div id="lblSinLineas" class="vn-empty vn-empty-entrega">
                         <i class="fa fa-inbox"></i>
                         Sin productos cargados
-                        <small class="d-block">Usá «Agregar producto» para comenzar</small>
+                        <small class="d-block">Usa Agregar producto para comenzar</small>
                     </div>
                 </div>
 
@@ -214,7 +214,7 @@
                     <div class="d-flex gap-2 flex-wrap align-items-center mb-3">
                         <div class="vn-agregar-wrap" id="wrapAgregarRecuperado">
                             <span class="vn-agregar-arrow" aria-hidden="true">
-                                <i class="fa fa-long-arrow-down"></i> Agregá recuperados acá
+                                <i class="fa fa-long-arrow-down"></i> Agrega recuperados aca
                             </span>
                             <button class="btn btn-outline-success vn-btn vn-btn-agregar-hint" id="btnAgregarRecuperado" type="button">
                                 <i class="fa fa-plus"></i> Agregar recuperado
@@ -242,7 +242,7 @@
                     <div id="lblSinRecuperados" class="vn-empty vn-empty-entrega">
                         <i class="fa fa-recycle"></i>
                         Sin productos recuperados
-                        <small class="d-block">Usá «Agregar recuperado» si el cliente devolvió material</small>
+                        <small class="d-block">Usa Agregar recuperado si el cliente devolvio material</small>
                     </div>
                 </div>
 
@@ -259,7 +259,7 @@
 
                     <div id="lblCobrosHint" class="cm-cobros-hint mb-3">
                         <i class="fa fa-info-circle"></i>
-                        <span id="lblCobrosHintText">Agregá filas de cobro como en productos. Nada se registra hasta guardar la entrega.</span>
+                        <span id="lblCobrosHintText">Agrega filas de cobro como en productos. Nada se registra hasta guardar la entrega.</span>
                     </div>
 
                     <div id="panelCobrosEntrega">
@@ -281,7 +281,7 @@
                         <div class="d-flex gap-2 flex-wrap mb-3">
                             <div class="vn-agregar-wrap vn-agregar-wrap--cobros" id="wrapAgregarCobro">
                                 <span class="vn-agregar-arrow" aria-hidden="true">
-                                    <i class="fa fa-long-arrow-down"></i> Agregá cobros acá
+                                    <i class="fa fa-long-arrow-down"></i> Agrega cobros aca
                                 </span>
                                 <button type="button" class="btn btn-outline-light vn-btn vn-btn-agregar-hint" id="btnAgregarCobroEntrega">
                                     <i class="fa fa-plus"></i> Agregar cobro
@@ -308,7 +308,7 @@
                         <div id="lblSinCobros" class="vn-empty vn-empty-entrega mt-2">
                             <i class="fa fa-credit-card"></i>
                             Sin cobros cargados
-                            <small class="d-block">Usá «Agregar cobro» para comenzar</small>
+                            <small class="d-block">Usa Agregar cobro para comenzar</small>
                         </div>
                     </div>
                 </div>
@@ -364,8 +364,8 @@
         window.CM_INIT = { id: @id, idCliente: @idCliente };
     </script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-    <script src="~/js/Entities/M_Productos.js?v=5.1"></script>
-    <script src="~/js/ContratosDocumentos.js?v=5.2"></script>
-    <script src="~/js/Entities/M_Contratos.js?v=5.3"></script>
-    <script src="~/js/ClientesEntregasNuevoModif.js?v=5.1"></script>
+    <script src="~/js/Entities/M_Productos.js?v=5.2"></script>
+    <script src="~/js/ContratosDocumentos.js?v=5.3"></script>
+    <script src="~/js/Entities/M_Contratos.js?v=5.4"></script>
+    <script src="~/js/ClientesEntregasNuevoModif.js?v=5.3"></script>
 }

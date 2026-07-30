@@ -235,23 +235,28 @@
 /* Modo tabla */
 .rp-view-mode-table .rp-table-wrap,
 .rp-view-mode-table .cg-table-wrap,
+.rp-view-mode-table .ld-table-wrap,
 .cg-page.cg-mode-table .cg-table-wrap,
-.cg-page.rp-view-mode-table .rp-table-wrap {
+.cg-page.rp-view-mode-table .rp-table-wrap,
+.ld-index.rp-view-mode-table .ld-table-wrap {
     display: block !important;
     visibility: visible;
 }
 
 .rp-view-mode-table .rp-cards-grid,
 .rp-view-mode-table .cg-cards-grid,
-.cg-page.cg-mode-table .cg-cards-grid {
+.cg-page.cg-mode-table .cg-cards-grid,
+.ld-index.rp-view-mode-table .rp-cards-grid {
     display: none !important;
 }
 
 /* Modo cards */
 .rp-view-mode-cards .rp-table-wrap,
 .rp-view-mode-cards .cg-table-wrap,
+.rp-view-mode-cards .ld-table-wrap,
 .rp-view-mode-cards .dt-dark-wrap,
-.cg-page.cg-mode-cards .cg-table-wrap {
+.cg-page.cg-mode-cards .cg-table-wrap,
+.ld-index.rp-view-mode-cards .ld-table-wrap {
     display: none !important;
 }
 
@@ -262,33 +267,40 @@
 
 .rp-view-mode-cards .rp-cards-grid,
 .rp-view-mode-cards .cg-cards-grid,
-.cg-page.cg-mode-cards .cg-cards-grid {
+.cg-page.cg-mode-cards .cg-cards-grid,
+.ld-index.rp-view-mode-cards .rp-cards-grid {
     display: grid !important;
 }
 
 /* Modo auto — desktop tabla */
 .rp-view-mode-auto .rp-table-wrap,
 .rp-view-mode-auto .cg-table-wrap,
-.cg-page.cg-mode-auto .cg-table-wrap {
+.rp-view-mode-auto .ld-table-wrap,
+.cg-page.cg-mode-auto .cg-table-wrap,
+.ld-index.rp-view-mode-auto .ld-table-wrap {
     display: block;
 }
 
 .rp-view-mode-auto .rp-cards-grid,
 .rp-view-mode-auto .cg-cards-grid,
-.cg-page.cg-mode-auto .cg-cards-grid {
+.cg-page.cg-mode-auto .cg-cards-grid,
+.ld-index.rp-view-mode-auto .rp-cards-grid {
     display: none;
 }
 
 @media (max-width: 992px) {
     .rp-view-mode-auto .rp-table-wrap,
     .rp-view-mode-auto .cg-table-wrap,
-    .cg-page.cg-mode-auto .cg-table-wrap {
+    .rp-view-mode-auto .ld-table-wrap,
+    .cg-page.cg-mode-auto .cg-table-wrap,
+    .ld-index.rp-view-mode-auto .ld-table-wrap {
         display: none !important;
     }
 
     .rp-view-mode-auto .rp-cards-grid,
     .rp-view-mode-auto .cg-cards-grid,
-    .cg-page.cg-mode-auto .cg-cards-grid {
+    .cg-page.cg-mode-auto .cg-cards-grid,
+    .ld-index.rp-view-mode-auto .rp-cards-grid {
         display: grid !important;
     }
 
@@ -476,8 +488,9 @@
     box-sizing: border-box;
 }
 
+/* Panel de filtros global: los filtros por columna van en thead (tr.filters) */
 .rp-grid-has-filtros-panel thead tr.filters {
-    display: none !important;
+    display: table-row !important;
 }
 
 .rp-grid-has-filtros-panel .dataTables_filter {

@@ -29,7 +29,7 @@
                 ? this.root
                 : this.root.querySelector("[data-contrato-modal]");
 
-            if (!this.modalEl) throw new Error("No se encontró [data-contrato-modal].");
+            if (!this.modalEl) throw new Error("No se encontro [data-contrato-modal].");
 
             this.bsModal = new bootstrap.Modal(this.modalEl);
             this._ultimoModo = "nuevo";
@@ -146,7 +146,7 @@
 
         _setTextoBotonRenovacion(esNuevo) {
             const lbl = this._id("lblGuardarRenovContrato");
-            if (lbl) lbl.textContent = esNuevo ? "Registrar renovación" : "Guardar renovación";
+            if (lbl) lbl.textContent = esNuevo ? "Registrar renovacion" : "Guardar renovacion";
         }
 
         limpiarModal() {
@@ -358,7 +358,7 @@
 
         async _descargarDocumentoAdjunto(id, nombre) {
             if (!window.ContratosDocumentos?.descargarDocumentoContrato) {
-                if (typeof errorModal === "function") errorModal("Módulo de documentos no cargado.");
+                if (typeof errorModal === "function") errorModal("Modulo de documentos no cargado.");
                 return;
             }
             this._setEstadoDocumentos("loading", "Descargando archivo...");
@@ -378,7 +378,7 @@
             const idTipo = this._toInt(window.jQuery(this._id("cmbTipoContrato")).val());
 
             if (!window.ContratosDocumentos?.exportarContratoDocumento) {
-                if (typeof errorModal === "function") errorModal("Módulo de documentos no cargado.");
+                if (typeof errorModal === "function") errorModal("Modulo de documentos no cargado.");
                 return;
             }
 
@@ -400,7 +400,7 @@
                 });
                 const nuevoDocId = Number(generado?.id || 0);
                 await this._cargarDocumentosAdjuntos(nuevoDocId);
-                this._setEstadoDocumentos("ok", "Contrato generado y adjuntado. Podés descargarlo desde la lista.");
+                this._setEstadoDocumentos("ok", "Contrato generado y adjuntado. Podes descargarlo desde la lista.");
                 setTimeout(() => this._setEstadoDocumentos("hide"), 4000);
             } catch (e) {
                 console.error(e);
@@ -474,7 +474,7 @@
                 return;
             }
             if (typeof errorModal === "function") {
-                errorModal("No está disponible el alta de clientes en esta pantalla.");
+                errorModal("No esta disponible el alta de clientes en esta pantalla.");
             }
         }
 
@@ -483,7 +483,7 @@
             const idCliente = this._toInt(window.jQuery(this._id("cmbClienteContrato")).val());
             if (!idCliente) {
                 if (typeof errorModal === "function") {
-                    errorModal("Seleccioná un cliente antes de agregar un establecimiento (o creá uno con el botón + en Cliente).");
+                    errorModal("Selecciona un cliente antes de agregar un establecimiento (o crea uno con el boton + en Cliente).");
                 }
                 return;
             }
@@ -492,7 +492,7 @@
                 return;
             }
             if (typeof errorModal === "function") {
-                errorModal("No está disponible el alta de establecimientos en esta pantalla.");
+                errorModal("No esta disponible el alta de establecimientos en esta pantalla.");
             }
         }
 
@@ -542,10 +542,10 @@
 
         _labelTipoRenov(tipo) {
             const t = (tipo || "").toUpperCase();
-            if (t === "AMPLIACION") return "Ampliación";
-            if (t === "MODIFICACION") return "Modificación";
-            if (t === "RENOVACION") return "Renovación";
-            return tipo || "Renovación";
+            if (t === "AMPLIACION") return "Ampliacion";
+            if (t === "MODIFICACION") return "Modificacion";
+            if (t === "RENOVACION") return "Renovacion";
+            return tipo || "Renovacion";
         }
 
         _chipClassRenov(tipo) {
@@ -690,7 +690,7 @@
 
             if (!modelo) return;
 
-            const txtUltimaMod = "Última modificación por";
+            const txtUltimaMod = "Ultima modificacion por";
 
             if (modelo.UsuarioModifica && modelo.FechaUsuarioModifica) {
                 mod.innerHTML = `
@@ -739,13 +739,13 @@
                 section.classList.remove("rp-section-disabled");
                 if (hint) {
                     hint.classList.add("success");
-                    hint.innerHTML = `<i class="fa fa-check-circle"></i> Generá el Word y queda adjunto al contrato en el servidor.`;
+                    hint.innerHTML = `<i class="fa fa-check-circle"></i> Genera el Word y queda adjunto al contrato en el servidor.`;
                 }
             } else {
                 section.classList.add("rp-section-disabled");
                 if (hint) {
                     hint.classList.remove("success");
-                    hint.innerHTML = `<i class="fa fa-info-circle"></i> Guardá el contrato para generar y adjuntar documentos.`;
+                    hint.innerHTML = `<i class="fa fa-info-circle"></i> Guarda el contrato para generar y adjuntar documentos.`;
                 }
             }
 
@@ -773,11 +773,11 @@
             if (habilitar) {
                 section.classList.remove("rp-section-disabled");
                 hint.classList.add("success");
-                hint.innerHTML = `<i class="fa fa-check-circle"></i> Ya podés administrar las renovaciones del contrato.`;
+                hint.innerHTML = `<i class="fa fa-check-circle"></i> Ya podes administrar las renovaciones del contrato.`;
             } else {
                 section.classList.add("rp-section-disabled");
                 hint.classList.remove("success");
-                hint.innerHTML = `<i class="fa fa-info-circle"></i> Guardá el contrato para administrar renovaciones.`;
+                hint.innerHTML = `<i class="fa fa-info-circle"></i> Guarda el contrato para administrar renovaciones.`;
             }
 
             this.bloquearControlesRenovaciones(this.isSoloLectura() || !habilitar);
@@ -1045,7 +1045,7 @@
             this._id("txtRenovInicioContrato").value = "";
             this._id("txtRenovVencContrato").value = "";
             const titulo = this._id("renovContratoFormTitulo");
-            if (titulo) titulo.textContent = "Nueva renovación";
+            if (titulo) titulo.textContent = "Nueva renovacion";
             this._setTextoBotonRenovacion(true);
             this._id("listaRenovContrato")?.querySelectorAll(".rp-sub-item")
                 .forEach(el => el.classList.remove("active"));
@@ -1065,8 +1065,8 @@
                     <div class="rp-sub-empty">
                         <i class="fa fa-refresh"></i>
                         <p>${idContrato > 0
-                            ? "No hay renovaciones. Agregá una desde el formulario."
-                            : "Guardá el contrato para ver renovaciones."}</p>
+                            ? "No hay renovaciones. Agrega una desde el formulario."
+                            : "Guarda el contrato para ver renovaciones."}</p>
                     </div>`;
                 return;
             }
@@ -1106,7 +1106,7 @@
             this._id("cmbTipoRenovContrato").value = r.Tipo || "RENOVACION";
             this._id("txtRenovInicioContrato").value = this._fechaInput(r.FechaInicio);
             this._id("txtRenovVencContrato").value = this._fechaInput(r.FechaVencimiento);
-            this._id("renovContratoFormTitulo").textContent = `Editar renovación #${r.Id}`;
+            this._id("renovContratoFormTitulo").textContent = `Editar renovacion #${r.Id}`;
             this._setTextoBotonRenovacion(false);
             this.renderListaRenovaciones();
         }
@@ -1160,13 +1160,13 @@
 
                 if (!r.ok || !res.valor) {
                     if (typeof errorModal === "function") {
-                        errorModal(res.mensaje || `No se pudo guardar la renovación (${r.status}).`);
+                        errorModal(res.mensaje || `No se pudo guardar la renovacion (${r.status}).`);
                     }
                     return;
                 }
 
                 if (typeof exitoModal === "function") {
-                    exitoModal(res.mensaje || "Renovación guardada correctamente");
+                    exitoModal(res.mensaje || "Renovacion guardada correctamente");
                 }
 
                 await this._cargarRenovaciones();
@@ -1179,7 +1179,7 @@
                     this._modeloActual = d;
                     this._id("txtFechaVencContrato").value = this._fechaInput(d.FechaVencimiento);
                 } catch (e) {
-                    console.warn("No se pudo refrescar el contrato tras la renovación.", e);
+                    console.warn("No se pudo refrescar el contrato tras la renovacion.", e);
                 }
 
                 const nuevoId = this._toInt(res.id ?? res.Id);
@@ -1191,7 +1191,7 @@
             } catch (e) {
                 console.error(e);
                 if (typeof errorModal === "function") {
-                    errorModal("Ha ocurrido un error al guardar la renovación.");
+                    errorModal("Ha ocurrido un error al guardar la renovacion.");
                 }
             }
         }
@@ -1199,8 +1199,8 @@
         async eliminarRenovacion(id) {
             if (!id || this.isSoloLectura()) return;
             const ok = typeof confirmarModal === "function"
-                ? await confirmarModal("¿Eliminar esta renovación?")
-                : window.confirm("¿Eliminar esta renovación?");
+                ? await confirmarModal("¿Eliminar esta renovacion?")
+                : window.confirm("¿Eliminar esta renovacion?");
             if (!ok) return;
 
             try {
@@ -1216,7 +1216,7 @@
                     return;
                 }
 
-                if (typeof exitoModal === "function") exitoModal(res.mensaje || "Renovación eliminada correctamente");
+                if (typeof exitoModal === "function") exitoModal(res.mensaje || "Renovacion eliminada correctamente");
                 await this._cargarRenovaciones();
                 this.nuevaRenovacion();
             } catch (e) {

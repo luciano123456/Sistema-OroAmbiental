@@ -10,33 +10,59 @@ namespace SistemaOroAmbiental.Application.Controllers
     public class CajasController : Controller
     {
         private readonly ICajasService _service;
+        private readonly IGastosService _gastosService;
 
-        public CajasController(ICajasService service)
+        public CajasController(ICajasService service, IGastosService gastosService)
         {
             _service = service;
+            _gastosService = gastosService;
         }
 
         [AllowAnonymous]
         public IActionResult Index()
         {
-            return View();
+            return RedirectToAction("Tesoreria", "Finanzas");
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> SincronizarGastos()
+        {
+            try
+            {
+                var idClaim = User.FindFirst("Id")?.Value;
+                if (int.TryParse(idClaim, out var idUsuario) && idUsuario > 0)
+                {
+                    var n = await _gastosService.SincronizarMovimientosCajaPendientes(idUsuario);
+                    return Ok(new { valor = true, sincronizados = n });
+                }
+            }
+            catch
+            {
+                // ignore
+            }
+
+            return Ok(new { valor = true, sincronizados = 0 });
         }
 
         [HttpPost]
         public async Task<IActionResult> Movimientos([FromBody] VMCajaFiltro filtro)
         {
+            filtro ??= new VMCajaFiltro();
+
             var movimientos = await _service.Movimientos(
                 filtro.FechaDesde,
                 filtro.FechaHasta,
                 filtro.IdCuenta,
                 filtro.IdSucursal,
                 filtro.TipoMovimiento,
-                filtro.Texto);
+                filtro.Texto,
+                filtro.TipoCuenta);
 
             decimal saldo = await _service.SaldoAnterior(
                 filtro.FechaDesde,
                 filtro.IdCuenta,
-                filtro.IdSucursal);
+                filtro.IdSucursal,
+                filtro.TipoCuenta);
 
             var lista = new List<VMCajaMovimiento>
             {
@@ -88,10 +114,13 @@ namespace SistemaOroAmbiental.Application.Controllers
         [HttpPost]
         public async Task<IActionResult> Resumen([FromBody] VMCajaFiltro filtro)
         {
+            filtro ??= new VMCajaFiltro();
+
             var saldoAnterior = await _service.SaldoAnterior(
                 filtro.FechaDesde,
                 filtro.IdCuenta,
-                filtro.IdSucursal);
+                filtro.IdSucursal,
+                filtro.TipoCuenta);
 
             var (ingresos, egresos, cantidad) = await _service.Resumen(
                 filtro.FechaDesde,
@@ -99,7 +128,8 @@ namespace SistemaOroAmbiental.Application.Controllers
                 filtro.IdCuenta,
                 filtro.IdSucursal,
                 filtro.TipoMovimiento,
-                filtro.Texto);
+                filtro.Texto,
+                filtro.TipoCuenta);
 
             return Ok(new VMCajaResumen
             {
@@ -108,6 +138,29 @@ namespace SistemaOroAmbiental.Application.Controllers
                 Egresos = egresos,
                 SaldoActual = saldoAnterior + ingresos - egresos,
                 CantidadMovimientos = cantidad
+            });
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> ResumenConsolidado([FromBody] VMCajaFiltro filtro)
+        {
+            filtro ??= new VMCajaFiltro();
+
+            var (saldoEfectivo, saldoBanco, ingEfe, egrEfe, ingBan, egrBan) = await _service.ResumenConsolidado(
+                filtro.FechaDesde,
+                filtro.FechaHasta,
+                filtro.IdSucursal,
+                filtro.Texto);
+
+            return Ok(new VMCajaResumenConsolidado
+            {
+                SaldoEfectivo = saldoEfectivo,
+                SaldoBanco = saldoBanco,
+                SaldoTotal = saldoEfectivo + saldoBanco,
+                IngresosEfectivo = ingEfe,
+                EgresosEfectivo = egrEfe,
+                IngresosBanco = ingBan,
+                EgresosBanco = egrBan
             });
         }
 

@@ -18,7 +18,14 @@ namespace SistemaOroAmbiental.Application.Controllers
         }
 
         [AllowAnonymous]
-        public IActionResult Index() => View();
+        public IActionResult Index(int? embed = null)
+        {
+            if (embed != 1)
+                return RedirectToAction("Index", "Finanzas", new { tab = "gastos" });
+
+            ViewBag.Embed = true;
+            return View();
+        }
 
         [HttpPost]
         public async Task<IActionResult> ListaFiltrada([FromBody] VMGastoFiltro? f)

@@ -11,16 +11,16 @@
     /* DataTables / superficies oscuras */
     --dt-body: #0b1320;
     --dt-head: #1d2633;
-    --dt-head-b: #2b3647;
-    --dt-row: #0f1722;
-    --dt-row-zebra: #363659;
-    --dt-row-zebra2: #525285;
-    --dt-row-hover: #152037;
-    --dt-text: #e5e7eb;
+    --dt-head-b: rgba(255, 255, 255, 0.08);
+    --dt-row: rgba(255, 255, 255, 0.02);
+    --dt-row-zebra: rgba(255, 255, 255, 0.035);
+    --dt-row-zebra2: rgba(255, 255, 255, 0.02);
+    --dt-row-hover: rgba(59, 130, 246, 0.1);
+    --dt-text: #dce6f5;
     --dt-input: #111827;
-    --dt-input-b: #2b3647;
+    --dt-input-b: rgba(255, 255, 255, 0.12);
     --dt-pag-bg: #0f192b;
-    --dt-pag-active: #3d6af2;
+    --dt-pag-active: #3b82f6;
     --chip-in: #18c37e;
     --chip-out: #ff7a66;
     --chip-stock: #7cc2ff;
@@ -38,10 +38,7 @@
     --danger: #ff5a6a;
     --txt: #eaf1ff;
     --muted: #9db1d2;
-    --dt-row-hover: rgba(17, 22, 44, .78);
-    --dt-row-zebra: rgba(24, 28, 52, .9);
-    --dt-row-zebra2: rgba(17, 22, 44, .78);
-    --dt-row-zebra3: #0e1024;
+    --dt-row-zebra3: #121b30;
     --ad-bg: #0e1224;
     --ad-card: rgba(22,26,48,.76);
     --ad-stroke: rgba(255,255,255,.06);
@@ -206,31 +203,47 @@ body {
 }
 
 .dt-dark thead th, .dt-dark thead td {
-    background: var(--dt-row-zebra3) !important;
-    color: var(--dt-text) !important;
+    background: linear-gradient(180deg, #1a2744 0%, #121b30 100%) !important;
+    color: #b8c9e6 !important;
     border-color: var(--dt-head-b) !important;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
 }
 
 .dt-dark tbody tr {
     background: var(--dt-row) !important;
+    background-image: none !important;
     color: var(--dt-text) !important;
+    transition: background-color 0.12s ease;
 }
 
 .dt-dark.display tbody tr:nth-child(2n),
-.dt-dark.stripe tbody tr:nth-child(2n) {
-    background: var(--dt-row-zebra) !important;
+.dt-dark.stripe tbody tr:nth-child(2n),
+.dt-dark tbody tr:nth-child(2n+1) {
+    background: var(--dt-row) !important;
 }
 
-.dt-dark tbody tr:nth-child(2n+1) {
-    background: var(--dt-row-zebra2) !important;
+.dt-dark.display tbody tr:nth-child(2n) td,
+.dt-dark.stripe tbody tr:nth-child(2n) td,
+.dt-dark tbody tr:nth-child(2n) td {
+    background-color: var(--dt-row-zebra) !important;
+}
+
+.dt-dark.display tbody tr:nth-child(2n+1) td,
+.dt-dark.stripe tbody tr:nth-child(2n+1) td,
+.dt-dark tbody tr:nth-child(2n+1) td {
+    background-color: var(--dt-row-zebra2) !important;
 }
 
 .dt-dark tbody td, .dt-dark thead th {
     border-bottom: 1px solid var(--dt-head-b) !important;
+    padding: 0.55rem 0.65rem !important;
 }
 
-.dt-dark tbody tr:hover {
-    background: var(--dt-row-hover) !important;
+.dt-dark tbody tr:hover td {
+    background-color: var(--dt-row-hover) !important;
 }
 
 /* Que el hover genérico del tr no tape la selección en celdas */
@@ -1843,7 +1856,7 @@ table.dataTable tbody tr.selected {
 
 
 /* Fondo para modal-body en general, excepto exito/Error/Advertencia */
-.modal:not(#exitoModal):not(#errorModal):not(#AdvertenciaModal) .modal-body {
+.modal:not(#modalConfirmar):not(#modalGuardadoConSalida) .modal-body {
     background: var(--dt-row-zebra2) !important;
 }
 
@@ -1964,24 +1977,35 @@ table.dataTable.display tbody tr.selected td {
 
 
 /* DASHBOARD GASTOS */
-#accordionDashboards .accordion-item {
+#accordionDashboards .accordion-item,
+#gsAccordionDash .accordion-item {
     background: transparent;
     border: none;
 }
 
-#accordionDashboards .accordion-button {
+#accordionDashboards .accordion-button,
+#gsAccordionDash .accordion-button {
     background: rgba(255,255,255,0.05);
     color: white;
     border-radius: 12px;
 }
 
-#accordionDashboards .accordion-body {
+#accordionDashboards .accordion-button:not(.collapsed),
+#gsAccordionDash .accordion-button:not(.collapsed) {
+    background: rgba(255,255,255,0.08);
+    color: #fde68a;
+    box-shadow: none;
+}
+
+#accordionDashboards .accordion-body,
+#gsAccordionDash .accordion-body {
     background: rgba(255,255,255,0.04);
     border-radius: 12px;
     padding: 25px;
 }
 
-#accordionDashboards canvas {
+#accordionDashboards canvas,
+#gsAccordionDash canvas {
     background: rgba(255,255,255,0.05);
     border-radius: 14px;
     padding: 10px;

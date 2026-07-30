@@ -283,10 +283,10 @@ window.editarCompra = function editarCompra(id) {
 
 async function eliminarCompra(id, tienePagos) {
     const msgPagos = tienePagos === true || tienePagos === "true"
-        ? " También se revertirán los pagos al proveedor (caja y cuenta corriente)."
+        ? " Tambien se revertiran los pagos al proveedor (caja y cuenta corriente)."
         : "";
     const ok = await confirmarModal(
-        `¿Eliminar esta compra? Se revertirá el stock y la deuda en cuenta corriente del proveedor.${msgPagos}`);
+        `Eliminar esta compra? Se revertira el stock y la deuda en cuenta corriente del proveedor.${msgPagos}`);
     if (!ok) return;
 
     const response = await fetch(API.eliminar(id), {
@@ -383,7 +383,7 @@ function renderModalProductosCompra(detalle) {
     const puedeEditar = detalle.PuedeEditar !== false && detalle.puedeEditar !== false;
 
     $("#cmProdModalTitle").text(`Compra #${id}`);
-    $("#cmProdModalSub").text(`${proveedor} ?,? ${sucursal} ?,? ${fecha}`);
+    $("#cmProdModalSub").text(`${proveedor} - ${sucursal} - ${fecha}`);
 
     const totalPagado = Number(detalle.TotalPagado ?? detalle.totalPagado ?? 0);
     const saldoPend = Number(detalle.SaldoPendiente ?? detalle.saldoPendiente
@@ -391,7 +391,7 @@ function renderModalProductosCompra(detalle) {
 
     const resumenHtml = `
         <div class="cm-prod-resumen-item">
-            <div class="lbl">ítems</div>
+            <div class="lbl">Items</div>
             <div class="val">${lineas.length}</div>
         </div>
         <div class="cm-prod-resumen-item">
@@ -462,7 +462,7 @@ function renderModalProductosCompra(detalle) {
                         <div class="val">${fmtCantCompras(porcIva)}%</div>
                     </div>
                     <div class="cm-prod-stat cm-prod-stat-wide cm-prod-stat-total">
-                        <div class="lbl">Subtotal línea</div>
+                        <div class="lbl">Subtotal linea</div>
                         <div class="val">${fmtMoneyCompras(subtotal)}</div>
                     </div>
                 </div>

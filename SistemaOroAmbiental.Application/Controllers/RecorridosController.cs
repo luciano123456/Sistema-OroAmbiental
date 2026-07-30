@@ -75,6 +75,7 @@ namespace SistemaOroAmbiental.Application.Controllers
                 IdSemana = model.IdSemana,
                 IdDia = model.IdDia,
                 Zona = model.Zona?.Trim() ?? "",
+                HorarioSalida = string.IsNullOrWhiteSpace(model.HorarioSalida) ? null : model.HorarioSalida.Trim(),
                 IdUsuarioRegistra = idUsuario,
                 FechaUsuarioRegistra = DateTime.Now,
                 IdUsuarioModifica = idUsuario,
@@ -99,7 +100,7 @@ namespace SistemaOroAmbiental.Application.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> HojaRuta(int idCamion, int idSemana, int idDia, DateTime? fecha, string? salida, string? recorridos)
+        public async Task<IActionResult> HojaRuta(int idCamion, int idSemana, int idDia, DateTime? fecha, string? recorridos)
         {
             if (idCamion <= 0)
                 return NotFound();
@@ -112,7 +113,6 @@ namespace SistemaOroAmbiental.Application.Controllers
             if (model == null)
                 return NotFound();
 
-            model.Salida = string.IsNullOrWhiteSpace(salida) ? null : salida.Trim();
             return View(model);
         }
 
@@ -283,6 +283,7 @@ namespace SistemaOroAmbiental.Application.Controllers
                 Dia = r.IdDiaNavigation?.Nombre,
                 r.Posicion,
                 r.Activo,
+                r.Observacion,
                 r.FechaUsuarioRegistra,
                 UsuarioRegistra = r.IdUsuarioRegistraNavigation?.Usuario,
                 r.FechaUsuarioModifica,
@@ -301,7 +302,8 @@ namespace SistemaOroAmbiental.Application.Controllers
                 IdSemana = model.IdSemana,
                 IdDia = model.IdDia,
                 Posicion = model.Posicion,
-                Activo = model.Activo
+                Activo = model.Activo,
+                Observacion = string.IsNullOrWhiteSpace(model.Observacion) ? null : model.Observacion.Trim()
             };
 
             if (esNuevo)

@@ -284,6 +284,11 @@
     background: rgba(239, 68, 68, 0.15) !important;
 }
 
+.rp-nav-user-menu .dropdown-divider-dark {
+    border-color: rgba(255, 255, 255, 0.1);
+    margin: 6px 0;
+}
+
 @media (max-width: 991.98px) {
     .rp-nav-dropdown {
         border: none;

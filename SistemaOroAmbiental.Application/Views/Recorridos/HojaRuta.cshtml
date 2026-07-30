@@ -1,8 +1,25 @@
 @model SistemaOroAmbiental.Models.HojaRutaDto
 @{
     Layout = null;
+
     string FmtMoney(decimal value) => value == 0 ? "" : value.ToString("N0");
-    string FmtFecha(DateTime value) => value.ToString("dd / MM / yyyy");
+
+    string TextoSalidaHoja(string? salida)
+    {
+        var hora = (salida ?? "").Trim();
+        return string.IsNullOrWhiteSpace(hora)
+            ? "SALIDA: HORAS"
+            : $"SALIDA: {hora} HORAS";
+    }
+
+    string ToneClass(int posicion)
+    {
+        var mod = (posicion - 1) % 4;
+        if (mod == 0) return "hr-tone-green";
+        if (mod == 3) return "hr-tone-pink";
+        return "hr-tone-blue";
+    }
+
     var secciones = Model.Secciones?.Count > 0
         ? Model.Secciones
         : new List<SistemaOroAmbiental.Models.HojaRutaSeccionDto>
@@ -13,9 +30,11 @@
                 Semana = Model.Semana,
                 Dia = Model.Dia,
                 Zona = Model.Zona,
+                Salida = Model.Salida,
                 Paradas = Model.Paradas
             }
         };
+
     var multiplesHojas = secciones.Count > 1;
 }
 <!DOCTYPE html>
@@ -24,16 +43,12 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Hoja de ruta - @Model.Titulo</title>
-    <link href="~/css/HojaRuta.css?v=1.3" rel="stylesheet" asp-append-version="true" />
+    <link href="~/css/HojaRuta.css?v=3.4" rel="stylesheet" asp-append-version="true" />
 </head>
 <body class="hr-page@(multiplesHojas ? " hr-page--multi" : "")">
     <div class="hr-toolbar no-print">
-        <button type="button" class="hr-btn-print" onclick="window.print()">
-            Imprimir / PDF
-        </button>
-        <button type="button" class="hr-btn-close" onclick="window.close()">
-            Cerrar
-        </button>
+        <button type="button" class="hr-btn-print" onclick="window.print()">Imprimir / PDF</button>
+        <button type="button" class="hr-btn-close" onclick="window.close()">Cerrar</button>
     </div>
 
     @for (var i = 0; i < secciones.Count; i++)
@@ -41,6 +56,7 @@
         var seccion = secciones[i];
         var esUltima = i == secciones.Count - 1;
         var tituloHoja = multiplesHojas ? seccion.Titulo : Model.Titulo;
+        var salidaHoja = seccion.Salida ?? Model.Salida ?? "";
 
         <div class="hr-sheet@(multiplesHojas ? " hr-sheet--dia" : "")@(!esUltima ? " hr-sheet--break" : "")">
             <header class="hr-header">
@@ -48,13 +64,12 @@
                     <h1>@tituloHoja</h1>
                 </div>
                 <div class="hr-header-meta">
-                    <div class="hr-meta-item">
-                        <span class="hr-meta-label">Salida</span>
-                        <span class="hr-meta-value">@(Model.Salida ?? "")</span>
+                    <div class="hr-meta-item hr-meta-item--salida">
+                        <span class="hr-meta-salida">@TextoSalidaHoja(salidaHoja)</span>
                     </div>
                     <div class="hr-meta-item">
                         <span class="hr-meta-label">Fecha</span>
-                        <span class="hr-meta-value">@FmtFecha(Model.Fecha)</span>
+                        <span class="hr-meta-value hr-meta-value--blank">&nbsp;</span>
                     </div>
                 </div>
                 <div class="hr-header-precios">
@@ -78,26 +93,20 @@
                 <div class="hr-stops">
                     @foreach (var p in seccion.Paradas)
                     {
-                        var toneClass = p.AlertaTipo == "alerta" ? "hr-tone-alert" : "hr-tone-normal";
+                        var obsClass = p.AlertaTipo == "alerta" ? " hr-cell-obs--alert" : "";
+
                         <section class="hr-stop @(p.Activo ? "" : "hr-stop-inactivo")">
                             <div class="hr-stop-head">
                                 <span class="hr-stop-num">@p.Posicion</span>
                                 <span class="hr-stop-cliente">@p.Cliente</span>
-                                <span class="hr-stop-abono">
-                                    Abono:
-                                    @if (p.AbonoEfectivo > 0 || p.AbonoTransferencia > 0)
-                                    {
-                                        <text>$ @FmtMoney(p.AbonoEfectivo + p.AbonoTransferencia)</text>
-                                    }
-                                    else
-                                    {
-                                        <text>$</text>
-                                    }
-                                </span>
+                                <div class="hr-stop-abono">
+                                    <span class="hr-abono-label">Abono: $</span>
+                                    <span class="hr-abono-write"></span>
+                                </div>
                             </div>
 
                             <div class="hr-stop-grid">
-                                <div class="hr-cell hr-cell-domicilio @toneClass">
+                                <div class="hr-cell hr-cell-domicilio @ToneClass(p.Posicion)">
                                     <div class="hr-cell-label">Domicilio</div>
                                     <div class="hr-cell-value">@p.Domicilio</div>
                                     <div class="hr-pagos">
@@ -105,31 +114,38 @@
                                         <span>Efect: $ @FmtMoney(p.AbonoEfectivo)</span>
                                     </div>
                                 </div>
+
                                 <div class="hr-cell">
                                     <div class="hr-cell-label">Localidad</div>
                                     <div class="hr-cell-value">@p.Localidad</div>
                                 </div>
+
                                 <div class="hr-cell">
-                                    <div class="hr-cell-label">Teléfono</div>
+                                    <div class="hr-cell-label">Telefono</div>
                                     <div class="hr-cell-value">@p.Telefono</div>
                                 </div>
+
                                 <div class="hr-cell">
                                     <div class="hr-cell-label">Horario</div>
                                     <div class="hr-cell-value">@p.Horario</div>
                                 </div>
+
                                 <div class="hr-cell hr-cell-box">
                                     <div class="hr-cell-label">Cajas: Recibo del Cliente</div>
                                     <div class="hr-write-box"></div>
                                 </div>
+
                                 <div class="hr-cell hr-cell-box">
                                     <div class="hr-cell-label">Cajas: Entrego al Cliente</div>
                                     <div class="hr-write-box"></div>
                                 </div>
-                                <div class="hr-cell hr-cell-obs @toneClass">
-                                    <div class="hr-cell-label">Observación</div>
+
+                                <div class="hr-cell hr-cell-obs hr-tone-green@obsClass">
+                                    <div class="hr-cell-label">Observacion</div>
                                     <div class="hr-cell-value">@p.Observacion</div>
                                 </div>
-                                <div class="hr-cell hr-cell-box hr-cell-hora">
+
+                                <div class="hr-cell hr-cell-box hr-cell-hora hr-tone-green">
                                     <div class="hr-cell-label">Hora de Visita</div>
                                     <div class="hr-write-box"></div>
                                 </div>

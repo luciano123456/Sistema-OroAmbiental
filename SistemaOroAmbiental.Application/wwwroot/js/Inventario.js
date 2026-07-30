@@ -1,4 +1,4 @@
-/* Inventario — productos por sucursal + Stock */
+/* Inventario - productos por sucursal + Stock */
 
 let gridInventario;
 let sucursalesInv = [];
@@ -128,7 +128,7 @@ function wireEventosInv() {
     $("#fSucursalLista").on("change", async function () {
         ACC.idSucursalLista = $(this).val() ? parseInt($(this).val(), 10) : null;
         ACC.ProductoSel = null;
-        $("#lblFiltroProducto").text("Seleccioná un producto");
+        $("#lblFiltroProducto").text("Selecciona un producto");
         await cargarProductosInv();
         renderProductosInv();
         mostrarEstadoSinSeleccionInv();
@@ -262,7 +262,7 @@ function initValidacionesInventario() {
         if (!okBase || reglas.length) {
             const errores = [...validacionInvAjuste._listarErrores(), ...reglas];
             if (errores.length) {
-                const msg = `Revisá los siguientes campos:<br><strong>${[...new Set(errores)].join(", ")}</strong>`;
+                const msg = `Revisa los siguientes campos:<br><strong>${[...new Set(errores)].join(", ")}</strong>`;
                 validacionInvAjuste.cancelarPanelExito?.();
                 if (typeof mostrarErrorPanelRp === "function") {
                     mostrarErrorPanelRp("#errorCamposAjusteInv", msg);
@@ -297,7 +297,7 @@ function initValidacionesInventario() {
         if (!okBase || reglas.length) {
             const errores = [...validacionInvTransferencia._listarErrores(), ...reglas];
             if (errores.length) {
-                const msg = `Revisá los siguientes campos:<br><strong>${[...new Set(errores)].join(", ")}</strong>`;
+                const msg = `Revisa los siguientes campos:<br><strong>${[...new Set(errores)].join(", ")}</strong>`;
                 validacionInvTransferencia.cancelarPanelExito?.();
                 if (typeof mostrarErrorPanelRp === "function") {
                     mostrarErrorPanelRp("#errorCamposTransferenciaInv", msg);
@@ -472,7 +472,7 @@ function renderProductosInv() {
     cont.html("");
 
     if (!ACC.idSucursalLista) {
-        cont.html(`<div class="cc-empty"><i class="fa fa-building"></i> Seleccioná una sucursal.</div>`);
+        cont.html(`<div class="cc-empty"><i class="fa fa-building"></i> Selecciona una sucursal.</div>`);
         $("#kpiProductos").text("0");
         return;
     }
@@ -512,7 +512,7 @@ function renderProductosInv() {
                     <div class="cc-artist-meta ${stockCls}">
                         <span class="lbl">Stock</span>
                         <span class="val">${fmtQty(stock)}</span>
-                        ${p.StockMinimo > 0 ? `<span class="lbl ms-2">Mín.</span><span class="val">${fmtQty(p.StockMinimo)}</span>` : ""}
+                        ${p.StockMinimo > 0 ? `<span class="lbl ms-2">Min.</span><span class="val">${fmtQty(p.StockMinimo)}</span>` : ""}
                         ${recHtml}
                     </div>
                 </div>
@@ -527,7 +527,7 @@ async function seleccionarProductoInv(idProducto) {
         ACC.movimientos = [];
         ACC.movimientosOriginal = [];
         ACC.movimientosMap = new Map();
-        $("#lblFiltroProducto").text("Seleccioná un producto");
+        $("#lblFiltroProducto").text("Selecciona un producto");
         renderProductosInv();
         mostrarEstadoSinSeleccionInv();
         return;
@@ -562,7 +562,7 @@ async function aplicarFiltrosInv() {
     const filtros = obtenerFiltrosInv();
     ACC.filtrosActivos = !!(filtros.TipoMovimiento || filtros.Texto);
     $("#txtFiltrosEstadoInv").text(ACC.filtrosActivos ? "Filtros activos" : "");
-    if (!ACC.ProductoSel) return errorModal("Seleccioná un producto.");
+    if (!ACC.ProductoSel) return errorModal("Selecciona un producto.");
     await cargarStockSeleccionado();
 }
 
@@ -769,7 +769,7 @@ function actualizarKpisInv() {
     const stock = Number(ACC.ProductoSel.Stock ?? r.stockActual ?? 0);
     const min = Number(ACC.ProductoSel.StockMinimo || 0);
     if (min > 0 && stock < min) {
-        chip.addClass("warn").html(`<i class="fa fa-exclamation-triangle"></i> Bajo mínimo (${fmtQty(stock)} / ${fmtQty(min)})`);
+        chip.addClass("warn").html(`<i class="fa fa-exclamation-triangle"></i> Bajo minimo (${fmtQty(stock)} / ${fmtQty(min)})`);
     } else {
         chip.addClass("ok").html(`<i class="fa fa-check-circle"></i> Stock ${fmtQty(stock)}`);
     }
@@ -829,7 +829,7 @@ function poblarDetalleMovimientoInv(m) {
     const entrada = Number(m.Entrada) || 0;
     const salida = Number(m.Salida) || 0;
     const stock = Number(m.Stock ?? 0);
-    const concepto = (m.Concepto || "").trim() || "—";
+    const concepto = (m.Concepto || "").trim() || "-";
     const fechaTxt = formatearFecha(m.Fecha);
     const tipoLabel = m.TipoMovimiento || "";
 
@@ -906,11 +906,11 @@ async function eliminarMovimientoInv(id) {
 
 function requiereProductoSel() {
     if (!ACC.idSucursalLista) {
-        errorModal("Seleccioná una sucursal.");
+        errorModal("Selecciona una sucursal.");
         return false;
     }
     if (!ACC.ProductoSel) {
-        errorModal("Seleccioná un producto.");
+        errorModal("Selecciona un producto.");
         return false;
     }
     return true;

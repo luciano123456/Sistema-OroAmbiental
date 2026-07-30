@@ -11,10 +11,17 @@ namespace SistemaOroAmbiental.Application.Controllers
     public class ClientesEstablecimientosController : Controller
     {
         private readonly IClientesEstablecimientosService _service;
+        private readonly ILocalidadesService _localidadesService;
+        private readonly IPartidosService _partidosService;
 
-        public ClientesEstablecimientosController(IClientesEstablecimientosService service)
+        public ClientesEstablecimientosController(
+            IClientesEstablecimientosService service,
+            ILocalidadesService localidadesService,
+            IPartidosService partidosService)
         {
             _service = service;
+            _localidadesService = localidadesService;
+            _partidosService = partidosService;
         }
 
         [AllowAnonymous]
@@ -35,7 +42,8 @@ namespace SistemaOroAmbiental.Application.Controllers
                 e.Id,
                 e.Nombre,
                 e.IdCliente,
-                Etiqueta = e.Nombre
+                Etiqueta = e.Nombre,
+                e.OrdenRecorrido
             }));
         }
 
@@ -48,11 +56,18 @@ namespace SistemaOroAmbiental.Application.Controllers
             {
                 Id = e.Id,
                 IdCliente = e.IdCliente,
+                IdEstablecimientoCliente = e.IdEstablecimientoCliente,
                 Nombre = e.Nombre,
                 Cuit = e.Cuit,
                 IdCondicionIva = e.IdCondicionIva,
-                Domicilio = e.Domicilio,
+                Domicilio = DomicilioHelper.Componer(e.Calle, e.Numero, e.PisoDepartamento, e.Domicilio),
+                Calle = e.Calle,
+                Numero = e.Numero,
+                PisoDepartamento = e.PisoDepartamento,
+                IdTipoGenerador = e.IdTipoGenerador,
                 IdProvincia = e.IdProvincia,
+                IdPartido = e.IdPartido,
+                IdLocalidad = e.IdLocalidad,
                 Localidad = e.Localidad,
                 CodPostal = e.CodPostal,
                 ImpuestoIva = e.ImpuestoIva,
@@ -60,11 +75,20 @@ namespace SistemaOroAmbiental.Application.Controllers
                 IdSemanaRecoleccion = e.IdSemanaRecoleccion,
                 IdListaPrecio = e.IdListaPrecio,
                 IdCamion = e.IdCamion,
+                OrdenRecorrido = e.OrdenRecorrido,
+                Kilos = e.Kilos,
                 HorarioRecoleccionDesde = FormatearHora(e.HorarioRecoleccionDesde),
                 HorarioRecoleccionHasta = FormatearHora(e.HorarioRecoleccionHasta),
+                DiasHorarios = e.DiasHorarios,
                 Cliente = e.IdClienteNavigation?.Nombre ?? "",
                 Provincia = e.IdProvinciaNavigation?.Nombre ?? "",
+                Partido = e.IdPartidoNavigation?.Nombre ?? "",
+                CodigoPartido = e.IdPartidoNavigation?.Codigo ?? "",
+                CodigoLocalidad = e.IdLocalidadNavigation?.Codigo ?? "",
                 CondicionIva = e.IdCondicionIvaNavigation?.Nombre ?? "",
+                TipoGenerador = e.IdTipoGeneradorNavigation != null
+                    ? e.IdTipoGeneradorNavigation.Codigo + " - " + e.IdTipoGeneradorNavigation.Nombre
+                    : "",
                 DiaRecoleccion = e.IdDiaRecoleccionNavigation?.Nombre ?? "",
                 SemanaRecoleccion = e.IdSemanaRecoleccionNavigation?.Nombre ?? "",
                 ListaPrecio = e.IdListaPrecioNavigation?.Nombre ?? "",
@@ -90,19 +114,33 @@ namespace SistemaOroAmbiental.Application.Controllers
             {
                 e.Id,
                 e.IdCliente,
+                e.IdEstablecimientoCliente,
                 e.Nombre,
                 e.Cuit,
                 e.IdCondicionIva,
-                e.Domicilio,
+                e.Calle,
+                e.Numero,
+                e.PisoDepartamento,
+                Domicilio = DomicilioHelper.Componer(e.Calle, e.Numero, e.PisoDepartamento, e.Domicilio),
+                e.IdTipoGenerador,
                 e.IdProvincia,
+                e.IdPartido,
+                e.IdLocalidad,
                 e.Localidad,
+                Partido = e.IdPartidoNavigation?.Nombre,
+                CodigoPartido = e.IdPartidoNavigation?.Codigo,
+                CodigoLocalidad = e.IdLocalidadNavigation?.Codigo,
                 e.CodPostal,
                 e.ImpuestoIva,
                 e.IdDiaRecoleccion,
                 e.IdSemanaRecoleccion,
                 e.IdListaPrecio,
+                e.IdCamion,
+                e.OrdenRecorrido,
+                e.Kilos,
                 HorarioRecoleccionDesde = FormatearHora(e.HorarioRecoleccionDesde),
                 HorarioRecoleccionHasta = FormatearHora(e.HorarioRecoleccionHasta),
+                DiasHorarios = e.DiasHorarios,
                 e.FechaUsuarioRegistra,
                 UsuarioRegistra = e.IdUsuarioRegistraNavigation?.Usuario,
                 e.FechaUsuarioModifica,
@@ -114,6 +152,10 @@ namespace SistemaOroAmbiental.Application.Controllers
         public async Task<IActionResult> Insertar([FromBody] VMClienteEstablecimiento model)
         {
             int idUsuario = int.Parse(User.FindFirst("Id")!.Value);
+
+            var geoError = await NormalizarGeo(model);
+            if (geoError != null)
+                return Ok(new { valor = false, mensaje = geoError, tipo = "validacion" });
 
             var entity = MapearEntidad(model, idUsuario, esNuevo: true);
 
@@ -133,6 +175,10 @@ namespace SistemaOroAmbiental.Application.Controllers
         public async Task<IActionResult> Actualizar([FromBody] VMClienteEstablecimiento model)
         {
             int idUsuario = int.Parse(User.FindFirst("Id")!.Value);
+
+            var geoError = await NormalizarGeo(model);
+            if (geoError != null)
+                return Ok(new { valor = false, mensaje = geoError, tipo = "validacion" });
 
             var entity = MapearEntidad(model, idUsuario, esNuevo: false);
 
@@ -163,24 +209,38 @@ namespace SistemaOroAmbiental.Application.Controllers
 
         private static ClientesEstablecimiento MapearEntidad(VMClienteEstablecimiento model, int idUsuario, bool esNuevo)
         {
+            var calle = string.IsNullOrWhiteSpace(model.Calle) ? null : model.Calle.Trim();
+            var numero = string.IsNullOrWhiteSpace(model.Numero) ? null : model.Numero.Trim();
+            var piso = string.IsNullOrWhiteSpace(model.PisoDepartamento) ? null : model.PisoDepartamento.Trim();
+
             var entity = new ClientesEstablecimiento
             {
                 Id = model.Id,
                 IdCliente = model.IdCliente,
+                IdEstablecimientoCliente = NormalizarIdEstablecimientoCliente(model.IdEstablecimientoCliente),
                 Nombre = model.Nombre?.Trim() ?? "",
                 Cuit = model.Cuit,
                 IdCondicionIva = model.IdCondicionIva,
-                Domicilio = model.Domicilio,
+                Calle = calle,
+                Numero = numero,
+                PisoDepartamento = piso,
+                Domicilio = DomicilioHelper.Componer(calle, numero, piso, model.Domicilio),
+                IdTipoGenerador = model.IdTipoGenerador,
                 IdProvincia = model.IdProvincia,
-                Localidad = model.Localidad,
+                IdPartido = model.IdPartido,
+                IdLocalidad = model.IdLocalidad,
+                Localidad = string.IsNullOrWhiteSpace(model.Localidad) ? null : model.Localidad.Trim(),
                 CodPostal = model.CodPostal,
                 ImpuestoIva = model.ImpuestoIva,
                 IdDiaRecoleccion = model.IdDiaRecoleccion,
                 IdSemanaRecoleccion = model.IdSemanaRecoleccion,
                 IdListaPrecio = model.IdListaPrecio,
                 IdCamion = model.IdCamion,
-                HorarioRecoleccionDesde = ParseHora(model.HorarioRecoleccionDesde),
-                HorarioRecoleccionHasta = ParseHora(model.HorarioRecoleccionHasta)
+                OrdenRecorrido = model.OrdenRecorrido,
+                Kilos = model.Kilos,
+                DiasHorarios = string.IsNullOrWhiteSpace(model.DiasHorarios) ? null : model.DiasHorarios.Trim(),
+                HorarioRecoleccionDesde = ResolverHorarioDesde(model),
+                HorarioRecoleccionHasta = ResolverHorarioHasta(model)
             };
 
             if (esNuevo)
@@ -197,6 +257,46 @@ namespace SistemaOroAmbiental.Application.Controllers
             return entity;
         }
 
+        private async Task<string?> NormalizarGeo(VMClienteEstablecimiento model)
+        {
+            if (model.IdLocalidad.HasValue)
+            {
+                var localidad = await _localidadesService.Obtener(model.IdLocalidad.Value);
+                if (localidad == null)
+                    return "La localidad seleccionada no existe.";
+
+                if (model.IdPartido.HasValue && localidad.IdPartido != model.IdPartido)
+                    return "La localidad seleccionada no pertenece al partido indicado.";
+
+                if (model.IdProvincia.HasValue && localidad.IdProvincia != model.IdProvincia)
+                    return "La localidad seleccionada no pertenece a la provincia indicada.";
+
+                model.IdPartido = localidad.IdPartido;
+                model.IdProvincia = localidad.IdProvincia;
+                model.Localidad = localidad.Nombre;
+            }
+            else
+            {
+                model.Localidad = string.IsNullOrWhiteSpace(model.Localidad)
+                    ? null
+                    : model.Localidad.Trim();
+            }
+
+            if (model.IdPartido.HasValue)
+            {
+                var partido = await _partidosService.Obtener(model.IdPartido.Value);
+                if (partido == null)
+                    return "El partido seleccionado no existe.";
+
+                if (model.IdProvincia.HasValue && partido.IdProvincia != model.IdProvincia)
+                    return "El partido seleccionado no pertenece a la provincia indicada.";
+
+                model.IdProvincia = partido.IdProvincia;
+            }
+
+            return null;
+        }
+
         private static string FormatearHora(TimeSpan t)
             => $"{(int)t.TotalHours:D2}:{t.Minutes:D2}";
 
@@ -209,6 +309,29 @@ namespace SistemaOroAmbiental.Application.Controllers
                 return ts;
 
             return TimeSpan.Zero;
+        }
+
+        private static TimeSpan ResolverHorarioDesde(VMClienteEstablecimiento model)
+        {
+            var desde = ParseHora(model.HorarioRecoleccionDesde);
+            var hasta = ParseHora(model.HorarioRecoleccionHasta);
+            if (hasta > desde) return desde;
+            return new TimeSpan(8, 0, 0);
+        }
+
+        private static TimeSpan ResolverHorarioHasta(VMClienteEstablecimiento model)
+        {
+            var desde = ParseHora(model.HorarioRecoleccionDesde);
+            var hasta = ParseHora(model.HorarioRecoleccionHasta);
+            if (hasta > desde) return hasta;
+            return new TimeSpan(18, 0, 0);
+        }
+
+        private static string? NormalizarIdEstablecimientoCliente(string? valor)
+        {
+            if (string.IsNullOrWhiteSpace(valor)) return null;
+            var txt = valor.Trim();
+            return txt.Length > 8 ? txt[..8] : txt;
         }
     }
 }

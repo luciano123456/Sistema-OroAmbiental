@@ -1,40 +1,47 @@
 let gridProveedores;
-let proveedorModal;
+
+const URL_GESTION_PROVEEDOR = id => id > 0 ? `/Proveedores/Gestion?id=${id}` : "/Proveedores/Gestion";
 
 const columnConfig = [
     { index: 2, filterType: 'text' },
     { index: 3, filterType: 'text' },
-    { index: 4, filterType: 'select', fetchDataFunc: listaCondicionesIvaFilter },
-    { index: 5, filterType: 'select', fetchDataFunc: listaBancosFilter },
+    { index: 4, filterType: 'select_local' },
+    { index: 5, filterType: 'select_local' },
     { index: 6, filterType: 'text' },
-    { index: 7, filterType: 'text' }
+    { index: 7, filterType: 'text' },
+    { index: 8, filterType: 'activo' }
 ];
 
 registrarFiltrosGrilla('grd_Proveedores', columnConfig, {
+    defaultActivoModo: 'todos',
     initSelect2: ($el) => inicializarSelect2Filtro($el)
 });
 
+function columnDefsProveedoresGrid() {
+    return [
+        { targets: 0, className: "rp-col-acciones", width: "118px", orderable: false },
+        { targets: 1, className: "rp-col-id", width: "88px" },
+        { targets: 2, className: "rp-col-nombre", width: "260px" },
+        { targets: 3, className: "rp-col-cuit", width: "145px" },
+        { targets: 4, className: "rp-col-iva", width: "170px" },
+        { targets: 5, className: "rp-col-banco", width: "155px" },
+        { targets: 6, className: "rp-col-tel", width: "135px" },
+        { targets: 7, className: "rp-col-email", width: "280px" },
+        { targets: 8, className: "rp-col-activo", width: "108px" }
+    ];
+}
+
 $(document).ready(() => {
+    window.nuevoProveedor = () => { window.location.href = URL_GESTION_PROVEEDOR(0); };
+    window.editarProveedor = id => { window.location.href = URL_GESTION_PROVEEDOR(id); };
+    window.verProveedor = id => { window.location.href = URL_GESTION_PROVEEDOR(id); };
+    window.eliminarProveedor = eliminarProveedorIndex;
 
-    proveedorModal = typeof initProveedorModal === "function"
-        ? initProveedorModal({
-            token: token,
-            onSaved: async () => { await listaProveedores(); },
-            onDeleted: async () => { await listaProveedores(); }
-        })
-        : null;
-
-    if (!proveedorModal) return;
-
-    $(document)
-        .off("click.select2fix.proveedores")
-        .on("click.select2fix.proveedores", ".select2-container--default .select2-selection--single", function () {
-            const $select = $(this).closest(".select2-container").prev("select");
-            if ($select.length) {
-                if ($select.data("select2") && $select.data("select2").isOpen()) return;
-                $select.select2("open");
-            }
+    if (typeof registrarGrillaDobleClick === "function") {
+        registrarGrillaDobleClick("grd_Proveedores", id => {
+            window.location.href = URL_GESTION_PROVEEDOR(id);
         });
+    }
 
     listaProveedores();
 });
@@ -56,6 +63,29 @@ function inicializarSelect2Filtro($select) {
         allowClear: true,
         placeholder: "Todos"
     });
+}
+
+async function eliminarProveedorIndex(id) {
+    if (typeof ejecutarEliminacionEntidad !== "function") {
+        errorModal("No esta disponible el asistente de eliminacion.");
+        return;
+    }
+
+    const resultado = await ejecutarEliminacionEntidad({
+        entidadLabel: "este proveedor",
+        urlDependencias: `/Proveedores/DependenciasEliminar?id=${id}`,
+        urlEliminar: cascada => `/Proveedores/Eliminar?id=${id}&cascada=${cascada ? "true" : "false"}`,
+        headers: { Authorization: "Bearer " + token },
+        fetchJson: async (url, options) => {
+            const response = await fetch(url, options);
+            if (!response.ok) throw new Error(`Error HTTP ${response.status}`);
+            return await response.json();
+        }
+    });
+
+    if (resultado.accion !== "ok") return;
+    exitoModal(resultado.data?.mensaje ?? "Proveedor eliminado correctamente");
+    await listaProveedores();
 }
 
 async function listaProveedores() {
@@ -90,7 +120,7 @@ async function configurarDataTable(data) {
                 url: "//cdn.datatables.net/plug-ins/2.0.7/i18n/es-MX.json"
             },
             autoWidth: false,
-            columnDefs: typeof columnDefsGridLista === "function" ? columnDefsGridLista() : [],
+            columnDefs: columnDefsProveedoresGrid(),
             scrollX: true,
             scrollCollapse: true,
             columns: [
@@ -100,17 +130,17 @@ async function configurarDataTable(data) {
                     eliminar: "eliminarProveedor"
                 }, "Proveedores"),
                 columnaGridId(),
-                { data: 'Nombre' },
-                { data: 'Cuit' },
-                { data: 'CondicionIva' },
-                { data: 'Banco' },
-                { data: 'Telefono' },
-                { data: 'Email' },
+                { data: 'Nombre', className: 'rp-col-nombre' },
+                { data: 'Cuit', className: 'rp-col-cuit' },
+                { data: 'CondicionIva', className: 'rp-col-iva' },
+                { data: 'Banco', className: 'rp-col-banco' },
+                { data: 'Telefono', className: 'rp-col-tel' },
+                { data: 'Email', className: 'rp-col-email' },
                 typeof columnaGridActivo === "function" ? columnaGridActivo("Proveedores") : { data: "Activo" },
             ],
-            createdRow: function (row, data) {
+            createdRow: function (row, rowData) {
                 if (typeof createdRowEstiloActivoGrilla === "function") {
-                    createdRowEstiloActivoGrilla(row, data);
+                    createdRowEstiloActivoGrilla(row, rowData);
                 }
             },
             dom: 'Bfrtip',
@@ -119,12 +149,18 @@ async function configurarDataTable(data) {
             fixedHeader: true,
             initComplete: async function () {
                 const api = this.api();
-                await armarFiltrosGrillaLista(api, '#grd_Proveedores', columnConfig, {
+                await initFiltrosGrillaListaEnInitComplete(api, '#grd_Proveedores', columnConfig, {
+                    defaultActivoModo: 'todos',
                     initSelect2: ($el) => inicializarSelect2Filtro($el)
+                }, {
+                    afterFilters: () => {
+                        configurarOpcionesColumnas();
+                        actualizarKpis(data);
+                    },
+                    afterAdjust: () => {
+                        setTimeout(() => ajustarColumnasGrillaLista(api, '#grd_Proveedores'), 200);
+                    }
                 });
-                configurarOpcionesColumnas();
-                actualizarKpis(data);
-                api.draw(false);
             }
         });
 
@@ -132,20 +168,6 @@ async function configurarDataTable(data) {
         gridProveedores.clear().rows.add(data).draw();
         actualizarKpis(data);
     }
-}
-
-async function listaCondicionesIvaFilter() {
-    const response = await fetch(`/CondicionesIva/Lista`, {
-        headers: { 'Authorization': 'Bearer ' + token }
-    });
-    return await response.json();
-}
-
-async function listaBancosFilter() {
-    const response = await fetch(`/Bancos/Lista`, {
-        headers: { 'Authorization': 'Bearer ' + token }
-    });
-    return await response.json();
 }
 
 function configurarOpcionesColumnas() {
@@ -187,12 +209,14 @@ function configurarOpcionesColumnas() {
         savedConfig[`col_${columnIdx}`] = isChecked;
         localStorage.setItem(storageKey, JSON.stringify(savedConfig));
         grid.column(columnIdx).visible(isChecked);
+        ajustarColumnasGrillaLista(grid, '#grd_Proveedores');
     });
 }
 
 function actualizarKpis(data) {
-    const cant = Array.isArray(data) ? data.length : 0;
-    $('#kpiCantProveedores').text(cant);
+    const rows = Array.isArray(data) ? data : [];
+    $('#kpiCantProveedores').text(rows.length);
+    $('#kpiActivosProveedores').text(rows.filter(x => x.Activo !== false && x.Activo !== 0).length);
 }
 
 function escapeRegex(text) {

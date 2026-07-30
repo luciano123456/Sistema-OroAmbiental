@@ -47,6 +47,8 @@ builder.Services.AddScoped<IClientesService, ClientesService>();
 
 builder.Services.AddScoped<IClientesOperativoRepository, ClientesOperativoRepository>();
 builder.Services.AddScoped<IClientesOperativoService, ClientesOperativoService>();
+builder.Services.AddScoped<IProveedoresOperativoRepository, ProveedoresOperativoRepository>();
+builder.Services.AddScoped<IProveedoresOperativoService, ProveedoresOperativoService>();
 
 builder.Services.AddScoped<IClientesContactosRepository, ClientesContactosRepository>();
 builder.Services.AddScoped<IClientesContactosService, ClientesContactosService>();

@@ -95,8 +95,8 @@ function renderSinPermisos(cont) {
                 </div>
 
                 <div class="dash-empty-text-pro">
-                    No tenés permisos para acceder a ningún módulo.<br>
-                    Si creés que esto es un error, hablá con un administrador.
+                    No tenes permisos para acceder a ningun modulo.<br>
+                    Si crees que esto es un error, habla con un administrador.
                 </div>
 
                 <button class="dash-empty-btn" onclick="location.reload()">
@@ -137,10 +137,12 @@ function obtenerUrlModulo(nombre) {
         "artistas cc": "/ArtistasCuentaCorriente",
 
         "ventas": "/Ventas",
-        "cajas": "/Cajas",
+        "cajas": "/Finanzas?tab=tesoreria",
+        "finanzas": "/Finanzas",
         "monedas": "/PaisesMoneda",
         "tareas": "/Tareas",
-        "gastos": "/Gastos",
+        "gastos": "/Finanzas?tab=gastos",
+        "libro diario": "/Finanzas",
         "usuarios": "/Usuarios",
         "ubicaciones": "/Ubicaciones",
 

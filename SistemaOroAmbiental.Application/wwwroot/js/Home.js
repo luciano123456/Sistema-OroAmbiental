@@ -1,4 +1,4 @@
-﻿//#########################################################################################################################################################
+//#########################################################################################################################################################
 //#########################################################################################################################################################
 //#############################################################################CLIENTES####################################################################
 const precioZonaInput = document.getElementById('txtPrecioZona');
@@ -429,13 +429,13 @@ function validarCamposUsuario() {
     const contrasena = $("#txtContrasenaUsuario").val();
 
 
-    // Validación independiente para cada campo
+    // Validacion independiente para cada campo
     const nombreValido = nombre !== "";
     const usuarioValido = usuario !== "";
     const apellidoValido = apellido !== "";
     const contrasenaValido = contrasena !== "";
 
-    // Cambiar el color de texto y borde según la validez de los campos
+    // Cambiar el color de texto y borde segun la validez de los campos
     $("#lblNombreUsuario").css("color", nombreValido ? "" : "red");
     $("#txtNombreUsuario").css("border-color", nombreValido ? "" : "red");
 
@@ -451,7 +451,7 @@ function validarCamposUsuario() {
 
 
 
-    // La función retorna 'true' si todos los campos son válidos, de lo contrario 'false'
+    // La funcion retorna 'true' si todos los campos son validos, de lo contrario 'false'
     return nombreValido && usuarioValido && apellidoValido && contrasenaValido;
 }
 
@@ -973,7 +973,7 @@ precioZonaInput.addEventListener('blur', function () {
     const rawValue = this.value.replace(/[^0-9.,]/g, '').replace(',', '.');
     const parsedValue = parseFloat(rawValue) || 0;
 
-    // Formatear el número al finalizar la edición
+    // Formatear el numero al finalizar la edicion
     this.value = formatNumber(parsedValue);
 
 });

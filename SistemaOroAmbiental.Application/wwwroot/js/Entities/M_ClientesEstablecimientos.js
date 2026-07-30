@@ -19,12 +19,16 @@
                     actualizar: "/ClientesEstablecimientos/Actualizar",
                     eliminar: "/ClientesEstablecimientos/Eliminar?id={id}",
                     clientes: "/Clientes/Lista",
+                    clienteEditar: "/Clientes/EditarInfo?id={id}",
                     provincias: "/Provincias/Lista",
+                    partidosPorProvincia: "/Partidos/ListaPorProvincia?idProvincia={idProvincia}",
+                    localidadesPorPartido: "/Localidades/ListaPorPartido?idPartido={idPartido}",
                     condicionesIva: "/CondicionesIva/Lista",
                     dias: "/Dias/Lista",
                     semanas: "/Semanas/Lista",
                     listasPrecios: "/ListasPrecios/Lista",
                     camiones: "/Camiones/Lista?soloActivos=true",
+                    tiposGenerador: "/ClientesTiposGenerador/Lista",
                     contactosLista: "/ClientesEstablecimientosContactos/ListaPorEstablecimiento?idEstablecimiento={idEstablecimiento}",
                     contactosInsertar: "/ClientesEstablecimientosContactos/Insertar",
                     contactosActualizar: "/ClientesEstablecimientosContactos/Actualizar",
@@ -56,10 +60,16 @@
             this._contactoSeleccionadoId = 0;
             this._productosCache = [];
             this._productoSeleccionadoId = 0;
+            this._cargarCombosSeq = 0;
+            this._cargarPartidosSeq = 0;
+            this._cargarLocalidadesSeq = 0;
+            this._localidadesCargando = false;
+            this._geoCache = { partidos: [], localidades: [] };
+            this._localidadLegacy = null;
 
             this._camposObligatorios = [
                 "cmbClienteEst", "txtNombreEst", "cmbDiaEst", "cmbSemanaEst",
-                "cmbListaPrecioEst", "txtHorarioDesdeEst", "txtHorarioHastaEst"
+                "cmbListaPrecioEst"
             ];
             this._validacion = new ValidacionModalAbm({
                 modalEl: this.modalEl,
@@ -69,9 +79,7 @@
                     { id: "txtNombreEst", nombre: "Nombre establecimiento" },
                     { id: "cmbDiaEst", nombre: "D\u00EDa recolecci\u00F3n" },
                     { id: "cmbSemanaEst", nombre: "Semana recolecci\u00F3n" },
-                    { id: "cmbListaPrecioEst", nombre: "Lista de precios" },
-                    { id: "txtHorarioDesdeEst", nombre: "Horario desde" },
-                    { id: "txtHorarioHastaEst", nombre: "Horario hasta" }
+                    { id: "cmbListaPrecioEst", nombre: "Lista de precios" }
                 ],
                 esCampoValido: (el) => this._valorCampoValido(el),
                 isSoloLectura: () => this.isSoloLectura(),
@@ -81,9 +89,13 @@
             this._comboPorController = {
                 CondicionesIva: { selectId: "cmbCondicionIvaEst", url: this.options.endpoints.condicionesIva },
                 Provincias: { selectId: "cmbProvinciaEst", url: this.options.endpoints.provincias },
+                Partidos: { selectId: "cmbPartidoEst", dependent: true },
+                Localidades: { selectId: "cmbLocalidadEst", dependent: true },
                 Dias: { selectId: "cmbDiaEst", url: this.options.endpoints.dias },
                 Semanas: { selectId: "cmbSemanaEst", url: this.options.endpoints.semanas },
-                ListasPrecios: { selectId: "cmbListaPrecioEst", url: this.options.endpoints.listasPrecios }
+                ListasPrecios: { selectId: "cmbListaPrecioEst", url: this.options.endpoints.listasPrecios },
+                ClientesTiposGenerador: { selectId: "cmbTipoGeneradorEst", url: this.options.endpoints.tiposGenerador, textField: "Etiqueta" },
+                Camiones: { selectId: "cmbCamionEst", url: this.options.endpoints.camiones }
             };
 
             window.establecimientoModal = this;
@@ -141,6 +153,10 @@
             const el = this._id(id);
             if (!el) return "";
             if (el.type === "checkbox") return el.checked;
+            if (window.jQuery) {
+                const $el = window.jQuery(el);
+                if ($el.data("select2")) return $el.val() ?? "";
+            }
             return el.value ?? "";
         }
 
@@ -224,8 +240,9 @@
                 placeholder: "Seleccionar"
             };
             [
-                "cmbClienteEst", "cmbCondicionIvaEst", "cmbProvinciaEst",
-                "cmbDiaEst", "cmbSemanaEst", "cmbListaPrecioEst", "cmbProductoEst"
+                "cmbClienteEst", "cmbCondicionIvaEst", "cmbProvinciaEst", "cmbPartidoEst",
+                "cmbLocalidadEst", "cmbTipoGeneradorEst",
+                "cmbDiaEst", "cmbSemanaEst", "cmbListaPrecioEst", "cmbCamionEst", "cmbProductoEst"
             ].forEach(id => {
                 this.ensureSelect2(window.jQuery(this._id(id)), opts);
             });
@@ -237,8 +254,9 @@
 
             this.modalEl.querySelectorAll("input, select, textarea").forEach(el => {
                 if (el.id === "txtIdEst") return;
-                el.disabled = disabled;
-                if (el.type !== "checkbox") el.readOnly = disabled;
+                const esCodigoGeo = el.id === "txtCodigoPartidoEst" || el.id === "txtCodigoLocalidadEst";
+                el.disabled = disabled || esCodigoGeo;
+                if (el.type !== "checkbox") el.readOnly = disabled || esCodigoGeo;
             });
 
             const btnGuardar = this._id("btnGuardarEst");
@@ -256,6 +274,9 @@
                     $el.trigger("change.select2");
                 }
             });
+            this._setLocalidadDisabled(
+                disabled || this._localidadesCargando || !this._getIntOrNull("cmbPartidoEst")
+            );
 
             const idEst = this.getId();
             this.bloquearControlesContactos(disabled || !idEst);
@@ -496,6 +517,34 @@
                 if (typeof errorModal === "function") {
                     errorModal("Ha ocurrido un error al guardar el contacto.");
                 }
+            }
+        }
+
+        async _guardarContactoInicial(idEstablecimiento) {
+            const telefono = (this._getFieldValue("txtContactoEstTelefono") || "").trim();
+            const telefonoAlt = (this._getFieldValue("txtContactoEstTelefonoAlt") || "").trim();
+            const email = (this._getFieldValue("txtContactoEstEmail") || "").trim();
+            if (!idEstablecimiento || (!telefono && !telefonoAlt && !email)) return;
+
+            const modelo = {
+                Id: 0,
+                IdEstablecimiento: idEstablecimiento,
+                Nombre: (this._getFieldValue("txtContactoEstNombre")
+                    || this._getFieldValue("txtNombreEst")
+                    || "Contacto principal").trim(),
+                Puesto: "Contacto principal",
+                Telefono: telefono || null,
+                TelefonoAlt: telefonoAlt || null,
+                Email: email || null
+            };
+
+            const data = await this._fetchJson(this.options.endpoints.contactosInsertar, {
+                method: "POST",
+                headers: this._headers(true),
+                body: JSON.stringify(modelo)
+            });
+            if (!data?.valor) {
+                throw new Error(data?.mensaje || "No se pudo copiar el contacto principal.");
             }
         }
 
@@ -886,7 +935,7 @@
                 return;
             }
             if (typeof errorModal === "function") {
-                errorModal("No está disponible el alta de clientes en esta pantalla. Andá a Clientes → Nuevo.");
+                errorModal("No esta disponible el alta de clientes en esta pantalla. Anda a Clientes → Nuevo.");
             }
         }
 
@@ -894,6 +943,7 @@
             try {
                 this._ultimoModo = "nuevo";
                 this._modeloActual = null;
+                this._localidadLegacy = null;
 
                 if (typeof this.options.onBeforeOpen === "function") {
                     await this.options.onBeforeOpen("nuevo", this);
@@ -908,11 +958,14 @@
 
                 if (idClientePreseleccionado) {
                     this._setFieldValue("cmbClienteEst", idClientePreseleccionado, true);
+                    await this.prefillDesdeCliente(idClientePreseleccionado);
+                } else {
+                    await this.limpiarGeoEspecifico();
                 }
 
                 if (!this._tieneClientesEnCombo()) {
                     this.mostrarErrorCampos(
-                        "No hay clientes cargados. Creá primero un <strong>Cliente</strong> con el botón + al lado del combo (o en el menú Clientes → Nuevo). Después podés registrar el establecimiento. <em>No hace falta ningún contrato.</em>",
+                        "No hay clientes cargados. Crea primero un <strong>Cliente</strong> con el boton + al lado del combo (o en el menu Clientes → Nuevo). Despues podes registrar el establecimiento. <em>No hace falta ningun contrato.</em>",
                         null,
                         "validacion"
                     );
@@ -920,8 +973,6 @@
                     this.cerrarErrorCampos();
                 }
 
-                this._setFieldValue("txtHorarioDesdeEst", "08:00");
-                this._setFieldValue("txtHorarioHastaEst", "12:00");
                 this._syncIvaCardUI();
 
                 this._id("modalEstablecimientoLabel").textContent = "Nuevo Establecimiento";
@@ -987,17 +1038,28 @@
 
             this._setFieldValue("txtIdEst", modelo.Id || "");
             this._setFieldValue("txtNombreEst", modelo.Nombre || "");
+            this._setFieldValue("txtIdEstablecimientoClienteEst", modelo.IdEstablecimientoCliente || "");
             this._setFieldValue("txtCuitEst", modelo.Cuit || "");
-            this._setFieldValue("txtDomicilioEst", modelo.Domicilio || "");
-            this._setFieldValue("txtLocalidadEst", modelo.Localidad || "");
+            this._setFieldValue("txtCalleEst", modelo.Calle || modelo.Domicilio || "");
+            this._setFieldValue("txtNumeroEst", modelo.Numero || "");
+            this._setFieldValue("txtPisoDeptoEst", modelo.PisoDepartamento || "");
             this._setFieldValue("txtCodPostalEst", modelo.CodPostal || "");
             this._setFieldValue("chkImpuestoIvaEst", !!modelo.ImpuestoIva);
-            this._setFieldValue("txtHorarioDesdeEst", this._parseHorario(modelo.HorarioRecoleccionDesde));
-            this._setFieldValue("txtHorarioHastaEst", this._parseHorario(modelo.HorarioRecoleccionHasta));
+                this._setFieldValue("txtDiasHorariosEst", modelo.DiasHorarios || "");
 
             if (modelo.IdCliente) this._setFieldValue("cmbClienteEst", modelo.IdCliente, true);
             if (modelo.IdCondicionIva) this._setFieldValue("cmbCondicionIvaEst", modelo.IdCondicionIva, true);
-            if (modelo.IdProvincia) this._setFieldValue("cmbProvinciaEst", modelo.IdProvincia, true);
+            if (modelo.IdProvincia) {
+                this._setFieldValue("cmbProvinciaEst", modelo.IdProvincia, true);
+                await this.cargarPartidos(modelo.IdProvincia, modelo.IdPartido, modelo.IdLocalidad);
+            }
+            if (!modelo.IdLocalidad && modelo.Localidad) {
+                this._localidadLegacy = modelo.Localidad;
+                const localidad = this._id("cmbLocalidadEst");
+                localidad.options[0].text = `${modelo.Localidad} (sin catalogo)`;
+                this._refreshSelect2Field("cmbLocalidadEst");
+            }
+            if (modelo.IdTipoGenerador) this._setFieldValue("cmbTipoGeneradorEst", modelo.IdTipoGenerador, true);
             if (modelo.IdDiaRecoleccion) this._setFieldValue("cmbDiaEst", modelo.IdDiaRecoleccion, true);
             if (modelo.IdSemanaRecoleccion) this._setFieldValue("cmbSemanaEst", modelo.IdSemanaRecoleccion, true);
             if (modelo.IdListaPrecio) this._setFieldValue("cmbListaPrecioEst", modelo.IdListaPrecio, true);
@@ -1038,31 +1100,163 @@
             this._refreshSelect2Field(id);
         }
 
-        async _llenarCombo(selectId, url) {
+        _actualizarCodigosGeo() {
+            const partido = this._id("cmbPartidoEst")?.selectedOptions?.[0];
+            const localidad = this._id("cmbLocalidadEst")?.selectedOptions?.[0];
+            this._setFieldValue("txtCodigoPartidoEst", partido?.value ? (partido.dataset.codigo || "") : "");
+            this._setFieldValue("txtCodigoLocalidadEst", localidad?.value ? (localidad.dataset.codigo || "") : "");
+        }
+
+        _setLocalidadDisabled(disabled) {
+            const select = this._id("cmbLocalidadEst");
+            if (!select) return;
+            select.disabled = !!disabled;
+            if (!window.jQuery) return;
+            const $select = window.jQuery(select);
+            if ($select.data("select2")) {
+                $select.prop("disabled", select.disabled);
+                $select.trigger("change.select2");
+            }
+        }
+
+        async cargarPartidos(idProvincia, selectedPartidoId = null, selectedLocalidadId = null) {
+            const seq = ++this._cargarPartidosSeq;
+            ++this._cargarLocalidadesSeq;
+            this._localidadesCargando = false;
+            this.resetSelect("cmbPartidoEst", "Seleccionar");
+            this.resetSelect("cmbLocalidadEst", "Seleccionar");
+            this._geoCache.partidos = [];
+            this._geoCache.localidades = [];
+            this._actualizarCodigosGeo();
+            this._setLocalidadDisabled(true);
+            if (!idProvincia) return;
+
+            const url = this._replaceUrl(this.options.endpoints.partidosPorProvincia, { idProvincia });
             const data = await this._fetchJson(url, { headers: this._headers(false) });
+            if (seq !== this._cargarPartidosSeq) return;
+
+            this._geoCache.partidos = Array.isArray(data) ? data : [];
+            const select = this._id("cmbPartidoEst");
+            this._geoCache.partidos.forEach(x => {
+                const option = new Option(x.Nombre, x.Id);
+                option.dataset.codigo = x.Codigo || "";
+                select.append(option);
+            });
+            if (selectedPartidoId) this._setFieldValue("cmbPartidoEst", selectedPartidoId, true);
+            await this.cargarLocalidades(selectedPartidoId, selectedLocalidadId);
+            if (seq !== this._cargarPartidosSeq) return;
+            this._actualizarCodigosGeo();
+        }
+
+        async cargarLocalidades(idPartido, selectedLocalidadId = null) {
+            const seq = ++this._cargarLocalidadesSeq;
+            this._localidadesCargando = !!idPartido;
+            this.resetSelect("cmbLocalidadEst", "Seleccionar");
+            this._geoCache.localidades = [];
+            this._actualizarCodigosGeo();
+            this._setLocalidadDisabled(true);
+            if (!idPartido) {
+                this._localidadesCargando = false;
+                return;
+            }
+
+            try {
+                const url = this._replaceUrl(this.options.endpoints.localidadesPorPartido, { idPartido });
+                const data = await this._fetchJson(url, { headers: this._headers(false) });
+                if (seq !== this._cargarLocalidadesSeq) return;
+
+                this._geoCache.localidades = Array.isArray(data) ? data : [];
+                const select = this._id("cmbLocalidadEst");
+                this._geoCache.localidades.forEach(x => {
+                    const option = new Option(x.Nombre, x.Id);
+                    option.dataset.codigo = x.Codigo || "";
+                    select.append(option);
+                });
+                if (selectedLocalidadId) this._setFieldValue("cmbLocalidadEst", selectedLocalidadId, true);
+                this._actualizarCodigosGeo();
+            } finally {
+                if (seq === this._cargarLocalidadesSeq) {
+                    this._localidadesCargando = false;
+                    this._setLocalidadDisabled(this.isSoloLectura() || !this._getIntOrNull("cmbPartidoEst"));
+                }
+            }
+        }
+
+        async limpiarGeoEspecifico() {
+            this._localidadLegacy = null;
+            return await this.cargarPartidos(this._getIntOrNull("cmbProvinciaEst"));
+        }
+
+        async prefillDesdeCliente(idCliente) {
+            if (this._ultimoModo !== "nuevo" || !idCliente) return;
+            const url = this._replaceUrl(this.options.endpoints.clienteEditar, { id: idCliente });
+            const c = await this._fetchJson(url, { headers: this._headers(false) });
+
+            this._setFieldValue("txtNombreEst", c.Nombre || "");
+            this._setFieldValue("txtCuitEst", c.Cuit || "");
+            this._setFieldValue("txtCalleEst", c.Calle || c.Domicilio || "");
+            this._setFieldValue("txtNumeroEst", c.Numero || "");
+            this._setFieldValue("txtPisoDeptoEst", c.PisoDepartamento || "");
+            this._setFieldValue("txtCodPostalEst", c.CodPostal || "");
+            this._setFieldValue("txtContactoEstNombre", c.Nombre || "");
+            this._setFieldValue("txtContactoEstTelefono", c.Telefono || "");
+            this._setFieldValue("txtContactoEstTelefonoAlt", c.TelefonoAlt || "");
+            this._setFieldValue("txtContactoEstEmail", c.Email || "");
+            if (c.IdCondicionIva) this._setFieldValue("cmbCondicionIvaEst", c.IdCondicionIva, true);
+            if (c.IdProvincia) this._setFieldValue("cmbProvinciaEst", c.IdProvincia, true);
+            if (c.IdTipoGenerador) this._setFieldValue("cmbTipoGeneradorEst", c.IdTipoGenerador, true);
+            await this.limpiarGeoEspecifico();
+            this.actualizarBadgeEstablecimiento();
+        }
+
+        async _llenarCombo(selectId, url, seq, textField = "Nombre") {
+            const data = await this._fetchJson(url, { headers: this._headers(false) });
+            if (seq !== this._cargarCombosSeq) return;
+
             const select = this._id(selectId);
             if (!select) return;
-            (data || []).forEach(x => select.append(new Option(x.Nombre, x.Id)));
+
+            const seen = new Set();
+            (data || []).forEach(x => {
+                const id = String(x.Id);
+                if (seen.has(id)) return;
+                seen.add(id);
+                select.append(new Option(x[textField] || x.Nombre, x.Id));
+            });
+        }
+
+        async _llenarComboTiposGenerador(seq) {
+            await this._llenarCombo("cmbTipoGeneradorEst", this.options.endpoints.tiposGenerador, seq, "Etiqueta");
         }
 
         async cargarCombos() {
+            const seq = ++this._cargarCombosSeq;
+
             this.resetSelect("cmbClienteEst", "Seleccionar");
             this.resetSelect("cmbCondicionIvaEst", "Seleccionar");
             this.resetSelect("cmbProvinciaEst", "Seleccionar");
+            this.resetSelect("cmbPartidoEst", "Seleccionar");
+            this.resetSelect("cmbLocalidadEst", "Seleccionar");
+            this.resetSelect("cmbTipoGeneradorEst", "Seleccionar");
             this.resetSelect("cmbDiaEst", "Seleccionar");
             this.resetSelect("cmbSemanaEst", "Seleccionar");
             this.resetSelect("cmbListaPrecioEst", "Seleccionar");
+            this.resetSelect("cmbCamionEst", "Seleccionar");
             this.resetSelect("cmbProductoEst", "Seleccionar");
+            this._setLocalidadDisabled(true);
 
             await Promise.all([
-                this._llenarCombo("cmbClienteEst", this.options.endpoints.clientes),
-                this._llenarCombo("cmbCondicionIvaEst", this.options.endpoints.condicionesIva),
-                this._llenarCombo("cmbProvinciaEst", this.options.endpoints.provincias),
-                this._llenarCombo("cmbDiaEst", this.options.endpoints.dias),
-                this._llenarCombo("cmbSemanaEst", this.options.endpoints.semanas),
-                this._llenarCombo("cmbListaPrecioEst", this.options.endpoints.listasPrecios),
-                this._llenarCombo("cmbCamionEst", this.options.endpoints.camiones)
+                this._llenarCombo("cmbClienteEst", this.options.endpoints.clientes, seq),
+                this._llenarCombo("cmbCondicionIvaEst", this.options.endpoints.condicionesIva, seq),
+                this._llenarCombo("cmbProvinciaEst", this.options.endpoints.provincias, seq),
+                this._llenarComboTiposGenerador(seq),
+                this._llenarCombo("cmbDiaEst", this.options.endpoints.dias, seq),
+                this._llenarCombo("cmbSemanaEst", this.options.endpoints.semanas, seq),
+                this._llenarCombo("cmbListaPrecioEst", this.options.endpoints.listasPrecios, seq),
+                this._llenarCombo("cmbCamionEst", this.options.endpoints.camiones, seq)
             ]);
+
+            if (seq !== this._cargarCombosSeq) return;
 
             this.inicializarSelect2Modal();
         }
@@ -1077,19 +1271,26 @@
                 Id: id !== "" ? parseInt(id, 10) : 0,
                 IdCliente: this._getIntOrNull("cmbClienteEst"),
                 Nombre: this._getFieldValue("txtNombreEst"),
+                IdEstablecimientoCliente: (this._getFieldValue("txtIdEstablecimientoClienteEst") || "").trim() || null,
                 Cuit: this._getFieldValue("txtCuitEst") || null,
                 IdCondicionIva: this._getIntOrNull("cmbCondicionIvaEst"),
                 ImpuestoIva: !!this._getFieldValue("chkImpuestoIvaEst"),
+                Calle: (this._getFieldValue("txtCalleEst") || "").trim() || null,
+                Numero: (this._getFieldValue("txtNumeroEst") || "").trim() || null,
+                PisoDepartamento: (this._getFieldValue("txtPisoDeptoEst") || "").trim() || null,
+                IdTipoGenerador: this._getIntOrNull("cmbTipoGeneradorEst"),
                 IdProvincia: this._getIntOrNull("cmbProvinciaEst"),
-                Localidad: this._getFieldValue("txtLocalidadEst") || null,
+                IdPartido: this._getIntOrNull("cmbPartidoEst"),
+                IdLocalidad: this._getIntOrNull("cmbLocalidadEst"),
+                Localidad: this._getIntOrNull("cmbLocalidadEst")
+                    ? (this._id("cmbLocalidadEst")?.selectedOptions?.[0]?.text || "").trim() || null
+                    : this._localidadLegacy,
                 CodPostal: this._getFieldValue("txtCodPostalEst") || null,
-                Domicilio: this._getFieldValue("txtDomicilioEst") || null,
                 IdDiaRecoleccion: this._getIntOrNull("cmbDiaEst") ?? 0,
                 IdSemanaRecoleccion: this._getIntOrNull("cmbSemanaEst") ?? 0,
                 IdListaPrecio: this._getIntOrNull("cmbListaPrecioEst") ?? 0,
                 IdCamion: this._getIntOrNull("cmbCamionEst"),
-                HorarioRecoleccionDesde: this._parseHorario(this._getFieldValue("txtHorarioDesdeEst")),
-                HorarioRecoleccionHasta: this._parseHorario(this._getFieldValue("txtHorarioHastaEst"))
+                DiasHorarios: (this._getFieldValue("txtDiasHorariosEst") || "").trim() || null
             };
 
             if (typeof this.options.onGuardarModelo === "function") {
@@ -1118,6 +1319,13 @@
                 }
 
                 this.cerrarErrorCampos();
+                if (esNuevo && data.id) {
+                    try {
+                        await this._guardarContactoInicial(data.id);
+                    } catch (contactoError) {
+                        console.warn("El establecimiento se guardo, pero no se pudo copiar el contacto principal.", contactoError);
+                    }
+                }
                 if (typeof exitoModal === "function") {
                     exitoModal(data.mensaje || (esNuevo
                         ? "Establecimiento registrado correctamente"
@@ -1189,6 +1397,7 @@
 
         limpiarModal() {
             this.setSoloLecturaAttribute(false);
+            this._localidadLegacy = null;
             this.modalEl.querySelectorAll("input, select, textarea").forEach(el => {
                 if (el.id === "txtIdEst") { el.value = ""; return; }
                 if (el.type === "checkbox") { el.checked = false; return; }
@@ -1215,25 +1424,10 @@
         }
 
         validarCampos() {
-            const base = this._validacion?.validarTodos() ?? true;
-            if (!base) return false;
-
-            const desde = this._parseHorario(this._getFieldValue("txtHorarioDesdeEst"));
-            const hasta = this._parseHorario(this._getFieldValue("txtHorarioHastaEst"));
-
-            if (desde && hasta && hasta <= desde) {
-                this.mostrarErrorCampos(
-                    "El horario hasta debe ser mayor al horario desde.",
-                    null,
-                    "validacion"
-                );
-                return false;
-            }
-
-            return true;
+            return this._validacion?.validarTodos() ?? true;
         }
 
-        async _recargarCombo(selectId, url) {
+        async _recargarCombo(selectId, url, textField = "Nombre") {
             const el = this._id(selectId);
             if (!el) return;
 
@@ -1242,7 +1436,7 @@
             el.append(new Option("Seleccionar", ""));
 
             const data = await this._fetchJson(url, { headers: this._headers(false) });
-            (data || []).forEach(x => el.append(new Option(x.Nombre, x.Id)));
+            (data || []).forEach(x => el.append(new Option(x[textField] || x.Nombre, x.Id)));
 
             this._refreshSelect2Field(selectId);
 
@@ -1255,7 +1449,18 @@
             const cfg = this._comboPorController[detail?.tipo];
             if (!cfg) return;
 
-            await this._recargarCombo(cfg.selectId, cfg.url);
+            if (detail?.tipo === "Partidos") {
+                this._localidadLegacy = null;
+                await this.cargarPartidos(this._getIntOrNull("cmbProvinciaEst"), detail.nuevoId || null);
+                return;
+            }
+            if (detail?.tipo === "Localidades") {
+                this._localidadLegacy = null;
+                await this.cargarLocalidades(this._getIntOrNull("cmbPartidoEst"), detail.nuevoId || null);
+                return;
+            }
+
+            await this._recargarCombo(cfg.selectId, cfg.url, cfg.textField || "Nombre");
 
             if (detail.nuevoId) {
                 this._setFieldValue(cfg.selectId, detail.nuevoId, true);
@@ -1364,6 +1569,54 @@
             const btnCli = this._id("btnAgregarClienteEst");
             if (btnCli) {
                 btnCli.addEventListener("click", () => this._abrirNuevoCliente());
+            }
+
+            const cliente = this._id("cmbClienteEst");
+            if (cliente) {
+                cliente.addEventListener("change", () => {
+                    const id = this._getIntOrNull("cmbClienteEst");
+                    if (id && this._ultimoModo === "nuevo") {
+                        this.prefillDesdeCliente(id).catch(console.error);
+                    }
+                });
+            }
+
+            const provincia = this._id("cmbProvinciaEst");
+            if (provincia) {
+                window.jQuery(provincia)
+                    .off("change.geoEst")
+                    .on("change.geoEst", () => {
+                    this._localidadLegacy = null;
+                    this.resetSelect("cmbPartidoEst", "Seleccionar");
+                    this.resetSelect("cmbLocalidadEst", "Seleccionar");
+                    this._actualizarCodigosGeo();
+                    this._setLocalidadDisabled(true);
+                    this.cargarPartidos(this._getIntOrNull("cmbProvinciaEst")).catch(console.error);
+                });
+            }
+
+            const partido = this._id("cmbPartidoEst");
+            if (partido) {
+                window.jQuery(partido)
+                    .off("change.geoEst")
+                    .on("change.geoEst", () => {
+                    this._localidadLegacy = null;
+                    this._actualizarCodigosGeo();
+                    this.resetSelect("cmbLocalidadEst", "Seleccionar");
+                    this._actualizarCodigosGeo();
+                    this._setLocalidadDisabled(true);
+                    this.cargarLocalidades(this._getIntOrNull("cmbPartidoEst")).catch(console.error);
+                });
+            }
+
+            const localidad = this._id("cmbLocalidadEst");
+            if (localidad) {
+                window.jQuery(localidad)
+                    .off("change.geoEst")
+                    .on("change.geoEst", () => {
+                    this._localidadLegacy = null;
+                    this._actualizarCodigosGeo();
+                });
             }
         }
 

@@ -25,7 +25,7 @@
                 ? this.root
                 : this.root.querySelector("[data-gasto-modal]");
 
-            if (!this.modalEl) throw new Error("No se encontró [data-gasto-modal].");
+            if (!this.modalEl) throw new Error("No se encontro [data-gasto-modal].");
 
             this.bsModal = new bootstrap.Modal(this.modalEl);
             this._ultimoModo = "nuevo";
@@ -43,7 +43,7 @@
 
             this._labelsCampos = {
                 txtFecha: "Fecha",
-                cmbCategoria: "Categoría",
+                cmbCategoria: "Categoria",
                 cmbCuenta: "Cuenta",
                 txtConcepto: "Concepto",
                 txtImporteNeto: "Importe neto"
@@ -113,7 +113,9 @@
         _etiquetaCuenta(c) {
             const nom = (c.Nombre || "").trim();
             const suc = (c.NombreCombo || "").trim();
-            return suc ? `${nom} (${suc})` : nom;
+            const tipo = ((c.Codigo || "Efectivo") === "Banco") ? "Banco" : "Efectivo";
+            const base = suc ? `${nom} (${suc})` : nom;
+            return `${base} · ${tipo}`;
         }
 
         _refreshSelect2Field(id) {
@@ -348,7 +350,13 @@
 
                 await this.cargarCombos();
 
-                const hoy = new Date().toISOString().slice(0, 10);
+                // Fecha local (toISOString es UTC y puede pasar al dia siguiente)
+                const ahora = new Date();
+                const hoy = [
+                    ahora.getFullYear(),
+                    String(ahora.getMonth() + 1).padStart(2, "0"),
+                    String(ahora.getDate()).padStart(2, "0")
+                ].join("-");
                 this._setFieldValue("txtFecha", hoy);
 
                 this._id("modalEdicionLabel").textContent = "Nuevo gasto";
@@ -484,7 +492,7 @@
 
         async eliminar(id) {
             const ok = typeof confirmarModal === "function"
-                ? await confirmarModal("¿Desea eliminar este gasto? Se revertirá el movimiento en caja.")
+                ? await confirmarModal("¿Desea eliminar este gasto? Se revertira el movimiento en caja.")
                 : window.confirm("¿Desea eliminar este gasto?");
 
             if (!ok) return false;

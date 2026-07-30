@@ -11,5 +11,9 @@ namespace SistemaOroAmbiental.DAL.Repository
         Task<IQueryable<ClientesEstablecimiento>> ObtenerTodos();
         Task<ClientesEstablecimiento?> BuscarDuplicado(int? idExcluir, int idCliente, string nombre);
         Task<bool> TieneContratos(int id);
+        Task<ClientesEstablecimiento?> ObtenerPrincipalPorCliente(int idCliente);
+        Task<List<ClientesEstablecimientosDia>> ObtenerDiasAdicionales(int idEstablecimiento);
+        Task<bool> ReemplazarDiasAdicionales(int idEstablecimiento, IReadOnlyList<ClientesEstablecimientosDia> dias, int idUsuario);
+        Task<int> ObtenerPrimerIdCatalogo(string tabla);
     }
 }

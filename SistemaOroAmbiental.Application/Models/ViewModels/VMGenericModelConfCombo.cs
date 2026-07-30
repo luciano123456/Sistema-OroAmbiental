@@ -9,5 +9,6 @@ namespace SistemaOroAmbiental.Application.Models.ViewModels
 
         public string? Nombre { get; set; }
         public string? NombreCombo { get; set; }
+        public string? Codigo { get; set; }
     }
 }

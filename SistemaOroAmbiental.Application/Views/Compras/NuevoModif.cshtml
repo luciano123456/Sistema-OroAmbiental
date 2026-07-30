@@ -1,4 +1,4 @@
-﻿@{
+@{
     Layout = "_LayoutModulo";
     ViewData["Title"] = "Compras - Nuevo / Modificar";
     var id = (int)(ViewBag.Id ?? 0);
@@ -8,10 +8,10 @@
 @section Estilos {
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
-    <link href="~/css/disenopantallas.css?v=5.1" rel="stylesheet" />
-    <link href="~/css/M_Generico.css?v=5.1" rel="stylesheet" />
-    <link href="~/css/VentasNuevoModif.css?v=5.1" rel="stylesheet" />
-    <link href="~/css/Compras.css?v=5.1" rel="stylesheet" />
+    <link href="~/css/disenopantallas.css?v=8.1" rel="stylesheet" />
+    <link href="~/css/M_Generico.css?v=5.2" rel="stylesheet" />
+    <link href="~/css/VentasNuevoModif.css?v=5.2" rel="stylesheet" />
+    <link href="~/css/Compras.css?v=5.2" rel="stylesheet" />
 }
 
 <div class="ventanew compras-nuevo">
@@ -79,7 +79,7 @@
 
                 <div id="alertCompraPagos" class="vn-alert-warning mb-3" hidden>
                     <i class="fa fa-info-circle"></i>
-                    Esta compra tiene pagos. Podés editarlos en la pestaña Pagos; los cambios se aplican al guardar (caja y cuenta corriente).
+                    Esta compra tiene pagos. Podes editarlos en la pestana Pagos; los cambios se aplican al guardar (caja y cuenta corriente).
                 </div>
 
                 <input type="hidden" id="Compra_Id" value="@id" />
@@ -160,7 +160,7 @@
                     <div id="lblSinLineas" class="vn-empty" hidden>
                         <i class="fa fa-inbox"></i>
                         Sin productos cargados
-                        <small class="d-block">Usá «Agregar producto» para comenzar</small>
+                        <small class="d-block">Usa "Agregar producto" para comenzar</small>
                     </div>
                 </div>
 
@@ -177,7 +177,7 @@
 
                     <div id="lblPagosHint" class="cm-pagos-hint mb-3">
                         <i class="fa fa-info-circle"></i>
-                        <span id="lblPagosHintText">Agregá filas de pago como en productos. Nada se registra hasta guardar la compra.</span>
+                        <span id="lblPagosHintText">Agrega filas de pago como en productos. Nada se registra hasta guardar la compra.</span>
                     </div>
 
                     <div id="panelPagosCompra">
@@ -276,7 +276,7 @@
         window.CM_INIT = { id: @id, idProveedor: @idProveedor };
     </script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-    <script src="~/js/Entities/M_Proveedores.js?v=5.1"></script>
-    <script src="~/js/Entities/M_Productos.js?v=5.1"></script>
-    <script src="~/js/ComprasNuevoModif.js?v=5.1"></script>
+    <script src="~/js/Entities/M_Proveedores.js?v=5.2"></script>
+    <script src="~/js/Entities/M_Productos.js?v=5.2"></script>
+    <script src="~/js/ComprasNuevoModif.js?v=5.4"></script>
 }

@@ -127,7 +127,7 @@
         return (CM.lineas || []).filter(esLineaRecuperada);
     }
 
-    /** Productos / cobros vacíos: cartel visible + animación en botones agregar */
+    /** Productos / cobros vacios: cartel visible + animacion en botones agregar */
     function actualizarUIEstadoVaciosEntrega() {
         const productosOp = lineasProductosOperacion();
         const recuperados = lineasRecuperadas();
@@ -229,7 +229,7 @@
 
         const clavesDatos = ["contrato", "estado", "fecha", "nota"];
         const clavesCobros = ["cobro", "cobros", "cuenta", "caja"];
-        const clavesProductos = ["producto", "línea", "linea", "cantidad", "costo", "ítem", "item", "líneas", "lineas"];
+        const clavesProductos = ["producto", "linea", "linea", "cantidad", "costo", "item", "item", "lineas", "lineas"];
         const clavesRecuperados = ["recuperado", "recuperados"];
 
         clavesDatos.forEach(k => { if (m.includes(k)) secciones.datos = true; });
@@ -244,7 +244,7 @@
         return (CM.cobrosLineas || []).filter(p => Number(p.Importe) > 0 || p.IdCobro > 0);
     }
 
-    /** Cobros que se envían al guardar (importe > 0 y cuenta de caja). */
+    /** Cobros que se envian al guardar (importe > 0 y cuenta de caja). */
     function cobrosParaGuardar() {
         sincronizarCobrosDesdeDom();
         return (CM.cobrosLineas || []).filter(p =>
@@ -323,7 +323,7 @@
         } else {
             const sinProducto = CM.lineas.some(l => !l.IdProducto);
             if (sinProducto) {
-                erroresProductos.push("Hay líneas sin producto seleccionado.");
+                erroresProductos.push("Hay lineas sin producto seleccionado.");
             }
 
             const cantidadInvalida = CM.lineas.some(l => l.IdProducto > 0 && !(Number(l.Cantidad) > 0));
@@ -438,7 +438,7 @@
 
         initSelectClienteHeader();
         ensureSelect2Cm($("#cEstado"), { placeholder: "Seleccionar estado" });
-        ensureSelect2Cm($("#cCamion"), { placeholder: "Seleccionar camión", allowClear: true });
+        ensureSelect2Cm($("#cCamion"), { placeholder: "Seleccionar camion", allowClear: true });
 
         $("#cCliente").off("change.entregaSuc").on("change.entregaSuc", function () {
             const id = parseInt($(this).val(), 10) || 0;
@@ -563,7 +563,7 @@
     async function cargarEntrega(id) {
         const r = await fetch(API.editarInfo(id), { headers: authHeaders() });
         if (!r.ok) {
-            errorModal("No se encontró la entrega.");
+            errorModal("No se encontro la entrega.");
             return;
         }
 
@@ -855,10 +855,11 @@
         $("#cobroSaldoPend").text(fmtMoney(saldo));
         $("#totPagadoResumen").text(fmtMoney(totalPagado));
         $("#totSaldoResumen").text(fmtMoney(saldo));
+        const accionGuardar = CM.id > 0 ? "Guardar cambios" : "Registrar entrega";
         $("#lblCobrosHintText").text(
             activos.length
-                ? `${activos.length} cobro(s) en la grilla. Se guardan al pulsar ?,?${CM.id > 0 ? "Guardar cambios" : "Registrar entrega"}?,? (caja y cuenta corriente).`
-                : "Agregá filas de cobro como en productos. Nada se registra hasta guardar la entrega."
+                ? `${activos.length} cobro(s) en la grilla. Se guardan al pulsar ${accionGuardar} (caja y cuenta corriente).`
+                : "Agrega filas de cobro como en productos. Nada se registra hasta guardar la entrega."
         );
 
         actualizarUIEstadoVaciosEntrega();
@@ -935,7 +936,7 @@
         recalcularTotalesUI();
     }
 
-    /** IDs de producto ya elegidos en otras líneas (no repetir en la misma entrega). */
+    /** IDs de producto ya elegidos en otras lineas (no repetir en la misma entrega). */
     function idsProductosEnOtrasLineas(excluirKey) {
         const ids = new Set();
         CM.lineas.forEach(l => {
@@ -1313,7 +1314,7 @@
         });
 
         if (!r.ok) {
-            mostrarErrorEntrega("Error de comunicación con el servidor.");
+            mostrarErrorEntrega("Error de comunicacion con el servidor.");
             return;
         }
 
@@ -1338,10 +1339,10 @@
 
         const tieneCobros = (CM.cobrosLineas || []).some(p => p.IdCobro > 0) || cobrosActivos().length > 0;
         const msgCobros = tieneCobros
-            ? " También se revertirán los cobros (egresos de caja y cuenta corriente)."
+            ? " Tambien se revertiran los cobros (egresos de caja y cuenta corriente)."
             : "";
         const confirmado = await confirmarModal(
-            `¿Eliminar esta entrega? Se revertirá stock y deuda del contrato.${msgCobros}`);
+            `¿Eliminar esta entrega? Se revertira stock y deuda del contrato.${msgCobros}`);
         if (!confirmado) return;
 
         const r = await fetch(API.eliminar(CM.id), { method: "DELETE", headers: authHeaders() });

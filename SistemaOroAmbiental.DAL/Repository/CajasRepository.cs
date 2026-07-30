@@ -31,7 +31,8 @@ namespace SistemaOroAmbiental.DAL.Repository
             int? idCuenta,
             int? idSucursal,
             string? tipoMovimiento,
-            string? texto)
+            string? texto,
+            string? tipoCuenta = null)
         {
             if (fechaDesde.HasValue)
                 query = query.Where(x => x.Fecha >= fechaDesde.Value.Date);
@@ -48,6 +49,9 @@ namespace SistemaOroAmbiental.DAL.Repository
             if (idSucursal.HasValue)
                 query = query.Where(x => x.IdCajaNavigation.IdCuentaNavigation.IdSucursal == idSucursal.Value);
 
+            if (!string.IsNullOrWhiteSpace(tipoCuenta))
+                query = AplicarFiltroTipoCuenta(query, tipoCuenta);
+
             if (!string.IsNullOrWhiteSpace(tipoMovimiento))
                 query = query.Where(x => x.TipoMovimiento == tipoMovimiento);
 
@@ -63,9 +67,10 @@ namespace SistemaOroAmbiental.DAL.Repository
             int? idCuenta,
             int? idSucursal,
             string? tipoMovimiento,
-            string? texto)
+            string? texto,
+            string? tipoCuenta = null)
         {
-            var query = AplicarFiltros(QueryBase(), fechaDesde, fechaHasta, idCuenta, idSucursal, tipoMovimiento, texto);
+            var query = AplicarFiltros(QueryBase(), fechaDesde, fechaHasta, idCuenta, idSucursal, tipoMovimiento, texto, tipoCuenta);
 
             return await query
                 .OrderBy(x => x.Fecha)
@@ -76,7 +81,8 @@ namespace SistemaOroAmbiental.DAL.Repository
         public async Task<decimal> SaldoAnterior(
             DateTime? fechaDesde,
             int? idCuenta,
-            int? idSucursal)
+            int? idSucursal,
+            string? tipoCuenta = null)
         {
             if (!fechaDesde.HasValue)
                 return 0;
@@ -93,6 +99,9 @@ namespace SistemaOroAmbiental.DAL.Repository
             if (idSucursal.HasValue)
                 query = query.Where(x => x.IdCajaNavigation.IdCuentaNavigation.IdSucursal == idSucursal.Value);
 
+            if (!string.IsNullOrWhiteSpace(tipoCuenta))
+                query = AplicarFiltroTipoCuenta(query, tipoCuenta);
+
             return await query.SumAsync(x => x.Ingreso - x.Egreso);
         }
 
@@ -102,15 +111,73 @@ namespace SistemaOroAmbiental.DAL.Repository
             int? idCuenta,
             int? idSucursal,
             string? tipoMovimiento,
-            string? texto)
+            string? texto,
+            string? tipoCuenta = null)
         {
-            var query = AplicarFiltros(_db.CajasMovimientos.AsQueryable(), fechaDesde, fechaHasta, idCuenta, idSucursal, tipoMovimiento, texto);
+            var query = AplicarFiltros(QueryBase(), fechaDesde, fechaHasta, idCuenta, idSucursal, tipoMovimiento, texto, tipoCuenta);
 
             var ingresos = await query.SumAsync(x => x.Ingreso);
             var egresos = await query.SumAsync(x => x.Egreso);
             var cantidad = await query.CountAsync();
 
             return (ingresos, egresos, cantidad);
+        }
+
+        public async Task<(decimal saldoEfectivo, decimal saldoBanco, decimal ingresosEfectivo, decimal egresosEfectivo, decimal ingresosBanco, decimal egresosBanco)> ResumenConsolidado(
+            DateTime? fechaDesde,
+            DateTime? fechaHasta,
+            int? idSucursal,
+            string? texto)
+        {
+            var saldosQuery = _db.CajasSaldos
+                .AsNoTracking()
+                .Include(x => x.IdCuentaNavigation)
+                .AsQueryable();
+
+            if (idSucursal.HasValue)
+                saldosQuery = saldosQuery.Where(x => x.IdCuentaNavigation.IdSucursal == idSucursal.Value);
+
+            var saldos = await saldosQuery.ToListAsync();
+            var saldoEfectivo = saldos.Where(x => EsTipoCuenta(x.IdCuentaNavigation.TipoCuenta, "Efectivo")).Sum(x => x.Saldo);
+            var saldoBanco = saldos.Where(x => EsTipoCuenta(x.IdCuentaNavigation.TipoCuenta, "Banco")).Sum(x => x.Saldo);
+
+            var movQuery = _db.CajasMovimientos
+                .AsNoTracking()
+                .Include(x => x.IdCajaNavigation)
+                    .ThenInclude(c => c.IdCuentaNavigation)
+                .AsQueryable();
+
+            if (fechaDesde.HasValue)
+                movQuery = movQuery.Where(x => x.Fecha >= fechaDesde.Value.Date);
+
+            if (fechaHasta.HasValue)
+            {
+                var hasta = fechaHasta.Value.Date.AddDays(1).AddTicks(-1);
+                movQuery = movQuery.Where(x => x.Fecha <= hasta);
+            }
+
+            if (idSucursal.HasValue)
+                movQuery = movQuery.Where(x => x.IdCajaNavigation.IdCuentaNavigation.IdSucursal == idSucursal.Value);
+
+            if (!string.IsNullOrWhiteSpace(texto))
+                movQuery = movQuery.Where(x => x.Concepto.Contains(texto));
+
+            var movimientos = await movQuery.ToListAsync();
+
+            var ingresosEfectivo = movimientos
+                .Where(x => EsTipoCuenta(x.IdCajaNavigation.IdCuentaNavigation.TipoCuenta, "Efectivo"))
+                .Sum(x => x.Ingreso);
+            var egresosEfectivo = movimientos
+                .Where(x => EsTipoCuenta(x.IdCajaNavigation.IdCuentaNavigation.TipoCuenta, "Efectivo"))
+                .Sum(x => x.Egreso);
+            var ingresosBanco = movimientos
+                .Where(x => EsTipoCuenta(x.IdCajaNavigation.IdCuentaNavigation.TipoCuenta, "Banco"))
+                .Sum(x => x.Ingreso);
+            var egresosBanco = movimientos
+                .Where(x => EsTipoCuenta(x.IdCajaNavigation.IdCuentaNavigation.TipoCuenta, "Banco"))
+                .Sum(x => x.Egreso);
+
+            return (saldoEfectivo, saldoBanco, ingresosEfectivo, egresosEfectivo, ingresosBanco, egresosBanco);
         }
 
         public async Task<CajasSaldo> ObtenerOCrearCajasSaldo(int idCuenta)
@@ -467,6 +534,30 @@ namespace SistemaOroAmbiental.DAL.Repository
                 await trx.RollbackAsync();
                 throw;
             }
+        }
+
+        private static IQueryable<CajasMovimiento> AplicarFiltroTipoCuenta(
+            IQueryable<CajasMovimiento> query,
+            string tipoCuenta)
+        {
+            var tipo = (tipoCuenta ?? "").Trim();
+            if (string.Equals(tipo, "Banco", StringComparison.OrdinalIgnoreCase))
+            {
+                return query.Where(x =>
+                    x.IdCajaNavigation.IdCuentaNavigation.TipoCuenta == "Banco");
+            }
+
+            // Efectivo: incluye null/vacio (default historico) y "Efectivo"
+            return query.Where(x =>
+                x.IdCajaNavigation.IdCuentaNavigation.TipoCuenta == null
+                || x.IdCajaNavigation.IdCuentaNavigation.TipoCuenta == ""
+                || x.IdCajaNavigation.IdCuentaNavigation.TipoCuenta == "Efectivo");
+        }
+
+        private static bool EsTipoCuenta(string? valor, string esperado)
+        {
+            var tipo = string.IsNullOrWhiteSpace(valor) ? "Efectivo" : valor.Trim();
+            return string.Equals(tipo, esperado, StringComparison.OrdinalIgnoreCase);
         }
 
         private static bool EsEditable(string tipo)

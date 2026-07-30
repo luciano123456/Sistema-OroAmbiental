@@ -3,6 +3,7 @@ let dias = [];
 let camiones = [];
 let rutasData = [];
 let clientesCatalogo = [];
+let establecimientosClienteCache = [];
 let recorridosSeleccionados = [];
 let clientesRecorridoActual = [];
 let sugeridosRecorridoActual = [];
@@ -35,14 +36,14 @@ $(document).ready(async () => {
     $(".rec-btn-shortcut[data-config-controller]").on("click", async function (e) {
         e.preventDefault();
         if (typeof abrirConfiguracion !== "function") {
-            errorModal("No se pudo abrir la configuración.");
+            errorModal("No se pudo abrir la configuracion.");
             return;
         }
         try {
             await abrirConfiguracion($(this).data("config-nombre"), $(this).data("config-controller"), null, null, null, true);
         } catch (err) {
             console.error(err);
-            errorModal("No se pudo abrir la configuración.");
+            errorModal("No se pudo abrir la configuracion.");
         }
     });
 
@@ -96,10 +97,11 @@ $(document).ready(async () => {
     $("#listaRutas").on("click", ".btn-guardar-zona", async function (e) {
         e.stopPropagation();
         const $row = $(this).closest(".rec-ruta-item");
-        await guardarZonaRecorrido(
+        await guardarMetaRecorrido(
             parseInt($row.data("semana"), 10),
             parseInt($row.data("dia"), 10),
-            $row.find(".rec-zona-input").val()
+            $row.find(".rec-zona-input").val(),
+            $row.find(".rec-salida-input").val()
         );
     });
 
@@ -120,11 +122,32 @@ $(document).ready(async () => {
         $(this).trigger("click");
     });
 
-    $("#listaRutas").on("keydown", ".rec-zona-input", function (e) {
+    $("#listaRutas").on("keydown", ".rec-zona-input, .rec-salida-input", function (e) {
         if (e.key === "Enter") {
             e.preventDefault();
             $(this).closest(".rec-ruta-item").find(".btn-guardar-zona").trigger("click");
         }
+    });
+
+    $("#listaRutas").on("blur", ".rec-salida-input", async function () {
+        const $row = $(this).closest(".rec-ruta-item");
+        const idSemana = parseInt($row.data("semana"), 10);
+        const idDia = parseInt($row.data("dia"), 10);
+        const valor = ($(this).val() || "").trim();
+        if (valor === getHorarioSalidaRecorrido(idSemana, idDia)) return;
+
+        await guardarMetaRecorrido(
+            idSemana,
+            idDia,
+            $row.find(".rec-zona-input").val(),
+            valor,
+            { silent: true }
+        );
+    });
+
+    $("#listaClientesRecorrido").on("blur", ".rec-obs-input", function () {
+        const id = parseInt($(this).data("id"), 10);
+        guardarObservacionClienteRecorrido(id, $(this).val());
     });
 
     $("#txtBuscarRecorrido").on("input", function () {
@@ -160,6 +183,8 @@ $(document).ready(async () => {
     $("#crCliente").on("change", async function () {
         await cargarEstablecimientosCliente(parseInt($(this).val(), 10));
     });
+
+    $("#crEstablecimiento").on("change", aplicarOrdenRecorridoDesdeEstablecimiento);
 
     $("#crActivo").on("change", function () {
         $("#lblCrActivo").text($(this).is(":checked") ? "Activo" : "Inactivo");
@@ -276,6 +301,7 @@ async function cargarClientesCatalogo() {
 async function cargarEstablecimientosCliente(idCliente, selectedId) {
     const sel = $("#crEstablecimiento");
     sel.empty().append(new Option("Sin establecimiento", ""));
+    establecimientosClienteCache = [];
 
     if (!idCliente) {
         sel.val("").trigger("change");
@@ -284,12 +310,24 @@ async function cargarEstablecimientosCliente(idCliente, selectedId) {
 
     try {
         const data = await fetchJson(`/ClientesEstablecimientos/ListaPorCliente?idCliente=${idCliente}`);
-        (data || []).forEach(e => sel.append(new Option(e.Nombre || e.Etiqueta, e.Id)));
+        establecimientosClienteCache = Array.isArray(data) ? data : [];
+        establecimientosClienteCache.forEach(e => sel.append(new Option(e.Nombre || e.Etiqueta, e.Id)));
     } catch (e) {
         console.warn("No se pudieron cargar establecimientos:", e);
     }
 
     sel.val(selectedId ? String(selectedId) : "").trigger("change");
+    aplicarOrdenRecorridoDesdeEstablecimiento();
+}
+
+function aplicarOrdenRecorridoDesdeEstablecimiento() {
+    const idEst = parseInt($("#crEstablecimiento").val(), 10);
+    if (!idEst) return;
+
+    const est = establecimientosClienteCache.find(x => Number(x.Id) === idEst);
+    if (est?.OrdenRecorrido != null && est.OrdenRecorrido > 0) {
+        $("#crPosicion").val(est.OrdenRecorrido);
+    }
 }
 
 async function cargarRutasUnidad() {
@@ -317,9 +355,9 @@ function getUnidadPromptHtml() {
             <div class="rec-unidad-prompt-glow"></div>
             <span class="rec-unidad-prompt-icon"><i class="fa fa-truck"></i></span>
             <p class="rec-unidad-prompt-step">Paso 1</p>
-            <h6 class="rec-unidad-prompt-title">Seleccioná una unidad</h6>
+            <h6 class="rec-unidad-prompt-title">Selecciona una unidad</h6>
             <p class="rec-unidad-prompt-text">
-                Acá vas a ver las rutas por semana y día. Elegí la unidad de recolección en el selector de arriba para empezar.
+                Aca vas a ver las rutas por semana y dia. Elegi la unidad de recoleccion en el selector de arriba para empezar.
             </p>
             <button type="button" class="btn btn-success rec-btn-unidad-prompt">
                 <i class="fa fa-hand-pointer-o me-1"></i> Elegir unidad
@@ -334,7 +372,7 @@ function setEstadoUnidadSeleccionada(seleccionada) {
 
     if (!seleccionada) {
         $("#lblRutasHint").html(
-            '<span class="rec-hint-pendiente"><i class="fa fa-arrow-circle-up"></i> Elegí una unidad arriba para continuar</span>'
+            '<span class="rec-hint-pendiente"><i class="fa fa-arrow-circle-up"></i> Elegi una unidad arriba para continuar</span>'
         );
     }
 }
@@ -355,15 +393,15 @@ function renderListaRutasVacia() {
     const idCamion = parseInt($("#selCamion").val(), 10);
     setEstadoUnidadSeleccionada(!!idCamion);
 
-    $("#selRecorridoRapido").prop("disabled", true).empty().append(new Option("Primero elegí una unidad", "")).trigger("change.select2");
+    $("#selRecorridoRapido").prop("disabled", true).empty().append(new Option("Primero elegi una unidad", "")).trigger("change.select2");
 
     if (!semanas.length || !dias.length) {
-        $("#lblRutasHint").text("Configurá semanas y días para armar los recorridos");
+        $("#lblRutasHint").text("Configura semanas y dias para armar los recorridos");
         $("#listaRutas").html(`
             <div class="rec-empty">
                 <i class="fa fa-calendar-plus-o"></i>
-                Todavía no hay semanas o días cargados.<br>
-                <span class="text-muted-cc">Usá los botones <strong>+ Semanas</strong> y <strong>+ Días</strong> para crearlos.</span>
+                Todavia no hay semanas o dias cargados.<br>
+                <span class="text-muted-cc">Usa los botones <strong>+ Semanas</strong> y <strong>+ Dias</strong> para crearlos.</span>
             </div>`);
         return;
     }
@@ -377,25 +415,35 @@ function renderRutaItemHtml(s, d, mapa) {
     const key = `${s.Id}_${d.Id}`;
     const ruta = mapa[key];
     const zona = (ruta?.Zona || "").trim();
+    const salida = (ruta?.HorarioSalida || "").trim();
     const selected = isRecorridoSeleccionado(s.Id, d.Id);
 
     return `
-        <div class="rec-ruta-item${selected ? " selected" : ""}${zona ? " has-zona" : ""}"
+        <div class="rec-ruta-item${selected ? " selected" : ""}${zona ? " has-zona" : ""}${salida ? " has-salida" : ""}"
              data-semana="${s.Id}" data-dia="${d.Id}" id="ruta-${key}" role="button" tabindex="0">
             <div class="rec-ruta-main">
                 <span class="rec-ruta-badge">${escapeHtml(s.Nombre)}</span>
                 <strong class="rec-ruta-dia">${escapeHtml(d.Nombre)}</strong>
             </div>
-            <div class="rec-ruta-zona">
-                <label class="rec-ruta-zona-label">Zona / barrio</label>
-                <div class="rec-ruta-zona-row">
-                    <input type="text" class="form-control rec-input rec-zona-input"
-                           value="${escapeHtml(zona)}" placeholder="Ej: Lanús, Avellaneda..."
-                           maxlength="120" autocomplete="off" />
-                    <button type="button" class="btn btn-success btn-sm btn-guardar-zona" title="Guardar zona">
-                        <i class="fa fa-check"></i>
-                    </button>
+            <div class="rec-ruta-meta">
+                <div class="rec-ruta-zona">
+                    <label class="rec-ruta-zona-label">Zona / barrio</label>
+                    <div class="rec-ruta-zona-row">
+                        <input type="text" class="form-control rec-input rec-zona-input"
+                               value="${escapeHtml(zona)}" placeholder="Ej: Lanus, Avellaneda..."
+                               maxlength="120" autocomplete="off" />
+                    </div>
                 </div>
+                <div class="rec-ruta-salida">
+                    <label class="rec-ruta-zona-label">Horario de salida</label>
+                    <input type="text" class="form-control rec-input rec-salida-input"
+                           value="${escapeHtml(salida)}" placeholder="Ej: 07:30"
+                           maxlength="20" autocomplete="off"
+                           title="Horario de salida del recorrido (se imprime en la hoja de ruta)" />
+                </div>
+                <button type="button" class="btn btn-success btn-sm btn-guardar-zona" title="Guardar zona y horario de salida">
+                    <i class="fa fa-check"></i>
+                </button>
             </div>
             <div class="rec-ruta-actions">
                 <button type="button" class="btn btn-primary btn-sm btn-ver-clientes">
@@ -420,7 +468,7 @@ function renderListaRutas() {
     }
 
     const camionNombre = camiones.find(c => c.Id === idCamion)?.Nombre || "";
-    $("#lblRutasHint").html(`${camionNombre} — ${semanas.length * dias.length} recorridos posibles · <span class="rec-hint-multi">Ctrl + clic para elegir varios días</span>`);
+    $("#lblRutasHint").html(`${camionNombre} - ${semanas.length * dias.length} recorridos posibles · <span class="rec-hint-multi">Ctrl + clic para elegir varios dias</span>`);
 
     const mapa = {};
     (rutasData || []).forEach(r => { mapa[`${r.IdSemana}_${r.IdDia}`] = r; });
@@ -450,7 +498,7 @@ function renderListaRutas() {
             const key = `${s.Id}_${d.Id}`;
             const ruta = mapa[key];
             const zona = (ruta?.Zona || "").trim();
-            const label = `${s.Nombre} · ${d.Nombre}${zona ? " — " + zona : ""}`;
+            const label = `${s.Nombre} · ${d.Nombre}${zona ? " - " + zona : ""}`;
             items.push({ s, d, zona, label, key });
             opcionesRapidas.push({ key, label });
         });
@@ -543,7 +591,7 @@ function syncSeleccionRecorridosUI(recargarClientes) {
 
     const activo = getRecorridoActivo();
     if (!activo) {
-        $("#lblRecorridoSeleccionado").text("Elegí un recorrido de la lista");
+        $("#lblRecorridoSeleccionado").text("Elegi un recorrido de la lista");
         $("#btnNuevoClienteRecorrido, #btnHojaRutaRecorrido, #btnTraerProgramadosRec").prop("disabled", true);
         $("#btnTraerProgramadosRec").addClass("d-none");
         ocultarPanelSugeridos();
@@ -564,7 +612,7 @@ function syncSeleccionRecorridosUI(recargarClientes) {
 function actualizarLabelRecorridoSeleccionado(extra) {
     const activo = getRecorridoActivo();
     if (!activo) {
-        $("#lblRecorridoSeleccionado").text("Elegí un recorrido de la lista");
+        $("#lblRecorridoSeleccionado").text("Elegi un recorrido de la lista");
         return;
     }
 
@@ -578,7 +626,7 @@ function actualizarLabelRecorridoSeleccionado(extra) {
             })
             .join(" · ");
         const activoDia = dias.find(d => d.Id === activo.idDia)?.Nombre || "";
-        const base = `${camion} · ${recorridosSeleccionados.length} días seleccionados (${resumenDias}) · viendo ${activoDia}`;
+        const base = `${camion} · ${recorridosSeleccionados.length} dias seleccionados (${resumenDias}) · viendo ${activoDia}`;
         $("#lblRecorridoSeleccionado").text(extra ? `${base} · ${extra}` : base);
         return;
     }
@@ -599,14 +647,21 @@ function actualizarSelectRecorridoRapido(opciones) {
     if (sel.data("select2")) sel.trigger("change.select2");
 }
 
+function getHorarioSalidaRecorrido(idSemana, idDia) {
+    const ruta = rutasData.find(x => x.IdSemana === idSemana && x.IdDia === idDia);
+    return (ruta?.HorarioSalida || "").trim();
+}
+
 function getRecorridoLabelText(extra) {
     const activo = getRecorridoActivo();
-    if (!activo) return "Elegí un recorrido de la lista";
+    if (!activo) return "Elegi un recorrido de la lista";
     const { idCamion, idSemana, idDia, zona } = activo;
     const camion = camiones.find(c => c.Id === idCamion)?.Nombre || "";
     const semana = semanas.find(s => s.Id === idSemana)?.Nombre || "";
     const dia = dias.find(d => d.Id === idDia)?.Nombre || "";
-    const base = `${camion} · ${semana} · ${dia}${zona ? " · " + zona : ""}`;
+    const salida = getHorarioSalidaRecorrido(idSemana, idDia);
+    let base = `${camion} · ${semana} · ${dia}${zona ? " · " + zona : ""}`;
+    if (salida) base += ` · Salida ${salida}`;
     return extra ? `${base} · ${extra}` : base;
 }
 
@@ -621,7 +676,7 @@ function seleccionarRecorrido(idSemana, idDia, zona) {
 function limpiarSeleccionRecorrido() {
     recorridosSeleccionados = [];
     $(".rec-ruta-item").removeClass("selected");
-    $("#lblRecorridoSeleccionado").text("Elegí un recorrido de la lista");
+    $("#lblRecorridoSeleccionado").text("Elegi un recorrido de la lista");
     $("#btnNuevoClienteRecorrido, #btnHojaRutaRecorrido, #btnTraerProgramadosRec").prop("disabled", true);
     $("#btnTraerProgramadosRec").addClass("d-none");
     ocultarPanelSugeridos();
@@ -633,24 +688,29 @@ function scrollARuta(idSemana, idDia) {
     if (el) el.scrollIntoView({ behavior: "smooth", block: "nearest" });
 }
 
-async function guardarZonaRecorrido(idSemana, idDia, zona) {
+async function guardarMetaRecorrido(idSemana, idDia, zona, horarioSalida, opciones = {}) {
+    const silent = !!opciones.silent;
     const idCamion = parseInt($("#selCamion").val(), 10);
-    const valor = (zona || "").trim();
+    const valorZona = (zona || "").trim();
+    const valorSalida = (horarioSalida || "").trim();
 
     if (!idCamion) {
-        errorModal("Seleccioná una unidad.");
-        return;
+        if (!silent) errorModal("Selecciona una unidad.");
+        return false;
     }
 
-    if (!valor) {
-        errorModal("Ingresá el nombre de la zona antes de guardar.");
-        return;
+    if (!valorZona && !valorSalida) {
+        if (!silent) errorModal("Ingresa la zona o el horario de salida antes de guardar.");
+        return false;
     }
 
-    const anterior = (rutasData.find(x => x.IdSemana === idSemana && x.IdDia === idDia)?.Zona || "").trim();
-    if (valor === anterior) {
-        if (typeof exitoModal === "function") exitoModal("La zona ya está guardada.");
-        return;
+    const anterior = rutasData.find(x => x.IdSemana === idSemana && x.IdDia === idDia);
+    const zonaAnterior = (anterior?.Zona || "").trim();
+    const salidaAnterior = (anterior?.HorarioSalida || "").trim();
+
+    if (valorZona === zonaAnterior && valorSalida === salidaAnterior) {
+        if (!silent && typeof exitoModal === "function") exitoModal("Los datos ya estan guardados.");
+        return true;
     }
 
     try {
@@ -660,13 +720,14 @@ async function guardarZonaRecorrido(idSemana, idDia, zona) {
                 IdCamion: idCamion,
                 IdSemana: idSemana,
                 IdDia: idDia,
-                Zona: valor
+                Zona: valorZona,
+                HorarioSalida: valorSalida || null
             })
         });
 
         if (!(data?.valor ?? data?.Valor)) {
-            errorModal(data?.mensaje ?? data?.Mensaje ?? "No se pudo guardar la zona.");
-            return;
+            if (!silent) errorModal(data?.mensaje ?? data?.Mensaje ?? "No se pudo guardar.");
+            return false;
         }
 
         const idx = rutasData.findIndex(x => x.IdSemana === idSemana && x.IdDia === idDia);
@@ -682,22 +743,27 @@ async function guardarZonaRecorrido(idSemana, idDia, zona) {
             Semana: semanaNombre,
             IdDia: idDia,
             Dia: diaNombre,
-            Zona: valor
+            Zona: valorZona,
+            HorarioSalida: valorSalida || null
         };
 
         if (idx >= 0) rutasData[idx] = item;
         else rutasData.push(item);
 
         recorridosSeleccionados.forEach(r => {
-            if (r.idSemana === idSemana && r.idDia === idDia) r.zona = valor;
+            if (r.idSemana === idSemana && r.idDia === idDia) r.zona = valorZona;
         });
 
         renderListaRutas();
         if (getRecorridoActivo()) actualizarLabelRecorridoSeleccionado();
-        if (typeof exitoModal === "function") exitoModal(data?.mensaje ?? data?.Mensaje ?? "Zona guardada.");
+        if (!silent && typeof exitoModal === "function") {
+            exitoModal(data?.mensaje ?? data?.Mensaje ?? "Datos guardados.");
+        }
+        return true;
     } catch (e) {
         console.error(e);
-        errorModal("Error al guardar. Verificá tu sesión e intentá de nuevo.");
+        if (!silent) errorModal("Error al guardar. Verifica tu sesion e intenta de nuevo.");
+        return false;
     }
 }
 
@@ -739,7 +805,7 @@ function renderClientesRecorrido(data) {
         $lista.html(`
             <div class="rec-empty">
                 <i class="fa fa-hand-pointer-o"></i>
-                Elegí un recorrido y tocá <strong>Clientes</strong> para ver la lista
+                Elegi un recorrido y toca <strong>Clientes</strong> para ver la lista
             </div>`);
         return;
     }
@@ -749,7 +815,7 @@ function renderClientesRecorrido(data) {
             <div class="rec-empty" id="recEmptyClientes">
                 <i class="fa fa-users"></i>
                 Sin clientes en este recorrido.<br>
-                <span class="text-muted-cc">Usá <strong>Traer programados</strong> para cargar los del día/semana del establecimiento, o <strong>+ Agregar cliente</strong>.</span>
+                <span class="text-muted-cc">Usa <strong>Traer programados</strong> para cargar los del dia/semana del establecimiento, o <strong>+ Agregar cliente</strong>.</span>
             </div>`);
         return;
     }
@@ -759,17 +825,43 @@ function renderClientesRecorrido(data) {
             ? '<span class="rec-badge-activo rec-badge-activo--si"><i class="fa fa-check-circle"></i> Activo</span>'
             : '<span class="rec-badge-activo rec-badge-activo--no"><i class="fa fa-pause-circle"></i> Inactivo</span>';
 
+        const domicilioTxt = (item.Domicilio || "").trim();
+        const localidadTxt = (item.Localidad || "").trim();
+        const camionTxt = (item.Camion || "").trim();
+
+        const domicilioHtml = domicilioTxt
+            ? escapeHtml(domicilioTxt)
+            : `<span class="rec-cliente-ubicacion-empty">Sin domicilio cargado</span>`;
+
+        const localidadHtml = localidadTxt
+            ? `<span class="rec-cliente-chip rec-cliente-chip--loc"><i class="fa fa-map-pin"></i>${escapeHtml(localidadTxt)}</span>`
+            : `<span class="rec-cliente-chip rec-cliente-chip--muted"><i class="fa fa-map-pin"></i>Sin localidad</span>`;
+
+        const camionHtml = camionTxt
+            ? `<span class="rec-cliente-chip rec-cliente-chip--truck"><i class="fa fa-truck"></i>${escapeHtml(camionTxt)}</span>`
+            : `<span class="rec-cliente-chip rec-cliente-chip--muted"><i class="fa fa-truck"></i>Sin unidad</span>`;
+
         const establecimiento = item.Establecimiento
-            ? `<span class="rec-cliente-est"><i class="fa fa-building-o"></i> ${escapeHtml(item.Establecimiento)}</span>`
-            : `<span class="rec-cliente-est rec-cliente-est--empty"><i class="fa fa-building-o"></i> Sin establecimiento</span>`;
+            ? `<div class="rec-cliente-est-line"><i class="fa fa-building-o"></i>${escapeHtml(item.Establecimiento)}</div>`
+            : "";
 
         return `
             <article class="rec-cliente-item${item.Activo ? "" : " rec-cliente-item--inactive"}" data-id="${item.Id}">
-                <div class="rec-cliente-pos" title="Posición en la ruta">
+                <div class="rec-cliente-pos" title="Posicion en la ruta">
                     <span>${item.Posicion}</span>
                 </div>
                 <div class="rec-cliente-main">
                     <div class="rec-cliente-name">${escapeHtml(item.Cliente)}</div>
+                    <div class="rec-cliente-ubicacion">
+                        <div class="rec-cliente-domicilio">
+                            <i class="fa fa-map-marker" aria-hidden="true"></i>
+                            <span>${domicilioHtml}</span>
+                        </div>
+                        <div class="rec-cliente-ubicacion-chips">
+                            ${localidadHtml}
+                            ${camionHtml}
+                        </div>
+                    </div>
                     ${establecimiento}
                 </div>
                 <div class="rec-cliente-status">${badge}</div>
@@ -780,6 +872,11 @@ function renderClientesRecorrido(data) {
                     <button type="button" class="rec-cliente-btn rec-cliente-btn--delete" onclick="eliminarClienteRecorrido(${item.Id})" title="Quitar de la ruta">
                         <i class="fa fa-trash"></i>
                     </button>
+                </div>
+                <div class="rec-cliente-obs">
+                    <label class="rec-cliente-obs-label">Observacion hoja de ruta</label>
+                    <textarea class="form-control rec-input rec-obs-input" data-id="${item.Id}" rows="2"
+                              maxlength="500" placeholder="Notas para imprimir en la hoja de ruta...">${escapeHtml(item.Observacion || "")}</textarea>
                 </div>
             </article>`;
     }).join("");
@@ -824,7 +921,7 @@ function renderResultadosBusqueda(data) {
             <tr>
                 <td>${escapeHtml(item.RecorridoTexto)}</td>
                 <td>${escapeHtml(item.Camion)}</td>
-                <td>${escapeHtml(item.Zona || "—")}</td>
+                <td>${escapeHtml(item.Zona || "-")}</td>
                 <td>${item.Posicion}</td>
                 <td>${escapeHtml(item.Cliente)}</td>
                 <td class="text-end">
@@ -869,6 +966,7 @@ async function abrirModalClienteRecorrido(modelo) {
     $("#crId").val(modelo?.Id || 0);
     sel.val(idCliente ? String(idCliente) : "").trigger("change");
     $("#crPosicion").val(esEdicion ? (modelo?.Posicion ?? 1) : getSiguientePosicionRecorrido());
+    $("#crObservacion").val(modelo?.Observacion || "");
     $("#crActivo").prop("checked", modelo?.Activo !== false);
     $("#lblCrActivo").text(modelo?.Activo === false ? "Inactivo" : "Activo");
     $("#modalClienteRecorridoTitulo").text(esEdicion ? "Editar cliente en recorrido" : "Agregar cliente al recorrido");
@@ -886,7 +984,8 @@ async function editarClienteRecorrido(id) {
             IdCliente: data.IdCliente,
             IdEstablecimiento: data.IdEstablecimiento,
             Posicion: data.Posicion,
-            Activo: data.Activo
+            Activo: data.Activo,
+            Observacion: data.Observacion
         });
     } catch (e) {
         console.error(e);
@@ -909,11 +1008,12 @@ async function guardarClienteRecorrido() {
         IdSemana: activo.idSemana,
         IdDia: activo.idDia,
         Posicion: parseInt($("#crPosicion").val(), 10) || 1,
-        Activo: $("#crActivo").is(":checked")
+        Activo: $("#crActivo").is(":checked"),
+        Observacion: ($("#crObservacion").val() || "").trim() || null
     };
 
     if (!payload.IdCliente) {
-        errorModal("Seleccioná un cliente.");
+        errorModal("Selecciona un cliente.");
         return;
     }
 
@@ -960,19 +1060,54 @@ async function eliminarClienteRecorrido(id) {
     }
 }
 
+async function guardarObservacionClienteRecorrido(id, observacion) {
+    const item = clientesRecorridoActual.find(x => Number(x.Id) === Number(id));
+    if (!item) return;
+
+    const activo = getRecorridoActivo();
+    if (!activo) return;
+
+    const valor = (observacion || "").trim();
+    const anterior = (item.Observacion || "").trim();
+    if (valor === anterior) return;
+
+    const payload = {
+        Id: item.Id,
+        IdCliente: item.IdCliente,
+        IdEstablecimiento: item.IdEstablecimiento,
+        IdCamion: activo.idCamion,
+        IdSemana: activo.idSemana,
+        IdDia: activo.idDia,
+        Posicion: item.Posicion,
+        Activo: item.Activo,
+        Observacion: valor || null
+    };
+
+    try {
+        const data = await fetchJson("/Recorridos/ActualizarClienteRecorrido", {
+            method: "PUT",
+            body: JSON.stringify(payload)
+        });
+
+        if (!(data?.valor ?? data?.Valor)) {
+            errorModal(data?.mensaje ?? data?.Mensaje ?? "No se pudo guardar la observacion.");
+            return;
+        }
+
+        item.Observacion = valor || null;
+    } catch (e) {
+        console.error(e);
+        errorModal("Error al guardar la observacion.");
+    }
+}
+
 async function abrirHojaRutaRecorrido() {
     if (!recorridosSeleccionados.length) {
-        errorModal("Seleccioná al menos un recorrido.");
+        errorModal("Selecciona al menos un recorrido.");
         return;
     }
 
     const idCamion = recorridosSeleccionados[0].idCamion;
-    const hoy = new Date();
-    const fecha = [
-        hoy.getFullYear(),
-        String(hoy.getMonth() + 1).padStart(2, "0"),
-        String(hoy.getDate()).padStart(2, "0")
-    ].join("-");
 
     const recorridosParam = recorridosSeleccionados
         .map(r => recorridoKey(r.idSemana, r.idDia))
@@ -980,7 +1115,6 @@ async function abrirHojaRutaRecorrido() {
 
     const params = new URLSearchParams({
         idCamion: String(idCamion),
-        fecha,
         recorridos: recorridosParam
     });
 
@@ -1005,7 +1139,7 @@ async function abrirHojaRutaRecorrido() {
         const html = await response.text();
         const ventana = window.open("", "_blank");
         if (!ventana) {
-            errorModal("El navegador bloqueó la ventana emergente. Permití pop-ups e intentá de nuevo.");
+            errorModal("El navegador bloqueo la ventana emergente. Permiti pop-ups e intenta de nuevo.");
             return;
         }
 
@@ -1081,7 +1215,7 @@ function renderPanelSugeridos() {
 
     $panel.removeClass("d-none");
     $("#lblSugeridosRecorrido").text(
-        `${pendientes.length} cliente${pendientes.length === 1 ? "" : "s"} con recolección programada para este día y semana` +
+        `${pendientes.length} cliente${pendientes.length === 1 ? "" : "s"} con recoleccion programada para este dia y semana` +
         (enRuta.length ? ` · ${enRuta.length} ya en la ruta` : "")
     );
 
@@ -1099,7 +1233,7 @@ function renderPanelSugeridos() {
                     ${item.Establecimiento ? `<small>${escapeHtml(item.Establecimiento)}</small>` : ""}
                     ${domicilio ? `<span class="rec-sugerido-meta">${escapeHtml(domicilio)}</span>` : ""}
                 </span>
-                <span class="rec-sugerido-horario">${escapeHtml(item.Horario || "—")}</span>
+                <span class="rec-sugerido-horario">${escapeHtml(item.Horario || "-")}</span>
                 ${item.YaEnRecorrido ? `<span class="rec-sugerido-badge">En ruta</span>` : ""}
             </label>`;
     }).join("");
@@ -1143,7 +1277,7 @@ async function agregarSugeridosSeleccionados() {
     });
 
     if (!items.length) {
-        errorModal("Seleccioná al menos un cliente programado.");
+        errorModal("Selecciona al menos un cliente programado.");
         return;
     }
 

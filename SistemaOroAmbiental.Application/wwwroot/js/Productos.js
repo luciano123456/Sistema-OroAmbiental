@@ -8,7 +8,7 @@ const columnConfig = [
     { index: 5, filterType: 'text' },
     { index: 6, filterType: 'text' },
     { index: 7, filterType: 'text' },
-    { index: 8, filterType: 'select', fetchDataFunc: listaEstadosStockFilter }
+    { index: 8, filterType: 'select_local' }
 ];
 
 registrarFiltrosGrilla('grd_Productos', columnConfig, {
@@ -157,7 +157,12 @@ async function configurarDataTable(data) {
                 {
                     data: 'StockEstadoTexto',
                     orderable: true,
-                    render: (data, type, row) => renderEstadoStockBadge(row)
+                    render: (data, type, row) => {
+                        if (type === "filter" || type === "sort" || type === "type") {
+                            return row?.StockEstadoTexto || data || "Sin stock";
+                        }
+                        return renderEstadoStockBadge(row);
+                    }
                 },
                 typeof columnaGridActivo === "function" ? columnaGridActivo("Productos") : { data: "Activo" },
             ],
@@ -172,12 +177,14 @@ async function configurarDataTable(data) {
             fixedHeader: true,
             initComplete: async function () {
                 const api = this.api();
-                await armarFiltrosGrillaLista(api, '#grd_Productos', columnConfig, {
+                await initFiltrosGrillaListaEnInitComplete(api, '#grd_Productos', columnConfig, {
                     initSelect2: ($el) => inicializarSelect2Filtro($el)
+                }, {
+                    afterFilters: () => {
+                        configurarOpcionesColumnas();
+                        actualizarKpis(data);
+                    }
                 });
-                configurarOpcionesColumnas();
-                actualizarKpis(data);
-                api.draw(false);
             }
         });
 
@@ -199,15 +206,6 @@ async function listaMedidasFilter() {
         headers: { 'Authorization': 'Bearer ' + token }
     });
     return await response.json();
-}
-
-async function listaEstadosStockFilter() {
-    return [
-        { Nombre: "Sin stock" },
-        { Nombre: "Bajo mínimo" },
-        { Nombre: "Stock OK" },
-        { Nombre: "Disponible" }
-    ];
 }
 
 function renderStockCantidad(valor, row) {

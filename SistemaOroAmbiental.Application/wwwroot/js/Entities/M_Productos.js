@@ -36,7 +36,7 @@
                 : this.root.querySelector("[data-producto-modal]");
 
             if (!this.modalEl) {
-                throw new Error("No se encontr� [data-producto-modal].");
+                throw new Error("No se encontro [data-producto-modal].");
             }
 
             this.bsModal = new bootstrap.Modal(this.modalEl);
@@ -51,7 +51,7 @@
                 getPanel: () => this._id("errorCampos"),
                 campos: [
                     { id: "txtNombre", nombre: "Nombre" },
-                    { id: "cmbCategoria", nombre: "Categoría" },
+                    { id: "cmbCategoria", nombre: "Categoria" },
                     { id: "cmbMedida", nombre: "Unidad de medida" },
                     { id: "txtCostoUnitario", nombre: "Costo unitario" }
                 ],
@@ -268,13 +268,13 @@
 
                 const variacionHtml = pctTxt && tend !== "igual"
                     ? `<div class="prod-hist-var-row">
-                            <span class="prod-hist-var-label">Variación</span>
+                            <span class="prod-hist-var-label">Variacion</span>
                             <span class="prod-hist-pct-large prod-hist-pct-large--${tend}">${pctTxt}</span>
                             <span class="prod-hist-monto-diff">${montoTxt}</span>
                        </div>`
                     : (tend !== "igual"
                         ? `<div class="prod-hist-var-row">
-                            <span class="prod-hist-var-label">Variación</span>
+                            <span class="prod-hist-var-label">Variacion</span>
                             <span class="prod-hist-monto-diff">${montoTxt}</span>
                            </div>`
                         : "");
@@ -858,7 +858,7 @@
                 try {
                     await this._onConfiguracionActualizada(e.detail || {});
                 } catch (err) {
-                    console.error("Error recargando combo tras configuración", err);
+                    console.error("Error recargando combo tras configuracion", err);
                 }
             };
 
@@ -887,7 +887,7 @@
                     ? window.RpVerFicha.botonHtml(idReferencia, "verProducto")
                     : `
                     <button class="rp-btn-ref" data-rp-ver-ficha data-id="${idReferencia}" data-handler="verProducto">
-                        <i class="fa fa-eye me-1"></i> Abrir ficha existente �??
+                        <i class="fa fa-eye me-1"></i> Abrir ficha existente
                     </button>`;
             }
 
@@ -1008,8 +1008,8 @@
     };
 
     /**
-     * Inicializa (o reconfigura) el modal M_Productos de la página.
-     * Incluir el partial M_Productos.cshtml y llamar desde el módulo host con onSaved, etc.
+     * Inicializa (o reconfigura) el modal M_Productos de la pagina.
+     * Incluir el partial M_Productos.cshtml y llamar desde el modulo host con onSaved, etc.
      */
     function initProductoModal(options = {}) {
         const root = document.querySelector("[data-producto-modal]")

@@ -1,4 +1,4 @@
-/* Libro Diario — tabla estilo Excel, responsive */
+/* Libro Diario — tabla premium alineada con RpDataTable */
 
 .ld-index {
     color: #eaf1ff;
@@ -8,8 +8,8 @@
 .ld-tabs {
     border-radius: 12px;
     overflow: hidden;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(8, 12, 22, 0.65);
 }
 
 .ld-tabs .nav-link {
@@ -20,7 +20,7 @@
 }
 
 .ld-tabs .nav-link.active {
-    background: linear-gradient(135deg, rgba(56, 189, 148, 0.35), rgba(16, 185, 129, 0.15));
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.35), rgba(5, 150, 105, 0.15));
     color: #fff;
 }
 
@@ -31,37 +31,28 @@
 }
 
 @media (max-width: 1200px) {
-    .ld-kpis {
-        grid-template-columns: repeat(3, 1fr);
-    }
+    .ld-kpis { grid-template-columns: repeat(3, 1fr); }
 }
 
 @media (max-width: 768px) {
-    .ld-kpis {
-        grid-template-columns: repeat(2, 1fr);
-    }
-
-    .ld-tabs {
-        width: 100%;
-    }
+    .ld-kpis { grid-template-columns: repeat(2, 1fr); }
+    .ld-tabs { width: 100%; }
 }
 
 @media (max-width: 480px) {
-    .ld-kpis {
-        grid-template-columns: 1fr;
-    }
+    .ld-kpis { grid-template-columns: 1fr; }
 }
 
-.ld-val-debe {
-    color: #7dffb8 !important;
-}
+.ld-val-debe { color: #6ee7b7 !important; }
+.ld-val-haber { color: #fca5a5 !important; }
+.ld-val-saldo { color: #fcd34d !important; }
 
-.ld-val-haber {
-    color: #ff9a9a !important;
-}
-
-.ld-val-saldo {
-    color: #ffd166 !important;
+.ld-grid-card {
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(8, 12, 22, 0.72);
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.28);
 }
 
 .ld-grid-card .cc-card-body {
@@ -71,39 +62,86 @@
 .ld-table-wrap {
     overflow: auto;
     max-height: calc(100vh - 340px);
-    border-radius: 0 0 16px 16px;
 }
 
 .ld-table {
     width: 100%;
-    min-width: 1200px;
+    min-width: 1280px;
     border-collapse: separate;
     border-spacing: 0;
-    font-size: 0.82rem;
+    font-size: 0.8rem;
+    table-layout: fixed;
 }
 
-.ld-table thead th {
+.ld-table thead tr:first-child th {
     position: sticky;
     top: 0;
-    z-index: 2;
-    background: linear-gradient(180deg, #1a2744 0%, #121b30 100%);
-    color: #cfe0ff;
+    z-index: 4;
+    background: linear-gradient(180deg, #1a2744 0%, #121b30 100%) !important;
+    color: #b8c9e6 !important;
     font-weight: 700;
-    padding: 10px 8px;
-    border-bottom: 2px solid rgba(255, 255, 255, 0.12);
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 0.65rem 0.5rem;
+    border-bottom: 2px solid rgba(255, 255, 255, 0.08);
     white-space: nowrap;
+}
+
+.ld-table thead tr.ld-filters th {
+    position: sticky;
+    top: 34px;
+    z-index: 3;
+    background: rgba(8, 12, 20, 0.98) !important;
+    padding: 4px 5px !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    vertical-align: middle;
+}
+
+.ld-table thead tr.ld-filters th input,
+.ld-table .rp-filter-thead,
+.ld-table .ld-col-filter {
+    width: 100% !important;
+    height: 30px !important;
+    min-height: 30px !important;
+    padding: 0 8px !important;
+    font-size: 0.72rem !important;
+    border-radius: 7px !important;
+    background: rgba(10, 16, 28, 0.95) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    color: #eaf1ff !important;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.25) !important;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.ld-table thead tr.ld-filters th input::placeholder {
+    color: rgba(234, 241, 255, 0.32) !important;
+}
+
+.ld-table thead tr.ld-filters th input:focus {
+    border-color: rgba(52, 211, 153, 0.5) !important;
+    box-shadow: 0 0 0 2px rgba(52, 211, 153, 0.12) !important;
+    outline: none !important;
 }
 
 .ld-table tbody td,
 .ld-table tfoot td {
-    padding: 8px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    padding: 0.5rem 0.45rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
     vertical-align: middle;
-    background: rgba(255, 255, 255, 0.02);
+    background: rgba(255, 255, 255, 0.018) !important;
+    color: #dce6f5;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ld-table tbody tr:nth-child(even) td {
+    background: rgba(255, 255, 255, 0.038) !important;
 }
 
 .ld-table tbody tr:hover td {
-    background: rgba(255, 255, 255, 0.05);
+    background: rgba(16, 185, 129, 0.07) !important;
 }
 
 .ld-table .ld-num {
@@ -113,25 +151,30 @@
 }
 
 .ld-col-acc {
-    width: 72px;
+    width: 92px !important;
+    min-width: 92px !important;
+    max-width: 92px !important;
     text-align: center;
     white-space: nowrap;
+    padding: 4px !important;
 }
 
 .ld-col-concepto {
-    min-width: 160px;
-    max-width: 220px;
+    min-width: 140px;
+    width: 16%;
 }
 
 .ld-col-saldo {
-    background: rgba(255, 209, 102, 0.06) !important;
+    background: rgba(252, 211, 77, 0.05) !important;
     font-weight: 700;
+    width: 9%;
 }
 
 .ld-row-saldo-ant td {
-    background: rgba(255, 255, 255, 0.04) !important;
+    background: rgba(255, 255, 255, 0.03) !important;
     font-style: italic;
-    opacity: 0.9;
+    color: rgba(234, 241, 255, 0.75) !important;
+    border-bottom: 1px dashed rgba(255, 255, 255, 0.08) !important;
 }
 
 .ld-empty {
@@ -140,10 +183,7 @@
     color: rgba(234, 241, 255, 0.55);
 }
 
-/* Autocomplete */
-.ld-ac-wrap {
-    position: relative;
-}
+.ld-ac-wrap { position: relative; }
 
 .ld-ac-list {
     position: absolute;
@@ -154,8 +194,8 @@
     max-height: 220px;
     overflow: auto;
     border-radius: 10px;
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    background: #1a2332;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: #0f1628;
     box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
 }
 
@@ -173,10 +213,54 @@
 }
 
 .ld-ac-item:hover {
-    background: rgba(56, 189, 148, 0.15);
+    background: rgba(16, 185, 129, 0.12);
 }
 
 .ld-ac-item small {
     opacity: 0.65;
     margin-left: 8px;
+}
+
+.ld-grid-card.rp-grid-panel-wrap {
+    overflow: visible;
+}
+
+.ld-index .rp-grid-panel {
+    padding: 0;
+}
+
+.ld-index .rp-cards-grid {
+    padding: 1rem;
+    gap: 12px;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+}
+
+.ld-mov-card.ld-card-debe {
+    border-color: rgba(16, 185, 129, 0.25);
+}
+
+.ld-mov-card.ld-card-haber {
+    border-color: rgba(248, 113, 113, 0.25);
+}
+
+.ld-mov-card.ld-card-saldo-ant {
+    border-style: dashed;
+    opacity: 0.92;
+}
+
+.ld-card-head-text {
+    min-width: 0;
+}
+
+.ld-mov-card .rp-data-card-title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ld-mov-card .rp-data-card-foot {
+    padding: 0.5rem 0.75rem 0.75rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    display: flex;
+    justify-content: flex-end;
 }

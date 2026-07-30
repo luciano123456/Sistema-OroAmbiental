@@ -37,7 +37,7 @@
                 : this.root.querySelector("[data-proveedor-modal]");
 
             if (!this.modalEl) {
-                throw new Error("No se encontr� [data-proveedor-modal].");
+                throw new Error("No se encontro [data-proveedor-modal].");
             }
 
             this.bsModal = new bootstrap.Modal(this.modalEl);
@@ -51,7 +51,7 @@
                 campos: [
                     { id: "txtNombre", nombre: "Nombre" },
                     { id: "txtCuit", nombre: "CUIT" },
-                    { id: "cmbCondicionIva", nombre: "Condición IVA" }
+                    { id: "cmbCondicionIva", nombre: "Condicion IVA" }
                 ],
                 esCampoValido: (el) => this._valorCampoValido(el),
                 isSoloLectura: () => this.isSoloLectura(),
@@ -717,7 +717,7 @@
 
         async eliminar(id) {
             if (typeof window.ejecutarEliminacionEntidad !== "function") {
-                errorModal("No está disponible el asistente de eliminación.");
+                errorModal("No esta disponible el asistente de eliminacion.");
                 return false;
             }
 
@@ -809,7 +809,7 @@
                 try {
                     await this._onConfiguracionActualizada(e.detail || {});
                 } catch (err) {
-                    console.error("Error recargando combo tras configuración", err);
+                    console.error("Error recargando combo tras configuracion", err);
                 }
             };
 
@@ -838,7 +838,7 @@
                     ? window.RpVerFicha.botonHtml(idReferencia, "verProveedor")
                     : `
                     <button class="rp-btn-ref" data-rp-ver-ficha data-id="${idReferencia}" data-handler="verProveedor">
-                        <i class="fa fa-eye me-1"></i> Abrir ficha existente �??
+                        <i class="fa fa-eye me-1"></i> Abrir ficha existente
                     </button>`;
             }
 
@@ -959,7 +959,7 @@
     };
 
     /**
-     * Inicializa (o reconfigura) el modal M_Proveedores de la página.
+     * Inicializa (o reconfigura) el modal M_Proveedores de la pagina.
      */
     function initProveedorModal(options = {}) {
         const root = document.querySelector("[data-proveedor-modal]")

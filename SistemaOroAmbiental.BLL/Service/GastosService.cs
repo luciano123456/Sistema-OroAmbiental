@@ -41,5 +41,8 @@ namespace SistemaOroAmbiental.BLL.Service
             string? concepto,
             decimal? importeMin)
             => _repo.ListarFiltrado(fechaDesde, fechaHasta, idCategoria, idCuenta, idSucursal, concepto, importeMin);
+
+        public Task<int> SincronizarMovimientosCajaPendientes(int idUsuario)
+            => _repo.SincronizarMovimientosCajaPendientes(idUsuario);
     }
 }

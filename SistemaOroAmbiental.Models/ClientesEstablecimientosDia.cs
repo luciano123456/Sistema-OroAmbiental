@@ -11,6 +11,8 @@ public partial class ClientesEstablecimientosDia
 
     public int IdDia { get; set; }
 
+    public int? IdCamion { get; set; }
+
     public int IdUsuarioRegistra { get; set; }
 
     public DateTime FechaUsuarioRegistra { get; set; }

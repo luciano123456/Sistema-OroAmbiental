@@ -105,37 +105,30 @@ table {
     color: white;
 }
 
-tbody tr:nth-child(odd) {
+/*tbody tr:nth-child(odd) {
     background-color: #097CF7;
 }
-
+*/
 .divLogo {
     display: flex;
     justify-content: center;
     align-items: center;
     position: relative;
     z-index: 1;
-}
-
-.imageLogo {
-    height: 80%;
-}
-
-/* Layout módulos (_LayoutModulo) — logo + aire entre navbar y contenido */
-body.layout-modulo .layout-modulo-logo {
-    margin-top: 0.35rem;
-    margin-bottom: 0.15rem;
-}
-
-body.layout-modulo .layout-modulo-logo .divLogo {
     padding: 0.35rem 0 0.5rem;
 }
 
-body.layout-modulo .layout-modulo-logo .imageLogo {
-    max-height: 72px;
+.imageLogo {
+    max-height: clamp(96px, 11vw, 150px);
     width: auto;
     height: auto;
     object-fit: contain;
+}
+
+/* Layout modulos (_LayoutModulo) — aire entre navbar y contenido */
+body.layout-modulo .layout-modulo-logo {
+    margin-top: 0.35rem;
+    margin-bottom: 0.15rem;
 }
 
 body.layout-modulo .layout-modulo-content {
@@ -173,14 +166,18 @@ tbody tr {
 
 
 
-/* Cambia el color de fondo de todas las celdas, incluida la primera columna, en filas pares */
+/* Cambia el color de fondo de todas las celdas en filas pares */
 table.dataTable.display tbody tr:nth-child(even) td {
-    background-color: #353c48 !important;
+    background-color: rgba(255, 255, 255, 0.035) !important;
 }
 
-/* Cambia el color de fondo de todas las celdas, incluida la primera columna, en filas impares */
+/* Cambia el color de fondo de todas las celdas en filas impares */
 table.dataTable.display tbody tr:nth-child(odd) td {
-    background-color: #2a303a !important;
+    background-color: rgba(255, 255, 255, 0.02) !important;
+}
+
+table.dataTable.display tbody tr:hover td {
+    background-color: rgba(59, 130, 246, 0.1) !important;
 }
 
 /* Fila seleccionada en grillas dt-dark (pisa zebra de arriba) */
@@ -343,21 +340,17 @@ label {
     width: 95% !important;
 }
 
-/* Estilo personalizado para la colección de botones */
+/* Colección pageLength — estilos globales en RpDataTable.css */
 div.dt-button-collection {
-    background-color: #0D82F7; /* Cambia el color de fondo */
-    border-color: #0D82F7 !important; /* Cambia el color del borde */
+    background: transparent;
+    border-color: transparent;
 }
 
-    div.dt-button-collection .dt-button {
-        color: white; /* Cambia el color del texto */
-        background-color: #0D82F7; /* Cambia el color de fondo */
-        border-color: #0D82F7 !important; /* Cambia el color del borde */
-    }
-
-        div.dt-button-collection .dt-button:hover {
-            background-color: #0E21E3 !important; /* Cambia el color de fondo al pasar el mouse */
-        }
+div.dt-button-collection .dt-button {
+    color: inherit;
+    background: transparent;
+    border-color: transparent;
+}
 
 
 
@@ -597,10 +590,11 @@ input:disabled {
 
 
 .paginate_button.current {
-    background-color: #007bff !important;
-    color: white !important;
-    border: 1px solid #007bff !important;
-    border-radius: 4px !important;
+    background: linear-gradient(180deg, rgba(16, 185, 129, 0.45), rgba(5, 150, 105, 0.35)) !important;
+    color: #ecfdf5 !important;
+    border: 1px solid rgba(52, 211, 153, 0.4) !important;
+    border-radius: 8px !important;
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.2) !important;
 }
 
 
@@ -669,14 +663,14 @@ select.sucursal-unica-lock:disabled {
 ========================= */
 
 thead tr.filters th {
-    padding: 6px !important;
+    padding: 5px 6px !important;
 }
 
 .rp-filter-input,
 .rp-filter-select,
 .select2-container--default .select2-selection--single {
-    height: 45px !important;
-    min-height: 36px !important;
+    height: 32px !important;
+    min-height: 32px !important;
     border-radius: 8px !important;
     background: rgba(20, 30, 60, 0.6) !important;
     border: 1px solid rgba(255,255,255,0.15) !important;
@@ -988,10 +982,7 @@ table.dt-dark thead tr.filters th.rp-col-id-h .rp-filter-id {
     z-index: 10000055 !important;
 }
 
-/* Éxito, error, advertencia y confirmación siempre por encima de modales de edición */
-#exitoModal,
-#errorModal,
-#AdvertenciaModal,
+/* Confirmación y guardado con salida — por encima de modales de edición */
 #modalConfirmar,
 #modalGuardadoConSalida {
     z-index: 10000090 !important;
@@ -1284,4 +1275,249 @@ table.dt-dark thead tr.filters th.rp-col-id-h .rp-filter-id {
 
 table.dt-dark tbody tr {
     cursor: pointer;
+}
+
+/* =========================
+   TOASTS GLOBALES — feedback guardado / error
+========================= */
+
+.rp-toast-stack {
+    position: fixed;
+    right: 1.15rem;
+    bottom: 1.15rem;
+    z-index: 10000125;
+    display: flex;
+    flex-direction: column-reverse;
+    align-items: flex-end;
+    gap: 0.75rem;
+    width: min(24rem, calc(100vw - 2rem));
+    pointer-events: none;
+}
+
+.rp-toast {
+    position: relative;
+    width: 100%;
+    pointer-events: auto;
+    opacity: 0;
+    transform: translateX(calc(100% + 1.5rem)) scale(0.92);
+    filter: blur(4px);
+    transition:
+        transform 0.42s cubic-bezier(0.22, 1, 0.36, 1),
+        opacity 0.35s ease,
+        filter 0.35s ease;
+}
+
+.rp-toast.is-visible {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+    filter: blur(0);
+}
+
+.rp-toast.is-leaving {
+    opacity: 0;
+    transform: translateX(calc(100% + 1rem)) scale(0.96);
+    filter: blur(2px);
+}
+
+.rp-toast-glow {
+    position: absolute;
+    inset: -1px;
+    border-radius: 16px;
+    opacity: 0.55;
+    filter: blur(14px);
+    z-index: 0;
+    pointer-events: none;
+}
+
+.rp-toast--success .rp-toast-glow { background: radial-gradient(circle at 20% 50%, rgba(52, 211, 153, 0.45), transparent 70%); }
+.rp-toast--error .rp-toast-glow { background: radial-gradient(circle at 20% 50%, rgba(248, 113, 113, 0.5), transparent 70%); }
+.rp-toast--warning .rp-toast-glow { background: radial-gradient(circle at 20% 50%, rgba(251, 191, 36, 0.45), transparent 70%); }
+.rp-toast--info .rp-toast-glow { background: radial-gradient(circle at 20% 50%, rgba(96, 165, 250, 0.45), transparent 70%); }
+
+.rp-toast-panel {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 0.85rem;
+    align-items: center;
+    padding: 0.95rem 1rem 0.95rem 0.85rem;
+    border-radius: 14px;
+    background: linear-gradient(135deg, rgba(38, 46, 58, 0.97) 0%, rgba(24, 29, 38, 0.98) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow:
+        0 20px 50px rgba(0, 0, 0, 0.55),
+        inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    overflow: hidden;
+}
+
+.rp-toast-panel::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    border-radius: 14px 0 0 14px;
+}
+
+.rp-toast--success .rp-toast-panel::before { background: linear-gradient(180deg, #6ee7b7, #059669); }
+.rp-toast--error .rp-toast-panel::before { background: linear-gradient(180deg, #fca5a5, #dc2626); }
+.rp-toast--warning .rp-toast-panel::before { background: linear-gradient(180deg, #fcd34d, #d97706); }
+.rp-toast--info .rp-toast-panel::before { background: linear-gradient(180deg, #93c5fd, #2563eb); }
+
+.rp-toast--error.is-visible {
+    animation: rpToastShake 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+}
+
+@keyframes rpToastShake {
+    0%, 100% { transform: translateX(0) scale(1); }
+    15% { transform: translateX(-7px) scale(1); }
+    30% { transform: translateX(7px) scale(1); }
+    45% { transform: translateX(-5px) scale(1); }
+    60% { transform: translateX(5px) scale(1); }
+}
+
+.rp-toast-icon-wrap {
+    position: relative;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.05rem;
+    flex-shrink: 0;
+}
+
+.rp-toast-icon-ring {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    border: 2px solid transparent;
+    opacity: 0.85;
+}
+
+.rp-toast--success .rp-toast-icon-wrap {
+    background: rgba(16, 185, 129, 0.16);
+    color: #34d399;
+    box-shadow: 0 0 20px rgba(52, 211, 153, 0.25);
+}
+.rp-toast--success .rp-toast-icon-ring {
+    border-color: rgba(52, 211, 153, 0.35);
+    animation: rpToastRingPulse 1.8s ease-out infinite;
+}
+
+.rp-toast--error .rp-toast-icon-wrap {
+    background: rgba(239, 68, 68, 0.16);
+    color: #f87171;
+    box-shadow: 0 0 20px rgba(248, 113, 113, 0.22);
+}
+.rp-toast--error .rp-toast-icon-ring { border-color: rgba(248, 113, 113, 0.35); }
+
+.rp-toast--warning .rp-toast-icon-wrap {
+    background: rgba(245, 158, 11, 0.16);
+    color: #fbbf24;
+}
+.rp-toast--warning .rp-toast-icon-ring { border-color: rgba(251, 191, 36, 0.35); }
+
+.rp-toast--info .rp-toast-icon-wrap {
+    background: rgba(59, 130, 246, 0.16);
+    color: #60a5fa;
+}
+.rp-toast--info .rp-toast-icon-ring { border-color: rgba(96, 165, 250, 0.35); }
+
+@keyframes rpToastRingPulse {
+    0% { transform: scale(1); opacity: 0.85; }
+    70% { transform: scale(1.18); opacity: 0; }
+    100% { transform: scale(1.18); opacity: 0; }
+}
+
+.rp-toast-body {
+    min-width: 0;
+}
+
+.rp-toast-label {
+    display: block;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.55);
+    margin-bottom: 0.2rem;
+}
+
+.rp-toast-msg {
+    margin: 0;
+    font-size: 0.94rem;
+    font-weight: 500;
+    line-height: 1.4;
+    color: #f1f5f9;
+    word-break: break-word;
+}
+
+.rp-toast-close {
+    align-self: flex-start;
+    border: 0;
+    background: rgba(255, 255, 255, 0.04);
+    color: rgba(255, 255, 255, 0.4);
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    transition: background 0.2s, color 0.2s;
+}
+
+.rp-toast-close:hover {
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff;
+}
+
+.rp-toast-progress {
+    position: relative;
+    z-index: 1;
+    height: 3px;
+    margin-top: 0.45rem;
+    border-radius: 0 0 14px 14px;
+    background: rgba(255, 255, 255, 0.06);
+    overflow: hidden;
+}
+
+.rp-toast-progress span {
+    display: block;
+    height: 100%;
+    width: 100%;
+    transform-origin: left center;
+    animation: rpToastProgress var(--rp-toast-ms, 4.5s) linear forwards;
+}
+
+.rp-toast.is-paused .rp-toast-progress span {
+    animation-play-state: paused;
+}
+
+.rp-toast--success .rp-toast-progress span { background: linear-gradient(90deg, #059669, #34d399); }
+.rp-toast--error .rp-toast-progress span { background: linear-gradient(90deg, #dc2626, #f87171); }
+.rp-toast--warning .rp-toast-progress span { background: linear-gradient(90deg, #d97706, #fbbf24); }
+.rp-toast--info .rp-toast-progress span { background: linear-gradient(90deg, #2563eb, #60a5fa); }
+
+@keyframes rpToastProgress {
+    from { transform: scaleX(1); }
+    to { transform: scaleX(0); }
+}
+
+@media (max-width: 576px) {
+    .rp-toast-stack {
+        right: 0.65rem;
+        bottom: 0.75rem;
+        width: calc(100vw - 1.3rem);
+    }
+
+    .rp-toast-panel {
+        padding: 0.85rem 0.85rem 0.85rem 0.75rem;
+    }
 }

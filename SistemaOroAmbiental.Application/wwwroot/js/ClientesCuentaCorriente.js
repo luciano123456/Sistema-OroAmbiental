@@ -63,7 +63,7 @@ const authHeaders = () => ({
     'Authorization': 'Bearer ' + token
 });
 
-/** Número desde input .Inputmiles (parseNumero / leerInputNumerico en site.js). */
+/** Numero desde input .Inputmiles (parseNumero / leerInputNumerico en site.js). */
 function leerNumCC(valor) {
     if (typeof parseNumero === "function") return parseNumero(valor);
     if (typeof leerInputNumerico === "function") return leerInputNumerico(valor);
@@ -349,7 +349,7 @@ async function seleccionarCliente(id) {
         ACC.movimientosOriginal = [];
         ACC.movimientosMap = new Map();
 
-        $("#lblFiltroCliente").text("Seleccioná un Cliente");
+        $("#lblFiltroCliente").text("Selecciona un Cliente");
 
         renderClientes();
         mostrarEstadoSinSeleccion();
@@ -399,7 +399,7 @@ async function aplicarFiltrosCC() {
     actualizarEstadoFiltrosCC();
 
     if (!ACC.ClienteSel) {
-        return errorModal("Seleccioná un Cliente para aplicar filtros.");
+        return errorModal("Selecciona un Cliente para aplicar filtros.");
     }
 
     await cargarCuentaCorrienteSeleccionada();
@@ -896,7 +896,7 @@ function initValidacionesCC() {
         if (!okBase || reglas.length) {
             const errores = [...validacionAjusteCC._listarErrores(), ...reglas];
             if (errores.length) {
-                const msg = `Revisá los siguientes campos/reglas:<br><strong>${[...new Set(errores)].join(", ")}</strong>`;
+                const msg = `Revisa los siguientes campos/reglas:<br><strong>${[...new Set(errores)].join(", ")}</strong>`;
                 validacionAjusteCC.cancelarPanelExito?.();
                 if (typeof mostrarErrorPanelRp === "function") {
                     mostrarErrorPanelRp("#errorCamposAjuste", msg);
@@ -914,13 +914,13 @@ function initValidacionesCC() {
 function abrirModalPago() {
 
     if (!Permisos.tiene("CLIENTES CC", "Crear")) {
-        errorModal("No tenés permisos.");
+        errorModal("No tenes permisos.");
         return;
     }
 
 
     if (!ACC.ClienteSel) {
-        return errorModal("Seleccioná un Cliente.");
+        return errorModal("Selecciona un Cliente.");
     }
 
     validacionPagoCC?.reset();
@@ -948,7 +948,7 @@ function validarPago() {
 async function guardarPago() {
 
     if (!ACC.ClienteSel) {
-        return errorModal("Seleccioná un Cliente.");
+        return errorModal("Selecciona un Cliente.");
     }
 
     if (!validarPago()) return;
@@ -1015,13 +1015,13 @@ function mostrarErrorCamposPago(mensaje) {
 function abrirModalAjuste() {
 
     if (!Permisos.tiene("CLIENTES CC", "Crear")) {
-        errorModal("No tenés permisos.");
+        errorModal("No tenes permisos.");
         return;
     }
 
 
     if (!ACC.ClienteSel) {
-        return errorModal("Seleccioná un Cliente.");
+        return errorModal("Selecciona un Cliente.");
     }
 
     validacionAjusteCC?.reset();
@@ -1050,7 +1050,7 @@ function validarAjuste() {
 async function guardarAjuste() {
 
     if (!ACC.ClienteSel) {
-        return errorModal("Seleccioná un Cliente.");
+        return errorModal("Selecciona un Cliente.");
     }
 
     if (!validarAjuste()) return;
@@ -1119,11 +1119,11 @@ function mostrarErrorCamposAjuste(mensaje) {
 ========================================================= */
 
 function exportarEstadoCuentaPdf() {
-    errorModal("Exportación PDF pendiente de implementar.");
+    errorModal("Exportacion PDF pendiente de implementar.");
     return;
 
     if (!ACC.ClienteSel) {
-        return errorModal("Seleccioná un Cliente.");
+        return errorModal("Selecciona un Cliente.");
     }
 
     const Cliente = ACC.ClienteSel.Nombre || "Cliente";

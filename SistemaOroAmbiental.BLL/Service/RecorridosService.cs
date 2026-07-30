@@ -147,17 +147,29 @@ namespace SistemaOroAmbiental.BLL.Service
                 return false;
             }
 
-            if (string.IsNullOrWhiteSpace(model.Zona))
+            var zona = (model.Zona ?? "").Trim();
+            var salida = (model.HorarioSalida ?? "").Trim();
+
+            if (string.IsNullOrWhiteSpace(zona) && string.IsNullOrWhiteSpace(salida))
             {
-                error = "Debe ingresar la zona.";
+                error = "Ingresá la zona o el horario de salida.";
                 return false;
             }
 
-            if (model.Zona.Length > 120)
+            if (zona.Length > 120)
             {
                 error = "La zona no puede superar 120 caracteres.";
                 return false;
             }
+
+            if (salida.Length > 20)
+            {
+                error = "El horario de salida no puede superar 20 caracteres.";
+                return false;
+            }
+
+            model.Zona = zona;
+            model.HorarioSalida = string.IsNullOrWhiteSpace(salida) ? null : salida;
 
             error = "";
             return true;
@@ -180,6 +192,12 @@ namespace SistemaOroAmbiental.BLL.Service
             if (model.Posicion <= 0)
             {
                 error = "La posición debe ser mayor a cero.";
+                return false;
+            }
+
+            if (!string.IsNullOrWhiteSpace(model.Observacion) && model.Observacion.Trim().Length > 500)
+            {
+                error = "La observación no puede superar 500 caracteres.";
                 return false;
             }
 

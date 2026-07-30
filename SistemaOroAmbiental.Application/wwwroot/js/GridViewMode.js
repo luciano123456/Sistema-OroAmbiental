@@ -85,7 +85,7 @@
 
     function applyGlobalMode(pref) {
         const mode = normalizePref(pref ?? getPref());
-        $(".cg-page, .cl-page, .page-99").each(function () {
+        $(".cg-page, .cl-page, .page-99, .ld-index").each(function () {
             applyModeToRoot($(this), mode);
         });
 
@@ -99,9 +99,9 @@
 
     function viewSwitchHtml(id) {
         return `
-<div class="rp-view-switch" id="${id}" title="Modo de visualización de listados">
+<div class="rp-view-switch" id="${id}" title="Modo de visualizacion de listados">
     <span class="rp-view-switch-label">Vista</span>
-    <button type="button" class="rp-view-btn is-active" data-rp-view="auto" title="Automático"><i class="fa fa-magic"></i><span>Auto</span></button>
+    <button type="button" class="rp-view-btn is-active" data-rp-view="auto" title="Automatico"><i class="fa fa-magic"></i><span>Auto</span></button>
     <button type="button" class="rp-view-btn" data-rp-view="table" title="Tabla"><i class="fa fa-table"></i><span>Tabla</span></button>
     <button type="button" class="rp-view-btn" data-rp-view="cards" title="Tarjetas"><i class="fa fa-th-large"></i><span>Cards</span></button>
 </div>`;
@@ -177,7 +177,7 @@
         const fields = dataCols.slice(2).map(c => `
             <div class="rp-card-field ${dataCols.length <= 3 ? "rp-card-field--full" : ""}">
                 <span>${escapeHtml(c.title)}</span>
-                <strong>${c.display || "—"}</strong>
+                <strong>${c.display || "-"}</strong>
             </div>`).join("");
 
         const rowId = row.Id ?? row.id ?? "";
@@ -187,7 +187,7 @@
 <article class="rp-data-card cg-data-card rp-data-card--blue cg-data-card--blue rp-card-selectable" data-row-id="${escapeHtml(rowId)}" tabindex="0" role="button">
     <div class="rp-data-card-head cg-data-card-head">
         <div>
-            <div class="rp-data-card-title cg-data-card-title">${titleCol?.display || "—"}</div>
+            <div class="rp-data-card-title cg-data-card-title">${titleCol?.display || "-"}</div>
             ${subCol ? `<div class="rp-data-card-sub cg-data-card-sub">${subCol.display || ""}</div>` : ""}
         </div>
         ${idDisplay ? `<span class="rp-data-card-badge cg-data-card-badge">${idDisplay}</span>` : ""}
@@ -225,10 +225,20 @@
 
     function renderCards(key) {
         const grid = grids[key];
-        if (!grid?.api) return;
+        if (!grid) return;
+
+        if (debeMostrarTabla()) return;
 
         const schema = schemas[key];
-        if (schema?.manualRender) return;
+        if (grid.manualRender || schema?.manualRender) {
+            if (typeof grid.renderManual === "function") {
+                const data = typeof grid.getData === "function" ? grid.getData() : [];
+                grid.renderManual(data);
+            }
+            return;
+        }
+
+        if (!grid?.api) return;
 
         const $cards = grid.$cards;
         if (!$cards?.length) return;
@@ -407,9 +417,11 @@
         const tableId = table.id;
         if (!tableId || !tableId.startsWith("grd_")) return;
 
+        const $table = $(table);
+        if ($table.is("[data-rp-no-cards]")) return;
+
         const key = deriveGridKey(tableId);
         const api = new $.fn.dataTable.Api(settings);
-        const $table = $(table);
         const $wrap = $table.closest(".dt-dark-wrap, .cg-table-wrap");
         if (!$wrap.length) return;
 
@@ -505,6 +517,39 @@
         };
     }
 
+    function registerManualList(key, options = {}) {
+        const $wrap = $(options.wrap);
+        if (!$wrap.length) return null;
+
+        const $page = options.pageRoot ? $(options.pageRoot) : findPageRoot($wrap);
+        let $cards = options.cards ? $(options.cards) : $(`#rpCards_${key}`);
+        if (!$cards.length) {
+            $cards = $(`<div class="rp-cards-grid cg-cards-grid" id="rpCards_${key}"></div>`);
+            $wrap.before($cards);
+        }
+
+        if (!$wrap.parent(".rp-grid-panel").length) {
+            $wrap.add($cards).wrapAll('<div class="rp-grid-panel"></div>');
+        }
+
+        $wrap.addClass("rp-table-wrap cg-table-wrap");
+
+        registerSchema(key, { manualRender: true });
+        registerGrid(key, {
+            key,
+            manualRender: true,
+            $cards,
+            $wrap,
+            pageRoot: $page,
+            getData: options.getData,
+            renderManual: options.renderCards
+        });
+
+        applyModeToRoot($page.length ? $page : findPageRoot($wrap));
+        renderCards(key);
+        return grids[key];
+    }
+
     const RpGridView = {
         STORAGE_KEY,
         BREAKPOINT,
@@ -523,6 +568,7 @@
         programarAjuste,
         ajustarTodas,
         configurarGrillaLista,
+        registerManualList,
         ensureViewSwitch,
         viewSwitchHtml
     };
