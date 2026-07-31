@@ -106,13 +106,41 @@ namespace SistemaOroAmbiental.BLL.Service
                 : ServiceResult.Error("No se pudo registrar el ajuste.");
         }
 
+        public async Task<ServiceResult> RegistrarInteres(
+            int idCliente,
+            DateTime fecha,
+            string concepto,
+            decimal importe,
+            int idUsuario)
+        {
+            if (idCliente <= 0)
+                return ServiceResult.Error("Debe seleccionar un cliente.", "validacion");
+
+            if (string.IsNullOrWhiteSpace(concepto))
+                return ServiceResult.Error("El concepto es obligatorio.", "validacion");
+
+            if (importe <= 0)
+                return ServiceResult.Error("El importe de interés debe ser mayor a cero.", "validacion");
+
+            var ok = await _repo.RegistrarInteres(
+                idCliente,
+                fecha,
+                concepto.Trim(),
+                importe,
+                idUsuario);
+
+            return ok
+                ? ServiceResult.Success("Interés registrado correctamente.")
+                : ServiceResult.Error("No se pudo registrar el interés.");
+        }
+
         public async Task<ServiceResult> Eliminar(int id)
         {
             var ok = await _repo.Eliminar(id);
 
             return ok
                 ? ServiceResult.Success("Movimiento eliminado correctamente.")
-                : ServiceResult.Error("No se pudo eliminar el movimiento. Solo se pueden eliminar cobros y ajustes manuales.");
+                : ServiceResult.Error("No se pudo eliminar el movimiento. Solo se pueden eliminar cobros, ajustes e intereses manuales.");
         }
     }
 }

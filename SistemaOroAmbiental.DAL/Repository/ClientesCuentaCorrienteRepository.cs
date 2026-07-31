@@ -8,6 +8,7 @@ namespace SistemaOroAmbiental.DAL.Repository
     {
         public const string TIPO_COBRO_CLIENTE = "COBRO CLIENTE";
         public const string TIPO_AJUSTE_CLIENTE = "AJUSTE CLIENTE";
+        public const string TIPO_INTERES_CLIENTE = "INTERES CLIENTE";
         public const string TIPO_ENTREGA = "ENTREGA";
 
         private readonly SistemaOroAmbientalContext _db;
@@ -83,6 +84,7 @@ namespace SistemaOroAmbiental.DAL.Repository
             {
                 "PAGO" or "COBRO" => query.Where(x => x.TipoMovimiento == TIPO_COBRO_CLIENTE),
                 "AJUSTE" => query.Where(x => x.TipoMovimiento == TIPO_AJUSTE_CLIENTE),
+                "INTERES" => query.Where(x => x.TipoMovimiento == TIPO_INTERES_CLIENTE),
                 "ENTREGA" => query.Where(x => x.TipoMovimiento == TIPO_ENTREGA),
                 _ => query.Where(x => x.TipoMovimiento == tipoMovimiento)
             };
@@ -404,6 +406,53 @@ namespace SistemaOroAmbiental.DAL.Repository
             }
         }
 
+        public async Task<bool> RegistrarInteres(
+            int idCliente,
+            DateTime fecha,
+            string concepto,
+            decimal importe,
+            int idUsuario)
+        {
+            if (importe <= 0)
+                return false;
+
+            await using var trx = await _db.Database.BeginTransactionAsync();
+
+            try
+            {
+                var cc = await ObtenerOCrearCuentaCorriente(idCliente);
+                var ahora = DateTime.Now;
+
+                var movCc = new ClientesCuentaCorrienteMovimiento
+                {
+                    IdCuentaCorriente = cc.Id,
+                    TipoMovimiento = TIPO_INTERES_CLIENTE,
+                    IdMovimiento = 0,
+                    Fecha = fecha.Date,
+                    Concepto = concepto,
+                    Debe = importe,
+                    Haber = 0,
+                    IdUsuarioRegistra = idUsuario,
+                    FechaUsuarioRegistra = ahora
+                };
+
+                _db.ClientesCuentaCorrienteMovimientos.Add(movCc);
+                await _db.SaveChangesAsync();
+
+                movCc.IdMovimiento = movCc.Id;
+                cc.Saldo += importe;
+
+                await _db.SaveChangesAsync();
+                await trx.CommitAsync();
+                return true;
+            }
+            catch
+            {
+                await trx.RollbackAsync();
+                return false;
+            }
+        }
+
         public async Task<bool> Eliminar(int idMovimiento)
         {
             await using var trx = await _db.Database.BeginTransactionAsync();
@@ -439,7 +488,8 @@ namespace SistemaOroAmbiental.DAL.Repository
                     return false;
 
                 if (mov.TipoMovimiento != TIPO_COBRO_CLIENTE &&
-                    mov.TipoMovimiento != TIPO_AJUSTE_CLIENTE)
+                    mov.TipoMovimiento != TIPO_AJUSTE_CLIENTE &&
+                    mov.TipoMovimiento != TIPO_INTERES_CLIENTE)
                     return false;
 
                 var cc = mov.IdCuentaCorrienteNavigation;

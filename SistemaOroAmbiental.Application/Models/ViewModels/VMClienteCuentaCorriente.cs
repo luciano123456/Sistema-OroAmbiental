@@ -59,6 +59,16 @@ namespace SistemaOroAmbiental.Application.Models.ViewModels
         public decimal Haber { get; set; }
     }
 
+    public class VMClienteCCInteres
+    {
+        public int IdCliente { get; set; }
+        public DateTime Fecha { get; set; }
+        public string Concepto { get; set; } = "";
+        public decimal Importe { get; set; }
+        public int? AnioRef { get; set; }
+        public int? MesRef { get; set; }
+    }
+
     public class VMClienteCCDetalleMovimiento
     {
         public int Id { get; set; }

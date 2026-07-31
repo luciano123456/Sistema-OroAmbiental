@@ -379,6 +379,18 @@ function clsSaldoMoney(n) {
 }
 window.clsSaldoMoney = clsSaldoMoney;
 
+/**
+ * Saldos de cliente donde + = debe (rojo), - = a favor (verde), 0 = amarillo.
+ * Control de pagos, CC y hoja de ruta.
+ */
+function clsSaldoDeudaMoney(n) {
+    const v = Number(n || 0);
+    if (v > 0) return "rp-money-neg";
+    if (v < 0) return "rp-money-pos";
+    return "rp-money-zero";
+}
+window.clsSaldoDeudaMoney = clsSaldoDeudaMoney;
+
 // Seguridad global: si el boton ya esta busy, bloquear clicks adicionales (capture).
 if (!window._rpBusyClickGuard) {
     window._rpBusyClickGuard = true;

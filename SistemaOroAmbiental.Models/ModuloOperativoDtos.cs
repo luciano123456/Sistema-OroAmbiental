@@ -111,7 +111,21 @@ public class ClienteControlMensualDto
     public bool SinEntrega { get; set; }
     public string? Observaciones { get; set; }
     public bool TieneOverride { get; set; }
+    public int CantidadIntereses { get; set; }
+    public decimal TotalIntereses { get; set; }
+    public List<ClienteInteresMovDto> Intereses { get; set; } = new();
     public List<ClienteControlProductoMesDto> Productos { get; set; } = new();
+}
+
+public class ClienteInteresMovDto
+{
+    public int Id { get; set; }
+    public DateTime Fecha { get; set; }
+    public string Concepto { get; set; } = "";
+    public decimal Importe { get; set; }
+    public int? AnioRef { get; set; }
+    public int? MesRef { get; set; }
+    public string? MesNombreRef { get; set; }
 }
 
 public class ClienteControlAnualDto
@@ -140,6 +154,7 @@ public class ClienteControlFiltradoDto
     public bool DatosParciales { get; set; }
     public List<ClienteControlMensualDto> Filas { get; set; } = new();
     public List<ClientesRecorridoDto> Recorridos { get; set; } = new();
+    public List<ClienteInteresMovDto> Intereses { get; set; } = new();
 }
 
 public class ClienteStockDto

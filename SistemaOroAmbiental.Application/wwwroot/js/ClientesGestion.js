@@ -13,6 +13,8 @@ const CG = {
     contratoModal: null,
     modalCobro: null,
     modalControlMensual: null,
+    modalInteres: null,
+    modalInteresesHist: null,
     modalContacto: null,
     controlAnual: null,
     controlFiltrado: null,
@@ -73,6 +75,7 @@ const API_CG = {
     ccMovimientos: "/ClientesCuentaCorriente/Movimientos",
     ccResumen: "/ClientesCuentaCorriente/Resumen",
     ccRegistrarCobro: "/ClientesCuentaCorriente/RegistrarCobro",
+    ccRegistrarInteres: "/ClientesCuentaCorriente/RegistrarInteres",
     ccEliminar: id => `/ClientesCuentaCorriente/Eliminar?id=${id}`,
     cuentas: "/Cuentas/Lista",
     entregaNuevoModif: (idEntrega, idCliente) =>
@@ -422,6 +425,12 @@ function initModalesCg() {
     const modalCmEl = document.getElementById("modalControlMensualCg");
     if (modalCmEl) CG.modalControlMensual = new bootstrap.Modal(modalCmEl);
 
+    const modalInteresEl = document.getElementById("modalInteresCg");
+    if (modalInteresEl) CG.modalInteres = new bootstrap.Modal(modalInteresEl);
+
+    const modalInteresesHistEl = document.getElementById("modalInteresesHistCg");
+    if (modalInteresesHistEl) CG.modalInteresesHist = new bootstrap.Modal(modalInteresesHistEl);
+
     const modalContactoEl = document.getElementById("modalContactoCg");
     if (modalContactoEl) CG.modalContacto = new bootstrap.Modal(modalContactoEl);
 
@@ -497,14 +506,45 @@ function wireEventosCg() {
         const mes = Number($(this).data("mes"));
         mostrarDetalleMesHub(anio, mes);
     });
+    $("#cgAtrasosAlert").on("click", ".cg-atraso-chip", function () {
+        const anio = Number($(this).data("anio"));
+        const mes = Number($(this).data("mes"));
+        mostrarDetalleMesHub(anio, mes);
+        const row = document.querySelector(`#cgControlMensualBody tr[data-anio="${anio}"][data-mes="${mes}"]`);
+        row?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+    $("#btnAtrasosToggleLista").on("click", function () {
+        const $lista = $("#cgAtrasosLista");
+        const abierto = !$lista.hasClass("is-collapsed");
+        $lista.toggleClass("is-collapsed", abierto);
+        $(this).attr("aria-expanded", abierto ? "false" : "true");
+        $(this).text(abierto ? "Ver lista" : "Ocultar");
+    });
     $("#btnCerrarMesDetail").on("click", () => {
         $("#cgHubMesDetail").prop("hidden", true);
         CG.hubMesSel = null;
         $("#cgControlMensualBody tr").removeClass("is-selected");
+        actualizarChipsAtrasosSeleccionCg(-1, -1);
     });
     $("#btnEditarMesHub").on("click", () => {
         if (CG.hubMesSel) abrirModalControlMensual(CG.hubMesSel.anio, CG.hubMesSel.mes);
     });
+    $("#btnInteresMesHub").on("click", () => {
+        if (CG.hubMesSel) abrirModalInteresCg(CG.hubMesSel.anio, CG.hubMesSel.mes);
+    });
+    $("#btnVerInteresesMesHub").on("click", () => {
+        if (CG.hubMesSel) abrirModalInteresesHistCg(CG.hubMesSel.anio, CG.hubMesSel.mes);
+    });
+    $("#btnVerInteresesCg").on("click", () => abrirModalInteresesHistCg(null, null));
+    $("#cgControlMensualBody").on("click", ".cg-cm-int-eye", function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        const anio = Number($(this).data("anio"));
+        const mes = Number($(this).data("mes"));
+        abrirModalInteresesHistCg(anio, mes);
+    });
+    $("#cgInteresPct").on("input change", recalcularImporteInteresCg);
+    $("#btnConfirmarInteresCg").on("click", busyHandler(confirmarInteresCg));
 
     $("#cgHubEntregasList").on("click", ".cg-hub-entrega-toggle", function (e) {
         e.preventDefault();
@@ -1788,16 +1828,18 @@ function renderControlMensualCg(data) {
     $("#cgControlSaldoAnual")
         .text(fmtMoneyCg(totalSaldo))
         .removeClass("rp-money-pos rp-money-neg rp-money-zero")
-        .addClass(typeof clsSaldoMoney === "function" ? clsSaldoMoney(totalSaldo) : "");
+        .addClass(typeof clsSaldoDeudaMoney === "function" ? clsSaldoDeudaMoney(totalSaldo) : "");
     $("#cgControlError").toggleClass("d-none", !(data?.DatosParciales || CG.controlAnualError));
     $("#cgControlCount").text(filas.length
         ? String(filas.length)
         : "0");
 
+    renderAlertaAtrasosCg(filas);
+
     $(".cg-cm-table").toggleClass("cg-cm-show-anio", !!mostrarAnio);
 
     if (!filas.length) {
-        tbody.html(`<tr class="cg-cm-empty"><td colspan="17" class="text-center py-4">
+        tbody.html(`<tr class="cg-cm-empty"><td colspan="18" class="text-center py-4">
             No hay datos para los filtros elegidos.</td></tr>`);
         renderControlMensualCardsCg([], mostrarAnio);
         return;
@@ -1807,14 +1849,19 @@ function renderControlMensualCg(data) {
         const rowClass = m.SinEntrega ? "cg-cm-sin-entrega" : "";
         const anio = m.Anio || CG.controlAnio;
         const saldo = Number(m.Saldo) || 0;
-        const saldoClass = typeof clsSaldoMoney === "function"
-            ? clsSaldoMoney(saldo)
-            : (saldo > 0 ? "cg-cm-saldo-pos" : (saldo < 0 ? "cg-cm-saldo-neg" : "cg-cm-saldo-cero"));
+        const saldoClass = typeof clsSaldoDeudaMoney === "function"
+            ? clsSaldoDeudaMoney(saldo)
+            : (saldo > 0 ? "cg-cm-saldo-neg" : (saldo < 0 ? "cg-cm-saldo-pos" : "cg-cm-saldo-cero"));
         const sel = CG.hubMesSel && CG.hubMesSel.anio === anio && CG.hubMesSel.mes === m.Mes ? " is-selected" : "";
+        const atrasado = puedeCargarInteresMesCg(m, anio, m.Mes);
+        const vencido = atrasado ? " cg-cm-vencido" : "";
+        const badgeAtraso = atrasado
+            ? `<span class="cg-cm-badge-atraso" title="Pago atrasado más de 1 mes">Atrasado</span>`
+            : "";
 
-        return `<tr class="${rowClass}${sel}" data-anio="${anio}" data-mes="${m.Mes}">
+        return `<tr class="${rowClass}${sel}${vencido}" data-anio="${anio}" data-mes="${m.Mes}">
             <td class="cg-col-anio cg-cm-mes">${anio}</td>
-            <td class="cg-cm-mes">${escapeCg(m.MesNombre)}</td>
+            <td class="cg-cm-mes">${escapeCg(m.MesNombre)}${badgeAtraso}</td>
             <td class="cg-cm-date">${formatearFechaCortaCg(m.FechaVisita)}</td>
             <td class="cg-cm-num cg-cm-grp-start">${fmtQtyCg(m.Entregadas)}</td>
             <td class="cg-cm-num">${fmtQtyCg(m.Retiradas)}</td>
@@ -1827,6 +1874,7 @@ function renderControlMensualCg(data) {
             <td class="cg-cm-num cg-cm-debe cg-cm-grp-start">${fmtMoneyCg(m.Debe)}</td>
             <td class="cg-cm-num cg-cm-haber">${fmtMoneyCg(m.Haber)}</td>
             <td class="cg-cm-num ${saldoClass}">${fmtMoneyCg(m.Saldo)}</td>
+            <td class="cg-cm-num cg-cm-int">${celdaInteresesMesCg(m, anio)}</td>
             <td class="cg-cm-num">${m.CajasAFavor ?? 0}</td>
             <td class="cg-cm-flag">${m.SinEntrega ? '<i class="fa fa-times"></i>' : ""}</td>
             <td class="cg-cm-obs" title="${escapeCg(m.Observaciones || "")}">${escapeCg(truncarCg(m.Observaciones, 28))}</td>
@@ -1888,8 +1936,365 @@ function mostrarDetalleMesHub(anio, mes, keepScroll) {
     }
 
     $("#cgHubMesDetail").prop("hidden", false);
+    actualizarBotonInteresMesHub(m, anio, mes);
+    actualizarChipsAtrasosSeleccionCg(anio, mes);
     if (!keepScroll) {
         document.getElementById("cgHubMesDetail")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+}
+
+const CG_INTERES_PCT_KEY = "oroAmbiental.interesClientePct";
+const CG_INTERES_PCT_DEFAULT = 10;
+
+function leerPctInteresDefaultCg() {
+    const raw = localStorage.getItem(CG_INTERES_PCT_KEY);
+    const n = Number(raw);
+    if (Number.isFinite(n) && n >= 0) return n;
+    return CG_INTERES_PCT_DEFAULT;
+}
+
+function guardarPctInteresDefaultCg(pct) {
+    const n = Number(pct);
+    if (Number.isFinite(n) && n >= 0) localStorage.setItem(CG_INTERES_PCT_KEY, String(n));
+}
+
+/** Mes vencido si ya pasó más de 1 mes desde el fin de ese período. */
+function mesVencidoParaInteresCg(anio, mes) {
+    const finMes = new Date(anio, mes, 0, 23, 59, 59);
+    const limite = new Date();
+    limite.setMonth(limite.getMonth() - 1);
+    return finMes.getTime() < limite.getTime();
+}
+
+function baseAdeudadaMesCg(m) {
+    const neto = (Number(m?.Debe) || 0) - (Number(m?.Haber) || 0);
+    return neto > 0.009 ? neto : 0;
+}
+
+function puedeCargarInteresMesCg(m, anio, mes) {
+    return mesVencidoParaInteresCg(anio, mes) && baseAdeudadaMesCg(m) > 0;
+}
+
+function listarMesesAtrasadosCg(filas) {
+    return (filas || [])
+        .map(m => {
+            const anio = Number(m.Anio || CG.controlAnio);
+            const mes = Number(m.Mes);
+            return {
+                anio,
+                mes,
+                mesNombre: m.MesNombre || `Mes ${mes}`,
+                base: baseAdeudadaMesCg(m),
+                saldo: Number(m.Saldo) || 0,
+                ok: puedeCargarInteresMesCg(m, anio, mes)
+            };
+        })
+        .filter(x => x.ok)
+        .sort((a, b) => (a.anio - b.anio) || (a.mes - b.mes));
+}
+
+function renderAlertaAtrasosCg(filas) {
+    const atrasos = listarMesesAtrasadosCg(filas);
+    const $alert = $("#cgAtrasosAlert");
+    const $kpi = $("#cgKpiAtrasos");
+
+    if (!$alert.length) return;
+
+    if (!atrasos.length) {
+        $alert.addClass("d-none").prop("hidden", true);
+        $kpi.prop("hidden", true);
+        $("#cgControlAtrasosCount").text("0");
+        $("#cgControlAtrasosMonto").text("sin deuda vencida");
+        return;
+    }
+
+    const totalBase = atrasos.reduce((s, x) => s + x.base, 0);
+    const n = atrasos.length;
+    const titulo = n === 1
+        ? "1 mes con pago atrasado"
+        : `${n} meses con pago atrasado`;
+
+    $("#cgAtrasosTitulo").text(titulo);
+    $("#cgAtrasosResumen").text(
+        `Deuda vencida (más de 1 mes): ${fmtMoneyCg(totalBase)}. Tocá un mes para abrir el detalle o cargar interés.`
+    );
+    $("#cgControlAtrasosCount").text(String(n));
+    $("#cgControlAtrasosMonto").text(fmtMoneyCg(totalBase));
+
+    const sel = CG.hubMesSel;
+    $("#cgAtrasosLista").html(atrasos.map(x => {
+        const active = sel && sel.anio === x.anio && sel.mes === x.mes ? " is-active" : "";
+        const fila = (filas || []).find(f => Number(f.Anio || CG.controlAnio) === x.anio && Number(f.Mes) === x.mes);
+        const cantInt = Number(fila?.CantidadIntereses) || 0;
+        const intBadge = cantInt > 0
+            ? `<span class="cg-atraso-chip-int" title="Ya tiene ${cantInt} interés(es)">${cantInt}× int.</span>`
+            : `<span class="cg-atraso-chip-hint">Sin interés</span>`;
+        return `<button type="button" class="cg-atraso-chip${active}" data-anio="${x.anio}" data-mes="${x.mes}">
+            <span class="cg-atraso-chip-mes">${escapeCg(x.mesNombre)} ${x.anio}</span>
+            <span class="cg-atraso-chip-monto rp-money-out">${fmtMoneyCg(x.base)}</span>
+            ${intBadge}
+        </button>`;
+    }).join(""));
+
+    $alert.removeClass("d-none").prop("hidden", false);
+    $kpi.prop("hidden", false);
+
+    const $btn = $("#btnAtrasosToggleLista");
+    if ($btn.length && !$("#cgAtrasosLista").hasClass("is-collapsed")) {
+        $btn.text("Ocultar").attr("aria-expanded", "true");
+    }
+}
+
+function actualizarChipsAtrasosSeleccionCg(anio, mes) {
+    $("#cgAtrasosLista .cg-atraso-chip").each(function () {
+        const a = Number($(this).data("anio"));
+        const m = Number($(this).data("mes"));
+        $(this).toggleClass("is-active", a === anio && m === mes);
+    });
+}
+
+function celdaInteresesMesCg(m, anio) {
+    const cant = Number(m.CantidadIntereses) || 0;
+    const total = Number(m.TotalIntereses) || 0;
+    if (cant <= 0) {
+        return `<span class="cg-cm-int-empty" title="Sin intereses cargados">—</span>`;
+    }
+    const veces = cant === 1 ? "1 vez" : `${cant} veces`;
+    return `<div class="cg-cm-int-cell">
+        <span class="cg-cm-int-badge" title="${escapeCg(veces)} · ${fmtMoneyCg(total)}">${cant}×</span>
+        <span class="cg-cm-int-monto rp-money-out">${fmtMoneyCg(total)}</span>
+        <button type="button" class="cg-cm-int-eye" data-anio="${anio}" data-mes="${m.Mes}" title="Ver intereses de este mes">
+            <i class="fa fa-eye"></i>
+        </button>
+    </div>`;
+}
+
+function interesesDelMesCg(anio, mes) {
+    const filas = CG.controlFiltrado?.Filas || [];
+    const m = filas.find(x => Number(x.Mes) === mes && Number(x.Anio || CG.controlAnio) === anio);
+    if (m?.Intereses?.length) return m.Intereses;
+    return (CG.controlFiltrado?.Intereses || []).filter(i =>
+        Number(i.AnioRef) === Number(anio) && Number(i.MesRef) === Number(mes));
+}
+
+function actualizarBotonInteresMesHub(m, anio, mes) {
+    const $btn = $("#btnInteresMesHub");
+    if (!$btn.length) return;
+    const ok = puedeCargarInteresMesCg(m, anio, mes);
+    $btn.toggleClass("d-none", !ok);
+
+    const cant = Number(m?.CantidadIntereses) || 0;
+    const $ver = $("#btnVerInteresesMesHub");
+    $ver.toggleClass("d-none", cant <= 0);
+    if (cant > 0) {
+        $ver.html(`<i class="fa fa-eye"></i> Ver intereses (${cant})`);
+    }
+}
+
+function abrirModalInteresesHistCg(anioFiltro, mesFiltro) {
+    const todos = Array.isArray(CG.controlFiltrado?.Intereses) ? CG.controlFiltrado.Intereses : [];
+    const filtrar = anioFiltro != null && mesFiltro != null;
+    const lista = filtrar
+        ? interesesDelMesCg(anioFiltro, mesFiltro)
+        : todos.slice().sort((a, b) => new Date(b.Fecha).getTime() - new Date(a.Fecha).getTime());
+
+    if (filtrar) {
+        const m = (CG.controlFiltrado?.Filas || []).find(x =>
+            Number(x.Mes) === mesFiltro && Number(x.Anio || CG.controlAnio) === anioFiltro);
+        const nom = m?.MesNombre || `Mes ${mesFiltro}`;
+        $("#cgInteresesHistSub").text(`${nom} ${anioFiltro}`);
+    } else {
+        $("#cgInteresesHistSub").text("Todos los intereses del cliente");
+    }
+
+    const total = lista.reduce((s, x) => s + (Number(x.Importe) || 0), 0);
+    const filasPlanilla = CG.controlFiltrado?.Filas || [];
+    const conInt = filasPlanilla.filter(f => (Number(f.CantidadIntereses) || 0) > 0).length;
+    const atrasados = listarMesesAtrasadosCg(filasPlanilla);
+    const atrasadosSinInt = atrasados.filter(a => {
+        const f = filasPlanilla.find(x => Number(x.Anio || CG.controlAnio) === a.anio && Number(x.Mes) === a.mes);
+        return !(Number(f?.CantidadIntereses) || 0);
+    });
+
+    $("#cgInteresesHistResumen").html(`
+        <div class="cg-interes-hist-kpis">
+            <div><span>Cargas</span><strong>${lista.length}</strong></div>
+            <div><span>Total</span><strong class="rp-money-out">${fmtMoneyCg(total)}</strong></div>
+            ${filtrar ? "" : `<div><span>Meses con interés</span><strong>${conInt}</strong></div>
+            <div><span>Atrasados sin interés</span><strong class="${atrasadosSinInt.length ? "rp-money-out" : ""}">${atrasadosSinInt.length}</strong></div>`}
+        </div>
+        ${!filtrar && atrasadosSinInt.length ? `
+            <div class="cg-interes-hist-pendientes">
+                <strong>Atrasados sin interés cargado:</strong>
+                <div class="cg-interes-hist-chips">
+                    ${atrasadosSinInt.map(x =>
+                        `<button type="button" class="cg-atraso-chip" data-anio="${x.anio}" data-mes="${x.mes}">
+                            <span class="cg-atraso-chip-mes">${escapeCg(x.mesNombre)} ${x.anio}</span>
+                            <span class="cg-atraso-chip-monto rp-money-out">${fmtMoneyCg(x.base)}</span>
+                        </button>`).join("")}
+                </div>
+            </div>` : ""}
+    `);
+
+    if (!lista.length) {
+        $("#cgInteresesHistBody").html(`<div class="cg-hub-stock-empty">No hay intereses cargados${filtrar ? " en este mes" : ""}.</div>`);
+    } else {
+        $("#cgInteresesHistBody").html(`
+            <table class="cg-hub-prod-table cg-interes-hist-table">
+                <thead>
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Mes ref.</th>
+                        <th>Concepto</th>
+                        <th class="text-end">Importe</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${lista.map(i => {
+                        const mesRef = i.MesNombreRef
+                            ? `${escapeCg(i.MesNombreRef)} ${i.AnioRef || ""}`
+                            : (i.AnioRef && i.MesRef ? `${i.MesRef}/${i.AnioRef}` : "—");
+                        return `<tr>
+                            <td>${formatearFechaCortaCg(i.Fecha)}</td>
+                            <td>${mesRef}</td>
+                            <td>${escapeCg(i.Concepto || "")}</td>
+                            <td class="text-end rp-money-out">${fmtMoneyCg(i.Importe)}</td>
+                        </tr>`;
+                    }).join("")}
+                </tbody>
+            </table>`);
+    }
+
+    $("#cgInteresesHistResumen").off("click.cgIntHist").on("click.cgIntHist", ".cg-atraso-chip", function () {
+        const anio = Number($(this).data("anio"));
+        const mes = Number($(this).data("mes"));
+        CG.modalInteresesHist?.hide();
+        mostrarDetalleMesHub(anio, mes);
+        const row = document.querySelector(`#cgControlMensualBody tr[data-anio="${anio}"][data-mes="${mes}"]`);
+        row?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+
+    CG.modalInteresesHist?.show();
+}
+
+function abrirModalInteresCg(anio, mes) {
+    const filas = CG.controlFiltrado?.Filas || [];
+    const m = filas.find(x => Number(x.Mes) === mes && Number(x.Anio || CG.controlAnio) === anio);
+    if (!m) return;
+
+    if (!puedeCargarInteresMesCg(m, anio, mes)) {
+        errorModal("Este mes no tiene saldo adeudado vencido (más de 1 mes).");
+        return;
+    }
+
+    const base = baseAdeudadaMesCg(m);
+    const pct = leerPctInteresDefaultCg();
+    const mesNom = m.MesNombre || `Mes ${mes}`;
+    const cantPrev = Number(m.CantidadIntereses) || 0;
+    const totalPrev = Number(m.TotalIntereses) || 0;
+
+    $("#cgInteresAnio").val(anio);
+    $("#cgInteresMes").val(mes);
+    $("#cgInteresSubtitulo").text(`Atraso de ${mesNom} ${anio}`);
+    setImporteInputCg("#cgInteresBase", base);
+    $("#cgInteresPct").val(pct);
+    $("#cgInteresFecha").val(new Date().toISOString().slice(0, 10));
+    $("#cgInteresConcepto").val(`Interés por atraso ${mesNom} ${anio}`);
+    recalcularImporteInteresCg();
+
+    const $aviso = $("#cgInteresAvisoExistente");
+    if (cantPrev > 0) {
+        const veces = cantPrev === 1 ? "1 vez" : `${cantPrev} veces`;
+        $aviso
+            .removeClass("d-none")
+            .html(`<i class="fa fa-exclamation-triangle"></i>
+                <span><strong>Atención:</strong> a este mes ya le cargaron intereses <strong>${veces}</strong>
+                (total ${fmtMoneyCg(totalPrev)}). Revisá si corresponde sumar otra carga.</span>
+                <button type="button" class="cg-btn cg-btn--ghost cg-btn--sm ms-auto" id="btnAvisoVerIntereses">
+                    <i class="fa fa-eye"></i> Ver
+                </button>`);
+        $aviso.off("click.cgAviso").on("click.cgAviso", "#btnAvisoVerIntereses", () => {
+            CG.modalInteres?.hide();
+            abrirModalInteresesHistCg(anio, mes);
+        });
+    } else {
+        $aviso.addClass("d-none").empty();
+    }
+
+    CG.modalInteres?.show();
+}
+
+function recalcularImporteInteresCg() {
+    const base = leerImporteInputCg("#cgInteresBase");
+    const pct = Number($("#cgInteresPct").val()) || 0;
+    const sugerido = Math.round((base * pct / 100) * 100) / 100;
+    setImporteInputCg("#cgInteresImporte", sugerido);
+}
+
+async function confirmarInteresCg() {
+    if (!CG.id) {
+        errorModal("Seleccione un cliente.");
+        return;
+    }
+
+    const importe = leerImporteInputCg("#cgInteresImporte");
+    const concepto = ($("#cgInteresConcepto").val() || "").trim();
+    const fecha = $("#cgInteresFecha").val();
+    const pct = Number($("#cgInteresPct").val()) || 0;
+
+    if (importe <= 0) {
+        errorModal("Indique un importe de interés mayor a cero.");
+        return;
+    }
+    if (!concepto) {
+        errorModal("El concepto es obligatorio.");
+        return;
+    }
+    if (!fecha) {
+        errorModal("Indique la fecha.");
+        return;
+    }
+
+    const anioRef = parseInt($("#cgInteresAnio").val(), 10) || null;
+    const mesRef = parseInt($("#cgInteresMes").val(), 10) || null;
+    const prev = interesesDelMesCg(anioRef, mesRef);
+    if (prev.length > 0) {
+        const veces = prev.length === 1 ? "1 vez" : `${prev.length} veces`;
+        const ok = typeof confirmarModal === "function"
+            ? await confirmarModal(`Este mes ya tiene intereses cargados ${veces}. ¿Sumar otra carga igual?`)
+            : confirm(`Este mes ya tiene intereses cargados ${veces}. ¿Sumar otra carga igual?`);
+        if (!ok) return;
+    }
+
+    const payload = {
+        IdCliente: CG.id,
+        Fecha: fecha,
+        Concepto: concepto,
+        Importe: importe,
+        AnioRef: anioRef,
+        MesRef: mesRef
+    };
+
+    const data = await fetchJsonCg(API_CG.ccRegistrarInteres, {
+        method: "POST",
+        headers: authCg(),
+        body: JSON.stringify(payload)
+    });
+
+    if (!data?.valor) {
+        errorModal(data?.mensaje || "No se pudo registrar el interés.");
+        return;
+    }
+
+    guardarPctInteresDefaultCg(pct);
+    exitoModal(data.mensaje || "Interés registrado.");
+    CG.modalInteres?.hide();
+
+    CG.tabsLoaded.controlMensual = false;
+    CG.tabsLoaded.cuentaCorriente = false;
+    await cargarTabControlMensual(true);
+    if (typeof cargarTabCuentaCorriente === "function") {
+        try { await cargarTabCuentaCorriente(true); } catch { /* opcional */ }
     }
 }
 
@@ -2016,13 +2421,14 @@ function renderHubStockCg(items) {
 
     cont.html(list.map(s => {
         const enPoder = Number(s.EnPoderCliente) || 0;
-        const tone = enPoder > 0 ? "has-stock" : (enPoder < 0 ? "neg-stock" : "");
+        const poderCls = typeof clsSaldoMoney === "function" ? clsSaldoMoney(enPoder) : "";
+        const tone = enPoder > 0 ? "has-stock" : (enPoder < 0 ? "neg-stock" : "zero-stock");
         return `<div class="cg-hub-stock-card ${tone}">
             <div class="cg-hub-stock-name">${escapeCg(s.Producto)}</div>
             <div class="cg-hub-stock-nums">
-                <span><small>Entreg.</small><strong>${fmtQtyCg(s.Entregadas)}</strong></span>
-                <span><small>Retir.</small><strong>${fmtQtyCg(s.Retiradas)}</strong></span>
-                <span class="cg-hub-stock-poder"><small>En poder</small><strong>${fmtQtyCg(enPoder)}</strong></span>
+                <span><small>Entreg.</small><strong class="rp-money-in">${fmtQtyCg(s.Entregadas)}</strong></span>
+                <span><small>Retir.</small><strong class="rp-money-out">${fmtQtyCg(s.Retiradas)}</strong></span>
+                <span class="cg-hub-stock-poder"><small>En poder</small><strong class="${poderCls}">${fmtQtyCg(enPoder)}</strong></span>
             </div>
         </div>`;
     }).join(""));
@@ -2054,10 +2460,10 @@ async function cargarTabCuentaCorriente(force) {
     ]);
 
     if (res) {
-        $("#cgSaldoAnterior").text(fmtMoneyCg(res.SaldoAnterior)).attr("class", "val " + (typeof clsSaldoMoney === "function" ? clsSaldoMoney(res.SaldoAnterior) : ""));
+        $("#cgSaldoAnterior").text(fmtMoneyCg(res.SaldoAnterior)).attr("class", "val " + (typeof clsSaldoDeudaMoney === "function" ? clsSaldoDeudaMoney(res.SaldoAnterior) : ""));
         $("#cgDebe").text(fmtMoneyCg(res.Debe)).attr("class", "val rp-money-out");
         $("#cgHaber").text(fmtMoneyCg(res.Haber)).attr("class", "val rp-money-in");
-        $("#cgSaldoActual").text(fmtMoneyCg(res.SaldoActual)).attr("class", "val " + (typeof clsSaldoMoney === "function" ? clsSaldoMoney(res.SaldoActual) : ""));
+        $("#cgSaldoActual").text(fmtMoneyCg(res.SaldoActual)).attr("class", "val " + (typeof clsSaldoDeudaMoney === "function" ? clsSaldoDeudaMoney(res.SaldoActual) : ""));
     }
 
     const data = (movs || []).filter(x => x.TipoMovimiento !== "SALDO_ANTERIOR" && x.Id > 0);
@@ -2081,7 +2487,7 @@ async function cargarTabCuentaCorriente(force) {
         }},
         { data: "Saldo", className: "text-end", render: d => {
             const n = Number(d || 0);
-            const cls = typeof clsSaldoMoney === "function" ? clsSaldoMoney(n) : "rp-money-zero";
+            const cls = typeof clsSaldoDeudaMoney === "function" ? clsSaldoDeudaMoney(n) : "rp-money-zero";
             return `<strong class="${cls}">${fmtMoneyCg(n)}</strong>`;
         }}
     ]);
@@ -2210,7 +2616,7 @@ const CG_CARD_SCHEMAS = {
             { label: "Estado", value: r => r.Estado || "-" },
             { label: "Total", value: r => fmtMoneyCg(r.ImporteTotal), cls: "cg-val-neutral" },
             { label: "Pagado", value: r => fmtMoneyCg(r.ImporteAbonado), cls: "cg-val-haber" },
-            { label: "Saldo", value: r => fmtMoneyCg(r.Saldo), cls: r => typeof clsSaldoMoney === "function" ? clsSaldoMoney(r.Saldo) : "cg-val-saldo" }
+            { label: "Saldo", value: r => fmtMoneyCg(r.Saldo), cls: r => typeof clsSaldoDeudaMoney === "function" ? clsSaldoDeudaMoney(r.Saldo) : "cg-val-saldo" }
         ],
         actions: r => `<a class="cg-card-btn" href="${API_CG.entregaNuevoModif(r.Id, CG.id)}"><i class="fa fa-pencil"></i> Ver / editar</a>`
     },
@@ -2219,9 +2625,9 @@ const CG_CARD_SCHEMAS = {
         subtitle: () => "Stock en poder del cliente",
         tone: () => "cg-data-card--purple",
         fields: [
-            { label: "Entregadas", value: r => fmtQtyCg(r.Entregadas) },
-            { label: "Retiradas", value: r => fmtQtyCg(r.Retiradas) },
-            { label: "En poder", value: r => fmtQtyCg(r.EnPoderCliente), cls: "cg-val-accent", full: true }
+            { label: "Entregadas", value: r => fmtQtyCg(r.Entregadas), cls: "rp-money-in" },
+            { label: "Retiradas", value: r => fmtQtyCg(r.Retiradas), cls: "rp-money-out" },
+            { label: "En poder", value: r => fmtQtyCg(r.EnPoderCliente), cls: r => typeof clsSaldoMoney === "function" ? clsSaldoMoney(r.EnPoderCliente) : "cg-val-accent", full: true }
         ]
     },
     cuentaCorriente: {
@@ -2233,7 +2639,7 @@ const CG_CARD_SCHEMAS = {
             { label: "Concepto", value: r => r.Concepto, full: true },
             { label: "Debe", value: r => fmtMoneyCg(r.Debe), cls: "cg-val-debe" },
             { label: "Haber", value: r => fmtMoneyCg(r.Haber), cls: "cg-val-haber" },
-            { label: "Saldo", value: r => fmtMoneyCg(r.Saldo), cls: r => typeof clsSaldoMoney === "function" ? clsSaldoMoney(r.Saldo) : "cg-val-saldo" }
+            { label: "Saldo", value: r => fmtMoneyCg(r.Saldo), cls: r => typeof clsSaldoDeudaMoney === "function" ? clsSaldoDeudaMoney(r.Saldo) : "cg-val-saldo" }
         ],
         actions: r => r.PuedeEliminar
             ? `<button type="button" class="cg-card-btn cg-card-btn--danger" onclick="eliminarMovCcCg(${r.Id})"><i class="fa fa-trash"></i> Eliminar</button>`
@@ -2349,24 +2755,29 @@ function renderControlMensualCardsCg(filas, mostrarAnio) {
     $grid.html(filas.map(m => {
         const anio = m.Anio || CG.controlAnio;
         const saldo = Number(m.Saldo) || 0;
-        const saldoCls = typeof clsSaldoMoney === "function"
-            ? clsSaldoMoney(saldo)
-            : (saldo > 0 ? "cg-val-saldo-pos" : (saldo < 0 ? "cg-val-saldo-neg" : "cg-val-saldo-cero"));
+        const saldoCls = typeof clsSaldoDeudaMoney === "function"
+            ? clsSaldoDeudaMoney(saldo)
+            : (saldo > 0 ? "cg-val-saldo-neg" : (saldo < 0 ? "cg-val-saldo-pos" : "cg-val-saldo-cero"));
+        const atrasado = puedeCargarInteresMesCg(m, anio, m.Mes);
+        const badge = atrasado
+            ? `<span class="cg-data-card-badge cg-data-card-badge--atraso">Atrasado</span>`
+            : (m.SinEntrega ? `<span class="cg-data-card-badge cg-data-card-badge--warn">Sin entrega</span>` : "");
         return `
-            <article class="cg-data-card cg-data-card--cm rp-card-selectable ${m.SinEntrega ? "is-warn" : ""}"
+            <article class="cg-data-card cg-data-card--cm rp-card-selectable ${m.SinEntrega ? "is-warn" : ""} ${atrasado ? "is-atraso" : ""}"
                      data-anio="${anio}" data-mes="${m.Mes}" tabindex="0" role="button">
                 <div class="cg-data-card-head">
                     <div class="cg-data-card-head-text">
                         <div class="cg-data-card-title">${escapeCg(m.MesNombre)}${mostrarAnio ? ` ${anio}` : ""}</div>
                         <div class="cg-data-card-sub">Visita: ${formatearFechaCortaCg(m.FechaVisita) || "-"}</div>
                     </div>
-                    ${m.SinEntrega ? `<span class="cg-data-card-badge cg-data-card-badge--warn">Sin entrega</span>` : ""}
+                    ${badge}
                 </div>
                 <div class="cg-data-card-body">
-                    <div class="cg-card-field"><span>Entreg.</span><strong>${fmtQtyCg(m.Entregadas)}</strong></div>
-                    <div class="cg-card-field"><span>Retir.</span><strong>${fmtQtyCg(m.Retiradas)}</strong></div>
+                    <div class="cg-card-field"><span>Entreg.</span><strong class="rp-money-in">${fmtQtyCg(m.Entregadas)}</strong></div>
+                    <div class="cg-card-field"><span>Retir.</span><strong class="rp-money-out">${fmtQtyCg(m.Retiradas)}</strong></div>
                     <div class="cg-card-field"><span>Debe</span><strong class="cg-val-debe">${fmtMoneyCg(m.Debe)}</strong></div>
                     <div class="cg-card-field"><span>Haber</span><strong class="cg-val-haber">${fmtMoneyCg(m.Haber)}</strong></div>
+                    <div class="cg-card-field"><span>Intereses</span><strong class="${atrasado && !(Number(m.CantidadIntereses) || 0) ? "rp-money-out" : ""}">${(Number(m.CantidadIntereses) || 0) > 0 ? `${m.CantidadIntereses}× ${fmtMoneyCg(m.TotalIntereses)}` : "—"}</strong></div>
                     <div class="cg-card-field cg-card-field--full"><span>Saldo</span><strong class="${saldoCls}">${fmtMoneyCg(m.Saldo)}</strong></div>
                 </div>
             </article>`;

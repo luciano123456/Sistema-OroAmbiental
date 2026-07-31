@@ -319,7 +319,7 @@ function renderClientes() {
 
         const active = ACC.ClienteSel && ACC.ClienteSel.Id === a.Id ? "active" : "";
 
-        let saldoClass = typeof clsSaldoMoney === "function" ? clsSaldoMoney(saldo) : "saldo-cero";
+        let saldoClass = typeof clsSaldoDeudaMoney === "function" ? clsSaldoDeudaMoney(saldo) : "saldo-cero";
 
         cont.append(`
             <div class="cc-artist-item ${active}" onclick="seleccionarCliente(${a.Id})">
@@ -575,7 +575,7 @@ async function configurarDataTable(data) {
                     className: "text-end",
                     render: function (v) {
                         const n = Number(v || 0);
-                        const cls = typeof clsSaldoMoney === "function" ? clsSaldoMoney(n) : "rp-money-zero";
+                        const cls = typeof clsSaldoDeudaMoney === "function" ? clsSaldoDeudaMoney(n) : "rp-money-zero";
                         return `<strong class="${cls}">${formatearNumero(n)}</strong>`;
                     }
                 },
@@ -671,10 +671,10 @@ function actualizarKpis() {
         cantidadMovimientos: 0
     };
 
-    $("#kpiSaldoAnterior").text(fmtMoney(r.saldoAnterior)).attr("class", "val " + (typeof clsSaldoMoney === "function" ? clsSaldoMoney(r.saldoAnterior) : ""));
+    $("#kpiSaldoAnterior").text(fmtMoney(r.saldoAnterior)).attr("class", "val " + (typeof clsSaldoDeudaMoney === "function" ? clsSaldoDeudaMoney(r.saldoAnterior) : ""));
     $("#kpiDebe").text(fmtMoney(r.debe)).attr("class", "val rp-money-out");
     $("#kpiHaber").text(fmtMoney(r.haber)).attr("class", "val rp-money-in");
-    $("#kpiSaldoActual").text(fmtMoney(r.saldoActual)).attr("class", "val " + (typeof clsSaldoMoney === "function" ? clsSaldoMoney(r.saldoActual) : ""));
+    $("#kpiSaldoActual").text(fmtMoney(r.saldoActual)).attr("class", "val " + (typeof clsSaldoDeudaMoney === "function" ? clsSaldoDeudaMoney(r.saldoActual) : ""));
     $("#kpiMovimientos").text(r.cantidadMovimientos || 0);
 
     const chip = $("#chipSaldoEstado");
@@ -727,7 +727,7 @@ function verMovimiento(id) {
             $("#vmConcepto").text(m.Concepto || "");
             $("#vmDebe").text(fmtMoney(m.Debe || 0)).attr("class", "v rp-money-out");
             $("#vmHaber").text(fmtMoney(m.Haber || 0)).attr("class", "v rp-money-in");
-            $("#vmSaldo").text(fmtMoney(m.Saldo ?? m.saldo ?? 0)).attr("class", "v " + (typeof clsSaldoMoney === "function" ? clsSaldoMoney(m.Saldo ?? m.saldo ?? 0) : ""));
+            $("#vmSaldo").text(fmtMoney(m.Saldo ?? m.saldo ?? 0)).attr("class", "v " + (typeof clsSaldoDeudaMoney === "function" ? clsSaldoDeudaMoney(m.Saldo ?? m.saldo ?? 0) : ""));
 
             if (m.Sucursal) {
                 $("#vmSucursal").text(m.Sucursal);

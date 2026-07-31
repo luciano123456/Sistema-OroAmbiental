@@ -11,7 +11,7 @@
     <link href="~/css/Productora.css?v=6.2" rel="stylesheet" />
     <link href="~/css/disenopantallas.css?v=6.2" rel="stylesheet" />
     <link href="~/css/M_Generico.css?v=6.2" rel="stylesheet" />
-    <link href="~/css/ClientesGestion.css?v=13.1" rel="stylesheet" />
+    <link href="~/css/ClientesGestion.css?v=13.5" rel="stylesheet" />
     <link href="~/css/ClientesEstablecimientos.css?v=5.4" rel="stylesheet" />
     <link href="~/css/ContratosModal.css?v=5.4" rel="stylesheet" />
 }
@@ -456,6 +456,9 @@
                             <a id="btnNuevaEntregaHub" class="cg-btn cg-btn--success cg-btn--sm" href="#">
                                 <i class="fa fa-truck"></i> Nueva entrega
                             </a>
+                            <button type="button" id="btnVerInteresesCg" class="cg-btn cg-btn--ghost cg-btn--sm" title="Ver intereses cargados">
+                                <i class="fa fa-eye"></i> Intereses
+                            </button>
                             <button type="button" id="btnRefreshControlMensual" class="cg-btn cg-btn--ghost cg-btn--sm">
                                 <i class="fa fa-refresh"></i> Actualizar
                             </button>
@@ -488,11 +491,30 @@
                             <strong id="cgControlCount">-</strong>
                             <small>meses filtrados</small>
                         </div>
+                        <div class="cg-hub-kpi cg-hub-kpi--atraso" id="cgKpiAtrasos" hidden>
+                            <span>Meses atrasados</span>
+                            <strong id="cgControlAtrasosCount">0</strong>
+                            <small id="cgControlAtrasosMonto">sin deuda vencida</small>
+                        </div>
                     </div>
 
                     <div id="cgControlError" class="cg-cm-alert d-none" role="alert">
                         <i class="fa fa-exclamation-triangle"></i>
                         <span>Algunos datos no se pudieron calcular. Podes editar los meses manualmente.</span>
+                    </div>
+
+                    <div id="cgAtrasosAlert" class="cg-atrasos-alert d-none" role="alert" hidden>
+                        <div class="cg-atrasos-alert-head">
+                            <div class="cg-atrasos-alert-icon" aria-hidden="true"><i class="fa fa-bell"></i></div>
+                            <div class="cg-atrasos-alert-copy">
+                                <strong id="cgAtrasosTitulo">Hay meses con pago atrasado</strong>
+                                <p id="cgAtrasosResumen">Seleccioná un mes para ver el detalle o cargar interés.</p>
+                            </div>
+                            <button type="button" class="cg-btn cg-btn--ghost cg-btn--sm" id="btnAtrasosToggleLista" aria-expanded="true">
+                                Ver lista
+                            </button>
+                        </div>
+                        <div class="cg-atrasos-alert-body" id="cgAtrasosLista"></div>
                     </div>
 
                     <div class="cg-hub-stock cg-hub-block" data-cg-section="stockCliente">
@@ -576,6 +598,7 @@
                                         <th class="cg-cm-th-num cg-cm-th-grp-start">Debe</th>
                                         <th class="cg-cm-th-num">Haber</th>
                                         <th class="cg-cm-th-num cg-cm-th-saldo">Saldo</th>
+                                        <th class="cg-cm-th-num cg-cm-th-int">Intereses</th>
                                         <th class="cg-cm-th-num">Cajas</th>
                                         <th class="cg-cm-th-flag">S/E</th>
                                         <th class="cg-cm-th-obs">Obs.</th>
@@ -596,6 +619,12 @@
                             <div class="cg-hub-mes-actions">
                                 <button type="button" class="cg-btn cg-btn--success cg-btn--sm" id="btnEditarMesHub">
                                     <i class="fa fa-pencil"></i> Editar visita / abonos
+                                </button>
+                                <button type="button" class="cg-btn cg-btn--warn cg-btn--sm d-none" id="btnInteresMesHub" title="Sugerir interés por atraso (aplica solo si confirman)">
+                                    <i class="fa fa-percent"></i> Cargar interés
+                                </button>
+                                <button type="button" class="cg-btn cg-btn--ghost cg-btn--sm d-none" id="btnVerInteresesMesHub" title="Ver intereses de este mes">
+                                    <i class="fa fa-eye"></i> Ver intereses
                                 </button>
                             </div>
                         </div>
@@ -927,6 +956,78 @@
     </div>
 </div>
 
+<!-- Modal cargar interés -->
+<div class="modal fade rp-modal" id="modalInteresCg" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rp-modal-content">
+            <div class="modal-header rp-modal-header">
+                <div>
+                    <div class="rp-modal-title"><i class="fa fa-percent"></i> Cargar interés</div>
+                    <div class="rp-modal-sub" id="cgInteresSubtitulo">Por atraso de pago</div>
+                </div>
+                <button type="button" class="btn-close rp-btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="cgInteresAnio" />
+                <input type="hidden" id="cgInteresMes" />
+                <p class="cg-interes-hint mb-3">
+                    El sistema sugiere un monto. Pueden editarlo o cancelar si el atraso no merece interés.
+                    Al confirmar se suma al <strong>Debe</strong> (cuenta corriente) y aparece en el saldo de la hoja de ruta.
+                </p>
+                <div id="cgInteresAvisoExistente" class="cg-interes-aviso d-none" role="alert"></div>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Base adeudada del mes</label>
+                        <input type="text" id="cgInteresBase" class="form-control" readonly />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">% interés</label>
+                        <input type="number" id="cgInteresPct" class="form-control" min="0" step="0.01" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Importe a cargar</label>
+                        <input type="text" id="cgInteresImporte" class="form-control Inputmiles" inputmode="decimal" autocomplete="off" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Fecha</label>
+                        <input type="date" id="cgInteresFecha" class="form-control" />
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Concepto</label>
+                        <input type="text" id="cgInteresConcepto" class="form-control" maxlength="200" />
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer rp-modal-footer">
+                <button class="rp-btn rp-btn-soft" data-bs-dismiss="modal"><i class="fa fa-times"></i> Cancelar</button>
+                <button class="rp-btn rp-btn-primary" id="btnConfirmarInteresCg" type="button"><i class="fa fa-check"></i> Confirmar interés</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal historial de intereses -->
+<div class="modal fade rp-modal" id="modalInteresesHistCg" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content rp-modal-content">
+            <div class="modal-header rp-modal-header">
+                <div>
+                    <div class="rp-modal-title"><i class="fa fa-eye"></i> Intereses cargados</div>
+                    <div class="rp-modal-sub" id="cgInteresesHistSub">Historial del cliente</div>
+                </div>
+                <button type="button" class="btn-close rp-btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="cgInteresesHistResumen" class="cg-interes-hist-resumen mb-3"></div>
+                <div id="cgInteresesHistBody" class="cg-interes-hist-body"></div>
+            </div>
+            <div class="modal-footer rp-modal-footer">
+                <button class="rp-btn rp-btn-soft" data-bs-dismiss="modal"><i class="fa fa-times"></i> Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <partial name="~/Views/Entities/M_ClientesEstablecimientos.cshtml" />
 <partial name="~/Views/Entities/M_Contratos.cshtml" />
 
@@ -939,5 +1040,5 @@
     <script src="~/js/Entities/M_ClientesEstablecimientos.js?v=5.8"></script>
     <script src="~/js/ContratosDocumentos.js?v=5.3"></script>
     <script src="~/js/Entities/M_Contratos.js?v=5.4"></script>
-    <script src="~/js/ClientesGestion.js?v=13.1"></script>
+    <script src="~/js/ClientesGestion.js?v=13.5"></script>
 }

@@ -308,6 +308,9 @@ namespace SistemaOroAmbiental.DAL.Repository
                 .SelectMany(a => mesesNorm.Select(m => filas.First(f => f.Anio == a && f.Mes == m)))
                 .ToList();
 
+            var intereses = MapearInteresesCliente(movimientosCc);
+            AsignarInteresesAFilas(filasOrdenadas, intereses);
+
             return new ClienteControlFiltradoDto
             {
                 IdCliente = idCliente,
@@ -320,8 +323,89 @@ namespace SistemaOroAmbiental.DAL.Repository
                 TotalSaldo = saldoAcumulado,
                 DatosParciales = datosParciales,
                 Filas = filasOrdenadas,
-                Recorridos = recorridos
+                Recorridos = recorridos,
+                Intereses = intereses
             };
+        }
+
+        private static List<ClienteInteresMovDto> MapearInteresesCliente(
+            List<ClientesCuentaCorrienteMovimiento> movimientosCc)
+        {
+            return movimientosCc
+                .Where(m => string.Equals(
+                    m.TipoMovimiento,
+                    ClientesCuentaCorrienteRepository.TIPO_INTERES_CLIENTE,
+                    StringComparison.OrdinalIgnoreCase))
+                .OrderByDescending(m => m.Fecha)
+                .ThenByDescending(m => m.Id)
+                .Select(m =>
+                {
+                    var (anioRef, mesRef) = ResolverPeriodoInteres(m);
+                    return new ClienteInteresMovDto
+                    {
+                        Id = m.Id,
+                        Fecha = m.Fecha,
+                        Concepto = m.Concepto ?? "",
+                        Importe = m.Debe,
+                        AnioRef = anioRef,
+                        MesRef = mesRef,
+                        MesNombreRef = mesRef is >= 1 and <= 12 ? MesesNombres[mesRef.Value] : null
+                    };
+                })
+                .ToList();
+        }
+
+        private static void AsignarInteresesAFilas(
+            List<ClienteControlMensualDto> filas,
+            List<ClienteInteresMovDto> intereses)
+        {
+            foreach (var fila in filas)
+            {
+                var delMes = intereses
+                    .Where(i => i.AnioRef == fila.Anio && i.MesRef == fila.Mes)
+                    .OrderByDescending(i => i.Fecha)
+                    .ThenByDescending(i => i.Id)
+                    .ToList();
+
+                fila.Intereses = delMes;
+                fila.CantidadIntereses = delMes.Count;
+                fila.TotalIntereses = delMes.Sum(i => i.Importe);
+            }
+        }
+
+        /// <summary>
+        /// Prefiere tag · ref:YYYY-MM en el concepto; si no, busca "MesNombre Año".
+        /// </summary>
+        private static (int? Anio, int? Mes) ResolverPeriodoInteres(ClientesCuentaCorrienteMovimiento mov)
+        {
+            var concepto = mov.Concepto ?? "";
+            var tag = System.Text.RegularExpressions.Regex.Match(
+                concepto,
+                @"ref:(\d{4})-(\d{2})",
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+            if (tag.Success &&
+                int.TryParse(tag.Groups[1].Value, out var anioTag) &&
+                int.TryParse(tag.Groups[2].Value, out var mesTag) &&
+                mesTag is >= 1 and <= 12)
+            {
+                return (anioTag, mesTag);
+            }
+
+            for (var mes = 1; mes <= 12; mes++)
+            {
+                var nombre = MesesNombres[mes];
+                var rx = System.Text.RegularExpressions.Regex.Match(
+                    concepto,
+                    $@"\b{System.Text.RegularExpressions.Regex.Escape(nombre)}\s+(\d{{4}})\b",
+                    System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+                if (rx.Success && int.TryParse(rx.Groups[1].Value, out var anioNom))
+                    return (anioNom, mes);
+            }
+
+            // Sin referencia clara: queda sin mes asignado (aparece en el listado general).
+            return (null, null);
         }
 
         /// <summary>
