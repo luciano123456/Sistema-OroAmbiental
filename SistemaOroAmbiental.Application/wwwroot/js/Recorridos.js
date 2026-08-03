@@ -149,6 +149,22 @@ $(document).ready(async () => {
         const id = parseInt($(this).data("id"), 10);
         guardarObservacionClienteRecorrido(id, $(this).val());
     });
+    $("#listaClientesRecorrido").on("change", ".rec-prod-lista", async function () {
+        await onCambioListaProductoRec($(this));
+        guardarProductoClienteRecorrido($(this).closest(".rec-prod-row[data-cep-id]"), { alertar: false });
+    });
+    $("#listaClientesRecorrido").on("blur", ".rec-prod-cant, .rec-prod-precio", function () {
+        const alertar = $(this).hasClass("rec-prod-precio");
+        guardarProductoClienteRecorrido($(this).closest(".rec-prod-row[data-cep-id]"), { alertar });
+    });
+    $("#listaClientesRecorrido").on("input", ".rec-prod-precio", function () {
+        const $row = $(this).closest(".rec-prod-row[data-cep-id]");
+        const raw = $row.attr("data-precio-lista");
+        if (raw === undefined || raw === "") return;
+        const precioLista = Number(raw);
+        if (Number.isNaN(precioLista)) return;
+        marcarPrecioVsListaRec($row, leerNumeroRec($(this).val()), precioLista, { alertar: false });
+    });
 
     $("#txtBuscarRecorrido").on("input", function () {
         clearTimeout(busquedaTimer);
@@ -209,7 +225,8 @@ async function inicializarPagina() {
         await Promise.all([
             cargarCatalogos(),
             recargarCamionesSelect(null, { silent: true }),
-            cargarClientesCatalogo()
+            cargarClientesCatalogo(),
+            ensureListasPreciosRec()
         ]);
         llenarFiltrosCatalogos();
         initSelect2Recorridos();
@@ -846,7 +863,8 @@ function renderClientesRecorrido(data) {
             : "";
 
         return `
-            <article class="rec-cliente-item${item.Activo ? "" : " rec-cliente-item--inactive"}" data-id="${item.Id}">
+            <article class="rec-cliente-item${item.Activo ? "" : " rec-cliente-item--inactive"}" data-id="${item.Id}"
+                     data-cliente="${item.IdCliente}" data-establecimiento="${item.IdEstablecimiento || 0}">
                 <div class="rec-cliente-pos" title="Posicion en la ruta">
                     <span>${item.Posicion}</span>
                 </div>
@@ -878,14 +896,383 @@ function renderClientesRecorrido(data) {
                     <textarea class="form-control rec-input rec-obs-input" data-id="${item.Id}" rows="2"
                               maxlength="500" placeholder="Notas para imprimir en la hoja de ruta...">${escapeHtml(item.Observacion || "")}</textarea>
                 </div>
+                ${renderProductosPlegableRec(item)}
             </article>`;
     }).join("");
 
     $lista.html(html);
+    $lista.find(".Inputmiles").each(function () {
+        if (typeof formatearMilesInput === "function") formatearMilesInput(this);
+    });
 
     const activos = data.filter(x => x.Activo).length;
     const suffix = `${data.length} cliente${data.length === 1 ? "" : "s"}${activos !== data.length ? ` (${activos} activos)` : ""}`;
     actualizarLabelRecorridoSeleccionado(suffix);
+
+    verificarPreciosProductosRec($lista);
+}
+
+let listasPreciosRec = [];
+
+async function ensureListasPreciosRec() {
+    if (listasPreciosRec.length) return listasPreciosRec;
+    try {
+        const data = await fetchJson("/ListasPrecios/Lista");
+        listasPreciosRec = Array.isArray(data) ? data : [];
+    } catch (e) {
+        console.warn(e);
+        listasPreciosRec = [];
+    }
+    return listasPreciosRec;
+}
+
+function fmtMoneyRec(n) {
+    const v = Number(n);
+    if (Number.isNaN(v)) return "0,00";
+    return typeof formatearNumero === "function"
+        ? formatearNumero(v)
+        : v.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function fmtCantRec(n) {
+    const v = Number(n) || 0;
+    return v % 1 === 0
+        ? String(Math.trunc(v))
+        : v.toLocaleString("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: 4 });
+}
+
+function leerNumeroRec(valor) {
+    if (typeof parseNumero === "function") return parseNumero(valor);
+    const n = parseFloat(String(valor ?? "").replace(/\./g, "").replace(",", "."));
+    return Number.isNaN(n) ? 0 : n;
+}
+
+function resumenProductosRec(productos) {
+    if (!productos?.length) return "Sin productos";
+    return productos.map(p => {
+        const abrev = (p.Abreviatura || p.Producto || "PROD").trim();
+        return `${fmtCantRec(p.Cantidad)} ${abrev} x $ ${fmtMoneyRec(p.PrecioVenta)}`;
+    }).join(" · ");
+}
+
+function renderProductosPlegableRec(item) {
+    const productos = Array.isArray(item.Productos) ? item.Productos : [];
+    const collapseId = `recProdCollapse_${item.Id}`;
+    const resumen = resumenProductosRec(productos);
+    const tieneEst = item.IdEstablecimiento > 0;
+
+    let body;
+    if (!tieneEst) {
+        body = `<div class="rec-prod-empty">Asigná un establecimiento al cliente en la ruta para ver productos.</div>`;
+    } else if (!productos.length) {
+        body = `<div class="rec-prod-empty">Sin productos en el establecimiento. Cargalos desde Clientes → Establecimientos → Productos.</div>`;
+    } else {
+        const optsLista = (listasPreciosRec || []).map(l =>
+            `<option value="${l.Id}">${escapeHtml(l.Nombre)}</option>`
+        ).join("");
+
+        const rows = productos.map(p => {
+            const opts = (listasPreciosRec || []).map(l =>
+                `<option value="${l.Id}" ${Number(l.Id) === Number(p.IdListaPrecio) ? "selected" : ""}>${escapeHtml(l.Nombre)}</option>`
+            ).join("");
+            const abrev = (p.Abreviatura || "").trim();
+            return `
+                <div class="rec-prod-row" data-cep-id="${p.Id}"
+                     data-id-producto="${p.IdProducto}"
+                     data-id-establecimiento="${item.IdEstablecimiento}"
+                     data-precio-ef="${p.PrecioEfectivo ?? 0}"
+                     data-precio-tr="${p.PrecioTransferencia ?? 0}">
+                    <div class="rec-prod-identity">
+                        <span class="rec-prod-avatar"><i class="fa fa-cube"></i></span>
+                        <div class="rec-prod-identity-text">
+                            <span class="rec-prod-name">${escapeHtml(p.Producto || "")}</span>
+                            <span class="rec-prod-abrev">${escapeHtml(abrev || "Sin abreviatura")}</span>
+                        </div>
+                    </div>
+                    <div class="rec-prod-fields">
+                        <label class="rec-prod-field">
+                            <span>Cant.</span>
+                            <input type="text" class="form-control form-control-sm Inputmiles rec-prod-cant"
+                                   value="${fmtCantRec(p.Cantidad)}" inputmode="decimal" />
+                        </label>
+                        <label class="rec-prod-field rec-prod-field--lista">
+                            <span>Lista</span>
+                            <select class="form-control form-control-sm rec-prod-lista">
+                                <option value="">Seleccionar</option>
+                                ${opts || optsLista}
+                            </select>
+                        </label>
+                        <label class="rec-prod-field rec-prod-field--precio">
+                            <span>Precio</span>
+                            <div class="rec-prod-precio-wrap">
+                                <span class="rec-prod-precio-prefix">$</span>
+                                <input type="text" class="form-control form-control-sm Inputmiles rec-prod-precio"
+                                       value="${fmtMoneyRec(p.PrecioVenta)}" inputmode="decimal" />
+                                <span class="rec-prod-precio-warn" title="El precio no coincide con la lista" hidden>
+                                    <i class="fa fa-exclamation-triangle"></i>
+                                </span>
+                            </div>
+                        </label>
+                    </div>
+                </div>`;
+        }).join("");
+
+        body = `
+            <div class="rec-prod-list">${rows}</div>
+            <div class="rec-prod-hint">
+                <i class="fa fa-print"></i>
+                <span>Estos valores salen en la hoja de ruta y se guardan al editar.</span>
+            </div>`;
+    }
+
+    return `
+        <div class="rec-cliente-productos">
+            <button class="rec-prod-toggle collapsed" type="button"
+                    data-bs-toggle="collapse" data-bs-target="#${collapseId}"
+                    aria-expanded="false">
+                <span class="rec-prod-toggle-left">
+                    <span class="rec-prod-toggle-icon"><i class="fa fa-cube"></i></span>
+                    <span class="rec-prod-toggle-copy">
+                        <strong>Productos a entregar</strong>
+                        <small class="rec-prod-resumen">${escapeHtml(resumen)}</small>
+                    </span>
+                    <span class="rec-prod-count">${productos.length}</span>
+                </span>
+                <span class="rec-prod-toggle-chevron"><i class="fa fa-chevron-down"></i></span>
+            </button>
+            <div id="${collapseId}" class="collapse">
+                <div class="rec-prod-body">${body}</div>
+            </div>
+        </div>`;
+}
+
+async function onCambioListaProductoRec($select) {
+    const $row = $select.closest(".rec-prod-row[data-cep-id]");
+    const idProducto = parseInt($row.data("id-producto"), 10);
+    const idLista = parseInt($select.val() || "0", 10);
+    if (!idProducto || !idLista) return;
+
+    try {
+        const precioLista = await obtenerPrecioCatalogoListaRec(idProducto, idLista);
+        if (precioLista != null) {
+            $row.attr("data-precio-lista", precioLista);
+            $row.find(".rec-prod-precio").val(fmtMoneyRec(precioLista));
+            const el = $row.find(".rec-prod-precio")[0];
+            if (el && typeof formatearMilesInput === "function") formatearMilesInput(el);
+            marcarPrecioVsListaRec($row, precioLista, precioLista, { alertar: false });
+        }
+    } catch (e) {
+        console.warn(e);
+    }
+}
+
+async function obtenerPrecioCatalogoListaRec(idProducto, idLista) {
+    const rows = await fetchJson(`/ProductosPrecios/ListaPorProducto?idProducto=${idProducto}`);
+    const match = (Array.isArray(rows) ? rows : []).find(r => Number(r.IdListaPrecio) === Number(idLista));
+    if (!match || match.PrecioVenta == null) return null;
+    return Number(match.PrecioVenta);
+}
+
+function marcarPrecioVsListaRec($row, precioGuardado, precioLista, { alertar = false } = {}) {
+    if (!$row?.length) return;
+
+    const $input = $row.find(".rec-prod-precio");
+    const $warnIcon = $row.find(".rec-prod-precio-warn");
+    $row.children(".rec-prod-mismatch").remove();
+
+    if (precioLista == null || Number.isNaN(Number(precioLista))) {
+        $row.removeClass("rec-prod-row--mismatch");
+        $input.removeClass("rec-prod-precio--mismatch");
+        $warnIcon.attr("hidden", true).attr("title", "El precio no coincide con la lista");
+        return;
+    }
+
+    const coincide = Math.abs(Number(precioGuardado) - Number(precioLista)) < 0.005;
+    $row.toggleClass("rec-prod-row--mismatch", !coincide);
+    $input.toggleClass("rec-prod-precio--mismatch", !coincide);
+    $warnIcon.attr("hidden", coincide);
+
+    if (!coincide) {
+        const listaNombre = ($row.find(".rec-prod-lista option:selected").text() || "la lista").trim();
+        const tip = `Lista ${listaNombre}: $ ${fmtMoneyRec(precioLista)}`;
+        $warnIcon.attr("title", tip);
+        $row.append(`
+            <div class="rec-prod-mismatch" role="status">
+                <i class="fa fa-exclamation-triangle"></i>
+                <span>No coincide con <strong>${escapeHtml(listaNombre)}</strong> · $ ${fmtMoneyRec(precioLista)}</span>
+            </div>`);
+
+        if (alertar && typeof advertenciaModal === "function") {
+            advertenciaModal(
+                `Ojo: el precio ($ ${fmtMoneyRec(precioGuardado)}) no coincide con la lista ` +
+                `"${listaNombre}" ($ ${fmtMoneyRec(precioLista)}). Se guardó igual.`
+            );
+        }
+    }
+}
+
+async function verificarPreciosProductosRec($scope) {
+    const $rows = ($scope && $scope.length ? $scope : $("#listaClientesRecorrido"))
+        .find(".rec-prod-row[data-cep-id]");
+    if (!$rows.length) return;
+
+    const cache = {};
+    for (const el of $rows.toArray()) {
+        const $row = $(el);
+        const idProducto = parseInt($row.data("id-producto"), 10);
+        const idLista = parseInt($row.find(".rec-prod-lista").val() || "0", 10);
+        if (!idProducto || !idLista) continue;
+
+        if (!Object.prototype.hasOwnProperty.call(cache, idProducto)) {
+            try {
+                cache[idProducto] = await fetchJson(`/ProductosPrecios/ListaPorProducto?idProducto=${idProducto}`);
+            } catch (e) {
+                console.warn(e);
+                cache[idProducto] = [];
+            }
+        }
+
+        const rows = Array.isArray(cache[idProducto]) ? cache[idProducto] : [];
+        const match = rows.find(r => Number(r.IdListaPrecio) === idLista);
+        const precioLista = match && match.PrecioVenta != null ? Number(match.PrecioVenta) : null;
+        if (precioLista != null) $row.attr("data-precio-lista", precioLista);
+
+        const precio = leerNumeroRec($row.find(".rec-prod-precio").val());
+        marcarPrecioVsListaRec($row, precio, precioLista, { alertar: false });
+    }
+}
+
+async function guardarProductoClienteRecorrido($row, { alertar = false } = {}) {
+    if (!$row?.length) return;
+    const id = parseInt($row.data("cep-id"), 10);
+    const idProducto = parseInt($row.data("id-producto"), 10);
+    const idEstablecimiento = parseInt($row.data("id-establecimiento"), 10);
+    if (!id || !idProducto || !idEstablecimiento) return;
+
+    const idLista = parseInt($row.find(".rec-prod-lista").val() || "0", 10);
+    const cantidad = leerNumeroRec($row.find(".rec-prod-cant").val());
+    const precio = leerNumeroRec($row.find(".rec-prod-precio").val());
+
+    if (!idLista || cantidad <= 0 || precio < 0) return;
+
+    try {
+        const data = await fetchJson("/ClientesEstablecimientosProductos/Actualizar", {
+            method: "PUT",
+            body: JSON.stringify({
+                Id: id,
+                IdEstablecimiento: idEstablecimiento,
+                IdProducto: idProducto,
+                Cantidad: cantidad,
+                IdListaPrecio: idLista,
+                PrecioVenta: precio
+            })
+        });
+
+        if (!data?.valor) {
+            if (typeof errorModal === "function") {
+                errorModal(data?.mensaje || "No se pudo guardar el producto.");
+            }
+            return;
+        }
+
+        // Actualizar resumen del plegable
+        const $article = $row.closest(".rec-cliente-item");
+        const productos = [];
+        $article.find(".rec-prod-row[data-cep-id]").each(function () {
+            const $r = $(this);
+            productos.push({
+                Abreviatura: $r.find(".rec-prod-abrev").text(),
+                Producto: $r.find(".rec-prod-name").text(),
+                Cantidad: leerNumeroRec($r.find(".rec-prod-cant").val()),
+                PrecioVenta: leerNumeroRec($r.find(".rec-prod-precio").val())
+            });
+        });
+        $article.find(".rec-prod-resumen").text(resumenProductosRec(productos));
+
+        // Sync cache
+        const idRec = parseInt($article.data("id"), 10);
+        const cached = clientesRecorridoActual.find(x => x.Id === idRec);
+        if (cached && Array.isArray(cached.Productos)) {
+            const p = cached.Productos.find(x => x.Id === id);
+            if (p) {
+                p.Cantidad = cantidad;
+                p.IdListaPrecio = idLista;
+                p.PrecioVenta = precio;
+                p.ListaPrecio = listasPreciosRec.find(l => Number(l.Id) === idLista)?.Nombre || p.ListaPrecio;
+            }
+        }
+
+        // Comparar con el precio de catalogo de esa lista
+        let precioLista = $row.attr("data-precio-lista");
+        precioLista = precioLista !== undefined && precioLista !== ""
+            ? Number(precioLista)
+            : null;
+
+        // Si no tenemos el de catalogo en cache, lo pedimos
+        if (precioLista == null || Number.isNaN(precioLista)) {
+            try {
+                precioLista = await obtenerPrecioCatalogoListaRec(idProducto, idLista);
+                if (precioLista != null) $row.attr("data-precio-lista", precioLista);
+            } catch (e) {
+                console.warn(e);
+            }
+        }
+
+        marcarPrecioVsListaRec($row, precio, precioLista, { alertar });
+    } catch (e) {
+        console.error(e);
+        if (typeof errorModal === "function") errorModal("Error al guardar el producto.");
+    }
+}
+
+async function abrirHojaRutaRecorrido() {
+    if (!recorridosSeleccionados.length) {
+        errorModal("Selecciona al menos un recorrido.");
+        return;
+    }
+
+    const idCamion = recorridosSeleccionados[0].idCamion;
+    const recorridosParam = recorridosSeleccionados
+        .map(r => recorridoKey(r.idSemana, r.idDia))
+        .join(",");
+
+    const params = new URLSearchParams({
+        idCamion: String(idCamion),
+        recorridos: recorridosParam
+    });
+
+    if (recorridosSeleccionados.length === 1) {
+        const unico = recorridosSeleccionados[0];
+        params.set("idSemana", String(unico.idSemana));
+        params.set("idDia", String(unico.idDia));
+    }
+
+    const url = `/Recorridos/HojaRuta?${params.toString()}`;
+
+    try {
+        const response = await fetch(url, {
+            headers: { Authorization: "Bearer " + getTokenRec() }
+        });
+
+        if (!response.ok) {
+            errorModal("No se pudo generar la hoja de ruta.");
+            return;
+        }
+
+        const html = await response.text();
+        const ventana = window.open("", "_blank");
+        if (!ventana) {
+            errorModal("El navegador bloqueo la ventana emergente. Permiti pop-ups e intenta de nuevo.");
+            return;
+        }
+
+        ventana.document.open();
+        ventana.document.write(html);
+        ventana.document.close();
+    } catch (e) {
+        console.error(e);
+        errorModal("Error al abrir la hoja de ruta.");
+    }
 }
 
 async function buscarRecorridos(texto) {
@@ -1098,57 +1485,6 @@ async function guardarObservacionClienteRecorrido(id, observacion) {
     } catch (e) {
         console.error(e);
         errorModal("Error al guardar la observacion.");
-    }
-}
-
-async function abrirHojaRutaRecorrido() {
-    if (!recorridosSeleccionados.length) {
-        errorModal("Selecciona al menos un recorrido.");
-        return;
-    }
-
-    const idCamion = recorridosSeleccionados[0].idCamion;
-
-    const recorridosParam = recorridosSeleccionados
-        .map(r => recorridoKey(r.idSemana, r.idDia))
-        .join(",");
-
-    const params = new URLSearchParams({
-        idCamion: String(idCamion),
-        recorridos: recorridosParam
-    });
-
-    if (recorridosSeleccionados.length === 1) {
-        const unico = recorridosSeleccionados[0];
-        params.set("idSemana", String(unico.idSemana));
-        params.set("idDia", String(unico.idDia));
-    }
-
-    const url = `/Recorridos/HojaRuta?${params.toString()}`;
-
-    try {
-        const response = await fetch(url, {
-            headers: { Authorization: "Bearer " + getTokenRec() }
-        });
-
-        if (!response.ok) {
-            errorModal("No se pudo generar la hoja de ruta.");
-            return;
-        }
-
-        const html = await response.text();
-        const ventana = window.open("", "_blank");
-        if (!ventana) {
-            errorModal("El navegador bloqueo la ventana emergente. Permiti pop-ups e intenta de nuevo.");
-            return;
-        }
-
-        ventana.document.open();
-        ventana.document.write(html);
-        ventana.document.close();
-    } catch (e) {
-        console.error(e);
-        errorModal("Error al abrir la hoja de ruta.");
     }
 }
 

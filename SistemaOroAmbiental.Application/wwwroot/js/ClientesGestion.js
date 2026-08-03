@@ -381,7 +381,7 @@ function toggleSeccionCollapseCg($toggle) {
     }
 
     if (abrir && targetSel === "#cgRecoleccionBody") {
-        ["#cgTipoGenerador", ...CG_REC_CAMION_SELECTORS, "#cgRecSemana", "#cgRecListaPrecio"]
+        ["#cgTipoGenerador", ...CG_REC_CAMION_SELECTORS, "#cgRecSemana"]
             .forEach(sel => refreshSelect2Cg($(sel)));
     }
 }
@@ -582,7 +582,7 @@ function initSelect2Cg() {
     ["#cgSucursal", "#cgProvincia", "#cgProfesion",
         "#cgCondicionIva", "#cgEstado", "#cgMotivo", "#cgCalificacion", "#cgTipoGenerador", "#cgCobroCuenta",
         ...CG_REC_CAMION_SELECTORS,
-        "#cgRecSemana", "#cgRecListaPrecio"].forEach(sel => {
+        "#cgRecSemana"].forEach(sel => {
         ensureSelect2Cg($(sel), opts);
     });
 }
@@ -657,10 +657,9 @@ async function cargarCombosRecoleccionCg() {
 
     CG_REC_CAMION_SELECTORS.forEach(sel => poblarSelectCamionesCg($(sel), camiones));
     await Promise.all([
-        llenarComboCg("#cgRecSemana", API_CG.semanas, null, "Nombre"),
-        llenarComboCg("#cgRecListaPrecio", API_CG.listasPrecios, null, "Nombre")
+        llenarComboCg("#cgRecSemana", API_CG.semanas, null, "Nombre")
     ]);
-    [...CG_REC_CAMION_SELECTORS, "#cgRecSemana", "#cgRecListaPrecio"].forEach(sel => {
+    [...CG_REC_CAMION_SELECTORS, "#cgRecSemana"].forEach(sel => {
         ensureSelect2Cg($(sel), sel.startsWith("#cgRecCamion") ? { placeholder: "Sin asignar", allowClear: true } : emptyOpt);
     });
 }
@@ -690,7 +689,6 @@ async function cargarRecoleccionPrincipalCg() {
         $("#cgDiasHorarios").val(r.DiasHorarios || "");
 
         if (r.IdSemanaRecoleccion) $("#cgRecSemana").val(String(r.IdSemanaRecoleccion)).trigger("change");
-        if (r.IdListaPrecio) $("#cgRecListaPrecio").val(String(r.IdListaPrecio)).trigger("change");
         if (r.OrdenRecorrido != null) $("#cgOrdenRecorrido").val(r.OrdenRecorrido);
         if (r.Kilos != null) $("#cgEstKilos").val(r.Kilos);
         if (r.IdTipoGenerador) $("#cgTipoGenerador").val(String(r.IdTipoGenerador)).trigger("change");
@@ -715,7 +713,7 @@ async function cargarRecoleccionPrincipalCg() {
 function limpiarRecoleccionCg() {
     $("#cgEstId, #cgIdEstablecimientoCliente, #cgDiasHorarios, #cgOrdenRecorrido, #cgEstKilos").val("");
     CG_REC_CAMION_SELECTORS.forEach(sel => $(sel).val("").trigger("change"));
-    ["#cgRecSemana", "#cgRecListaPrecio"].forEach(sel => $(sel).val("").trigger("change"));
+    $("#cgRecSemana").val("").trigger("change");
     CG.idDiaRecoleccionLegacy = 0;
 }
 
@@ -754,7 +752,7 @@ function obtenerModeloRecoleccionCg() {
         IdDiaRecoleccion: idDia || 0,
         IdSemanaRecoleccion: intOrNullCg("#cgRecSemana") || 0,
         IdCamion: idCamion,
-        IdListaPrecio: intOrNullCg("#cgRecListaPrecio") || 0,
+        IdListaPrecio: 0,
         DiasHorarios: ($("#cgDiasHorarios").val() || "").trim() || null,
         OrdenRecorrido: intOrNullCg("#cgOrdenRecorrido"),
         Kilos: Number.isNaN(kilos) ? null : kilos,
@@ -766,7 +764,7 @@ function obtenerModeloRecoleccionCg() {
 
 function tieneDatosRecoleccionCg() {
     const m = obtenerModeloRecoleccionCg();
-    return !!(m.DiasSemana?.length || m.IdSemanaRecoleccion || m.IdListaPrecio
+    return !!(m.DiasSemana?.length || m.IdSemanaRecoleccion
         || m.DiasHorarios || m.IdEstablecimientoCliente || m.OrdenRecorrido || m.Kilos != null || m.IdTipoGenerador);
 }
 

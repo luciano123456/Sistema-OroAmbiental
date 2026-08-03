@@ -19,6 +19,8 @@ public partial class ListasPrecio
 
     public virtual ICollection<ClientesEstablecimiento> ClientesEstablecimientos { get; set; } = new List<ClientesEstablecimiento>();
 
+    public virtual ICollection<ClientesEstablecimientosProducto> ClientesEstablecimientosProductos { get; set; } = new List<ClientesEstablecimientosProducto>();
+
     public virtual User? IdUsuarioModificaNavigation { get; set; }
 
     public virtual User IdUsuarioRegistraNavigation { get; set; } = null!;

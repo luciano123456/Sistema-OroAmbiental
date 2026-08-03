@@ -39,6 +39,7 @@ namespace SistemaOroAmbiental.Application.Controllers
                     Id = p.Id,
                     Activo = p.Activo,
                     Nombre = p.Nombre,
+                    Abreviatura = p.Abreviatura,
                     IdCategoria = p.IdCategoria,
                     IdMedida = p.IdMedida,
                     CostoUnitario = p.CostoUnitario,
@@ -82,6 +83,7 @@ namespace SistemaOroAmbiental.Application.Controllers
             var producto = new Producto
             {
                 Nombre = model.Nombre,
+                Abreviatura = string.IsNullOrWhiteSpace(model.Abreviatura) ? null : model.Abreviatura.Trim(),
                 IdCategoria = model.IdCategoria,
                 IdMedida = model.IdMedida,
                 CostoUnitario = model.CostoUnitario,
@@ -112,6 +114,7 @@ namespace SistemaOroAmbiental.Application.Controllers
             {
                 Id = model.Id,
                 Nombre = model.Nombre,
+                Abreviatura = string.IsNullOrWhiteSpace(model.Abreviatura) ? null : model.Abreviatura.Trim(),
                 IdCategoria = model.IdCategoria,
                 IdMedida = model.IdMedida,
                 CostoUnitario = model.CostoUnitario,
@@ -216,6 +219,7 @@ namespace SistemaOroAmbiental.Application.Controllers
             {
                 p.Id,
                 p.Nombre,
+                p.Abreviatura,
                 p.IdCategoria,
                 p.IdMedida,
                 p.CostoUnitario,

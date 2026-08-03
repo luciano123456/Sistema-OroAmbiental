@@ -33,6 +33,8 @@
                     contactosInsertar: "/ClientesEstablecimientosContactos/Insertar",
                     contactosActualizar: "/ClientesEstablecimientosContactos/Actualizar",
                     contactosEliminar: "/ClientesEstablecimientosContactos/Eliminar?id={id}",
+                    productosCatalogo: "/Productos/Lista?soloActivos=true",
+                    productosPrecios: "/ProductosPrecios/ListaPorProducto?idProducto={idProducto}",
                     productosLista: "/ClientesEstablecimientosProductos/ListaPorEstablecimiento?idEstablecimiento={idEstablecimiento}",
                     productosInsertar: "/ClientesEstablecimientosProductos/Insertar",
                     productosActualizar: "/ClientesEstablecimientosProductos/Actualizar",
@@ -60,6 +62,9 @@
             this._contactoSeleccionadoId = 0;
             this._productosCache = [];
             this._productoSeleccionadoId = 0;
+            this._productosPrecioBound = false;
+            this._precioListaSeq = 0;
+            this._omitirAutoPrecio = false;
             this._cargarCombosSeq = 0;
             this._cargarPartidosSeq = 0;
             this._cargarLocalidadesSeq = 0;
@@ -68,8 +73,7 @@
             this._localidadLegacy = null;
 
             this._camposObligatorios = [
-                "cmbClienteEst", "txtNombreEst", "cmbDiaEst", "cmbSemanaEst",
-                "cmbListaPrecioEst"
+                "cmbClienteEst", "txtNombreEst", "cmbDiaEst", "cmbSemanaEst"
             ];
             this._validacion = new ValidacionModalAbm({
                 modalEl: this.modalEl,
@@ -78,8 +82,7 @@
                     { id: "cmbClienteEst", nombre: "Cliente" },
                     { id: "txtNombreEst", nombre: "Nombre establecimiento" },
                     { id: "cmbDiaEst", nombre: "D\u00EDa recolecci\u00F3n" },
-                    { id: "cmbSemanaEst", nombre: "Semana recolecci\u00F3n" },
-                    { id: "cmbListaPrecioEst", nombre: "Lista de precios" }
+                    { id: "cmbSemanaEst", nombre: "Semana recolecci\u00F3n" }
                 ],
                 esCampoValido: (el) => this._valorCampoValido(el),
                 isSoloLectura: () => this.isSoloLectura(),
@@ -93,7 +96,7 @@
                 Localidades: { selectId: "cmbLocalidadEst", dependent: true },
                 Dias: { selectId: "cmbDiaEst", url: this.options.endpoints.dias },
                 Semanas: { selectId: "cmbSemanaEst", url: this.options.endpoints.semanas },
-                ListasPrecios: { selectId: "cmbListaPrecioEst", url: this.options.endpoints.listasPrecios },
+                ListasPrecios: { selectId: "cmbListaPrecioProdEst", url: this.options.endpoints.listasPrecios },
                 ClientesTiposGenerador: { selectId: "cmbTipoGeneradorEst", url: this.options.endpoints.tiposGenerador, textField: "Etiqueta" },
                 Camiones: { selectId: "cmbCamionEst", url: this.options.endpoints.camiones }
             };
@@ -242,7 +245,8 @@
             [
                 "cmbClienteEst", "cmbCondicionIvaEst", "cmbProvinciaEst", "cmbPartidoEst",
                 "cmbLocalidadEst", "cmbTipoGeneradorEst",
-                "cmbDiaEst", "cmbSemanaEst", "cmbListaPrecioEst", "cmbCamionEst", "cmbProductoEst"
+                "cmbDiaEst", "cmbSemanaEst", "cmbCamionEst",
+                "cmbProductoEst", "cmbListaPrecioProdEst"
             ].forEach(id => {
                 this.ensureSelect2(window.jQuery(this._id(id)), opts);
             });
@@ -640,7 +644,7 @@
         }
 
         bloquearControlesProductos(bloquear) {
-            const ids = ["cmbProductoEst", "txtCantidadEst"];
+            const ids = ["cmbProductoEst", "txtCantidadEst", "cmbListaPrecioProdEst", "txtPrecioVentaEst"];
             ids.forEach(id => {
                 const el = this._id(id);
                 if (el) el.disabled = !!bloquear;
@@ -651,14 +655,16 @@
             if (btnGuardar) btnGuardar.disabled = !!bloquear;
             if (btnNuevo) btnNuevo.disabled = !!bloquear;
 
-            const cmb = this._id("cmbProductoEst");
-            if (cmb && window.jQuery) {
-                const $el = window.jQuery(cmb);
-                if ($el.data("select2")) {
-                    $el.prop("disabled", !!bloquear);
-                    $el.trigger("change.select2");
+            ["cmbProductoEst", "cmbListaPrecioProdEst"].forEach(id => {
+                const cmb = this._id(id);
+                if (cmb && window.jQuery) {
+                    const $el = window.jQuery(cmb);
+                    if ($el.data("select2")) {
+                        $el.prop("disabled", !!bloquear);
+                        $el.trigger("change.select2");
+                    }
                 }
-            }
+            });
 
             const lista = this._id("listaProductosEst");
             if (lista) {
@@ -673,16 +679,42 @@
             this._setFieldValue("txtProductoEstId", "");
             this._setFieldValue("cmbProductoEst", "", true);
             this._setCantidadField("");
+            this._setFieldValue("cmbListaPrecioProdEst", "", true);
+            this._setPrecioField("");
             const titulo = this._id("productoEstFormTitulo");
             if (titulo) titulo.textContent = "Agregar producto";
             this._id("listaProductosEst")?.querySelectorAll(".rp-sub-item")
                 .forEach(el => el.classList.remove("active"));
         }
 
+        _setPrecioField(valor) {
+            const el = this._id("txtPrecioVentaEst");
+            if (!el) return;
+            if (valor === null || valor === undefined || valor === "") {
+                el.value = "";
+                return;
+            }
+            const n = Number(valor);
+            if (Number.isNaN(n)) {
+                el.value = String(valor);
+                return;
+            }
+            el.value = typeof formatearNumero === "function"
+                ? formatearNumero(n)
+                : n.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            if (typeof formatearMilesInput === "function") formatearMilesInput(el);
+        }
+
         _formatCantidad(valor) {
             const n = Number(valor);
             if (Number.isNaN(n)) return String(valor ?? "");
             return n.toLocaleString("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: 4 });
+        }
+
+        _formatPrecioLista(valor) {
+            const n = Number(valor);
+            if (Number.isNaN(n)) return String(valor ?? "");
+            return n.toLocaleString("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
         }
 
         renderListaProductos() {
@@ -708,12 +740,19 @@
             cont.innerHTML = items.map(p => {
                 const active = p.Id === this._productoSeleccionadoId ? " active" : "";
                 const nombre = p.Producto || `Producto #${p.IdProducto}`;
+                const abrev = (p.Abreviatura || "").trim();
                 const qty = this._formatCantidad(p.Cantidad);
+                const lista = (p.ListaPrecio || "").trim() || "Sin lista";
+                const precio = this._formatPrecioLista(p.PrecioVenta);
+                const sub = abrev
+                    ? `${this._escapeHtml(abrev)} · ${this._escapeHtml(lista)} · $ ${this._escapeHtml(precio)}`
+                    : `${this._escapeHtml(lista)} · $ ${this._escapeHtml(precio)}`;
                 return `
                     <div class="rp-sub-item${active}" data-id="${p.Id}">
                         <div class="rp-sub-item-avatar product"><i class="fa fa-cube"></i></div>
                         <div class="rp-sub-item-body">
                             <span class="rp-sub-item-title">${this._escapeHtml(nombre)}</span>
+                            <span class="rp-sub-item-meta">${sub}</span>
                         </div>
                         <span class="rp-qty-badge"><i class="fa fa-sort-numeric-asc"></i> ${this._escapeHtml(qty)}</span>
                         <div class="rp-sub-item-actions">
@@ -730,9 +769,13 @@
             if (!item) return;
 
             this._productoSeleccionadoId = id;
+            this._omitirAutoPrecio = true;
             this._setFieldValue("txtProductoEstId", item.Id);
             this._setFieldValue("cmbProductoEst", item.IdProducto, true);
             this._setCantidadField(item.Cantidad);
+            this._setFieldValue("cmbListaPrecioProdEst", item.IdListaPrecio || "", true);
+            this._setPrecioField(item.PrecioVenta);
+            setTimeout(() => { this._omitirAutoPrecio = false; }, 0);
 
             const titulo = this._id("productoEstFormTitulo");
             if (titulo) titulo.textContent = "Editar producto";
@@ -758,6 +801,22 @@
             if (cantidad <= 0) {
                 if (typeof errorModal === "function") {
                     errorModal("La cantidad debe ser mayor a cero.");
+                }
+                return false;
+            }
+
+            const idLista = this._getIntOrNull("cmbListaPrecioProdEst");
+            if (!idLista) {
+                if (typeof errorModal === "function") {
+                    errorModal("Debe seleccionar una lista de precios.");
+                }
+                return false;
+            }
+
+            const precio = this._leerNumero(this._getFieldValue("txtPrecioVentaEst"));
+            if (precio < 0) {
+                if (typeof errorModal === "function") {
+                    errorModal("El precio no puede ser negativo.");
                 }
                 return false;
             }
@@ -804,7 +863,9 @@
                 Id: idItem,
                 IdEstablecimiento: idEstablecimiento,
                 IdProducto: this._getIntOrNull("cmbProductoEst"),
-                Cantidad: this._leerNumero(this._getFieldValue("txtCantidadEst"))
+                Cantidad: this._leerNumero(this._getFieldValue("txtCantidadEst")),
+                IdListaPrecio: this._getIntOrNull("cmbListaPrecioProdEst"),
+                PrecioVenta: this._leerNumero(this._getFieldValue("txtPrecioVentaEst"))
             };
 
             const esNuevo = !modelo.Id;
@@ -899,6 +960,45 @@
                         if (id) this.seleccionarProducto(id);
                     }
                 });
+            }
+
+            // Delegado en el modal: Select2 hace destroy/off('.select2') y borra handlers
+            // namespaced en el select; change sin namespace + delegacion sobrevive.
+            if (window.jQuery && !this._productosPrecioBound) {
+                this._productosPrecioBound = true;
+                const $modal = window.jQuery(this.modalEl);
+                $modal.on("change.rpEstProducto", "#cmbProductoEst, #cmbListaPrecioProdEst", () => {
+                    this.aplicarPrecioDesdeLista();
+                });
+            }
+        }
+
+        async aplicarPrecioDesdeLista() {
+            if (this.isSoloLectura() || this._omitirAutoPrecio) return;
+            const idProducto = this._getIntOrNull("cmbProductoEst");
+            const idLista = this._getIntOrNull("cmbListaPrecioProdEst");
+            if (!idProducto || !idLista) return;
+
+            this._precioListaSeq = (this._precioListaSeq || 0) + 1;
+            const seq = this._precioListaSeq;
+
+            try {
+                const url = this._replaceUrl(this.options.endpoints.productosPrecios, { idProducto });
+                const data = await this._fetchJson(url, {
+                    method: "GET",
+                    headers: this._headers(false)
+                });
+
+                if (seq !== this._precioListaSeq) return;
+
+                const rows = Array.isArray(data) ? data : [];
+                const match = rows.find(r => Number(r.IdListaPrecio) === Number(idLista));
+                if (!match) return;
+
+                // Trae el precio de la lista (aunque sea 0); el usuario puede editarlo.
+                this._setPrecioField(match.PrecioVenta ?? 0);
+            } catch (e) {
+                console.warn("No se pudo obtener el precio de la lista.", e);
             }
         }
 
@@ -1062,7 +1162,6 @@
             if (modelo.IdTipoGenerador) this._setFieldValue("cmbTipoGeneradorEst", modelo.IdTipoGenerador, true);
             if (modelo.IdDiaRecoleccion) this._setFieldValue("cmbDiaEst", modelo.IdDiaRecoleccion, true);
             if (modelo.IdSemanaRecoleccion) this._setFieldValue("cmbSemanaEst", modelo.IdSemanaRecoleccion, true);
-            if (modelo.IdListaPrecio) this._setFieldValue("cmbListaPrecioEst", modelo.IdListaPrecio, true);
             if (modelo.IdCamion) this._setFieldValue("cmbCamionEst", modelo.IdCamion, true);
 
             this._setAuditoria(modelo);
@@ -1240,9 +1339,9 @@
             this.resetSelect("cmbTipoGeneradorEst", "Seleccionar");
             this.resetSelect("cmbDiaEst", "Seleccionar");
             this.resetSelect("cmbSemanaEst", "Seleccionar");
-            this.resetSelect("cmbListaPrecioEst", "Seleccionar");
             this.resetSelect("cmbCamionEst", "Seleccionar");
             this.resetSelect("cmbProductoEst", "Seleccionar");
+            this.resetSelect("cmbListaPrecioProdEst", "Seleccionar");
             this._setLocalidadDisabled(true);
 
             await Promise.all([
@@ -1252,8 +1351,9 @@
                 this._llenarComboTiposGenerador(seq),
                 this._llenarCombo("cmbDiaEst", this.options.endpoints.dias, seq),
                 this._llenarCombo("cmbSemanaEst", this.options.endpoints.semanas, seq),
-                this._llenarCombo("cmbListaPrecioEst", this.options.endpoints.listasPrecios, seq),
-                this._llenarCombo("cmbCamionEst", this.options.endpoints.camiones, seq)
+                this._llenarCombo("cmbCamionEst", this.options.endpoints.camiones, seq),
+                this._llenarCombo("cmbProductoEst", this.options.endpoints.productosCatalogo, seq),
+                this._llenarCombo("cmbListaPrecioProdEst", this.options.endpoints.listasPrecios, seq)
             ]);
 
             if (seq !== this._cargarCombosSeq) return;
@@ -1288,7 +1388,7 @@
                 CodPostal: this._getFieldValue("txtCodPostalEst") || null,
                 IdDiaRecoleccion: this._getIntOrNull("cmbDiaEst") ?? 0,
                 IdSemanaRecoleccion: this._getIntOrNull("cmbSemanaEst") ?? 0,
-                IdListaPrecio: this._getIntOrNull("cmbListaPrecioEst") ?? 0,
+                IdListaPrecio: null,
                 IdCamion: this._getIntOrNull("cmbCamionEst"),
                 DiasHorarios: (this._getFieldValue("txtDiasHorariosEst") || "").trim() || null
             };

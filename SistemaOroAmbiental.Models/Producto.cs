@@ -9,6 +9,9 @@ public partial class Producto
 
     public string Nombre { get; set; } = null!;
 
+    /// <summary>Abreviatura para hoja de ruta (ej. C/C, DESC).</summary>
+    public string? Abreviatura { get; set; }
+
     public int IdCategoria { get; set; }
 
     public int IdMedida { get; set; }

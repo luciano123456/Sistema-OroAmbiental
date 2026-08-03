@@ -68,7 +68,7 @@ body.hr-page {
 
 .hr-header {
     display: grid;
-    grid-template-columns: 1.4fr 0.8fr 1fr;
+    grid-template-columns: 1.6fr 1fr;
     gap: 0;
     align-items: stretch;
     margin-bottom: 0.75rem;
@@ -94,7 +94,6 @@ body.hr-page {
 .hr-header-meta {
     display: grid;
     grid-template-rows: 1fr 1fr;
-    border-right: 1px solid var(--hr-border);
 }
 
 .hr-meta-item {
@@ -139,33 +138,6 @@ body.hr-page {
 
 .hr-meta-value--blank {
     min-height: 1.35rem;
-}
-
-.hr-header-precios {
-    display: grid;
-    grid-template-rows: 1fr 1fr;
-}
-
-.hr-precio-item {
-    padding: 0.45rem 0.65rem;
-    border-bottom: 1px solid var(--hr-border);
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-}
-
-.hr-precio-item:last-child {
-    border-bottom: 0;
-}
-
-.hr-precio-item span {
-    font-size: 0.72rem;
-    color: var(--hr-muted);
-    font-weight: 700;
-}
-
-.hr-precio-item strong {
-    font-size: 1rem;
 }
 
 .hr-empty {
@@ -269,6 +241,34 @@ body.hr-page {
 .hr-stop-saldo--cero {
     color: #a16207;
     background: #fef9c3;
+}
+
+.hr-stop-productos {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    border-top: 1px solid var(--hr-border);
+    padding: 0.3rem 0.5rem;
+    min-height: 1.6rem;
+    background: #f8fafc;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+}
+
+.hr-stop-productos-label {
+    flex-shrink: 0;
+    font-size: 0.68rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    color: var(--hr-muted);
+    letter-spacing: 0.02em;
+}
+
+.hr-stop-productos-value {
+    font-size: 0.82rem;
+    font-weight: 700;
+    line-height: 1.25;
+    color: #0f172a;
 }
 
 /* Grilla de datos (8 columnas, misma proporción que la cabecera) */
@@ -395,8 +395,7 @@ body.hr-page {
 
     .hr-header-title,
     .hr-header-meta,
-    .hr-meta-item,
-    .hr-precio-item {
+    .hr-meta-item {
         border-right: 0;
     }
 

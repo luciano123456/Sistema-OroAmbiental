@@ -39,7 +39,7 @@ public partial class ClientesEstablecimiento
 
     public int IdSemanaRecoleccion { get; set; }
 
-    public int IdListaPrecio { get; set; }
+    public int? IdListaPrecio { get; set; }
 
     public TimeSpan HorarioRecoleccionDesde { get; set; }
 

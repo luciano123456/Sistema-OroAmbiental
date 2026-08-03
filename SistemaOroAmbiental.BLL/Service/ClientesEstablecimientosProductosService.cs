@@ -27,6 +27,12 @@ namespace SistemaOroAmbiental.BLL.Service
             if (model.Cantidad <= 0)
                 return ServiceResult.Error("La cantidad debe ser mayor a cero.", "validacion");
 
+            if (model.IdListaPrecio is null or <= 0)
+                return ServiceResult.Error("Debe seleccionar una lista de precios.", "validacion");
+
+            if (model.PrecioVenta < 0)
+                return ServiceResult.Error("El precio no puede ser negativo.", "validacion");
+
             var dup = await _repo.BuscarDuplicado(null, model.IdEstablecimiento, model.IdProducto);
             if (dup != null)
             {
@@ -52,6 +58,12 @@ namespace SistemaOroAmbiental.BLL.Service
 
             if (model.Cantidad <= 0)
                 return ServiceResult.Error("La cantidad debe ser mayor a cero.", "validacion");
+
+            if (model.IdListaPrecio is null or <= 0)
+                return ServiceResult.Error("Debe seleccionar una lista de precios.", "validacion");
+
+            if (model.PrecioVenta < 0)
+                return ServiceResult.Error("El precio no puede ser negativo.", "validacion");
 
             var dup = await _repo.BuscarDuplicado(model.Id, model.IdEstablecimiento, model.IdProducto);
             if (dup != null)

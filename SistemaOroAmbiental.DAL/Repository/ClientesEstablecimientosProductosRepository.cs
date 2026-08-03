@@ -17,6 +17,7 @@ namespace SistemaOroAmbiental.DAL.Repository
             => await _db.ClientesEstablecimientosProductos
                 .AsNoTracking()
                 .Include(x => x.IdProductoNavigation)
+                .Include(x => x.IdListaPrecioNavigation)
                 .Where(x => x.IdEstablecimiento == idEstablecimiento)
                 .OrderBy(x => x.IdProductoNavigation.Nombre)
                 .ToListAsync();
@@ -25,6 +26,7 @@ namespace SistemaOroAmbiental.DAL.Repository
             => await _db.ClientesEstablecimientosProductos
                 .AsNoTracking()
                 .Include(x => x.IdProductoNavigation)
+                .Include(x => x.IdListaPrecioNavigation)
                 .FirstOrDefaultAsync(x => x.Id == id);
 
         public async Task<ClientesEstablecimientosProducto?> BuscarDuplicado(int? idExcluir, int idEstablecimiento, int idProducto)
@@ -59,6 +61,8 @@ namespace SistemaOroAmbiental.DAL.Repository
 
                 entity.IdProducto = model.IdProducto;
                 entity.Cantidad = model.Cantidad;
+                entity.IdListaPrecio = model.IdListaPrecio;
+                entity.PrecioVenta = model.PrecioVenta;
                 entity.IdUsuarioModifica = model.IdUsuarioModifica;
                 entity.FechaUsuarioModifica = model.FechaUsuarioModifica;
 

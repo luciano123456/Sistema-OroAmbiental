@@ -139,13 +139,16 @@ namespace SistemaOroAmbiental.DAL.Repository
 
         public async Task<List<ClientesRecorridoDto>> ListarClientesPorRecorrido(int idCamion, int idSemana, int idDia)
         {
-            return await QueryClientesRecorridoDto()
+            var list = await QueryClientesRecorridoDto()
                 .Where(x =>
                     x.IdCamion == idCamion &&
                     x.IdSemana == idSemana &&
                     x.IdDia == idDia)
                 .OrderBy(x => x.Posicion)
                 .ToListAsync();
+
+            await CargarProductosEnClientesRecorrido(list);
+            return list;
         }
 
         public async Task<List<ClientesRecorridoDto>> BuscarClientesRecorrido(
@@ -326,7 +329,8 @@ namespace SistemaOroAmbiental.DAL.Repository
                 FechaReferencia = fecha.Date,
                 PrecioDescartadorGrande = preciosReferencia.grande,
                 PrecioDescartadorChico = preciosReferencia.chico,
-                Secciones = secciones
+                Secciones = secciones,
+                ListasPrecios = await ObtenerListasPrecioHoja()
             };
         }
 
@@ -351,6 +355,12 @@ namespace SistemaOroAmbiental.DAL.Repository
                 .Include(r => r.IdClienteNavigation)
                 .Include(r => r.IdEstablecimientoNavigation)
                     .ThenInclude(e => e!.ClientesEstablecimientosContactos)
+                .Include(r => r.IdEstablecimientoNavigation)
+                    .ThenInclude(e => e!.ClientesEstablecimientosProductos)
+                        .ThenInclude(p => p.IdProductoNavigation)
+                .Include(r => r.IdEstablecimientoNavigation)
+                    .ThenInclude(e => e!.ClientesEstablecimientosProductos)
+                        .ThenInclude(p => p.IdListaPrecioNavigation)
                 .Where(r =>
                     r.IdCamion == idCamion &&
                     r.IdSemana == idSemana &&
@@ -371,9 +381,16 @@ namespace SistemaOroAmbiental.DAL.Repository
             var saldos = await ObtenerSaldosHojaRuta(idsClientes, fecha);
 
             var preciosReferencia = await ObtenerPreciosDescartadoresReferencia();
+            var (preciosPorProductoLista, listasPorToken) = await ObtenerPreciosProductoPorLista(
+                items
+                    .SelectMany(i => i.IdEstablecimientoNavigation?.ClientesEstablecimientosProductos
+                        ?? Enumerable.Empty<ClientesEstablecimientosProducto>())
+                    .Select(p => p.IdProducto)
+                    .Distinct()
+                    .ToList());
 
             var titulo = ConstruirTituloHojaRuta(semana.Nombre, dia.Nombre, camion.Nombre, zona);
-            var paradas = items.Select(r => ConstruirParadaHojaRuta(r, fecha, controles, saldos)).ToList();
+            var paradas = items.Select(r => ConstruirParadaHojaRuta(r, fecha, controles, saldos, preciosPorProductoLista, listasPorToken)).ToList();
 
             return new HojaRutaDto
             {
@@ -389,8 +406,21 @@ namespace SistemaOroAmbiental.DAL.Repository
                 Salida = salida,
                 PrecioDescartadorGrande = preciosReferencia.grande,
                 PrecioDescartadorChico = preciosReferencia.chico,
-                Paradas = paradas
+                Paradas = paradas,
+                ListasPrecios = await ObtenerListasPrecioHoja()
             };
+        }
+
+        private async Task<List<HojaRutaListaPrecioDto>> ObtenerListasPrecioHoja()
+        {
+            return await _db.ListasPrecios.AsNoTracking()
+                .OrderBy(l => l.Nombre)
+                .Select(l => new HojaRutaListaPrecioDto
+                {
+                    Id = l.Id,
+                    Nombre = l.Nombre
+                })
+                .ToListAsync();
         }
 
         private static string ConstruirTituloHojaRutaCombinada(string camion, IReadOnlyList<HojaRutaSeccionDto> secciones)
@@ -502,15 +532,25 @@ namespace SistemaOroAmbiental.DAL.Repository
             ClientesRecorrido recorrido,
             DateTime fecha,
             Dictionary<int, ClientesControlMensual> controles,
-            Dictionary<int, (decimal Saldo, string Resumen, string Tone)> saldos)
+            Dictionary<int, (decimal Saldo, string Resumen, string Tone)> saldos,
+            IReadOnlyDictionary<(int IdProducto, int IdListaPrecio), decimal>? preciosPorProductoLista = null,
+            IReadOnlyDictionary<string, int>? listasPorToken = null)
         {
             var cliente = recorrido.IdClienteNavigation;
             var establecimiento = recorrido.IdEstablecimientoNavigation;
             controles.TryGetValue(recorrido.IdCliente, out var control);
             saldos.TryGetValue(recorrido.IdCliente, out var saldoInfo);
 
-            var abonoEfectivo = control?.AbonoEfectivo ?? 0;
-            var abonoTransferencia = control?.AbonoTransferencia ?? 0;
+            var productos = MapearProductosParada(establecimiento, preciosPorProductoLista, listasPorToken);
+            var totalEfectivoProductos = productos.Sum(p => Math.Round(p.Cantidad * p.PrecioEfectivo, 2));
+            var totalTransfProductos = productos.Sum(p => Math.Round(p.Cantidad * p.PrecioTransferencia, 2));
+
+            var abonoEfectivo = productos.Count > 0
+                ? totalEfectivoProductos
+                : (control?.AbonoEfectivo ?? 0);
+            var abonoTransferencia = productos.Count > 0
+                ? totalTransfProductos
+                : (control?.AbonoTransferencia ?? 0);
 
             var domicilio = ComponerDomicilio(
                 establecimiento?.Calle ?? cliente.Calle,
@@ -545,6 +585,7 @@ namespace SistemaOroAmbiental.DAL.Repository
             {
                 Posicion = recorrido.Posicion,
                 IdCliente = recorrido.IdCliente,
+                IdEstablecimiento = recorrido.IdEstablecimiento,
                 Cliente = cliente.Nombre,
                 Establecimiento = establecimiento?.Nombre,
                 Domicilio = domicilio,
@@ -558,8 +599,148 @@ namespace SistemaOroAmbiental.DAL.Repository
                 SaldoActual = saldoInfo.Saldo,
                 SaldoTone = string.IsNullOrWhiteSpace(saldoInfo.Tone) ? "cero" : saldoInfo.Tone,
                 AlertaTipo = alertaTipo,
-                Activo = recorrido.Activo
+                Activo = recorrido.Activo,
+                Productos = productos,
+                ProductosResumen = FormatearProductosResumen(productos)
             };
+        }
+
+        private static List<HojaRutaParadaProductoDto> MapearProductosParada(
+            ClientesEstablecimiento? establecimiento,
+            IReadOnlyDictionary<(int IdProducto, int IdListaPrecio), decimal>? preciosPorProductoLista,
+            IReadOnlyDictionary<string, int>? listasPorToken)
+        {
+            if (establecimiento?.ClientesEstablecimientosProductos == null)
+                return new List<HojaRutaParadaProductoDto>();
+
+            var listas = preciosPorProductoLista ?? new Dictionary<(int, int), decimal>();
+            int? idListaEfectivo = null;
+            int? idListaTransf = null;
+            if (listasPorToken != null)
+            {
+                if (listasPorToken.TryGetValue("efectivo", out var idEf)) idListaEfectivo = idEf;
+                if (listasPorToken.TryGetValue("transf", out var idTr)) idListaTransf = idTr;
+            }
+
+            return establecimiento.ClientesEstablecimientosProductos
+                .OrderBy(p => p.IdProductoNavigation?.Nombre ?? "")
+                .Select(p =>
+                {
+                    var precioEfectivo = ResolverPrecioLista(p.IdProducto, idListaEfectivo, listas, p.PrecioVenta);
+                    var precioTransf = ResolverPrecioLista(p.IdProducto, idListaTransf, listas, p.PrecioVenta);
+                    return new HojaRutaParadaProductoDto
+                    {
+                        Id = p.Id,
+                        IdProducto = p.IdProducto,
+                        Producto = p.IdProductoNavigation?.Nombre ?? $"Producto #{p.IdProducto}",
+                        Abreviatura = string.IsNullOrWhiteSpace(p.IdProductoNavigation?.Abreviatura)
+                            ? null
+                            : p.IdProductoNavigation!.Abreviatura!.Trim(),
+                        Cantidad = p.Cantidad,
+                        IdListaPrecio = p.IdListaPrecio,
+                        ListaPrecio = p.IdListaPrecioNavigation?.Nombre,
+                        PrecioVenta = p.PrecioVenta,
+                        PrecioEfectivo = precioEfectivo,
+                        PrecioTransferencia = precioTransf
+                    };
+                })
+                .ToList();
+        }
+
+        private static decimal ResolverPrecioLista(
+            int idProducto,
+            int? idLista,
+            IReadOnlyDictionary<(int IdProducto, int IdListaPrecio), decimal> precios,
+            decimal fallback)
+        {
+            if (idLista is > 0 && precios.TryGetValue((idProducto, idLista.Value), out var precio))
+                return precio;
+            return fallback;
+        }
+
+        private static string? FormatearProductosResumen(IReadOnlyList<HojaRutaParadaProductoDto> productos)
+        {
+            if (productos == null || productos.Count == 0)
+                return null;
+
+            var partes = productos.Select(p =>
+            {
+                var abrev = !string.IsNullOrWhiteSpace(p.Abreviatura)
+                    ? p.Abreviatura.Trim()
+                    : (string.IsNullOrWhiteSpace(p.Producto) ? "PROD" : p.Producto.Trim());
+                var cant = p.Cantidad % 1 == 0
+                    ? ((int)p.Cantidad).ToString()
+                    : p.Cantidad.ToString("0.####");
+                return $"{cant} {abrev} x $ {p.PrecioVenta:N0}";
+            });
+
+            return string.Join(" · ", partes);
+        }
+
+        private async Task<(
+            Dictionary<(int IdProducto, int IdListaPrecio), decimal> Precios,
+            Dictionary<string, int> ListasPorToken)> ObtenerPreciosProductoPorLista(IReadOnlyList<int> idsProductos)
+        {
+            var precios = new Dictionary<(int, int), decimal>();
+            var listasPorToken = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+
+            if (idsProductos == null || idsProductos.Count == 0)
+            {
+                var todasVacias = await _db.ListasPrecios.AsNoTracking()
+                    .Select(l => new { l.Id, l.Nombre })
+                    .ToListAsync();
+                RegistrarTokensLista(todasVacias.Select(l => (l.Id, l.Nombre)), listasPorToken);
+                return (precios, listasPorToken);
+            }
+
+            var rows = await (
+                from pp in _db.ProductosPrecios.AsNoTracking()
+                join lp in _db.ListasPrecios.AsNoTracking() on pp.IdListaPrecio equals lp.Id
+                where idsProductos.Contains(pp.IdProducto)
+                select new
+                {
+                    pp.IdProducto,
+                    pp.IdListaPrecio,
+                    pp.PrecioVenta,
+                    Lista = lp.Nombre
+                }).ToListAsync();
+
+            foreach (var row in rows)
+            {
+                precios[(row.IdProducto, row.IdListaPrecio)] = row.PrecioVenta;
+                RegistrarTokenLista(row.IdListaPrecio, row.Lista, listasPorToken);
+            }
+
+            if (!listasPorToken.ContainsKey("efectivo") || !listasPorToken.ContainsKey("transf"))
+            {
+                var todas = await _db.ListasPrecios.AsNoTracking()
+                    .Select(l => new { l.Id, l.Nombre })
+                    .ToListAsync();
+                RegistrarTokensLista(todas.Select(l => (l.Id, l.Nombre)), listasPorToken);
+            }
+
+            return (precios, listasPorToken);
+        }
+
+        private static void RegistrarTokensLista(IEnumerable<(int Id, string? Nombre)> listas, Dictionary<string, int> dest)
+        {
+            foreach (var (id, nombre) in listas)
+                RegistrarTokenLista(id, nombre, dest);
+        }
+
+        private static void RegistrarTokenLista(int idLista, string? nombre, Dictionary<string, int> dest)
+        {
+            var n = (nombre ?? "").Trim();
+            if (string.IsNullOrWhiteSpace(n)) return;
+
+            if (n.Contains("efectivo", StringComparison.OrdinalIgnoreCase)
+                && !dest.ContainsKey("efectivo"))
+                dest["efectivo"] = idLista;
+
+            if ((n.Contains("transf", StringComparison.OrdinalIgnoreCase)
+                 || n.Contains("transfer", StringComparison.OrdinalIgnoreCase))
+                && !dest.ContainsKey("transf"))
+                dest["transf"] = idLista;
         }
 
         private static string ObtenerTelefonoParada(Cliente cliente, ClientesEstablecimiento? establecimiento)
@@ -863,6 +1044,67 @@ namespace SistemaOroAmbiental.DAL.Repository
                        Observacion = r.Observacion,
                        RecorridoTexto = s.Nombre + " " + d.Nombre
                    };
+        }
+
+        private async Task CargarProductosEnClientesRecorrido(List<ClientesRecorridoDto> list)
+        {
+            if (list == null || list.Count == 0)
+                return;
+
+            var idsEst = list
+                .Where(x => x.IdEstablecimiento is > 0)
+                .Select(x => x.IdEstablecimiento!.Value)
+                .Distinct()
+                .ToList();
+
+            if (idsEst.Count == 0)
+                return;
+
+            var productos = await _db.ClientesEstablecimientosProductos.AsNoTracking()
+                .Include(p => p.IdProductoNavigation)
+                .Include(p => p.IdListaPrecioNavigation)
+                .Where(p => idsEst.Contains(p.IdEstablecimiento))
+                .ToListAsync();
+
+            var idsProducto = productos.Select(p => p.IdProducto).Distinct().ToList();
+            var (precios, tokens) = await ObtenerPreciosProductoPorLista(idsProducto);
+
+            int? idEf = tokens.TryGetValue("efectivo", out var ef) ? ef : null;
+            int? idTr = tokens.TryGetValue("transf", out var tr) ? tr : null;
+
+            var byEst = productos
+                .GroupBy(p => p.IdEstablecimiento)
+                .ToDictionary(g => g.Key, g => g.OrderBy(x => x.IdProductoNavigation?.Nombre ?? "").ToList());
+
+            foreach (var item in list)
+            {
+                if (item.IdEstablecimiento is not > 0)
+                    continue;
+
+                if (!byEst.TryGetValue(item.IdEstablecimiento.Value, out var rows))
+                    continue;
+
+                item.Productos = rows.Select(p =>
+                {
+                    var precioEf = ResolverPrecioLista(p.IdProducto, idEf, precios, p.PrecioVenta);
+                    var precioTr = ResolverPrecioLista(p.IdProducto, idTr, precios, p.PrecioVenta);
+                    return new HojaRutaParadaProductoDto
+                    {
+                        Id = p.Id,
+                        IdProducto = p.IdProducto,
+                        Producto = p.IdProductoNavigation?.Nombre ?? $"Producto #{p.IdProducto}",
+                        Abreviatura = string.IsNullOrWhiteSpace(p.IdProductoNavigation?.Abreviatura)
+                            ? null
+                            : p.IdProductoNavigation!.Abreviatura!.Trim(),
+                        Cantidad = p.Cantidad,
+                        IdListaPrecio = p.IdListaPrecio,
+                        ListaPrecio = p.IdListaPrecioNavigation?.Nombre,
+                        PrecioVenta = p.PrecioVenta,
+                        PrecioEfectivo = precioEf,
+                        PrecioTransferencia = precioTr
+                    };
+                }).ToList();
+            }
         }
 
         private static string ComponerDomicilio(string? calle, string? numero, string? pisoDepartamento, string? legacy)

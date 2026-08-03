@@ -761,6 +761,7 @@ public partial class SistemaOroAmbientalContext : DbContext
         modelBuilder.Entity<ClientesEstablecimientosProducto>(entity =>
         {
             entity.Property(e => e.Cantidad).HasColumnType("decimal(18, 2)");
+            entity.Property(e => e.PrecioVenta).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.FechaUsuarioModifica).HasColumnType("datetime");
             entity.Property(e => e.FechaUsuarioRegistra).HasColumnType("datetime");
 
@@ -773,6 +774,10 @@ public partial class SistemaOroAmbientalContext : DbContext
                 .HasForeignKey(d => d.IdProducto)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_ClientesEstablecimientosProductos_Productos");
+
+            entity.HasOne(d => d.IdListaPrecioNavigation).WithMany(p => p.ClientesEstablecimientosProductos)
+                .HasForeignKey(d => d.IdListaPrecio)
+                .HasConstraintName("FK_ClientesEstablecimientosProductos_ListasPrecios");
 
             entity.HasOne(d => d.IdUsuarioModificaNavigation).WithMany(p => p.ClientesEstablecimientosProductoIdUsuarioModificaNavigations)
                 .HasForeignKey(d => d.IdUsuarioModifica)
@@ -1247,6 +1252,9 @@ public partial class SistemaOroAmbientalContext : DbContext
             entity.Property(e => e.FechaUsuarioRegistra).HasColumnType("datetime");
             entity.Property(e => e.Nombre)
                 .HasMaxLength(200)
+                .IsUnicode(false);
+            entity.Property(e => e.Abreviatura)
+                .HasMaxLength(20)
                 .IsUnicode(false);
 
             entity.HasOne(d => d.IdCategoriaNavigation).WithMany(p => p.Productos)

@@ -2576,7 +2576,7 @@ function tienePermiso() {
 ========================================================= */
 
 document.addEventListener("click", async (e) => {
-    const btn = e.target.closest(".rp-btn-plus[data-config-controller], .vn-btn-plus[data-config-controller]");
+    const btn = e.target.closest(".rp-btn-plus[data-config-controller], .vn-btn-plus[data-config-controller], .rp-config-atajo[data-config-controller]");
     if (!btn || btn.disabled) return;
 
     e.preventDefault();
