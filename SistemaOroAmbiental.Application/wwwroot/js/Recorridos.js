@@ -951,7 +951,9 @@ function resumenProductosRec(productos) {
     if (!productos?.length) return "Sin productos";
     return productos.map(p => {
         const abrev = (p.Abreviatura || p.Producto || "PROD").trim();
-        return `${fmtCantRec(p.Cantidad)} ${abrev} x $ ${fmtMoneyRec(p.PrecioVenta)}`;
+        const lista = (p.ListaPrecio || "").trim();
+        const listaTxt = lista ? ` (${lista})` : "";
+        return `${fmtCantRec(p.Cantidad)} ${abrev}${listaTxt} x $ ${fmtMoneyRec(p.PrecioVenta)}`;
     }).join(" · ");
 }
 
@@ -976,6 +978,8 @@ function renderProductosPlegableRec(item) {
                 `<option value="${l.Id}" ${Number(l.Id) === Number(p.IdListaPrecio) ? "selected" : ""}>${escapeHtml(l.Nombre)}</option>`
             ).join("");
             const abrev = (p.Abreviatura || "").trim();
+            const listaNombre = (p.ListaPrecio || "").trim();
+            const metaLine = [abrev || "Sin abreviatura", listaNombre].filter(Boolean).join(" · ");
             return `
                 <div class="rec-prod-row" data-cep-id="${p.Id}"
                      data-id-producto="${p.IdProducto}"
@@ -986,7 +990,7 @@ function renderProductosPlegableRec(item) {
                         <span class="rec-prod-avatar"><i class="fa fa-cube"></i></span>
                         <div class="rec-prod-identity-text">
                             <span class="rec-prod-name">${escapeHtml(p.Producto || "")}</span>
-                            <span class="rec-prod-abrev">${escapeHtml(abrev || "Sin abreviatura")}</span>
+                            <span class="rec-prod-abrev">${escapeHtml(metaLine)}</span>
                         </div>
                     </div>
                     <div class="rec-prod-fields">

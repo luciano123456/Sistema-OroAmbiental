@@ -542,8 +542,7 @@ namespace SistemaOroAmbiental.DAL.Repository
             saldos.TryGetValue(recorrido.IdCliente, out var saldoInfo);
 
             var productos = MapearProductosParada(establecimiento, preciosPorProductoLista, listasPorToken);
-            var totalEfectivoProductos = productos.Sum(p => Math.Round(p.Cantidad * p.PrecioEfectivo, 2));
-            var totalTransfProductos = productos.Sum(p => Math.Round(p.Cantidad * p.PrecioTransferencia, 2));
+            var (totalEfectivoProductos, totalTransfProductos) = CalcularAbonosProductos(productos);
 
             var abonoEfectivo = productos.Count > 0
                 ? totalEfectivoProductos
@@ -624,6 +623,8 @@ namespace SistemaOroAmbiental.DAL.Repository
 
             return establecimiento.ClientesEstablecimientosProductos
                 .OrderBy(p => p.IdProductoNavigation?.Nombre ?? "")
+                .ThenBy(p => p.IdListaPrecioNavigation?.Nombre ?? "")
+                .ThenBy(p => p.Id)
                 .Select(p =>
                 {
                     var precioEfectivo = ResolverPrecioLista(p.IdProducto, idListaEfectivo, listas, p.PrecioVenta);
@@ -645,6 +646,27 @@ namespace SistemaOroAmbiental.DAL.Repository
                     };
                 })
                 .ToList();
+        }
+
+        /// <summary>
+        /// Calcula abonos Efectivo/Transferencia. Si el mismo producto está varias veces
+        /// (distintas listas), no duplica el importe: usa una fila por IdProducto.
+        /// </summary>
+        private static (decimal Efectivo, decimal Transferencia) CalcularAbonosProductos(
+            IReadOnlyList<HojaRutaParadaProductoDto> productos)
+        {
+            if (productos == null || productos.Count == 0)
+                return (0, 0);
+
+            decimal efectivo = 0;
+            decimal transferencia = 0;
+            foreach (var p in productos.GroupBy(x => x.IdProducto).Select(g => g.First()))
+            {
+                efectivo += Math.Round(p.Cantidad * p.PrecioEfectivo, 2);
+                transferencia += Math.Round(p.Cantidad * p.PrecioTransferencia, 2);
+            }
+
+            return (efectivo, transferencia);
         }
 
         private static decimal ResolverPrecioLista(
@@ -671,7 +693,8 @@ namespace SistemaOroAmbiental.DAL.Repository
                 var cant = p.Cantidad % 1 == 0
                     ? ((int)p.Cantidad).ToString()
                     : p.Cantidad.ToString("0.####");
-                return $"{cant} {abrev} x $ {p.PrecioVenta:N0}";
+                var lista = string.IsNullOrWhiteSpace(p.ListaPrecio) ? "" : $" ({p.ListaPrecio.Trim()})";
+                return $"{cant} {abrev}{lista} x $ {p.PrecioVenta:N0}";
             });
 
             return string.Join(" · ", partes);
@@ -1074,7 +1097,11 @@ namespace SistemaOroAmbiental.DAL.Repository
 
             var byEst = productos
                 .GroupBy(p => p.IdEstablecimiento)
-                .ToDictionary(g => g.Key, g => g.OrderBy(x => x.IdProductoNavigation?.Nombre ?? "").ToList());
+                .ToDictionary(g => g.Key, g => g
+                    .OrderBy(x => x.IdProductoNavigation?.Nombre ?? "")
+                    .ThenBy(x => x.IdListaPrecioNavigation?.Nombre ?? "")
+                    .ThenBy(x => x.Id)
+                    .ToList());
 
             foreach (var item in list)
             {

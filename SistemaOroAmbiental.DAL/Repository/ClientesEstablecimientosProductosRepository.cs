@@ -19,7 +19,9 @@ namespace SistemaOroAmbiental.DAL.Repository
                 .Include(x => x.IdProductoNavigation)
                 .Include(x => x.IdListaPrecioNavigation)
                 .Where(x => x.IdEstablecimiento == idEstablecimiento)
-                .OrderBy(x => x.IdProductoNavigation.Nombre)
+                .OrderBy(x => x.IdProductoNavigation != null ? x.IdProductoNavigation.Nombre : "")
+                .ThenBy(x => x.IdListaPrecioNavigation != null ? x.IdListaPrecioNavigation.Nombre : "")
+                .ThenBy(x => x.Id)
                 .ToListAsync();
 
         public async Task<ClientesEstablecimientosProducto?> Obtener(int id)
@@ -29,11 +31,14 @@ namespace SistemaOroAmbiental.DAL.Repository
                 .Include(x => x.IdListaPrecioNavigation)
                 .FirstOrDefaultAsync(x => x.Id == id);
 
-        public async Task<ClientesEstablecimientosProducto?> BuscarDuplicado(int? idExcluir, int idEstablecimiento, int idProducto)
+        public async Task<ClientesEstablecimientosProducto?> BuscarDuplicado(int? idExcluir, int idEstablecimiento, int idProducto, int idListaPrecio)
         {
             var query = _db.ClientesEstablecimientosProductos
                 .AsNoTracking()
-                .Where(x => x.IdEstablecimiento == idEstablecimiento && x.IdProducto == idProducto);
+                .Where(x =>
+                    x.IdEstablecimiento == idEstablecimiento
+                    && x.IdProducto == idProducto
+                    && x.IdListaPrecio == idListaPrecio);
 
             if (idExcluir.HasValue)
                 query = query.Where(x => x.Id != idExcluir.Value);

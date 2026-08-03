@@ -33,11 +33,11 @@ namespace SistemaOroAmbiental.BLL.Service
             if (model.PrecioVenta < 0)
                 return ServiceResult.Error("El precio no puede ser negativo.", "validacion");
 
-            var dup = await _repo.BuscarDuplicado(null, model.IdEstablecimiento, model.IdProducto);
+            var dup = await _repo.BuscarDuplicado(null, model.IdEstablecimiento, model.IdProducto, model.IdListaPrecio.Value);
             if (dup != null)
             {
                 return ServiceResult.Error(
-                    "El producto ya está asignado a este establecimiento.",
+                    "El producto ya está asignado a este establecimiento con esa lista de precios.",
                     "duplicado",
                     dup.Id);
             }
@@ -65,11 +65,11 @@ namespace SistemaOroAmbiental.BLL.Service
             if (model.PrecioVenta < 0)
                 return ServiceResult.Error("El precio no puede ser negativo.", "validacion");
 
-            var dup = await _repo.BuscarDuplicado(model.Id, model.IdEstablecimiento, model.IdProducto);
+            var dup = await _repo.BuscarDuplicado(model.Id, model.IdEstablecimiento, model.IdProducto, model.IdListaPrecio.Value);
             if (dup != null)
             {
                 return ServiceResult.Error(
-                    "El producto ya está asignado a este establecimiento.",
+                    "El producto ya está asignado a este establecimiento con esa lista de precios.",
                     "duplicado",
                     dup.Id);
             }

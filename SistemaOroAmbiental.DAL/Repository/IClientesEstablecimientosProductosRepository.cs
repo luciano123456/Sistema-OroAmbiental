@@ -6,7 +6,7 @@ namespace SistemaOroAmbiental.DAL.Repository
     {
         Task<List<ClientesEstablecimientosProducto>> ObtenerPorEstablecimiento(int idEstablecimiento);
         Task<ClientesEstablecimientosProducto?> Obtener(int id);
-        Task<ClientesEstablecimientosProducto?> BuscarDuplicado(int? idExcluir, int idEstablecimiento, int idProducto);
+        Task<ClientesEstablecimientosProducto?> BuscarDuplicado(int? idExcluir, int idEstablecimiento, int idProducto, int idListaPrecio);
         Task<bool> Insertar(ClientesEstablecimientosProducto model);
         Task<bool> Actualizar(ClientesEstablecimientosProducto model);
         Task<bool> Eliminar(int id);

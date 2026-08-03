@@ -20,7 +20,9 @@ namespace SistemaOroAmbiental.BLL.Service
                 ? await _repo.ObtenerPorProducto(idProducto)
                 : new List<ProductosPrecio>();
 
-            var mapa = precios.ToDictionary(x => x.IdListaPrecio);
+            var mapa = precios
+                .GroupBy(x => x.IdListaPrecio)
+                .ToDictionary(g => g.Key, g => g.First());
 
             return listas.Select(lista =>
             {
@@ -42,6 +44,7 @@ namespace SistemaOroAmbiental.BLL.Service
                 return ServiceResult.Error("Debe guardar el producto antes de asignar precios.", "validacion");
 
             var entidades = (precios ?? Enumerable.Empty<ProductoPrecioListaDto>())
+                .Where(p => p.IdListaPrecio > 0)
                 .Select(p => new ProductosPrecio
                 {
                     IdListaPrecio = p.IdListaPrecio,
@@ -53,7 +56,7 @@ namespace SistemaOroAmbiental.BLL.Service
             var ok = await _repo.GuardarPorProducto(idProducto, entidades, idUsuario);
 
             return ok
-                ? ServiceResult.Success("Precios guardados correctamente")
+                ? ServiceResult.Success("Precios guardados y actualizados en los establecimientos que usan esas listas.")
                 : ServiceResult.Error("No se pudieron guardar los precios");
         }
     }

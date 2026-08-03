@@ -633,7 +633,7 @@
             if (habilitar) {
                 section.classList.remove("rp-section-disabled");
                 hint.classList.add("success");
-                hint.innerHTML = `<i class="fa fa-check-circle"></i> Ya pod\u00E9s asignar productos al establecimiento.`;
+                hint.innerHTML = `<i class="fa fa-check-circle"></i> Ya pod\u00E9s asignar productos. El mismo producto se puede agregar m\u00E1s de una vez con distintas listas (ej. Efectivo y Transferencia).`;
             } else {
                 section.classList.add("rp-section-disabled");
                 hint.classList.remove("success");
@@ -895,8 +895,10 @@
                 }
 
                 await this.cargarProductos(idEstablecimiento);
-                if (esNuevo && data.id) {
-                    this.seleccionarProducto(data.id);
+                // Tras un alta, dejamos el formulario listo para agregar el mismo producto
+                // con otra lista de precios (ej. Efectivo y luego Transferencia).
+                if (!esNuevo && idItem > 0) {
+                    this.seleccionarProducto(idItem);
                 }
             } catch (e) {
                 console.error(e);

@@ -223,8 +223,10 @@ namespace SistemaOroAmbiental.Application.Controllers
                 p.ProductosResumen = FormatearProductosResumenHoja(p.Productos);
                 if (p.Productos.Count > 0)
                 {
-                    p.AbonoEfectivo = p.Productos.Sum(x => Math.Round(x.Cantidad * x.PrecioEfectivo, 2));
-                    p.AbonoTransferencia = p.Productos.Sum(x => Math.Round(x.Cantidad * x.PrecioTransferencia, 2));
+                    // Mismo producto con distintas listas: no duplicar abonos.
+                    var unicos = p.Productos.GroupBy(x => x.IdProducto).Select(g => g.First());
+                    p.AbonoEfectivo = unicos.Sum(x => Math.Round(x.Cantidad * x.PrecioEfectivo, 2));
+                    p.AbonoTransferencia = unicos.Sum(x => Math.Round(x.Cantidad * x.PrecioTransferencia, 2));
                 }
             }
 
@@ -251,7 +253,8 @@ namespace SistemaOroAmbiental.Application.Controllers
                 var cant = p.Cantidad % 1 == 0
                     ? ((int)p.Cantidad).ToString()
                     : p.Cantidad.ToString("0.####");
-                return $"{cant} {abrev} x $ {p.PrecioVenta:N0}";
+                var lista = string.IsNullOrWhiteSpace(p.ListaPrecio) ? "" : $" ({p.ListaPrecio.Trim()})";
+                return $"{cant} {abrev}{lista} x $ {p.PrecioVenta:N0}";
             }));
         }
 
