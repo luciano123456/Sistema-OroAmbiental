@@ -15,6 +15,8 @@ namespace SistemaOroAmbiental.DAL.Repository
 
         Task<List<ClienteStockDto>> ObtenerStockCliente(int idCliente);
 
+        Task<List<ClienteProductoSugeridoDto>> ObtenerProductosSugeridos(int idCliente, int? idEstablecimiento);
+
         Task<bool> GuardarControlMensual(ClientesControlMensual model, bool esNuevo, int idUsuario);
     }
 }

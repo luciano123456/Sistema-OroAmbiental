@@ -16,6 +16,8 @@ namespace SistemaOroAmbiental.BLL.Service
 
         Task<List<ClienteStockDto>> ObtenerStockCliente(int idCliente);
 
+        Task<List<ClienteProductoSugeridoDto>> ObtenerProductosSugeridos(int idCliente, int? idEstablecimiento);
+
         Task<ServiceResult> GuardarControlMensual(ClientesControlMensual model, int idUsuario);
     }
 }

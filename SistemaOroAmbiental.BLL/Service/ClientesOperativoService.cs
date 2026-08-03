@@ -47,6 +47,14 @@ namespace SistemaOroAmbiental.BLL.Service
             return _repo.ObtenerStockCliente(idCliente);
         }
 
+        public Task<List<ClienteProductoSugeridoDto>> ObtenerProductosSugeridos(int idCliente, int? idEstablecimiento)
+        {
+            if (idCliente <= 0)
+                return Task.FromResult(new List<ClienteProductoSugeridoDto>());
+
+            return _repo.ObtenerProductosSugeridos(idCliente, idEstablecimiento);
+        }
+
         public async Task<ServiceResult> GuardarControlMensual(ClientesControlMensual model, int idUsuario)
         {
             if (model.IdCliente <= 0 || model.Anio < 2000 || model.Mes is < 1 or > 12)

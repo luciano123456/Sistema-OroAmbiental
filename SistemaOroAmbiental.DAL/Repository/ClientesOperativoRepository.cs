@@ -311,6 +311,8 @@ namespace SistemaOroAmbiental.DAL.Repository
             var intereses = MapearInteresesCliente(movimientosCc);
             AsignarInteresesAFilas(filasOrdenadas, intereses);
 
+            var productosColumnas = await ConstruirProductosColumnas(idCliente, filasOrdenadas);
+
             return new ClienteControlFiltradoDto
             {
                 IdCliente = idCliente,
@@ -324,8 +326,61 @@ namespace SistemaOroAmbiental.DAL.Repository
                 DatosParciales = datosParciales,
                 Filas = filasOrdenadas,
                 Recorridos = recorridos,
-                Intereses = intereses
+                Intereses = intereses,
+                ProductosColumnas = productosColumnas
             };
+        }
+
+        private async Task<List<ClienteControlProductoColumnaDto>> ConstruirProductosColumnas(
+            int idCliente,
+            List<ClienteControlMensualDto> filas)
+        {
+            var mapa = new Dictionary<int, ClienteControlProductoColumnaDto>();
+
+            foreach (var p in filas.SelectMany(f => f.Productos ?? new List<ClienteControlProductoMesDto>()))
+            {
+                if (p.IdProducto <= 0) continue;
+                if (!mapa.ContainsKey(p.IdProducto))
+                {
+                    mapa[p.IdProducto] = new ClienteControlProductoColumnaDto
+                    {
+                        IdProducto = p.IdProducto,
+                        Nombre = p.Producto,
+                        Abreviatura = p.Abreviatura
+                    };
+                }
+            }
+
+            try
+            {
+                var cep = await _db.ClientesEstablecimientosProductos
+                    .AsNoTracking()
+                    .Include(x => x.IdProductoNavigation)
+                    .Include(x => x.IdEstablecimientoNavigation)
+                    .Where(x =>
+                        x.IdEstablecimientoNavigation.IdCliente == idCliente &&
+                        x.IdProductoNavigation != null)
+                    .ToListAsync();
+
+                foreach (var row in cep)
+                {
+                    if (mapa.ContainsKey(row.IdProducto)) continue;
+                    mapa[row.IdProducto] = new ClienteControlProductoColumnaDto
+                    {
+                        IdProducto = row.IdProducto,
+                        Nombre = row.IdProductoNavigation?.Nombre ?? $"Producto {row.IdProducto}",
+                        Abreviatura = row.IdProductoNavigation?.Abreviatura
+                    };
+                }
+            }
+            catch
+            {
+                // Si falla CEP, igual devolvemos columnas de movimientos.
+            }
+
+            return mapa.Values
+                .OrderBy(x => x.Nombre)
+                .ToList();
         }
 
         private static List<ClienteInteresMovDto> MapearInteresesCliente(
@@ -507,6 +562,8 @@ namespace SistemaOroAmbiental.DAL.Repository
                     {
                         IdProducto = g.Key.IdProducto,
                         Producto = g.Key.Nombre,
+                        Abreviatura = g.Select(x => x.IdProductoNavigation?.Abreviatura)
+                            .FirstOrDefault(a => !string.IsNullOrWhiteSpace(a)),
                         Entregadas = cantEnt,
                         Retiradas = cantRet,
                         PrecioUnitarioEntrega = cantEnt > 0 ? subEnt / cantEnt : 0,
@@ -573,6 +630,37 @@ namespace SistemaOroAmbiental.DAL.Repository
                 .Where(x => x.Entregadas > 0 || x.Retiradas > 0)
                 .OrderBy(x => x.Producto)
                 .ToList();
+        }
+
+        public async Task<List<ClienteProductoSugeridoDto>> ObtenerProductosSugeridos(int idCliente, int? idEstablecimiento)
+        {
+            var query = _db.ClientesEstablecimientosProductos
+                .AsNoTracking()
+                .Include(x => x.IdProductoNavigation)
+                .Include(x => x.IdListaPrecioNavigation)
+                .Include(x => x.IdEstablecimientoNavigation)
+                .Where(x => x.IdEstablecimientoNavigation.IdCliente == idCliente);
+
+            if (idEstablecimiento is > 0)
+                query = query.Where(x => x.IdEstablecimiento == idEstablecimiento.Value);
+
+            var rows = await query
+                .OrderBy(x => x.IdProductoNavigation!.Nombre)
+                .ThenBy(x => x.Id)
+                .ToListAsync();
+
+            return rows.Select(x => new ClienteProductoSugeridoDto
+            {
+                IdProducto = x.IdProducto,
+                Producto = x.IdProductoNavigation?.Nombre ?? $"Producto {x.IdProducto}",
+                Abreviatura = x.IdProductoNavigation?.Abreviatura,
+                IdEstablecimiento = x.IdEstablecimiento,
+                Establecimiento = x.IdEstablecimientoNavigation?.Nombre,
+                Cantidad = x.Cantidad,
+                IdListaPrecio = x.IdListaPrecio,
+                ListaPrecio = x.IdListaPrecioNavigation?.Nombre,
+                PrecioVenta = x.PrecioVenta
+            }).ToList();
         }
 
         public async Task<bool> GuardarControlMensual(ClientesControlMensual model, bool esNuevo, int idUsuario)

@@ -82,12 +82,33 @@ public class ClienteControlProductoMesDto
 {
     public int IdProducto { get; set; }
     public string Producto { get; set; } = "";
+    public string? Abreviatura { get; set; }
     public decimal Entregadas { get; set; }
     public decimal Retiradas { get; set; }
     public decimal PrecioUnitarioEntrega { get; set; }
     public decimal PrecioUnitarioRetiro { get; set; }
     public decimal SubtotalEntregas { get; set; }
     public decimal SubtotalRetiros { get; set; }
+}
+
+public class ClienteControlProductoColumnaDto
+{
+    public int IdProducto { get; set; }
+    public string Nombre { get; set; } = "";
+    public string? Abreviatura { get; set; }
+}
+
+public class ClienteProductoSugeridoDto
+{
+    public int IdProducto { get; set; }
+    public string Producto { get; set; } = "";
+    public string? Abreviatura { get; set; }
+    public int IdEstablecimiento { get; set; }
+    public string? Establecimiento { get; set; }
+    public decimal Cantidad { get; set; }
+    public int? IdListaPrecio { get; set; }
+    public string? ListaPrecio { get; set; }
+    public decimal PrecioVenta { get; set; }
 }
 
 public class ClienteControlMensualDto
@@ -156,6 +177,7 @@ public class ClienteControlFiltradoDto
     public List<ClienteControlMensualDto> Filas { get; set; } = new();
     public List<ClientesRecorridoDto> Recorridos { get; set; } = new();
     public List<ClienteInteresMovDto> Intereses { get; set; } = new();
+    public List<ClienteControlProductoColumnaDto> ProductosColumnas { get; set; } = new();
 }
 
 public class ClienteStockDto

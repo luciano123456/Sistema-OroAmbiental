@@ -78,6 +78,10 @@ namespace SistemaOroAmbiental.Application.Controllers
         public async Task<IActionResult> StockCliente(int idCliente)
             => Ok(await _service.ObtenerStockCliente(idCliente));
 
+        [HttpGet]
+        public async Task<IActionResult> ProductosSugeridos(int idCliente, int? idEstablecimiento = null)
+            => Ok(await _service.ObtenerProductosSugeridos(idCliente, idEstablecimiento));
+
         [HttpPost]
         public async Task<IActionResult> GuardarControlMensual([FromBody] VMClienteControlMensual model)
         {
@@ -133,7 +137,8 @@ namespace SistemaOroAmbiental.Application.Controllers
             {
                 IdCliente = idCliente,
                 Filas = filas,
-                DatosParciales = parcial
+                DatosParciales = parcial,
+                ProductosColumnas = new List<ClienteControlProductoColumnaDto>()
             };
         }
 
