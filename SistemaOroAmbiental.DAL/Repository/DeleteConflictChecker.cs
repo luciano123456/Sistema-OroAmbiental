@@ -71,8 +71,7 @@ namespace SistemaOroAmbiental.DAL.Repository
             var contr = await _db.Contratos.CountAsync(x => x.IdEstablecimiento == id);
             if (contr > 0) partes.Add($"{contr} contrato(s)");
 
-            var ent = await _db.ClientesEntregas.CountAsync(e =>
-                _db.Contratos.Any(c => c.Id == e.IdContrato && c.IdEstablecimiento == id));
+            var ent = await _db.ClientesEntregas.CountAsync(e => e.IdEstablecimiento == id);
             if (ent > 0) partes.Add($"{ent} entrega(s)");
 
             var prod = await _db.ClientesEstablecimientosProductos.CountAsync(x => x.IdEstablecimiento == id);
@@ -112,6 +111,18 @@ namespace SistemaOroAmbiental.DAL.Repository
             var precios = await _db.ProductosPrecios.CountAsync(x => x.IdListaPrecio == id);
             if (precios > 0)
                 return $"No se pudo eliminar esta lista de precios porque tiene {precios} precio(s) de producto asociados.";
+
+            var cep = await _db.ClientesEstablecimientosProductos.CountAsync(x => x.IdListaPrecio == id);
+            if (cep > 0)
+                return $"No se pudo eliminar esta lista de precios porque tiene {cep} producto(s) de establecimiento asociados.";
+
+            var entregas = await _db.ClientesEntregasProductos.CountAsync(x => x.IdListaPrecio == id);
+            if (entregas > 0)
+                return $"No se pudo eliminar esta lista de precios porque está usada en {entregas} línea(s) de entrega.";
+
+            var recuperados = await _db.ClientesEntregasProductosRecuperados.CountAsync(x => x.IdListaPrecio == id);
+            if (recuperados > 0)
+                return $"No se pudo eliminar esta lista de precios porque está usada en {recuperados} línea(s) de productos recuperados.";
 
             return null;
         }

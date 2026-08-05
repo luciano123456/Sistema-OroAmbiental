@@ -30,17 +30,23 @@ namespace SistemaOroAmbiental.Application.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> ControlMensual(int idCliente, string? anios, string? meses)
+        public async Task<IActionResult> ControlMensual(
+            int idCliente,
+            string? anios,
+            string? meses,
+            int? idEstablecimiento = null,
+            string? idEstablecimientos = null)
         {
             try
             {
                 var listaAnios = ParseCsvEnteros(anios);
                 var listaMeses = ParseCsvEnteros(meses);
+                var idsEst = ResolverIdsEstablecimiento(idEstablecimiento, idEstablecimientos);
 
                 if (!listaAnios.Any())
                     listaAnios.Add(DateTime.Now.Year);
 
-                var data = await _service.ObtenerControlMensualFiltrado(idCliente, listaAnios, listaMeses);
+                var data = await _service.ObtenerControlMensualFiltrado(idCliente, listaAnios, listaMeses, idsEst);
 
                 if (data == null)
                     return Ok(CrearControlFiltradoVacio(idCliente, listaAnios, listaMeses));
@@ -75,12 +81,12 @@ namespace SistemaOroAmbiental.Application.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> StockCliente(int idCliente)
-            => Ok(await _service.ObtenerStockCliente(idCliente));
+        public async Task<IActionResult> StockCliente(int idCliente, int? idEstablecimiento = null, string? idEstablecimientos = null)
+            => Ok(await _service.ObtenerStockCliente(idCliente, ResolverIdsEstablecimiento(idEstablecimiento, idEstablecimientos)));
 
         [HttpGet]
-        public async Task<IActionResult> ProductosSugeridos(int idCliente, int? idEstablecimiento = null)
-            => Ok(await _service.ObtenerProductosSugeridos(idCliente, idEstablecimiento));
+        public async Task<IActionResult> ProductosSugeridos(int idCliente, int? idEstablecimiento = null, string? idEstablecimientos = null)
+            => Ok(await _service.ObtenerProductosSugeridos(idCliente, ResolverIdsEstablecimiento(idEstablecimiento, idEstablecimientos)));
 
         [HttpPost]
         public async Task<IActionResult> GuardarControlMensual([FromBody] VMClienteControlMensual model)
@@ -164,6 +170,7 @@ namespace SistemaOroAmbiental.Application.Controllers
             {
                 Id = model.Id,
                 IdCliente = model.IdCliente,
+                IdEstablecimiento = model.IdEstablecimiento is > 0 ? model.IdEstablecimiento : null,
                 Anio = model.Anio,
                 Mes = model.Mes,
                 FechaVisita = model.FechaVisita,
@@ -174,5 +181,18 @@ namespace SistemaOroAmbiental.Application.Controllers
                 AbonoTransferencia = model.AbonoTransferencia,
                 FechaTransferencia = model.FechaTransferencia
             };
+
+        private static List<int>? ResolverIdsEstablecimiento(int? idEstablecimiento, string? idEstablecimientos)
+        {
+            var ids = ParseCsvEnteros(idEstablecimientos)
+                .Where(x => x > 0)
+                .Distinct()
+                .ToList();
+
+            if (ids.Count == 0 && idEstablecimiento is > 0)
+                ids.Add(idEstablecimiento.Value);
+
+            return ids.Count > 0 ? ids : null;
+        }
     }
 }

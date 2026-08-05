@@ -11,11 +11,12 @@ namespace SistemaOroAmbiental.DAL.Repository
         Task<ClienteControlFiltradoDto?> ObtenerControlMensualFiltrado(
             int idCliente,
             IReadOnlyList<int> anios,
-            IReadOnlyList<int> meses);
+            IReadOnlyList<int> meses,
+            IReadOnlyList<int>? idsEstablecimiento = null);
 
-        Task<List<ClienteStockDto>> ObtenerStockCliente(int idCliente);
+        Task<List<ClienteStockDto>> ObtenerStockCliente(int idCliente, IReadOnlyList<int>? idsEstablecimiento = null);
 
-        Task<List<ClienteProductoSugeridoDto>> ObtenerProductosSugeridos(int idCliente, int? idEstablecimiento);
+        Task<List<ClienteProductoSugeridoDto>> ObtenerProductosSugeridos(int idCliente, IReadOnlyList<int>? idsEstablecimiento = null);
 
         Task<bool> GuardarControlMensual(ClientesControlMensual model, bool esNuevo, int idUsuario);
     }

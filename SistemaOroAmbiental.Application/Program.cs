@@ -32,6 +32,8 @@ builder.Services.AddScoped<IEntidadCascadeRepository, EntidadCascadeRepository>(
 
 builder.Services.AddScoped<IUsuariosRepository<User>, UsuariosRepository>();
 builder.Services.AddScoped<IUsuariosService, UsuariosService>();
+builder.Services.AddScoped<IUsuariosConexionesRepository, UsuariosConexionesRepository>();
+builder.Services.AddScoped<IUsuariosConexionesService, UsuariosConexionesService>();
 
 builder.Services.AddScoped<IUsuariosSucursalesRepository, UsuariosSucursalesRepository>();
 builder.Services.AddScoped<IUsuariosSucursalesService, UsuariosSucursalesService>();

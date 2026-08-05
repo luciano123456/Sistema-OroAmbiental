@@ -149,6 +149,8 @@ public partial class SistemaOroAmbientalContext : DbContext
 
     public virtual DbSet<User> Usuarios { get; set; }
 
+    public virtual DbSet<UsuariosConexion> UsuariosConexiones { get; set; }
+
     public virtual DbSet<UsuariosEstado> UsuariosEstados { get; set; }
 
     public virtual DbSet<UsuariosModulo> UsuariosModulos { get; set; }
@@ -439,6 +441,11 @@ public partial class SistemaOroAmbientalContext : DbContext
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_ClientesEntregas_Clientes");
 
+            entity.HasOne(d => d.IdEstablecimientoNavigation).WithMany(p => p.ClientesEntregas)
+                .HasForeignKey(d => d.IdEstablecimiento)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ClientesEntregas_ClientesEstablecimientos");
+
             entity.HasOne(d => d.IdContratoNavigation).WithMany(p => p.ClientesEntregas)
                 .HasForeignKey(d => d.IdContrato)
                 .HasConstraintName("FK_ClientesEntregas_Contratos");
@@ -498,6 +505,10 @@ public partial class SistemaOroAmbientalContext : DbContext
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_ClientesEntregasProductos_Productos");
 
+            entity.HasOne(d => d.IdListaPrecioNavigation).WithMany(p => p.ClientesEntregasProductos)
+                .HasForeignKey(d => d.IdListaPrecio)
+                .HasConstraintName("FK_ClientesEntregasProductos_ListasPrecios");
+
             entity.HasOne(d => d.IdUsuarioModificaNavigation).WithMany(p => p.ClientesEntregasProductoIdUsuarioModificaNavigations)
                 .HasForeignKey(d => d.IdUsuarioModifica)
                 .HasConstraintName("FK_ClientesEntregasProductosUsuariosIdUsuarioModifica");
@@ -548,6 +559,10 @@ public partial class SistemaOroAmbientalContext : DbContext
                 .HasForeignKey(d => d.IdProducto)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_CEPR_Productos");
+
+            entity.HasOne(d => d.IdListaPrecioNavigation).WithMany(p => p.ClientesEntregasProductosRecuperados)
+                .HasForeignKey(d => d.IdListaPrecio)
+                .HasConstraintName("FK_CEPR_ListasPrecios");
 
             entity.HasOne(d => d.IdUsuarioModificaNavigation).WithMany()
                 .HasForeignKey(d => d.IdUsuarioModifica)
@@ -1639,12 +1654,17 @@ public partial class SistemaOroAmbientalContext : DbContext
             entity.Property(e => e.FechaTransferencia).HasColumnType("date");
             entity.Property(e => e.FechaUsuarioModifica).HasColumnType("datetime");
             entity.Property(e => e.FechaUsuarioRegistra).HasColumnType("datetime");
-            entity.HasIndex(e => new { e.IdCliente, e.Anio, e.Mes }).IsUnique();
+            entity.HasIndex(e => new { e.IdCliente, e.Anio, e.Mes });
+            entity.HasIndex(e => new { e.IdCliente, e.Anio, e.Mes, e.IdEstablecimiento });
 
             entity.HasOne(d => d.IdClienteNavigation).WithMany(p => p.ClientesControlMensuales)
                 .HasForeignKey(d => d.IdCliente)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_ClientesControlMensual_Clientes");
+
+            entity.HasOne(d => d.IdEstablecimientoNavigation).WithMany()
+                .HasForeignKey(d => d.IdEstablecimiento)
+                .HasConstraintName("FK_ClientesControlMensual_Establecimiento");
 
             entity.HasOne(d => d.IdUsuarioRegistraNavigation).WithMany()
                 .HasForeignKey(d => d.IdUsuarioRegistra)
@@ -1836,6 +1856,23 @@ public partial class SistemaOroAmbientalContext : DbContext
                 .HasForeignKey(d => d.IdRol)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Usuarios_Usuarios_Roles");
+        });
+
+        modelBuilder.Entity<UsuariosConexion>(entity =>
+        {
+            entity.ToTable("UsuariosConexiones");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Fecha).HasDefaultValueSql("(sysutcdatetime())");
+            entity.Property(e => e.Ip).HasMaxLength(64);
+            entity.Property(e => e.UserAgent).HasMaxLength(512);
+            entity.Property(e => e.TokenJti).HasMaxLength(64);
+            entity.Property(e => e.Detalle).HasMaxLength(200);
+
+            entity.HasOne(d => d.IdUsuarioNavigation)
+                .WithMany()
+                .HasForeignKey(d => d.IdUsuario)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_UsuariosConexiones_Usuarios");
         });
 
         modelBuilder.Entity<UsuariosEstado>(entity =>

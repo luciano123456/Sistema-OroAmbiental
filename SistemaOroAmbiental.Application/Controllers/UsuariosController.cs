@@ -14,13 +14,16 @@ namespace SistemaOroAmbiental.Application.Controllers
     {
         private readonly IUsuariosService _Usuarioservice;
         private readonly IUsuariosSucursalesService _usuariosSucursales;
+        private readonly IUsuariosConexionesService _conexiones;
 
         public UsuariosController(
             IUsuariosService Usuarioservice,
-            IUsuariosSucursalesService usuariosSucursales)
+            IUsuariosSucursalesService usuariosSucursales,
+            IUsuariosConexionesService conexiones)
         {
             _Usuarioservice = Usuarioservice;
             _usuariosSucursales = usuariosSucursales;
+            _conexiones = conexiones;
         }
 
         [AllowAnonymous]
@@ -106,7 +109,7 @@ namespace SistemaOroAmbiental.Application.Controllers
         [HttpGet]
         public async Task<IActionResult> Lista(bool soloActivos = false)
         {
-            var Usuarios = await _Usuarioservice.ObtenerTodos(soloActivos);
+            var Usuarios = (await _Usuarioservice.ObtenerTodos(soloActivos)).ToList();
 
             var lista = Usuarios.Select(c => new VMUser
             {
@@ -122,9 +125,58 @@ namespace SistemaOroAmbiental.Application.Controllers
                 UsuariosRol = c.IdRolNavigation.Nombre,
                 IdEstado = c.IdEstado,
                 Estado = c.IdEstadoNavigation.Nombre,
+                FechaUltimaActividad = c.FechaUltimaActividad,
+                EnLinea = _conexiones.EstaEnLinea(c.FechaUltimaActividad)
             }).ToList();
 
             return Ok(lista);
+        }
+
+        /// <summary>Endpoint liviano: solo Id + EnLinea (para refrescar badges sin recargar la grilla).</summary>
+        [HttpGet]
+        public async Task<IActionResult> Presencia()
+        {
+            var rows = await _conexiones.ListarPresenciaAsync();
+            return Ok(rows.Select(r => new { r.Id, r.EnLinea }).ToList());
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> HistorialConexiones(int id, int take = 100)
+        {
+            var user = await _Usuarioservice.Obtener(id);
+            if (user == null) return NotFound();
+
+            var eventos = await _conexiones.HistorialAsync(id, take);
+            static string NombreTipo(byte t) => t switch
+            {
+                UsuariosConexion.TipoConecto => "Conectó",
+                UsuariosConexion.TipoDesconecto => "Desconectó",
+                UsuariosConexion.TipoExpiro => "Sesión expirada",
+                _ => "Evento"
+            };
+
+            var vm = new VMUsuarioConexionHistorial
+            {
+                IdUsuario = user.Id,
+                Usuario = user.Usuario ?? "",
+                NombreCompleto = $"{user.Nombre} {user.Apellido}".Trim(),
+                EnLinea = _conexiones.EstaEnLinea(user.FechaUltimaActividad),
+                FechaUltimaActividad = user.FechaUltimaActividad,
+                TotalConexiones = eventos.Count(e => e.Tipo == UsuariosConexion.TipoConecto),
+                TotalDesconexiones = eventos.Count(e => e.Tipo == UsuariosConexion.TipoDesconecto || e.Tipo == UsuariosConexion.TipoExpiro),
+                Eventos = eventos.Select(e => new VMUsuarioConexion
+                {
+                    Id = e.Id,
+                    IdUsuario = e.IdUsuario,
+                    Tipo = e.Tipo,
+                    TipoNombre = NombreTipo(e.Tipo),
+                    Fecha = e.Fecha,
+                    Ip = e.Ip,
+                    Detalle = e.Detalle
+                }).ToList()
+            };
+
+            return Ok(vm);
         }
 
 

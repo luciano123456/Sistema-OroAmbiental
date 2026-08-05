@@ -20,6 +20,7 @@ namespace SistemaBronx.Application.Controllers
         private readonly ILoginService _loginService;
         private readonly IUsuariosService _usuariosService;
         private readonly IUsuariosSucursalesService _usuariosSucursales;
+        private readonly IUsuariosConexionesService _conexiones;
         private readonly IConfiguration _config;
         private readonly SessionSettings _sessionSettings;
 
@@ -27,12 +28,14 @@ namespace SistemaBronx.Application.Controllers
             ILoginService loginService,
             IUsuariosService usuariosService,
             IUsuariosSucursalesService usuariosSucursales,
+            IUsuariosConexionesService conexiones,
             IConfiguration config,
             SessionSettings sessionSettings)
         {
             _loginService = loginService;
             _usuariosService = usuariosService;
             _usuariosSucursales = usuariosSucursales;
+            _conexiones = conexiones;
             _config = config;
             _sessionSettings = sessionSettings;
         }
@@ -68,7 +71,12 @@ namespace SistemaBronx.Application.Controllers
 
                 if (result == PasswordVerificationResult.Success)
                 {
-                    var token = GenerarToken(user);
+                    var (token, jti) = GenerarToken(user);
+                    if (string.IsNullOrEmpty(token))
+                    {
+                        return StatusCode(500, new { success = false, message = "No se pudo generar el token." });
+                    }
+
                     var sucursales = await _usuariosSucursales.ListaParaUsuario(user.Id);
                     var sucursalesDto = sucursales
                         .Select(s => new { s.Id, s.Nombre })
@@ -77,10 +85,20 @@ namespace SistemaBronx.Application.Controllers
 
                     var expiresAt = DateTime.UtcNow.Add(_sessionSettings.GetDuration());
 
+                    try
+                    {
+                        await _conexiones.RegistrarConexionAsync(user.Id, jti, ObtenerIp(), ObtenerUserAgent());
+                    }
+                    catch
+                    {
+                        // No bloquea el login si falla el registro de conexión
+                    }
+
                     return Ok(new
                     {
                         success = true,
                         token,
+                        jti,
                         expiresAt = expiresAt.ToString("o"),
                         expiresAtUnixMs = new DateTimeOffset(expiresAt).ToUnixTimeMilliseconds(),
                         user = new
@@ -107,20 +125,21 @@ namespace SistemaBronx.Application.Controllers
             }
         }
 
-        private string GenerarToken(User user)
+        private (string? Token, string Jti) GenerarToken(User user)
         {
             try
             {
                 var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["JwtSettings:SecretKey"]));
                 var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+                var jti = Guid.NewGuid().ToString();
 
                 var claims = new[]
                 {
-            new Claim(JwtRegisteredClaimNames.Sub, user.Usuario),
-            new Claim("Id", user.Id.ToString()),
-            new Claim("UsuariosRol", user.IdRol.ToString()),
-            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
-        };
+                    new Claim(JwtRegisteredClaimNames.Sub, user.Usuario),
+                    new Claim("Id", user.Id.ToString()),
+                    new Claim("UsuariosRol", user.IdRol.ToString()),
+                    new Claim(JwtRegisteredClaimNames.Jti, jti)
+                };
 
                 var token = new JwtSecurityToken(
                     _config["JwtSettings:Issuer"],
@@ -129,11 +148,11 @@ namespace SistemaBronx.Application.Controllers
                     expires: DateTime.UtcNow.Add(_sessionSettings.GetDuration()),
                     signingCredentials: creds);
 
-                return new JwtSecurityTokenHandler().WriteToken(token);
+                return (new JwtSecurityTokenHandler().WriteToken(token), jti);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                return null;
+                return (null, string.Empty);
             }
         }
 
@@ -161,11 +180,13 @@ namespace SistemaBronx.Application.Controllers
                     return Unauthorized(new { success = false, message = "Tu usuario se encuentra bloqueado o inactivo." });
                 }
 
-                var token = GenerarToken(user);
+                var (token, jti) = GenerarToken(user);
                 if (string.IsNullOrEmpty(token))
                 {
                     return StatusCode(500, new { success = false, message = "No se pudo generar el token." });
                 }
+
+                try { await _conexiones.HeartbeatAsync(userId); } catch { /* ignore */ }
 
                 var expiresAt = DateTime.UtcNow.Add(_sessionSettings.GetDuration());
 
@@ -173,6 +194,7 @@ namespace SistemaBronx.Application.Controllers
                 {
                     success = true,
                     token,
+                    jti,
                     expiresAt = expiresAt.ToString("o"),
                     expiresAtUnixMs = new DateTimeOffset(expiresAt).ToUnixTimeMilliseconds()
                 });
@@ -183,13 +205,54 @@ namespace SistemaBronx.Application.Controllers
             }
         }
 
+        /// <summary>Mantiene al usuario en línea mientras la pestaña esté abierta.</summary>
+        [Authorize]
+        [HttpPost]
+        public async Task<IActionResult> Heartbeat()
+        {
+            if (!int.TryParse(User.FindFirst("Id")?.Value, out var userId))
+                return Unauthorized();
+
+            try
+            {
+                await _conexiones.HeartbeatAsync(userId);
+                return Ok(new { success = true });
+            }
+            catch
+            {
+                return Ok(new { success = false });
+            }
+        }
+
+        /// <summary>Registra desconexión voluntaria o por expiración. motivo: 2=logout, 3=expiró.</summary>
+        [Authorize]
+        [HttpPost]
+        public async Task<IActionResult> RegistrarDesconexion([FromQuery] byte motivo = 2, [FromQuery] string? jti = null)
+        {
+            if (!int.TryParse(User.FindFirst("Id")?.Value, out var userId))
+                return Unauthorized();
+
+            var tipo = motivo == UsuariosConexion.TipoExpiro
+                ? UsuariosConexion.TipoExpiro
+                : UsuariosConexion.TipoDesconecto;
+
+            var tokenJti = jti
+                ?? User.FindFirst(JwtRegisteredClaimNames.Jti)?.Value
+                ?? User.FindFirst("jti")?.Value;
+
+            try
+            {
+                await _conexiones.RegistrarDesconexionAsync(userId, tipo, tokenJti, ObtenerIp(), ObtenerUserAgent());
+            }
+            catch { /* ignore */ }
+
+            return Ok(new { success = true });
+        }
+
         [AllowAnonymous]
         public IActionResult Logout()
         {
-            // Eliminar cookie si la usás
             Response.Cookies.Delete("JwtToken");
-
-            // Simplemente redirigimos
             return RedirectToAction("Index", "Login");
         }
 
@@ -199,7 +262,16 @@ namespace SistemaBronx.Application.Controllers
         {
             return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
         }
+
+        private string? ObtenerIp()
+        {
+            var forwarded = Request.Headers["X-Forwarded-For"].FirstOrDefault();
+            if (!string.IsNullOrWhiteSpace(forwarded))
+                return forwarded.Split(',')[0].Trim();
+            return HttpContext.Connection.RemoteIpAddress?.ToString();
+        }
+
+        private string? ObtenerUserAgent()
+            => Request.Headers.UserAgent.ToString();
     }
-
 }
-

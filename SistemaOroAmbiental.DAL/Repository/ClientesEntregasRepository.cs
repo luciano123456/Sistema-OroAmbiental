@@ -38,6 +38,7 @@ namespace SistemaOroAmbiental.DAL.Repository
             var query = _db.ClientesEntregas
                 .AsNoTracking()
                 .Include(x => x.IdClienteNavigation)
+                .Include(x => x.IdEstablecimientoNavigation)
                 .Include(x => x.IdContratoNavigation)
                     .ThenInclude(c => c!.IdEstablecimientoNavigation)
                 .Include(x => x.IdEstadoNavigation)
@@ -70,6 +71,7 @@ namespace SistemaOroAmbiental.DAL.Repository
                     (x.NotaInterna != null && x.NotaInterna.Contains(t)) ||
                     (x.NotaCliente != null && x.NotaCliente.Contains(t)) ||
                     x.IdClienteNavigation.Nombre.Contains(t) ||
+                    (x.IdEstablecimientoNavigation != null && x.IdEstablecimientoNavigation.Nombre.Contains(t)) ||
                     (x.IdContratoNavigation != null && x.IdContratoNavigation.IdEstablecimientoNavigation != null &&
                      x.IdContratoNavigation.IdEstablecimientoNavigation.Nombre.Contains(t)));
             }
@@ -85,6 +87,7 @@ namespace SistemaOroAmbiental.DAL.Repository
             return await _db.ClientesEntregas
                 .Include(x => x.IdClienteNavigation)
                     .ThenInclude(cl => cl.IdSucursalNavigation)
+                .Include(x => x.IdEstablecimientoNavigation)
                 .Include(x => x.IdContratoNavigation)
                     .ThenInclude(c => c!.IdEstablecimientoNavigation)
                 .Include(x => x.IdEstadoNavigation)
@@ -92,9 +95,13 @@ namespace SistemaOroAmbiental.DAL.Repository
                 .Include(x => x.ClientesEntregasProductos)
                     .ThenInclude(l => l.IdProductoNavigation)
                         .ThenInclude(p => p.IdMedidaNavigation)
+                .Include(x => x.ClientesEntregasProductos)
+                    .ThenInclude(l => l.IdListaPrecioNavigation)
                 .Include(x => x.ClientesEntregasProductosRecuperados)
                     .ThenInclude(l => l.IdProductoNavigation)
                         .ThenInclude(p => p.IdMedidaNavigation)
+                .Include(x => x.ClientesEntregasProductosRecuperados)
+                    .ThenInclude(l => l.IdListaPrecioNavigation)
                 .FirstOrDefaultAsync(x => x.Id == id);
         }
 
@@ -230,6 +237,40 @@ namespace SistemaOroAmbiental.DAL.Repository
             }
 
             throw new InvalidOperationException("Debe indicar un cliente para la entrega.");
+        }
+
+        /// <summary>
+        /// La entrega se imputa al establecimiento. El contrato es opcional:
+        /// si hay uno solo para ese establecimiento, se asocia como referencia.
+        /// </summary>
+        private async Task AsegurarEstablecimientoYContrato(ClientesEntrega entrega)
+        {
+            if (entrega.IdEstablecimiento <= 0)
+                throw new InvalidOperationException("Debe indicar el establecimiento de la entrega.");
+
+            var est = await _db.ClientesEstablecimientos
+                .AsNoTracking()
+                .FirstOrDefaultAsync(x => x.Id == entrega.IdEstablecimiento);
+
+            if (est == null)
+                throw new InvalidOperationException("El establecimiento indicado no existe.");
+
+            if (entrega.IdCliente <= 0)
+                entrega.IdCliente = est.IdCliente;
+            else if (est.IdCliente != entrega.IdCliente)
+                throw new InvalidOperationException("El establecimiento no pertenece al cliente de la entrega.");
+
+            if (entrega.IdContrato is > 0)
+                return;
+
+            var contratos = await _db.Contratos
+                .AsNoTracking()
+                .Where(c => c.IdEstablecimiento == entrega.IdEstablecimiento)
+                .Select(c => c.Id)
+                .ToListAsync();
+
+            if (contratos.Count == 1)
+                entrega.IdContrato = contratos[0];
         }
 
         private async Task RegistrarStockRecuperadoEntrega(
@@ -397,6 +438,8 @@ namespace SistemaOroAmbiental.DAL.Repository
                 foreach (var l in lineasRecuperadas)
                     RecalcularLineaRecuperado(l);
 
+                await AsegurarEstablecimientoYContrato(entrega);
+
                 RecalcularTotalesEntrega(entrega, lineas);
                 entrega.ImporteAbonado = 0;
                 entrega.Saldo = entrega.ImporteTotal;
@@ -529,8 +572,11 @@ namespace SistemaOroAmbiental.DAL.Repository
                 foreach (var l in lineasRecuperadas)
                     RecalcularLineaRecuperado(l);
 
+                await AsegurarEstablecimientoYContrato(entrega);
+
                 entity.Fecha = entrega.Fecha;
                 entity.IdCliente = entrega.IdCliente;
+                entity.IdEstablecimiento = entrega.IdEstablecimiento;
                 entity.IdContrato = entrega.IdContrato;
                 entity.IdEstado = entrega.IdEstado;
                 entity.NotaInterna = entrega.NotaInterna;

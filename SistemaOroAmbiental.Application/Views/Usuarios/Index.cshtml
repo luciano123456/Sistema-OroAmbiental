@@ -9,7 +9,7 @@
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
 
-    <link href="~/css/usuarios.css?v=5.3" rel="stylesheet" />
+    <link href="~/css/usuarios.css?v=5.4" rel="stylesheet" />
     <link href="~/css/disenopantallas.css?v=8.1" rel="stylesheet" />
     <link href="~/css/M_Generico.css?v=5.2" rel="stylesheet" />
 }
@@ -434,6 +434,31 @@
     </div>
 </div>
 
+<!-- Historial de conexiones -->
+<div class="modal fade" id="modalHistorialConexionesUsr" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content rp-modal usr-conn-modal">
+            <div class="modal-header rp-modal-header usr-conn-modal-head">
+                <div class="usr-conn-modal-titlebox">
+                    <div class="usr-conn-kicker"><i class="fa fa-pulse"></i> Control de acceso</div>
+                    <h5 class="modal-title mb-0" id="usrConnTitulo">Usuario</h5>
+                    <p class="usr-conn-sub mb-0" id="usrConnSub">Historial de conexiones</p>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <div id="usrConnKpis" class="usr-conn-kpis"></div>
+                <div id="usrConnTimeline" class="usr-conn-timeline"></div>
+            </div>
+            <div class="modal-footer rp-modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fa fa-times"></i> Cerrar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
     <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/buttons/2.2.2/js/dataTables.buttons.min.js"></script>
@@ -447,5 +472,5 @@
     <script src="https://cdn.datatables.net/buttons/2.2.2/js/buttons.print.min.js"></script>
     <script src="https://cdn.datatables.net/fixedheader/3.2.2/js/dataTables.fixedHeader.min.js"></script>
 
-    <script src="~/js/Usuarios.js?v=5.3"></script>
+    <script src="~/js/Usuarios.js?v=5.5"></script>
 }

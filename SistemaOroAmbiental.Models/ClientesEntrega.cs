@@ -11,6 +11,9 @@ public partial class ClientesEntrega
 
     public int IdCliente { get; set; }
 
+    /// <summary>Establecimiento al que se imputa la entrega (obligatorio).</summary>
+    public int IdEstablecimiento { get; set; }
+
     public int? IdContrato { get; set; }
 
     public int? IdEstado { get; set; }
@@ -50,6 +53,8 @@ public partial class ClientesEntrega
     public virtual ICollection<ClientesEntregasProductosRecuperado> ClientesEntregasProductosRecuperados { get; set; } = new List<ClientesEntregasProductosRecuperado>();
 
     public virtual Cliente IdClienteNavigation { get; set; } = null!;
+
+    public virtual ClientesEstablecimiento IdEstablecimientoNavigation { get; set; } = null!;
 
     public virtual Contrato? IdContratoNavigation { get; set; }
 

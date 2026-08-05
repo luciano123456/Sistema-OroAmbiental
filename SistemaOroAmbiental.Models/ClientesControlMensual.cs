@@ -8,6 +8,8 @@ public partial class ClientesControlMensual
 
     public int IdCliente { get; set; }
 
+    public int? IdEstablecimiento { get; set; }
+
     public int Anio { get; set; }
 
     public int Mes { get; set; }
@@ -35,6 +37,8 @@ public partial class ClientesControlMensual
     public DateTime? FechaUsuarioModifica { get; set; }
 
     public virtual Cliente IdClienteNavigation { get; set; } = null!;
+
+    public virtual ClientesEstablecimiento? IdEstablecimientoNavigation { get; set; }
 
     public virtual User IdUsuarioRegistraNavigation { get; set; } = null!;
 

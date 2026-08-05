@@ -9,17 +9,23 @@
         init: window.CM_INIT || { id: 0, idCliente: 0 },
         id: 0,
         soloLectura: false,
+        cargandoEntrega: false,
         clientes: [],
         estadosEntrega: [],
         sucursales: [],
         idSucursalCliente: 0,
         productos: [],
+        listasPrecios: [],
+        preciosCache: {},
         lineas: [],
         nextLineId: 1,
         cobrosLineas: [],
         cobrosResumen: null,
         cuentasCaja: [],
-        nextCobroKey: 1
+        nextCobroKey: 1,
+        establecimientos: [],
+        contratos: [],
+        idEstablecimientoSel: 0
     };
 
     const API = {
@@ -31,10 +37,14 @@
         clientes: "/Clientes/Lista?soloActivos=true",
         clienteInfo: id => `/Clientes/EditarInfo?id=${id}`,
         productos: "/Productos/Lista",
+        listasPrecios: "/ListasPrecios/Lista",
+        preciosProducto: id => `/ProductosPrecios/ListaPorProducto?idProducto=${id}`,
         estadosEntrega: "/EntregasEstados/Lista",
         camiones: "/Camiones/Lista?soloActivos=true",
         sucursales: "/Sucursales/Lista",
-        cuentas: "/Cuentas/Lista"
+        cuentas: "/Cuentas/Lista",
+        establecimientosPorCliente: id => `/ClientesEstablecimientos/ListaPorCliente?idCliente=${id}`,
+        contratosPorCliente: id => `/Contratos/Lista?idCliente=${id}`
     };
 
     const TIPO_LINEA_ENTREGA = 1;
@@ -85,33 +95,67 @@
         }
     }
 
+    function resolverIdEntregaInicial() {
+        // 1) CM_INIT del servidor  2) hidden  3) querystring (fuente de verdad del link "Abrir entrega")
+        const fromInit = Number(window.CM_INIT?.id ?? CM.init?.id ?? 0);
+        if (fromInit > 0) return fromInit;
+        const fromHidden = Number(document.getElementById("Entrega_Id")?.value || 0);
+        if (fromHidden > 0) return fromHidden;
+        try {
+            return Number(new URLSearchParams(window.location.search).get("id") || 0) || 0;
+        } catch {
+            return 0;
+        }
+    }
+
+    function resolverIdClienteInicial() {
+        const fromInit = Number(window.CM_INIT?.idCliente ?? CM.init?.idCliente ?? 0);
+        if (fromInit > 0) return fromInit;
+        try {
+            return Number(new URLSearchParams(window.location.search).get("idCliente") || 0) || 0;
+        } catch {
+            return 0;
+        }
+    }
+
     $(document).ready(async () => {
-        CM.id = Number(CM.init.id || 0);
+        CM.init = Object.assign({}, CM.init, window.CM_INIT || {});
+        CM.id = resolverIdEntregaInicial();
+        if (!(Number(CM.init.idCliente) > 0)) {
+            CM.init.idCliente = resolverIdClienteInicial();
+        }
 
         initTabsEntrega();
         wireEventosEntrega();
         initModalesAtajos();
         initAtajosConfiguracionEntrega();
 
-        await cargarCombosEntrega();
-        await cargarCuentasCajaEntrega();
+        try {
+            await cargarCombosEntrega();
+            await cargarCuentasCajaEntrega();
 
-        if (CM.id > 0) {
-            await cargarEntrega(CM.id);
-            await cargarCobrosEntrega();
-        } else {
-            setModoNuevo();
-            if (CM.init.idCliente) {
-                const idCli = Number(CM.init.idCliente || 0);
-                $("#cCliente").val(String(idCli)).trigger("change.select2");
-                const cli = (CM.clientes || []).find(x => x.Id === idCli);
-                CM.idSucursalCliente = cli ? Number(cli.IdSucursal || 0) : 0;
+            if (CM.id > 0) {
+                await cargarEntrega(CM.id);
+            } else {
+                setModoNuevo();
+                if (CM.init.idCliente) {
+                    const idCli = Number(CM.init.idCliente || 0);
+                    $("#cCliente").val(String(idCli)).trigger("change.select2");
+                    const cli = (CM.clientes || []).find(x => Number(x.Id) === idCli);
+                    CM.idSucursalCliente = cli ? Number(cli.IdSucursal || 0) : 0;
+                    if (idCli > 0) await cargarEstablecimientosEntrega(idCli);
+                }
+                CM.lineas = [];
+                CM.cobrosLineas = [];
+                renderLineas();
+                renderCobrosLineas();
+                actualizarResumenCobrosUI();
             }
-            CM.lineas = [];
-            CM.cobrosLineas = [];
-            renderLineas();
-            renderCobrosLineas();
-            actualizarResumenCobrosUI();
+        } catch (e) {
+            console.error("Error inicializando entrega:", e);
+            if (typeof errorModal === "function") {
+                errorModal("No se pudo cargar la entrega. Revisá la consola o reintentá.");
+            }
         }
     });
 
@@ -137,10 +181,10 @@
         const lectura = !!CM.soloLectura;
 
         $("#lblSinLineas").prop("hidden", !sinProductos);
-        $("#tblLineasEntrega").closest(".vn-gridtable").toggleClass("d-none", sinProductos);
+        $("#tblLineasEntrega").toggleClass("d-none", sinProductos);
 
         $("#lblSinRecuperados").prop("hidden", !sinRecuperados);
-        $("#tblLineasRecuperados").closest(".vn-gridtable").toggleClass("d-none", sinRecuperados);
+        $("#tblLineasRecuperados").toggleClass("d-none", sinRecuperados);
 
         $("#lblSinCobros").prop("hidden", !sinCobros);
         $("#tblCobrosEntrega").closest(".vn-gridtable").toggleClass("d-none", sinCobros);
@@ -158,13 +202,8 @@
     }
 
     function initTabsEntrega() {
-        $(".vn-head-btn").on("click", function () {
-            const sec = $(this).data("sec");
-            $(".vn-head-btn").removeClass("active");
-            $(this).addClass("active");
-            $(".vn-section").removeClass("active");
-            $(`#sec-${sec}`).addClass("active");
-        });
+        // Vista unica: todas las secciones visibles; sin solapas.
+        $(".vn-section").addClass("active");
     }
 
     function wireEventosEntrega() {
@@ -186,6 +225,7 @@
     };
 
     function limpiarMarcasErrorSeccionesEntrega() {
+        $(".vn-section-block").removeClass("has-error");
         $(".vn-head-btn").removeClass("error");
     }
 
@@ -194,33 +234,36 @@
         if (!secciones) return;
 
         if (secciones.datos) {
+            $("#sec-datos").addClass("has-error");
             $('.vn-head-btn[data-sec="datos"]').addClass("error");
         }
         if (secciones.productos) {
+            $("#sec-productos").addClass("has-error");
             $('.vn-head-btn[data-sec="productos"]').addClass("error");
         }
         if (secciones.recuperados) {
+            $("#sec-recuperados").addClass("has-error");
             $('.vn-head-btn[data-sec="recuperados"]').addClass("error");
         }
         if (secciones.cobros) {
+            $("#sec-cobros").addClass("has-error");
             $('.vn-head-btn[data-sec="cobros"]').addClass("error");
         }
 
-        if (secciones.datos) {
-            activarTabEntrega("datos");
-        } else if (secciones.productos) {
-            activarTabEntrega("productos");
-        } else if (secciones.recuperados) {
-            activarTabEntrega("recuperados");
-        } else if (secciones.cobros) {
-            activarTabEntrega("cobros");
+        const primera = secciones.datos ? "#sec-datos"
+            : secciones.productos ? "#sec-productos"
+            : secciones.recuperados ? "#sec-recuperados"
+            : secciones.cobros ? "#sec-cobros"
+            : null;
+        if (primera) {
+            document.querySelector(primera)?.scrollIntoView({ behavior: "smooth", block: "start" });
         }
     }
 
     function activarTabEntrega(sec) {
-        const $btn = $(`.vn-head-btn[data-sec="${sec}"]`);
-        if (!$btn.length) return;
-        $btn.trigger("click");
+        // Compat: en vista unica solo scrollea a la seccion.
+        const el = document.getElementById(`sec-${sec}`);
+        el?.scrollIntoView({ behavior: "smooth", block: "start" });
     }
 
     function inferirSeccionesErrorEntrega(mensaje) {
@@ -297,7 +340,7 @@
     }
 
     function sincronizarLineasDesdeDom() {
-        $("#tbodyLineasEntrega tr, #tbodyLineasRecuperados tr").each(function () {
+        $("#tbodyLineasEntrega .en-linea, #tbodyLineasRecuperados .en-linea").each(function () {
             const key = Number($(this).data("key"));
             const linea = CM.lineas.find(x => x._key === key);
             if (linea) syncLineaFromRow($(this), linea);
@@ -316,6 +359,12 @@
         if (!(parseInt($("#cCliente").val(), 10) > 0)) {
             erroresDatos.push("Seleccione un cliente.");
         }
+
+        const idEst = parseInt($("#cEstablecimiento").val(), 10) || 0;
+        if (idEst <= 0) {
+            erroresDatos.push("Seleccione el establecimiento de la entrega.");
+        }
+
         const lineasConProducto = CM.lineas.filter(l => l.IdProducto > 0);
 
         if (lineasConProducto.length === 0) {
@@ -433,18 +482,65 @@
             cargarEstadoesEntrega(),
             cargarCamionesEntrega(),
             cargarSucursalesEntrega(),
-            cargarProductosEntrega()
+            cargarProductosEntrega(),
+            cargarListasPreciosEntrega()
         ]);
 
         initSelectClienteHeader();
         ensureSelect2Cm($("#cEstado"), { placeholder: "Seleccionar estado" });
         ensureSelect2Cm($("#cCamion"), { placeholder: "Seleccionar camion", allowClear: true });
+        ensureSelect2Cm($("#cEstablecimiento"), { placeholder: "Seleccionar establecimiento", allowClear: true });
 
-        $("#cCliente").off("change.entregaSuc").on("change.entregaSuc", function () {
+        $("#cCliente").off("change.entregaSuc").on("change.entregaSuc", async function () {
+            if (CM.cargandoEntrega) return;
             const id = parseInt($(this).val(), 10) || 0;
-            const c = (CM.clientes || []).find(x => x.Id === id);
+            const c = (CM.clientes || []).find(x => Number(x.Id) === id);
             CM.idSucursalCliente = c ? Number(c.IdSucursal || 0) : 0;
+            await cargarEstablecimientosEntrega(id);
         });
+    }
+
+    async function cargarEstablecimientosEntrega(idCliente, idEstablecimientoPreferido) {
+        const idCli = Number(idCliente || 0);
+        const preferido = Number(idEstablecimientoPreferido || 0);
+        CM.establecimientos = [];
+        CM.contratos = [];
+        CM.idEstablecimientoSel = 0;
+
+        const $sel = $("#cEstablecimiento");
+        $sel.empty().append(`<option value="">Seleccionar establecimiento</option>`);
+
+        if (idCli <= 0) {
+            $sel.val("").trigger("change.select2");
+            return;
+        }
+
+        try {
+            const rEst = await fetch(API.establecimientosPorCliente(idCli), { headers: authHeaders() });
+            CM.establecimientos = rEst.ok ? await rEst.json() : [];
+            CM.contratos = [];
+        } catch {
+            CM.establecimientos = [];
+            CM.contratos = [];
+        }
+
+        (CM.establecimientos || []).forEach(e => {
+            const id = Number(e.Id || e.id || 0);
+            if (id <= 0) return;
+            const nom = e.Nombre || e.nombre || `Est. #${id}`;
+            $sel.append(`<option value="${id}">${nom}</option>`);
+        });
+
+        let idSel = preferido;
+        if (!(idSel > 0) || !$sel.find(`option[value="${idSel}"]`).length) {
+            const ids = (CM.establecimientos || [])
+                .map(e => Number(e.Id || e.id || 0))
+                .filter(id => id > 0);
+            idSel = ids.length === 1 ? ids[0] : 0;
+        }
+
+        CM.idEstablecimientoSel = idSel;
+        $sel.val(idSel > 0 ? String(idSel) : "").trigger("change.select2");
     }
 
     async function cargarSucursalesEntrega() {
@@ -542,6 +638,52 @@
         CM.productos = r.ok ? await r.json() : [];
     }
 
+    async function cargarListasPreciosEntrega() {
+        const r = await fetch(API.listasPrecios, { headers: authHeaders() });
+        CM.listasPrecios = r.ok ? await r.json() : [];
+    }
+
+    async function obtenerPreciosProductoEntrega(idProducto) {
+        const id = Number(idProducto || 0);
+        if (id <= 0) return [];
+        if (CM.preciosCache[id]) return CM.preciosCache[id];
+        try {
+            const r = await fetch(API.preciosProducto(id), { headers: authHeaders() });
+            CM.preciosCache[id] = r.ok ? (await r.json()) || [] : [];
+        } catch (e) {
+            console.warn(e);
+            CM.preciosCache[id] = [];
+        }
+        return CM.preciosCache[id];
+    }
+
+    async function obtenerPrecioListaEntrega(idProducto, idLista) {
+        const idL = Number(idLista || 0);
+        if (!idProducto || !idL) return null;
+        const rows = await obtenerPreciosProductoEntrega(idProducto);
+        const match = (rows || []).find(x => Number(x.IdListaPrecio) === idL);
+        if (!match || match.PrecioVenta == null) return null;
+        return Number(match.PrecioVenta);
+    }
+
+    async function aplicarPrecioDesdeListaEntrega($tr, linea, { forzar = true } = {}) {
+        const precio = await obtenerPrecioListaEntrega(linea.IdProducto, linea.IdListaPrecio);
+        if (precio == null) return false;
+        if (!forzar && Number(linea.PrecioVenta) > 0) return false;
+        linea.PrecioVenta = precio;
+        setValorInputMiles($tr.find(".linea-precio"), precio);
+        return true;
+    }
+
+    function htmlOpcionesListaPrecio(linea) {
+        const idSel = Number(linea.IdListaPrecio || 0);
+        return (CM.listasPrecios || []).map(l => {
+            const id = Number(l.Id || l.id || 0);
+            const nom = l.Nombre || l.nombre || `Lista #${id}`;
+            return `<option value="${id}" ${id === idSel ? "selected" : ""}>${nom}</option>`;
+        }).join("");
+    }
+
     function ensureSelect2Cm($el, opts) {
         if (!$el?.length) return;
         if ($el.data("select2")) $el.select2("destroy");
@@ -561,54 +703,89 @@
     }
 
     async function cargarEntrega(id) {
-        const r = await fetch(API.editarInfo(id), { headers: authHeaders() });
-        if (!r.ok) {
-            errorModal("No se encontro la entrega.");
+        const idEntrega = Number(id || 0);
+        if (idEntrega <= 0) {
+            setModoNuevo();
             return;
         }
 
-        const d = await r.json();
-        CM.id = d.Id;
-        CM.soloLectura = !d.PuedeEditar;
+        CM.cargandoEntrega = true;
+        try {
+            const r = await fetch(API.editarInfo(idEntrega), { headers: authHeaders() });
+            if (!r.ok) {
+                const msg = r.status === 401 || r.status === 403
+                    ? "No tenés permiso para ver esta entrega (sesión vencida?). Volvé a iniciar sesión."
+                    : r.status === 404
+                        ? `No se encontró la entrega #${idEntrega}.`
+                        : `No se pudo cargar la entrega #${idEntrega} (HTTP ${r.status}).`;
+                if (typeof errorModal === "function") errorModal(msg);
+                $("#tituloPaginaEntrega").text(`Entrega #${idEntrega} (error)`);
+                return;
+            }
 
-        $("#tituloPaginaEntrega").text(`Entrega #${d.Id}`);
-        $("#lblGuardarEntrega").text(d.PuedeEditar ? "Guardar cambios" : "Solo lectura");
-        $("#btnEliminarEntrega").prop("hidden", !d.PuedeEliminar);
-        $("#alertEntregaCobros").prop("hidden", !d.TieneCobros);
-        CM.cobrosLineas = [];
+            const d = await r.json();
+            CM.id = Number(d.Id ?? d.id ?? idEntrega) || idEntrega;
+            $("#Entrega_Id").val(String(CM.id));
+            CM.soloLectura = !(d.PuedeEditar ?? d.puedeEditar ?? true);
 
-        const fecha = d.Fecha ? String(d.Fecha).slice(0, 10) : "";
-        $("#cFecha").val(fecha);
-        $("#cNota").val(d.NotaInterna || "");
-        $("#cNotaCliente").val(d.NotaCliente || "");
+            $("#tituloPaginaEntrega").text(`Entrega #${CM.id}`);
+            $("#lblGuardarEntrega").text(CM.soloLectura ? "Solo lectura" : "Guardar cambios");
+            $("#btnEliminarEntrega").prop("hidden", !(d.PuedeEliminar ?? d.puedeEliminar ?? true));
+            $("#alertEntregaCobros").prop("hidden", !(d.TieneCobros ?? d.tieneCobros));
+            CM.cobrosLineas = [];
 
-        const idCliente = Number(d.IdCliente || 0);
-        await cargarClientesEntrega(idCliente);
-        if (idCliente > 0) {
-            $("#cCliente").val(String(idCliente)).trigger("change.select2");
+            const fechaRaw = d.Fecha ?? d.fecha;
+            const fecha = fechaRaw ? String(fechaRaw).slice(0, 10) : "";
+            $("#cFecha").val(fecha);
+            $("#cNota").val(d.NotaInterna || d.notaInterna || "");
+            $("#cNotaCliente").val(d.NotaCliente || d.notaCliente || "");
+
+            const idCliente = Number(d.IdCliente ?? d.idCliente ?? 0);
+            await cargarClientesEntrega(idCliente);
+            if (idCliente > 0) {
+                $("#cCliente").val(String(idCliente)).trigger("change.select2");
+            }
+            const cli = (CM.clientes || []).find(x => Number(x.Id) === idCliente);
+            CM.idSucursalCliente = Number(d.IdSucursal ?? d.idSucursal ?? cli?.IdSucursal ?? 0);
+            await cargarEstablecimientosEntrega(
+                idCliente,
+                Number(d.IdEstablecimiento ?? d.idEstablecimiento ?? 0)
+            );
+            const idEstado = d.IdEstado ?? d.idEstado;
+            const idCamion = d.IdCamion ?? d.idCamion;
+            if (idEstado) $("#cEstado").val(String(idEstado)).trigger("change.select2");
+            if (idCamion) $("#cCamion").val(String(idCamion)).trigger("change.select2");
+
+            const lineasApi = Array.isArray(d.Lineas) ? d.Lineas : (Array.isArray(d.lineas) ? d.lineas : []);
+            const recuperadasApi = Array.isArray(d.LineasRecuperadas)
+                ? d.LineasRecuperadas
+                : (Array.isArray(d.lineasRecuperadas) ? d.lineasRecuperadas : []);
+            const lineasOperacion = lineasApi.map(l => mapLineaDesdeApi(l, Number(l.TipoMovimiento ?? l.tipoMovimiento ?? TIPO_LINEA_ENTREGA)));
+            const lineasRecuperadasApi = recuperadasApi.map(l => mapLineaDesdeApi(l, TIPO_LINEA_RECUPERADO));
+            CM.lineas = [...lineasOperacion, ...lineasRecuperadasApi];
+
+            renderLineas();
+            recalcularTotalesUI();
+
+            if (CM.soloLectura) aplicarSoloLectura();
+
+            await cargarCobrosEntrega();
+        } catch (e) {
+            console.error("cargarEntrega:", e);
+            if (typeof errorModal === "function") {
+                errorModal(`Error al cargar la entrega #${idEntrega}.`);
+            }
+            $("#tituloPaginaEntrega").text(`Entrega #${idEntrega} (error)`);
+        } finally {
+            CM.cargandoEntrega = false;
         }
-        const cli = (CM.clientes || []).find(x => Number(x.Id) === idCliente);
-        CM.idSucursalCliente = Number(d.IdSucursal || cli?.IdSucursal || 0);
-        if (d.IdEstado) $("#cEstado").val(String(d.IdEstado)).trigger("change.select2");
-        if (d.IdCamion) $("#cCamion").val(String(d.IdCamion)).trigger("change.select2");
-
-        const lineasOperacion = (d.Lineas || []).map(l => mapLineaDesdeApi(l, Number(l.TipoMovimiento || TIPO_LINEA_ENTREGA)));
-        const lineasRecuperadasApi = (d.LineasRecuperadas || []).map(l => mapLineaDesdeApi(l, TIPO_LINEA_RECUPERADO));
-        CM.lineas = [...lineasOperacion, ...lineasRecuperadasApi];
-
-        renderLineas();
-        recalcularTotalesUI();
-
-        if (CM.soloLectura) aplicarSoloLectura();
-
-        await cargarCobrosEntrega();
     }
 
     function aplicarSoloLectura() {
         $("#btnGuardarEntrega").prop("disabled", true);
         $("#btnAgregarLinea, #btnAgregarRecuperado, #btnCrearProducto, #btnAtajoEstadoEntrega").prop("hidden", true);
         $("#cFecha, #cNota").prop("disabled", true);
-        $("#cCliente, #cEstado, #cCamion").prop("disabled", true);
+        $("#cCliente, #cEstado, #cCamion, #cEstablecimiento").prop("disabled", true);
         $("#tbodyLineasEntrega input, #tbodyLineasEntrega select, #tbodyLineasRecuperados input, #tbodyLineasRecuperados select").prop("disabled", true);
         $("#tbodyLineasEntrega .btn-quitar-linea, #tbodyLineasRecuperados .btn-quitar-linea").prop("hidden", true);
         $("#btnAgregarCobroEntrega").prop("hidden", true);
@@ -621,7 +798,7 @@
         $("#lblGuardarEntrega").text("Guardar cambios");
         $("#btnAgregarLinea, #btnAgregarRecuperado, #btnCrearProducto, #btnAtajoEstadoEntrega").prop("hidden", false);
         $("#cFecha, #cNota").prop("disabled", false);
-        $("#cCliente, #cEstado").prop("disabled", false);
+        $("#cCliente, #cEstado, #cEstablecimiento").prop("disabled", false);
         $("#tbodyLineasEntrega input, #tbodyLineasEntrega select, #tbodyLineasRecuperados input, #tbodyLineasRecuperados select").prop("disabled", false);
         $("#tbodyLineasEntrega .btn-quitar-linea, #tbodyLineasRecuperados .btn-quitar-linea").prop("hidden", false);
         $("#btnAgregarCobroEntrega").prop("hidden", false);
@@ -909,6 +1086,7 @@
             _key: CM.nextLineId++,
             Id: 0,
             IdProducto: 0,
+            IdListaPrecio: 0,
             TipoMovimiento: tipo,
             Cantidad: 1,
             PrecioVenta: 0,
@@ -1023,73 +1201,124 @@
             const calc = calcularLinea(linea);
             const t = Number(linea.TipoMovimiento);
 
-            const tr = $(`
-                <tr data-key="${k}" data-seccion="productos">
-                    <td>
-                        <select id="linea_${k}_producto" class="form-select vn-input vn-mini linea-producto">
-                            <option value="">Seleccionar</option>
-                            ${prodOpts}
-                        </select>
-                    </td>
-                    <td>
-                        <select class="form-select vn-input vn-mini linea-tipo">
-                            <option value="${TIPO_LINEA_ENTREGA}" ${t === TIPO_LINEA_ENTREGA ? "selected" : ""}>Entrega</option>
-                            <option value="${TIPO_LINEA_RETIRO}" ${t === TIPO_LINEA_RETIRO ? "selected" : ""}>Retiro</option>
-                        </select>
-                    </td>
-                    <td><input type="text" inputmode="decimal" autocomplete="off" class="form-control vn-input vn-mini Inputmiles linea-cant" value="${fmtInputNum(linea.Cantidad)}" /></td>
-                    <td><input type="text" inputmode="decimal" autocomplete="off" class="form-control vn-input vn-mini Inputmiles linea-precio" value="${fmtInputNum(linea.PrecioVenta)}" /></td>
-                    <td><input type="text" inputmode="decimal" autocomplete="off" class="form-control vn-input vn-mini Inputmiles linea-desc" value="${fmtInputNum(linea.PorcDescuento)}" /></td>
-                    <td><input type="text" inputmode="decimal" autocomplete="off" class="form-control vn-input vn-mini Inputmiles linea-iva" value="${fmtInputNum(linea.PorcIva)}" /></td>
-                    <td class="text-end linea-subtotal-cell linea-subtotal">${fmtMoney(calc.signedSubtotalFinal)}</td>
-                    <td class="text-center">
+            const $row = $(`
+                <div class="en-linea" data-key="${k}" data-seccion="productos">
+                    <div class="en-linea-grid">
+                        <label class="en-field en-field--prod">
+                            <span>Producto</span>
+                            <select id="linea_${k}_producto" class="form-select vn-input vn-mini linea-producto">
+                                <option value="">Seleccionar</option>
+                                ${prodOpts}
+                            </select>
+                        </label>
+                        <label class="en-field en-field--tipo">
+                            <span>Tipo</span>
+                            <select class="form-select vn-input vn-mini linea-tipo">
+                                <option value="${TIPO_LINEA_ENTREGA}" ${t === TIPO_LINEA_ENTREGA ? "selected" : ""}>Entrega</option>
+                                <option value="${TIPO_LINEA_RETIRO}" ${t === TIPO_LINEA_RETIRO ? "selected" : ""}>Retiro</option>
+                            </select>
+                        </label>
+                        <label class="en-field en-field--lista">
+                            <span>Lista / Tipo pago</span>
+                            <select class="form-select vn-input vn-mini linea-lista">
+                                <option value="">Seleccionar</option>
+                                ${htmlOpcionesListaPrecio(linea)}
+                            </select>
+                        </label>
+                        <label class="en-field en-field--num">
+                            <span>Cant.</span>
+                            <input type="text" inputmode="decimal" autocomplete="off" class="form-control vn-input vn-mini Inputmiles linea-cant" value="${fmtInputNum(linea.Cantidad)}" />
+                        </label>
+                        <label class="en-field en-field--num en-field--precio">
+                            <span>Precio venta</span>
+                            <input type="text" inputmode="decimal" autocomplete="off" class="form-control vn-input vn-mini Inputmiles linea-precio" value="${fmtInputNum(linea.PrecioVenta)}" />
+                        </label>
+                        <label class="en-field en-field--num">
+                            <span>% Desc</span>
+                            <input type="text" inputmode="decimal" autocomplete="off" class="form-control vn-input vn-mini Inputmiles linea-desc" value="${fmtInputNum(linea.PorcDescuento)}" />
+                        </label>
+                        <label class="en-field en-field--num">
+                            <span>% IVA</span>
+                            <input type="text" inputmode="decimal" autocomplete="off" class="form-control vn-input vn-mini Inputmiles linea-iva" value="${fmtInputNum(linea.PorcIva)}" />
+                        </label>
+                    </div>
+                    <div class="en-linea-foot">
+                        <div class="en-linea-subtotal">
+                            <span>Subtotal</span>
+                            <strong class="linea-subtotal-cell linea-subtotal">${fmtMoney(calc.signedSubtotalFinal)}</strong>
+                        </div>
                         <button type="button" class="btn btn-outline-danger btn-quitar-linea" title="Quitar">
                             <i class="fa fa-trash"></i>
                         </button>
-                    </td>
-                </tr>
+                    </div>
+                </div>
             `);
 
-            $tb.append(tr);
-            prepararInputsMilesLinea(tr);
+            $tb.append($row);
+            prepararInputsMilesLinea($row);
 
-            const $sel = tr.find(".linea-producto");
-            const $tipo = tr.find(".linea-tipo");
+            const $sel = $row.find(".linea-producto");
+            const $tipo = $row.find(".linea-tipo");
+            const $lista = $row.find(".linea-lista");
             ensureSelect2Cm($sel, { placeholder: "Producto", dropdownParent: $(".entregas-nuevo") });
+            ensureSelect2Cm($lista, { placeholder: "Lista / Tipo pago", allowClear: true, dropdownParent: $(".entregas-nuevo") });
 
             $tipo.on("change", function () {
                 linea.TipoMovimiento = parseInt($(this).val(), 10) || TIPO_LINEA_ENTREGA;
-                syncLineaFromRow(tr, linea);
+                syncLineaFromRow($row, linea);
                 refrescarSelectsProducto();
                 actualizarBotonesAgregarLinea();
-                tr.find(".linea-subtotal").text(fmtMoney(calcularLinea(linea).signedSubtotalFinal));
+                $row.find(".linea-subtotal").text(fmtMoney(calcularLinea(linea).signedSubtotalFinal));
                 recalcularTotalesUI();
             });
 
-            $sel.on("change", function () {
+            $lista.on("change", async function () {
+                linea.IdListaPrecio = parseInt($(this).val(), 10) || 0;
+                if (linea.IdProducto > 0 && linea.IdListaPrecio > 0) {
+                    await aplicarPrecioDesdeListaEntrega($row, linea, { forzar: true });
+                }
+                syncLineaFromRow($row, linea);
+                $row.find(".linea-subtotal").text(fmtMoney(calcularLinea(linea).signedSubtotalFinal));
+                refrescarSelectsProducto();
+                actualizarBotonesAgregarLinea();
+                recalcularTotalesUI();
+            });
+
+            $sel.on("change", async function () {
                 linea.IdProducto = parseInt($(this).val(), 10) || 0;
                 const prod = CM.productos.find(p => p.Id === linea.IdProducto);
                 if (prod) {
-                    if (!linea.PrecioVenta) {
-                        linea.PrecioVenta = Number(prod.PrecioVenta || 0);
-                        setValorInputMiles(tr.find(".linea-precio"), linea.PrecioVenta);
-                    }
                     linea.CostoUnitario = Number(prod.CostoUnitario || 0);
                 }
-                syncLineaFromRow(tr, linea);
-                tr.find(".linea-subtotal").text(fmtMoney(calcularLinea(linea).signedSubtotalFinal));
+
+                if (linea.IdProducto > 0 && !linea.IdListaPrecio) {
+                    const precios = await obtenerPreciosProductoEntrega(linea.IdProducto);
+                    const conPrecio = (precios || []).filter(p => Number(p.PrecioVenta) > 0);
+                    if (conPrecio.length === 1) {
+                        linea.IdListaPrecio = Number(conPrecio[0].IdListaPrecio);
+                        $lista.val(String(linea.IdListaPrecio)).trigger("change");
+                        return;
+                    }
+                }
+
+                if (linea.IdProducto > 0 && linea.IdListaPrecio > 0) {
+                    await aplicarPrecioDesdeListaEntrega($row, linea, { forzar: true });
+                }
+
+                syncLineaFromRow($row, linea);
+                $row.find(".linea-subtotal").text(fmtMoney(calcularLinea(linea).signedSubtotalFinal));
                 refrescarSelectsProducto();
                 actualizarBotonesAgregarLinea();
                 recalcularTotalesUI();
             });
 
-            tr.find(".linea-cant, .linea-precio, .linea-desc, .linea-iva").on("input change", function () {
-                syncLineaFromRow(tr, linea);
-                tr.find(".linea-subtotal").text(fmtMoney(calcularLinea(linea).signedSubtotalFinal));
+            $row.find(".linea-cant, .linea-precio, .linea-desc, .linea-iva").on("input change", function () {
+                syncLineaFromRow($row, linea);
+                $row.find(".linea-subtotal").text(fmtMoney(calcularLinea(linea).signedSubtotalFinal));
                 recalcularTotalesUI();
             });
 
-            tr.find(".btn-quitar-linea").on("click", () => quitarLinea(k));
+            $row.find(".btn-quitar-linea").on("click", () => quitarLinea(k));
         });
     }
 
@@ -1103,57 +1332,107 @@
             const prodOpts = htmlOpcionesProducto(linea);
             const calc = calcularLinea(linea);
 
-            const tr = $(`
-                <tr data-key="${k}" data-tipo="${TIPO_LINEA_RECUPERADO}">
-                    <td>
-                        <select id="linea_${k}_producto" class="form-select vn-input vn-mini linea-producto">
-                            <option value="">Seleccionar</option>
-                            ${prodOpts}
-                        </select>
-                    </td>
-                    <td><input type="text" inputmode="decimal" autocomplete="off" class="form-control vn-input vn-mini Inputmiles linea-cant" value="${fmtInputNum(linea.Cantidad)}" /></td>
-                    <td><input type="text" inputmode="decimal" autocomplete="off" class="form-control vn-input vn-mini Inputmiles linea-precio" value="${fmtInputNum(linea.PrecioVenta)}" /></td>
-                    <td><input type="text" inputmode="decimal" autocomplete="off" class="form-control vn-input vn-mini Inputmiles linea-desc" value="${fmtInputNum(linea.PorcDescuento)}" /></td>
-                    <td><input type="text" inputmode="decimal" autocomplete="off" class="form-control vn-input vn-mini Inputmiles linea-iva" value="${fmtInputNum(linea.PorcIva)}" /></td>
-                    <td class="text-end linea-subtotal-cell linea-subtotal text-success">${fmtMoney(calc.signedSubtotalFinal)}</td>
-                    <td class="text-center">
+            const $row = $(`
+                <div class="en-linea en-linea--rec" data-key="${k}" data-tipo="${TIPO_LINEA_RECUPERADO}">
+                    <div class="en-linea-grid en-linea-grid--rec">
+                        <label class="en-field en-field--prod">
+                            <span>Producto</span>
+                            <select id="linea_${k}_producto" class="form-select vn-input vn-mini linea-producto">
+                                <option value="">Seleccionar</option>
+                                ${prodOpts}
+                            </select>
+                        </label>
+                        <label class="en-field en-field--lista">
+                            <span>Lista / Tipo pago</span>
+                            <select class="form-select vn-input vn-mini linea-lista">
+                                <option value="">Seleccionar</option>
+                                ${htmlOpcionesListaPrecio(linea)}
+                            </select>
+                        </label>
+                        <label class="en-field en-field--num">
+                            <span>Cant.</span>
+                            <input type="text" inputmode="decimal" autocomplete="off" class="form-control vn-input vn-mini Inputmiles linea-cant" value="${fmtInputNum(linea.Cantidad)}" />
+                        </label>
+                        <label class="en-field en-field--num en-field--precio">
+                            <span>Precio ref.</span>
+                            <input type="text" inputmode="decimal" autocomplete="off" class="form-control vn-input vn-mini Inputmiles linea-precio" value="${fmtInputNum(linea.PrecioVenta)}" />
+                        </label>
+                        <label class="en-field en-field--num">
+                            <span>% Desc</span>
+                            <input type="text" inputmode="decimal" autocomplete="off" class="form-control vn-input vn-mini Inputmiles linea-desc" value="${fmtInputNum(linea.PorcDescuento)}" />
+                        </label>
+                        <label class="en-field en-field--num">
+                            <span>% IVA</span>
+                            <input type="text" inputmode="decimal" autocomplete="off" class="form-control vn-input vn-mini Inputmiles linea-iva" value="${fmtInputNum(linea.PorcIva)}" />
+                        </label>
+                    </div>
+                    <div class="en-linea-foot">
+                        <div class="en-linea-subtotal">
+                            <span>Subtotal</span>
+                            <strong class="linea-subtotal-cell linea-subtotal text-success">${fmtMoney(calc.signedSubtotalFinal)}</strong>
+                        </div>
                         <button type="button" class="btn btn-outline-danger btn-quitar-linea" title="Quitar">
                             <i class="fa fa-trash"></i>
                         </button>
-                    </td>
-                </tr>
+                    </div>
+                </div>
             `);
 
-            $tb.append(tr);
-            prepararInputsMilesLinea(tr);
+            $tb.append($row);
+            prepararInputsMilesLinea($row);
 
-            const $sel = tr.find(".linea-producto");
+            const $sel = $row.find(".linea-producto");
+            const $lista = $row.find(".linea-lista");
             ensureSelect2Cm($sel, { placeholder: "Producto", dropdownParent: $(".entregas-nuevo") });
+            ensureSelect2Cm($lista, { placeholder: "Lista / Tipo pago", allowClear: true, dropdownParent: $(".entregas-nuevo") });
 
-            $sel.on("change", function () {
-                linea.IdProducto = parseInt($(this).val(), 10) || 0;
-                const prod = CM.productos.find(p => p.Id === linea.IdProducto);
-                if (prod) {
-                    if (!linea.PrecioVenta) {
-                        linea.PrecioVenta = Number(prod.PrecioVenta || 0);
-                        setValorInputMiles(tr.find(".linea-precio"), linea.PrecioVenta);
-                    }
-                    linea.CostoUnitario = Number(prod.CostoUnitario || 0);
+            $lista.on("change", async function () {
+                linea.IdListaPrecio = parseInt($(this).val(), 10) || 0;
+                if (linea.IdProducto > 0 && linea.IdListaPrecio > 0) {
+                    await aplicarPrecioDesdeListaEntrega($row, linea, { forzar: true });
                 }
-                syncLineaFromRow(tr, linea);
-                tr.find(".linea-subtotal").text(fmtMoney(calcularLinea(linea).signedSubtotalFinal));
+                syncLineaFromRow($row, linea);
+                $row.find(".linea-subtotal").text(fmtMoney(calcularLinea(linea).signedSubtotalFinal));
                 refrescarSelectsProducto();
                 actualizarBotonesAgregarLinea();
                 recalcularTotalesUI();
             });
 
-            tr.find(".linea-cant, .linea-precio, .linea-desc, .linea-iva").on("input change", function () {
-                syncLineaFromRow(tr, linea);
-                tr.find(".linea-subtotal").text(fmtMoney(calcularLinea(linea).signedSubtotalFinal));
+            $sel.on("change", async function () {
+                linea.IdProducto = parseInt($(this).val(), 10) || 0;
+                const prod = CM.productos.find(p => p.Id === linea.IdProducto);
+                if (prod) {
+                    linea.CostoUnitario = Number(prod.CostoUnitario || 0);
+                }
+
+                if (linea.IdProducto > 0 && !linea.IdListaPrecio) {
+                    const precios = await obtenerPreciosProductoEntrega(linea.IdProducto);
+                    const conPrecio = (precios || []).filter(p => Number(p.PrecioVenta) > 0);
+                    if (conPrecio.length === 1) {
+                        linea.IdListaPrecio = Number(conPrecio[0].IdListaPrecio);
+                        $lista.val(String(linea.IdListaPrecio)).trigger("change");
+                        return;
+                    }
+                }
+
+                if (linea.IdProducto > 0 && linea.IdListaPrecio > 0) {
+                    await aplicarPrecioDesdeListaEntrega($row, linea, { forzar: true });
+                }
+
+                syncLineaFromRow($row, linea);
+                $row.find(".linea-subtotal").text(fmtMoney(calcularLinea(linea).signedSubtotalFinal));
+                refrescarSelectsProducto();
+                actualizarBotonesAgregarLinea();
                 recalcularTotalesUI();
             });
 
-            tr.find(".btn-quitar-linea").on("click", () => quitarLinea(k));
+            $row.find(".linea-cant, .linea-precio, .linea-desc, .linea-iva").on("input change", function () {
+                syncLineaFromRow($row, linea);
+                $row.find(".linea-subtotal").text(fmtMoney(calcularLinea(linea).signedSubtotalFinal));
+                recalcularTotalesUI();
+            });
+
+            $row.find(".btn-quitar-linea").on("click", () => quitarLinea(k));
         });
     }
 
@@ -1169,6 +1448,9 @@
         linea.PorcDescuento = leerNum($tr.find(".linea-desc").val());
         linea.PorcIva = leerNum($tr.find(".linea-iva").val());
         linea.IdProducto = parseInt($tr.find(".linea-producto").val(), 10) || 0;
+        if ($tr.find(".linea-lista").length) {
+            linea.IdListaPrecio = parseInt($tr.find(".linea-lista").val(), 10) || 0;
+        }
     }
 
     function calcularLinea(linea) {
@@ -1233,6 +1515,7 @@
             _key: CM.nextLineId++,
             Id: l.Id,
             IdProducto: l.IdProducto,
+            IdListaPrecio: Number(l.IdListaPrecio || 0),
             TipoMovimiento: tipoMovimiento,
             Cantidad: Number(l.Cantidad || 0),
             PrecioVenta: Number(l.PrecioVenta || 0),
@@ -1246,6 +1529,7 @@
         return {
             Id: l.Id || 0,
             IdProducto: l.IdProducto,
+            IdListaPrecio: Number(l.IdListaPrecio || 0) > 0 ? Number(l.IdListaPrecio) : null,
             Cantidad: l.Cantidad,
             PrecioVenta: l.PrecioVenta,
             CostoUnitario: l.CostoUnitario || 0,
@@ -1257,11 +1541,14 @@
     function obtenerPayload() {
         const lineasOperacion = lineasProductosOperacion().filter(l => l.IdProducto > 0);
         const lineasRec = lineasRecuperadas().filter(l => l.IdProducto > 0);
+        const idEst = parseInt($("#cEstablecimiento").val(), 10) || 0;
 
         const payload = {
             Id: CM.id,
             Fecha: $("#cFecha").val() || null,
             IdCliente: parseInt($("#cCliente").val(), 10) || 0,
+            IdEstablecimiento: idEst,
+            IdContrato: null,
             IdEstado: parseInt($("#cEstado").val(), 10) || null,
             IdCamion: parseInt($("#cCamion").val(), 10) || null,
             NotaInterna: ($("#cNota").val() || "").trim() || null,
@@ -1324,9 +1611,47 @@
         if (ok) {
             cerrarErrorEntrega();
             limpiarMarcasErrorSeccionesEntrega();
+
+            const idClienteVolver = Number(CM.init?.idCliente || $("#cCliente").val() || 0);
+            const desdeCliente = !!CM.init?.volverCliente && idClienteVolver > 0;
+            const urlVolver = desdeCliente
+                ? (CM.init?.urlVolverCliente || `/Clientes/Gestion?id=${idClienteVolver}`)
+                : "/ClientesEntregas/Index";
+
+            const irAEdicion = (idEntrega) => {
+                let url = `/ClientesEntregas/NuevoModif?id=${idEntrega || 0}`;
+                if (idClienteVolver > 0) url += `&idCliente=${idClienteVolver}`;
+                if (desdeCliente) url += `&volverCliente=true`;
+                window.location.href = url;
+            };
+
+            if (typeof modalGuardadoConSalida === "function") {
+                const decision = await modalGuardadoConSalida({
+                    titulo: esNuevo ? "Entrega registrada" : "Entrega guardada",
+                    mensaje: result.mensaje || (esNuevo ? "Entrega registrada correctamente." : "Entrega guardada correctamente."),
+                    pregunta: desdeCliente
+                        ? "¿Querés volver al cliente o seguir editando esta entrega?"
+                        : "¿Querés volver al listado de entregas o seguir editando?",
+                    btnSalir: desdeCliente ? "Volver al cliente" : "Ir al listado",
+                    btnQuedarse: "Seguir editando",
+                    urlSalida: urlVolver
+                });
+
+                if (!decision?.salir) {
+                    if (esNuevo) {
+                        irAEdicion(result.id || 0);
+                    } else if (CM.id > 0) {
+                        // Recargar datos por si el servidor recalculó totales / cobros
+                        await cargarEntrega(CM.id);
+                        await cargarCobrosEntrega();
+                    }
+                }
+                return;
+            }
+
             exitoModal(result.mensaje || (esNuevo ? "Entrega registrada correctamente." : "Entrega guardada correctamente."));
             setTimeout(() => {
-                window.location.href = "/ClientesEntregas";
+                window.location.href = urlVolver;
             }, 1000);
         } else {
             const msg = result.mensaje || "No se pudo guardar.";

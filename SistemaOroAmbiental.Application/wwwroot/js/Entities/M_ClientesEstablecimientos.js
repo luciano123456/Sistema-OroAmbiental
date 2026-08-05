@@ -40,10 +40,13 @@
                     productosActualizar: "/ClientesEstablecimientosProductos/Actualizar",
                     productosEliminar: "/ClientesEstablecimientosProductos/Eliminar?id={id}"
                 },
+                mode: null,
+                lockClienteId: null,
                 onSaved: null,
                 onDeleted: null,
                 onBeforeOpen: null,
                 onOpen: null,
+                onClosed: null,
                 onGuardarModelo: null
             }, options || {});
 
@@ -55,7 +58,10 @@
                 throw new Error("No se encontr\u00F3 [data-establecimiento-modal].");
             }
 
-            this.bsModal = new bootstrap.Modal(this.modalEl);
+            this.mode = this.options.mode
+                || this.modalEl.getAttribute("data-mode")
+                || (this.modalEl.classList.contains("modal") ? "modal" : "inline");
+            this.bsModal = this.mode === "modal" ? new bootstrap.Modal(this.modalEl) : null;
             this._ultimoModo = "nuevo";
             this._modeloActual = null;
             this._contactosCache = [];
@@ -1058,9 +1064,10 @@
 
                 await this.cargarCombos();
 
-                if (idClientePreseleccionado) {
-                    this._setFieldValue("cmbClienteEst", idClientePreseleccionado, true);
-                    await this.prefillDesdeCliente(idClientePreseleccionado);
+                const idCliente = idClientePreseleccionado || this.options.lockClienteId || null;
+                if (idCliente) {
+                    this._setFieldValue("cmbClienteEst", idCliente, true);
+                    await this.prefillDesdeCliente(idCliente);
                 } else {
                     await this.limpiarGeoEspecifico();
                 }
@@ -1080,10 +1087,10 @@
                 this._id("modalEstablecimientoLabel").textContent = "Nuevo Establecimiento";
                 this._id("btnGuardarEst").innerHTML = `<i class="fa fa-check"></i> Registrar`;
 
-                this.bsModal.show();
+                this._mostrarUi();
 
                 if (typeof this.options.onOpen === "function") {
-                    await this.options.onOpen("nuevo", this);
+                    await this.options.onOpen("nuevo", this, null);
                 }
             } catch (e) {
                 console.error(e);
@@ -1124,7 +1131,46 @@
         }
 
         cerrar() {
-            this.bsModal.hide();
+            this._ocultarUi();
+            if (typeof this.options.onClosed === "function") {
+                this.options.onClosed(this);
+            }
+        }
+
+        _mostrarUi() {
+            this._aplicarLockCliente();
+            if (this.mode === "inline") {
+                this.modalEl.classList.remove("d-none");
+                document.getElementById("cgEstEditorEmpty")?.classList.add("d-none");
+                // Select2 necesita el panel visible
+                setTimeout(() => this.inicializarSelect2Modal(), 0);
+                return;
+            }
+            this.bsModal?.show();
+        }
+
+        _ocultarUi() {
+            if (this.mode === "inline") {
+                this.modalEl.classList.add("d-none");
+                document.getElementById("cgEstEditorEmpty")?.classList.remove("d-none");
+                return;
+            }
+            this.bsModal?.hide();
+        }
+
+        _aplicarLockCliente() {
+            const lockId = Number(this.options.lockClienteId) || 0;
+            const wrap = this._id("wrapClienteEst");
+            if (!lockId) {
+                wrap?.classList.remove("d-none");
+                return;
+            }
+            wrap?.classList.add("d-none");
+            this._setFieldValue("cmbClienteEst", lockId, true);
+        }
+
+        isInline() {
+            return this.mode === "inline";
         }
 
         async mostrarModal(modelo, soloLectura = false) {
@@ -1185,7 +1231,7 @@
                 this.prepararProductosNuevo();
             }
 
-            this.bsModal.show();
+            this._mostrarUi();
             this.setModalSoloLectura(soloLectura);
 
             if (typeof this.options.onOpen === "function") {
@@ -1427,6 +1473,15 @@
                     } catch (contactoError) {
                         console.warn("El establecimiento se guardo, pero no se pudo copiar el contacto principal.", contactoError);
                     }
+                    this._setFieldValue("txtIdEst", data.id);
+                    this._modeloActual = { ...(this._modeloActual || modelo), Id: data.id };
+                    this._id("btnGuardarEst").innerHTML = `<i class="fa fa-check"></i> Guardar`;
+                    this._id("modalEstablecimientoLabel").textContent = "Editar Establecimiento";
+                    this.actualizarBadgeEstablecimiento();
+                    await Promise.all([
+                        this.cargarContactos(data.id),
+                        this.cargarProductos(data.id)
+                    ]);
                 }
                 if (typeof exitoModal === "function") {
                     exitoModal(data.mensaje || (esNuevo
@@ -1434,7 +1489,9 @@
                         : "Establecimiento modificado correctamente"));
                 }
 
-                this.cerrar();
+                if (this.mode !== "inline") {
+                    this.cerrar();
+                }
 
                 if (typeof this.options.onSaved === "function") {
                     const modeloGuardado = esNuevo && data.id
@@ -1487,6 +1544,10 @@
 
                 if (typeof this.options.onDeleted === "function") {
                     await this.options.onDeleted(data, id, this);
+                }
+
+                if (this.mode === "inline") {
+                    this.cerrar();
                 }
 
                 return true;
@@ -1723,9 +1784,17 @@
         }
 
         _bindModalEvents() {
-            this.modalEl.addEventListener("shown.bs.modal", () => {
-                this.inicializarSelect2Modal();
-            });
+            if (this.mode === "modal") {
+                this.modalEl.addEventListener("shown.bs.modal", () => {
+                    this.inicializarSelect2Modal();
+                });
+                return;
+            }
+
+            const btnCancel = this._id("btnCancelarEstInline");
+            if (btnCancel) {
+                btnCancel.addEventListener("click", () => this.cerrar());
+            }
         }
     }
 
@@ -1758,9 +1827,17 @@
     window.EstablecimientoModal = EstablecimientoModal;
 
     function initEstablecimientoModal(options = {}) {
-        const root = document.querySelector("[data-establecimiento-modal]");
+        let root = null;
+        if (options.root) {
+            root = typeof options.root === "string"
+                ? document.querySelector(options.root)
+                : options.root;
+        }
         if (!root) {
-            console.warn("initEstablecimientoModal: incluya el partial M_ClientesEstablecimientos en la vista.");
+            root = document.querySelector("[data-establecimiento-modal]");
+        }
+        if (!root) {
+            console.warn("initEstablecimientoModal: incluya el partial M_ClientesEstablecimientos o el editor inline en la vista.");
             return null;
         }
 
@@ -1770,6 +1847,7 @@
             window.establecimientoModal = new EstablecimientoModal(root, merged);
         } else {
             Object.assign(window.establecimientoModal.options, merged);
+            if (merged.mode) window.establecimientoModal.mode = merged.mode;
         }
 
         const abrirVer = (id) => window.establecimientoModal?.abrirVer?.(id);

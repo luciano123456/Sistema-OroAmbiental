@@ -31,28 +31,29 @@ namespace SistemaOroAmbiental.BLL.Service
         public Task<ClienteControlFiltradoDto?> ObtenerControlMensualFiltrado(
             int idCliente,
             IReadOnlyList<int> anios,
-            IReadOnlyList<int> meses)
+            IReadOnlyList<int> meses,
+            IReadOnlyList<int>? idsEstablecimiento = null)
         {
             if (idCliente <= 0)
                 return Task.FromResult<ClienteControlFiltradoDto?>(null);
 
-            return _repo.ObtenerControlMensualFiltrado(idCliente, anios, meses);
+            return _repo.ObtenerControlMensualFiltrado(idCliente, anios, meses, idsEstablecimiento);
         }
 
-        public Task<List<ClienteStockDto>> ObtenerStockCliente(int idCliente)
+        public Task<List<ClienteStockDto>> ObtenerStockCliente(int idCliente, IReadOnlyList<int>? idsEstablecimiento = null)
         {
             if (idCliente <= 0)
                 return Task.FromResult(new List<ClienteStockDto>());
 
-            return _repo.ObtenerStockCliente(idCliente);
+            return _repo.ObtenerStockCliente(idCliente, idsEstablecimiento);
         }
 
-        public Task<List<ClienteProductoSugeridoDto>> ObtenerProductosSugeridos(int idCliente, int? idEstablecimiento)
+        public Task<List<ClienteProductoSugeridoDto>> ObtenerProductosSugeridos(int idCliente, IReadOnlyList<int>? idsEstablecimiento = null)
         {
             if (idCliente <= 0)
                 return Task.FromResult(new List<ClienteProductoSugeridoDto>());
 
-            return _repo.ObtenerProductosSugeridos(idCliente, idEstablecimiento);
+            return _repo.ObtenerProductosSugeridos(idCliente, idsEstablecimiento);
         }
 
         public async Task<ServiceResult> GuardarControlMensual(ClientesControlMensual model, int idUsuario)

@@ -75,6 +75,8 @@ public partial class ClientesEstablecimiento
 
     public virtual ICollection<Contrato> Contratos { get; set; } = new List<Contrato>();
 
+    public virtual ICollection<ClientesEntrega> ClientesEntregas { get; set; } = new List<ClientesEntrega>();
+
     public virtual Cliente IdClienteNavigation { get; set; } = null!;
 
     public virtual CondicionesIva? IdCondicionIvaNavigation { get; set; }

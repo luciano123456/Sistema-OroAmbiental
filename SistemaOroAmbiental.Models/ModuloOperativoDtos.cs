@@ -167,6 +167,7 @@ public class ClienteControlAnualDto
 public class ClienteControlFiltradoDto
 {
     public int IdCliente { get; set; }
+    public int? IdEstablecimiento { get; set; }
     public string Cliente { get; set; } = "";
     public int? NumeroCliente { get; set; }
     public decimal StockActual { get; set; }

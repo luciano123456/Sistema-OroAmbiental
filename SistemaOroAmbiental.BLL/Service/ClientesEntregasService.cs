@@ -154,6 +154,12 @@ namespace SistemaOroAmbiental.BLL.Service
                 return false;
             }
 
+            if (entrega.IdEstablecimiento <= 0)
+            {
+                error = "Seleccione el establecimiento de la entrega.";
+                return false;
+            }
+
             lineas ??= new List<ClientesEntregasProducto>();
             lineasRecuperadas ??= new List<ClientesEntregasProductosRecuperado>();
 

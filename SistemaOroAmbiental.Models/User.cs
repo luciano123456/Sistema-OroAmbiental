@@ -33,6 +33,9 @@ public partial class User
 
     public bool Activo { get; set; } = true;
 
+    /// <summary>UTC. Se actualiza en login/heartbeat; se atrasa al desconectar.</summary>
+    public DateTime? FechaUltimaActividad { get; set; }
+
     public virtual ICollection<CajasMovimiento> CajasMovimientoIdUsuarioModificaNavigations { get; set; } = new List<CajasMovimiento>();
 
     public virtual ICollection<CajasMovimiento> CajasMovimientoIdUsuarioRegistraNavigations { get; set; } = new List<CajasMovimiento>();

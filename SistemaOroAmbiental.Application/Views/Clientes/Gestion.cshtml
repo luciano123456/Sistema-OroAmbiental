@@ -11,12 +11,20 @@
     <link href="~/css/Productora.css?v=6.2" rel="stylesheet" />
     <link href="~/css/disenopantallas.css?v=6.2" rel="stylesheet" />
     <link href="~/css/M_Generico.css?v=6.2" rel="stylesheet" />
-    <link href="~/css/ClientesGestion.css?v=13.5" rel="stylesheet" />
-    <link href="~/css/ClientesEstablecimientos.css?v=5.4" rel="stylesheet" />
+    <link href="~/css/ClientesGestion.css?v=15.3" rel="stylesheet" />
+    <link href="~/css/ClientesEstablecimientos.css?v=5.6" rel="stylesheet" />
     <link href="~/css/ContratosModal.css?v=5.4" rel="stylesheet" />
 }
 
 <div class="cg-page">
+
+    <div id="cgPageLoading" class="cg-page-loading" hidden aria-live="polite" aria-busy="false">
+        <div class="cg-page-loading-card">
+            <i class="fa fa-spinner fa-spin" aria-hidden="true"></i>
+            <strong>Cargando</strong>
+            <span id="cgPageLoadingMsg">Preparando datos del cliente…</span>
+        </div>
+    </div>
 
     <div class="cg-header cc-header cg-header-hero shadow-lg rounded-4 p-3 mb-3">
         <div class="d-flex align-items-center gap-3 flex-wrap w-100">
@@ -75,6 +83,11 @@
                 <li class="nav-item">
                     <button class="nav-link" id="tabBtnCuentaCorriente" data-bs-toggle="tab" data-bs-target="#tabCuentaCorriente" type="button" data-cg-tab="cuentaCorriente" disabled>
                         <i class="fa fa-credit-card"></i><span>Cuenta corriente</span>
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link" id="tabBtnEntregas" data-bs-toggle="tab" data-bs-target="#tabEntregas" type="button" data-cg-tab="entregas" disabled>
+                        <i class="fa fa-truck"></i><span>Entregas</span>
                     </button>
                 </li>
             </ul>
@@ -624,37 +637,25 @@
                                         <span>Registrar entrega / retiro</span>
                                     </div>
                                     <div class="cg-mes-ws-panel-body">
-                                        <div class="row g-2 mb-2">
-                                            <div class="col-md-4">
-                                                <label class="form-label">Fecha entrega</label>
-                                                <input type="date" id="cgWsFechaEntrega" class="form-control form-control-sm" />
+                                        <div class="row g-3 mb-3 cg-ws-meta">
+                                            <div class="col-sm-5 col-lg-4">
+                                                <label class="form-label cg-ws-label">Fecha entrega</label>
+                                                <input type="date" id="cgWsFechaEntrega" class="form-control" />
                                             </div>
-                                            <div class="col-md-8">
-                                                <label class="form-label">Establecimiento</label>
-                                                <select id="cgWsEstablecimiento" class="form-control form-control-sm"></select>
+                                            <div class="col-sm-7 col-lg-8">
+                                                <label class="form-label cg-ws-label">Establecimiento</label>
+                                                <select id="cgWsEstablecimiento" class="form-control"></select>
                                             </div>
                                         </div>
                                         <div class="cg-ws-sugeridos" id="cgWsSugeridos"></div>
                                         <div class="cg-ws-lineas-wrap">
-                                            <table class="cg-ws-lineas-table">
-                                                <thead>
-                                                    <tr>
-                                                        <th>Producto</th>
-                                                        <th>Tipo</th>
-                                                        <th>Cant.</th>
-                                                        <th>Precio</th>
-                                                        <th>Subtotal</th>
-                                                        <th></th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody id="cgWsLineasBody"></tbody>
-                                            </table>
+                                            <div class="cg-ws-lineas-list" id="cgWsLineasBody"></div>
                                         </div>
                                         <div class="cg-ws-composer-actions">
-                                            <button type="button" class="cg-btn cg-btn--ghost cg-btn--sm" id="btnWsAgregarLinea">
+                                            <button type="button" class="cg-btn cg-btn--ghost" id="btnWsAgregarLinea">
                                                 <i class="fa fa-plus"></i> Agregar l&iacute;nea
                                             </button>
-                                            <button type="button" class="cg-btn cg-btn--success cg-btn--sm" id="btnWsRegistrarEntrega">
+                                            <button type="button" class="cg-btn cg-btn--success" id="btnWsRegistrarEntrega">
                                                 <i class="fa fa-check"></i> Registrar entrega
                                             </button>
                                             <a href="#" class="cg-hub-link" id="btnWsAbrirModuloEntregas" target="_blank">
@@ -673,26 +674,26 @@
                                         <input type="hidden" id="cgCmAnio" />
                                         <input type="hidden" id="cgCmMes" />
                                         <input type="hidden" id="cgCmIdControl" />
-                                        <div class="row g-2">
-                                            <div class="col-md-6">
-                                                <label class="form-label">Fecha visita</label>
-                                                <input type="date" id="cgCmFechaVisita" class="form-control form-control-sm" />
+                                        <div class="row g-3">
+                                            <div class="col-sm-6">
+                                                <label class="form-label cg-ws-label">Fecha visita</label>
+                                                <input type="date" id="cgCmFechaVisita" class="form-control" />
                                             </div>
-                                            <div class="col-md-6">
-                                                <label class="form-label">Cajas a favor</label>
-                                                <input type="number" id="cgCmCajasAFavor" class="form-control form-control-sm" min="0" step="1" />
+                                            <div class="col-sm-6">
+                                                <label class="form-label cg-ws-label">Cajas a favor</label>
+                                                <input type="number" id="cgCmCajasAFavor" class="form-control" min="0" step="1" />
                                             </div>
-                                            <div class="col-md-6">
-                                                <label class="form-label">Abono efectivo</label>
-                                                <input type="text" id="cgCmAbonoEfectivo" class="form-control form-control-sm Inputmiles" inputmode="decimal" autocomplete="off" />
+                                            <div class="col-sm-6">
+                                                <label class="form-label cg-ws-label">Abono efectivo</label>
+                                                <input type="text" id="cgCmAbonoEfectivo" class="form-control Inputmiles" inputmode="decimal" autocomplete="off" />
                                             </div>
-                                            <div class="col-md-6">
-                                                <label class="form-label">Abono transferencia</label>
-                                                <input type="text" id="cgCmAbonoTransferencia" class="form-control form-control-sm Inputmiles" inputmode="decimal" autocomplete="off" />
+                                            <div class="col-sm-6">
+                                                <label class="form-label cg-ws-label">Abono transferencia</label>
+                                                <input type="text" id="cgCmAbonoTransferencia" class="form-control Inputmiles" inputmode="decimal" autocomplete="off" />
                                             </div>
-                                            <div class="col-md-6">
-                                                <label class="form-label">Fecha transferencia</label>
-                                                <input type="date" id="cgCmFechaTransferencia" class="form-control form-control-sm" />
+                                            <div class="col-sm-6">
+                                                <label class="form-label cg-ws-label">Fecha transferencia</label>
+                                                <input type="date" id="cgCmFechaTransferencia" class="form-control" />
                                             </div>
                                             <div class="col-12">
                                                 <div class="cg-cm-sin-entrega-box" id="cgCmSinEntregaBox">
@@ -707,12 +708,12 @@
                                                 </div>
                                             </div>
                                             <div class="col-12">
-                                                <label class="form-label">Observaciones</label>
-                                                <textarea id="cgCmObservaciones" class="form-control form-control-sm" rows="2" maxlength="500"></textarea>
+                                                <label class="form-label cg-ws-label">Observaciones</label>
+                                                <textarea id="cgCmObservaciones" class="form-control" rows="3" maxlength="500"></textarea>
                                             </div>
                                         </div>
                                         <div class="cg-ws-pagos-actions">
-                                            <button type="button" class="cg-btn cg-btn--primary cg-btn--sm" id="btnGuardarControlMensualCg">
+                                            <button type="button" class="cg-btn cg-btn--primary" id="btnGuardarControlMensualCg">
                                                 <i class="fa fa-check"></i> Guardar visita
                                             </button>
                                         </div>
@@ -754,37 +755,66 @@
 
             <!-- ESTABLECIMIENTOS -->
             <div class="tab-pane fade" id="tabEstablecimientos">
-                <div class="cg-list-panel" data-cg-list="establecimientos">
-                    <div class="cg-list-toolbar">
-                        <div class="cg-list-toolbar-info">
-                            <h6 class="cg-list-title"><i class="fa fa-building"></i> Establecimientos</h6>
+                <div class="cg-est-stage">
+                    <div class="cg-est-rail">
+                        <div class="cg-est-rail-head">
+                            <div class="cg-est-rail-title">
+                                <span class="cg-est-rail-kicker">Puntos de entrega</span>
+                                <h6 class="mb-0"><i class="fa fa-building"></i> Establecimientos</h6>
+                                <p class="cg-est-rail-hint mb-0">Tocá para elegir · varios para ver la planilla juntos</p>
+                            </div>
+                            <div class="cg-est-rail-actions">
+                                <button type="button" id="btnEstSelTodos" class="cg-btn cg-btn--ghost cg-btn--sm" title="Seleccionar todos">
+                                    <i class="fa fa-check-double"></i> Todos
+                                </button>
+                                <button type="button" id="btnEliminarEstTab" class="cg-btn cg-btn--danger cg-btn--sm d-none">
+                                    <i class="fa fa-trash"></i> Eliminar
+                                </button>
+                                <button type="button" id="btnNuevoEstTab" class="cg-btn cg-btn--success cg-btn--sm">
+                                    <i class="fa fa-plus"></i> Nuevo
+                                </button>
+                            </div>
                         </div>
-                        <button type="button" id="btnNuevoEstTab" class="cg-btn cg-btn--success cg-btn--sm">
-                            <i class="fa fa-plus"></i> Nuevo
-                        </button>
+                        <div id="cgEstList" class="cg-est-pills" role="listbox" aria-multiselectable="true"></div>
+                        <div id="cgEstSelBar" class="cg-est-selbar d-none">
+                            <span id="cgEstSelLabel" class="cg-est-selbar-label"></span>
+                            <span id="cgEstSelMode" class="cg-est-selbar-mode"></span>
+                        </div>
                     </div>
-                    <div class="cg-cards-grid" id="cgCards_establecimientos"></div>
-                    <div class="dt-dark-wrap cg-table-wrap">
-                        <table class="dt-dark display nowrap compact" id="grd_EstablecimientosCg" style="width:100%">
-                        <thead>
-                            <tr>
-                                <th></th>
-                                <th>Id</th>
-                                <th>Id establecimiento</th>
-                                <th>Nombre</th>
-                                <th>Domicilio</th>
-                                <th>Partido</th>
-                                <th>Cod. partido</th>
-                                <th>Localidad</th>
-                                <th>Cod. localidad</th>
-                                <th>Unidad</th>
-                                <th>Dia rec.</th>
-                                <th>Semana rec.</th>
-                                <th>Lista precio</th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
+
+                    <div class="cg-est-detail-pane">
+                        <section id="cgEstEditor"
+                                 class="cg-est-editor establecimiento-inline-root d-none"
+                                 data-establecimiento-modal="establecimiento"
+                                 data-mode="inline">
+                            <div class="cg-est-editor-head">
+                                <h5 class="cg-est-editor-title mb-0" id="modalEstablecimientoLabel">Establecimiento</h5>
+                                <div id="cgEstMultiBanner" class="cg-est-multi-banner d-none">
+                                    <i class="fa fa-layer-group"></i>
+                                    <span>Vista combinada · solo planilla de pagos y stock</span>
+                                </div>
+                            </div>
+                            <div class="cg-est-editor-body">
+                                @{
+                                    ViewData["IncluirStockEst"] = true;
+                                }
+                                <partial name="~/Views/Entities/_EstablecimientoEditorBody.cshtml" />
+                            </div>
+                            <div class="cg-est-editor-foot" id="cgEstEditorFoot">
+                                <button type="button" id="btnCancelarEstInline" class="cg-btn cg-btn--ghost cg-btn--sm">
+                                    <i class="fa fa-times"></i> Cancelar
+                                </button>
+                                <button type="button" id="btnGuardarEst" class="cg-btn cg-btn--primary cg-btn--sm" onclick="guardarEstablecimiento()">
+                                    <i class="fa fa-check"></i> Guardar
+                                </button>
+                            </div>
+                        </section>
+
+                        <div id="cgEstEditorEmpty" class="cg-est-editor-empty">
+                            <div class="cg-est-empty-orb"></div>
+                            <i class="fa fa-hand-pointer-o"></i>
+                            <p>Elegí un establecimiento arriba para editarlo,<br>o varios para comparar la planilla.</p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -898,6 +928,32 @@
                         </thead>
                         <tbody></tbody>
                     </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ENTREGAS -->
+            <div class="tab-pane fade" id="tabEntregas">
+                <div class="cg-list-panel" data-cg-list="entregas">
+                    <div class="cg-list-toolbar">
+                        <div class="cg-list-toolbar-info">
+                            <h6 class="cg-list-title"><i class="fa fa-truck"></i> Entregas del cliente</h6>
+                            <small class="text-muted">Historial de entregas, retiros y cobros asociados</small>
+                        </div>
+                        <div class="d-flex gap-2 flex-wrap">
+                            <a id="btnNuevaEntregaTab" class="cg-btn cg-btn--success cg-btn--sm" href="#">
+                                <i class="fa fa-plus"></i> Nueva entrega
+                            </a>
+                            <a id="btnVerModuloEntregasTab" class="cg-btn cg-btn--ghost cg-btn--sm" href="/ClientesEntregas/Index" target="_blank">
+                                <i class="fa fa-external-link"></i> Ver modulo
+                            </a>
+                            <button type="button" id="btnRefreshEntregasTab" class="cg-btn cg-btn--ghost cg-btn--sm">
+                                <i class="fa fa-refresh"></i> Actualizar
+                            </button>
+                        </div>
+                    </div>
+                    <div id="cgTabEntregasList" class="cg-hub-entregas-list cg-tab-entregas-list">
+                        <div class="cg-hub-stock-empty">Sin entregas cargadas.</div>
                     </div>
                 </div>
             </div>
@@ -1059,7 +1115,6 @@
     </div>
 </div>
 
-<partial name="~/Views/Entities/M_ClientesEstablecimientos.cshtml" />
 <partial name="~/Views/Entities/M_Contratos.cshtml" />
 
 @section Scripts {
@@ -1068,8 +1123,8 @@
     </script>
     <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-    <script src="~/js/Entities/M_ClientesEstablecimientos.js?v=6.0"></script>
+    <script src="~/js/Entities/M_ClientesEstablecimientos.js?v=7.0"></script>
     <script src="~/js/ContratosDocumentos.js?v=5.3"></script>
     <script src="~/js/Entities/M_Contratos.js?v=5.4"></script>
-    <script src="~/js/ClientesGestion.js?v=13.6"></script>
+    <script src="~/js/ClientesGestion.js?v=17.9"></script>
 }
