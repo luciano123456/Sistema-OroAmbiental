@@ -382,6 +382,7 @@ window.__OA_ENTREGA_BUILD = "dup-alert-live-20260806";
 
     function validarEntregaLocal() {
         sincronizarLineasDesdeDom();
+        actualizarAlertaDuplicadosLineasEntrega();
 
         const erroresDatos = [];
         const erroresProductos = [];

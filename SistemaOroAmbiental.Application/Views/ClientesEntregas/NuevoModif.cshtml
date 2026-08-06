@@ -343,5 +343,49 @@
     <script src="~/js/Entities/M_Productos.js?v=5.5"></script>
     <script src="~/js/ContratosDocumentos.js?v=5.3"></script>
     <script src="~/js/Entities/M_Contratos.js?v=5.4"></script>
-    <script src="~/js/ClientesEntregasNuevoModif.js?v=6.9" asp-append-version="true"></script>
+    <script src="~/js/ClientesEntregasNuevoModif.js?v=7.0" asp-append-version="true"></script>
+    <script>
+        /* Guardia inline entregas */
+        (function () {
+            window.__OA_ENTREGA_BUILD = "inline-guard-v20-20260806";
+            console.info("[OA] Entregas guard v20", window.__OA_ENTREGA_BUILD);
+            function cuentaOk(tr) {
+                return (parseInt(tr?.querySelector?.(".cobro-cuenta")?.value || "0", 10) || 0) > 0;
+            }
+            function syncImp(tr) {
+                const imp = tr?.querySelector?.(".cobro-importe");
+                if (!imp) return;
+                const ok = cuentaOk(tr);
+                imp.disabled = !ok;
+                imp.readOnly = !ok;
+                if (!ok) imp.value = "";
+                imp.placeholder = ok ? "" : "Elegí cuenta";
+            }
+            function tick() {
+                document.querySelectorAll("#tbodyCobrosEntrega tr").forEach(syncImp);
+            }
+            document.addEventListener("change", function (e) {
+                if (e.target?.matches?.(".cobro-cuenta")) syncImp(e.target.closest("tr"));
+            }, true);
+            document.addEventListener("input", function (e) {
+                const imp = e.target?.closest?.(".cobro-importe");
+                if (!imp) return;
+                if (!cuentaOk(imp.closest("tr"))) { imp.value = ""; e.stopImmediatePropagation(); }
+            }, true);
+            document.addEventListener("focusin", function (e) {
+                const imp = e.target?.closest?.(".cobro-importe");
+                if (!imp) return;
+                if (!cuentaOk(imp.closest("tr"))) { imp.blur(); imp.value = ""; }
+            }, true);
+            const obs = new MutationObserver(tick);
+            function arm() {
+                const tb = document.getElementById("tbodyCobrosEntrega");
+                if (tb) obs.observe(tb, { childList: true, subtree: true });
+                tick();
+            }
+            if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", arm);
+            else arm();
+            setInterval(tick, 800);
+        })();
+    </script>
 }

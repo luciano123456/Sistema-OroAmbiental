@@ -2,7 +2,7 @@
    CLIENTES GESTION - Hub unificado por cliente
    (cliente + establecimientos: lineas completas + importe tras cuenta)
 ========================================================= */
-window.__OA_CG_BUILD = "dup-alert-live-20260806";
+window.__OA_CG_BUILD = "inline-guard-v20-20260806";
 
 const CG = {
     id: 0,
@@ -3492,14 +3492,22 @@ function totalEntregadoWsCg(lineas) {
         .reduce((s, l) => s + (Number(l.Cantidad) || 0) * (Number(l.PrecioVenta) || 0), 0);
 }
 
+function totalRetiradoWsCg(lineas) {
+    return (lineas || [])
+        .filter(l => Number(l.TipoMovimiento || 1) === 2)
+        .reduce((s, l) => s + (Number(l.Cantidad) || 0) * (Number(l.PrecioVenta) || 0), 0);
+}
+
 function actualizarResumenCobrosWsCg() {
     const lineas = (hubPropCg("wsLineas") || []).filter(l => l.IdProducto > 0 && l.Cantidad > 0);
     const cobros = cobrosWsParaGuardarCg();
     const totalEnt = totalEntregadoWsCg(lineas);
+    const totalRet = totalRetiradoWsCg(lineas);
     const totalPag = cobros.reduce((s, c) => s + Number(c.Importe || 0), 0);
     $h("cgWsCobroTotEntrega").text(fmtMoneyCg(totalEnt));
+    $h("cgWsCobroTotRetiro").text(fmtMoneyCg(totalRet));
     $h("cgWsCobroTotPagado").text(fmtMoneyCg(totalPag));
-    $h("cgWsCobroSaldo").text(fmtMoneyCg(Math.max(0, totalEnt - totalPag)));
+    $h("cgWsCobroSaldo").text(fmtMoneyCg(Math.max(0, totalEnt + totalRet - totalPag)));
 }
 
 function renderCobrosWsCg() {
