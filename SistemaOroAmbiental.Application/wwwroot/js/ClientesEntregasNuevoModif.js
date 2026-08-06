@@ -312,13 +312,13 @@
             return { ok: true, mensaje: "" };
         }
 
-        const totalEntrega = calcularTotalEntregaDesdeLineas();
+        const totalCobrar = calcularTotalCobrableDesdeLineas();
         const suma = paraGuardar.reduce((s, p) => s + Number(p.Importe || 0), 0);
 
-        if (suma > totalEntrega + 0.01) {
+        if (suma > totalCobrar + 0.01) {
             return {
                 ok: false,
-                mensaje: "La suma de los cobros no puede superar el total de lo entregado."
+                mensaje: "La suma de los cobros no puede superar el total de lo retirado."
             };
         }
 
@@ -674,13 +674,31 @@
         return Number(match.PrecioVenta);
     }
 
+    /** Entrega (1): precio 0 por defecto (manual). Retiro/Recuperado: trae precio de lista. */
+    function lineaTraePrecioDeLista(linea) {
+        const t = Number(linea?.TipoMovimiento);
+        return t === TIPO_LINEA_RETIRO || t === TIPO_LINEA_RECUPERADO;
+    }
+
     async function aplicarPrecioDesdeListaEntrega($tr, linea, { forzar = true } = {}) {
+        if (!lineaTraePrecioDeLista(linea)) return false;
         const precio = await obtenerPrecioListaEntrega(linea.IdProducto, linea.IdListaPrecio);
         if (precio == null) return false;
         if (!forzar && Number(linea.PrecioVenta) > 0) return false;
         linea.PrecioVenta = precio;
         setValorInputMiles($tr.find(".linea-precio"), precio);
         return true;
+    }
+
+    async function sincronizarPrecioSegunTipoLinea($tr, linea) {
+        if (Number(linea.TipoMovimiento) === TIPO_LINEA_ENTREGA) {
+            linea.PrecioVenta = 0;
+            setValorInputMiles($tr.find(".linea-precio"), 0);
+            return;
+        }
+        if (linea.IdProducto > 0 && linea.IdListaPrecio > 0) {
+            await aplicarPrecioDesdeListaEntrega($tr, linea, { forzar: true });
+        }
     }
 
     function htmlOpcionesListaPrecio(linea) {
@@ -831,15 +849,24 @@
         return (CM.cuentasCaja || []).filter(x => String(x.IdCombo) === String(idSucursal));
     }
 
-    function calcularTotalEntregaDesdeLineas() {
-        // Solo líneas de ENTREGA: es el monto cobrable (los retiros no se cobran).
+    function totalPorTipoLineaEntrega(tipo) {
+        const t = Number(tipo);
         let tot = 0;
         CM.lineas.forEach(l => {
-            if (Number(l.TipoMovimiento || TIPO_LINEA_ENTREGA) === TIPO_LINEA_ENTREGA) {
+            if (Number(l.TipoMovimiento || TIPO_LINEA_ENTREGA) === t) {
                 tot += calcularLinea(l).subtotalFinal;
             }
         });
         return tot;
+    }
+
+    /** Lo cobrable es el retiro (servicio/tratamiento que paga el cliente). */
+    function calcularTotalCobrableDesdeLineas() {
+        return totalPorTipoLineaEntrega(TIPO_LINEA_RETIRO);
+    }
+
+    function calcularTotalEntregaDesdeLineas() {
+        return totalPorTipoLineaEntrega(TIPO_LINEA_ENTREGA);
     }
 
     function htmlOpcionesSucursalCobro(cobro) {
@@ -1034,12 +1061,14 @@
 
     function actualizarResumenCobrosUI() {
         const totalEntrega = calcularTotalEntregaDesdeLineas();
+        const totalRetiro = calcularTotalCobrableDesdeLineas();
         const activos = cobrosActivos();
         const totalPagado = activos.reduce((s, p) => s + Number(p.Importe || 0), 0);
 
-        const saldo = Math.max(0, totalEntrega - totalPagado);
+        const saldo = totalRetiro - totalPagado;
 
         $("#cobroTotEntrega").text(fmtMoney(totalEntrega));
+        $("#cobroTotRetiro").text(fmtMoney(totalRetiro));
         $("#cobroTotPagado").text(fmtMoney(totalPagado));
         $("#cobroSaldoPend").text(fmtMoney(saldo));
         $("#totPagadoResumen").text(fmtMoney(totalPagado));
@@ -1266,7 +1295,7 @@
                     <div class="en-linea-foot">
                         <div class="en-linea-subtotal">
                             <span>Subtotal</span>
-                            <strong class="linea-subtotal-cell linea-subtotal">${fmtMoney(calc.signedSubtotalFinal)}</strong>
+                            <strong class="linea-subtotal-cell linea-subtotal">${fmtMoney(calc.subtotalFinal)}</strong>
                         </div>
                         <button type="button" class="btn btn-outline-danger btn-quitar-linea" title="Quitar">
                             <i class="fa fa-trash"></i>
@@ -1288,13 +1317,15 @@
             ensureSelect2Cm($sel, { placeholder: "Producto", dropdownParent: $(".entregas-nuevo") });
             ensureSelect2Cm($lista, { placeholder: "Lista / Tipo pago", allowClear: true, dropdownParent: $(".entregas-nuevo") });
 
-            $tipo.on("change", function () {
+            $tipo.on("change", async function () {
                 if (CM.cargandoEntrega) return;
                 linea.TipoMovimiento = parseInt($(this).val(), 10) || TIPO_LINEA_ENTREGA;
                 syncLineaFromRow($row, linea);
+                await sincronizarPrecioSegunTipoLinea($row, linea);
+                syncLineaFromRow($row, linea);
                 refrescarSelectsProducto();
                 actualizarBotonesAgregarLinea();
-                $row.find(".linea-subtotal").text(fmtMoney(calcularLinea(linea).signedSubtotalFinal));
+                $row.find(".linea-subtotal").text(fmtMoney(calcularLinea(linea).subtotalFinal));
                 recalcularTotalesUI();
             });
 
@@ -1305,7 +1336,7 @@
                     await aplicarPrecioDesdeListaEntrega($row, linea, { forzar: true });
                 }
                 syncLineaFromRow($row, linea);
-                $row.find(".linea-subtotal").text(fmtMoney(calcularLinea(linea).signedSubtotalFinal));
+                $row.find(".linea-subtotal").text(fmtMoney(calcularLinea(linea).subtotalFinal));
                 refrescarSelectsProducto();
                 actualizarBotonesAgregarLinea();
                 recalcularTotalesUI();
@@ -1331,10 +1362,13 @@
 
                 if (linea.IdProducto > 0 && linea.IdListaPrecio > 0) {
                     await aplicarPrecioDesdeListaEntrega($row, linea, { forzar: true });
+                } else if (Number(linea.TipoMovimiento) === TIPO_LINEA_ENTREGA) {
+                    linea.PrecioVenta = 0;
+                    setValorInputMiles($row.find(".linea-precio"), 0);
                 }
 
                 syncLineaFromRow($row, linea);
-                $row.find(".linea-subtotal").text(fmtMoney(calcularLinea(linea).signedSubtotalFinal));
+                $row.find(".linea-subtotal").text(fmtMoney(calcularLinea(linea).subtotalFinal));
                 refrescarSelectsProducto();
                 actualizarBotonesAgregarLinea();
                 recalcularTotalesUI();
@@ -1342,7 +1376,7 @@
 
             $row.find(".linea-cant, .linea-precio, .linea-desc, .linea-iva").on("input change", function () {
                 syncLineaFromRow($row, linea);
-                $row.find(".linea-subtotal").text(fmtMoney(calcularLinea(linea).signedSubtotalFinal));
+                $row.find(".linea-subtotal").text(fmtMoney(calcularLinea(linea).subtotalFinal));
                 recalcularTotalesUI();
             });
 
@@ -1397,7 +1431,7 @@
                     <div class="en-linea-foot">
                         <div class="en-linea-subtotal">
                             <span>Subtotal</span>
-                            <strong class="linea-subtotal-cell linea-subtotal text-success">${fmtMoney(calc.signedSubtotalFinal)}</strong>
+                            <strong class="linea-subtotal-cell linea-subtotal text-success">${fmtMoney(calc.subtotalFinal)}</strong>
                         </div>
                         <button type="button" class="btn btn-outline-danger btn-quitar-linea" title="Quitar">
                             <i class="fa fa-trash"></i>
@@ -1425,7 +1459,7 @@
                     await aplicarPrecioDesdeListaEntrega($row, linea, { forzar: true });
                 }
                 syncLineaFromRow($row, linea);
-                $row.find(".linea-subtotal").text(fmtMoney(calcularLinea(linea).signedSubtotalFinal));
+                $row.find(".linea-subtotal").text(fmtMoney(calcularLinea(linea).subtotalFinal));
                 refrescarSelectsProducto();
                 actualizarBotonesAgregarLinea();
                 recalcularTotalesUI();
@@ -1454,7 +1488,7 @@
                 }
 
                 syncLineaFromRow($row, linea);
-                $row.find(".linea-subtotal").text(fmtMoney(calcularLinea(linea).signedSubtotalFinal));
+                $row.find(".linea-subtotal").text(fmtMoney(calcularLinea(linea).subtotalFinal));
                 refrescarSelectsProducto();
                 actualizarBotonesAgregarLinea();
                 recalcularTotalesUI();
@@ -1462,7 +1496,7 @@
 
             $row.find(".linea-cant, .linea-precio, .linea-desc, .linea-iva").on("input change", function () {
                 syncLineaFromRow($row, linea);
-                $row.find(".linea-subtotal").text(fmtMoney(calcularLinea(linea).signedSubtotalFinal));
+                $row.find(".linea-subtotal").text(fmtMoney(calcularLinea(linea).subtotalFinal));
                 recalcularTotalesUI();
             });
 
@@ -1526,14 +1560,16 @@
     }
 
     function recalcularTotalesUI() {
+        // Totales del documento = lo cobrable (retiros). Entregas suelen ir a $0.
         let sub = 0, desc = 0, iva = 0, tot = 0;
 
         CM.lineas.forEach(l => {
+            if (Number(l.TipoMovimiento || TIPO_LINEA_ENTREGA) !== TIPO_LINEA_RETIRO) return;
             const c = calcularLinea(l);
-            sub += c.signedSubtotalcDesc;
-            desc += c.signedDescTotal;
-            iva += c.signedIvaTotal;
-            tot += c.signedSubtotalFinal;
+            sub += c.subtotalCdesc;
+            desc += c.descTotal;
+            iva += c.ivaTotal;
+            tot += c.subtotalFinal;
         });
 
         $("#totSubtotal").text(fmtMoney(sub));

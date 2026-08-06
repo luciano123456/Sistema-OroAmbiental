@@ -172,6 +172,9 @@ builder.Services.AddScoped<IGastosService, GastosService>();
 builder.Services.AddScoped<ILibroDiarioRepository, LibroDiarioRepository>();
 builder.Services.AddScoped<ILibroDiarioService, LibroDiarioService>();
 
+builder.Services.AddScoped<IAnalisisDatosRepository, AnalisisDatosRepository>();
+builder.Services.AddScoped<IAnalisisDatosService, AnalisisDatosService>();
+
 var sessionSettings = new SessionSettings();
 builder.Configuration.GetSection("SessionSettings").Bind(sessionSettings);
 if (sessionSettings.GetDuration() <= TimeSpan.Zero)

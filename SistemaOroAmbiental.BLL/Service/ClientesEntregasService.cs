@@ -260,9 +260,9 @@ namespace SistemaOroAmbiental.BLL.Service
             foreach (var l in lineas)
                 ClientesEntregasRepository.RecalcularLinea(l);
 
-            // Los cobros se imputan al cargo de lo entregado (no al neto con retiros).
+            // Los cobros se imputan a lo retirado (lo que el cliente paga).
             var totalCobrar = lineas
-                .Where(l => l.TipoMovimiento != ClientesEntregasRepository.TIPO_LINEA_RETIRO)
+                .Where(l => l.TipoMovimiento == ClientesEntregasRepository.TIPO_LINEA_RETIRO)
                 .Sum(l => l.SubtotalFinal);
 
             decimal sumaCobros = 0;
@@ -292,7 +292,7 @@ namespace SistemaOroAmbiental.BLL.Service
 
             if (sumaCobros > totalCobrar + 0.01m)
             {
-                error = "La suma de los cobros no puede superar el total de lo entregado.";
+                error = "La suma de los cobros no puede superar el total de lo retirado.";
                 return false;
             }
 

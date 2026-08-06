@@ -3322,7 +3322,7 @@ body.layout-modulo .container-fluid {
 
 .cg-ws-cobros-kpis {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 0.35rem;
     margin-bottom: 0.5rem;
 }
@@ -3418,7 +3418,7 @@ body.layout-modulo .container-fluid {
 
 @media (max-width: 900px) {
     .cg-ws-cobros-kpis {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
     .cg-ws-cobro-row {

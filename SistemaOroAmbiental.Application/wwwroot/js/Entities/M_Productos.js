@@ -1013,6 +1013,7 @@
 
             const btnHist = this._id("btnHistorialCosto");
             if (btnHist) {
+                btnHist.removeAttribute("onclick");
                 btnHist.addEventListener("click", (e) => {
                     e.preventDefault();
                     this.abrirHistorialCosto();
@@ -1075,6 +1076,8 @@
         window.verFicha = abrirVer;
         window.verHistorialCostoProducto = (id, nombre) =>
             window.productoModal?.abrirHistorialCostoPorId?.(id, nombre);
+        window.abrirHistorialCostoProducto = () =>
+            window.productoModal?.abrirHistorialCosto?.();
 
         if (window.RpVerFicha?.registrar) {
             window.RpVerFicha.registrar("verProducto", abrirVer);
