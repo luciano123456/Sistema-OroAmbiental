@@ -542,7 +542,7 @@ namespace SistemaOroAmbiental.DAL.Repository
             saldos.TryGetValue(recorrido.IdCliente, out var saldoInfo);
 
             var productos = MapearProductosParada(establecimiento, preciosPorProductoLista, listasPorToken);
-            var (totalEfectivoProductos, totalTransfProductos) = CalcularAbonosProductos(productos);
+            var (totalEfectivoProductos, totalTransfProductos) = CalcularAbonosProductos(productos, listasPorToken);
 
             var abonoEfectivo = productos.Count > 0
                 ? totalEfectivoProductos
@@ -649,21 +649,47 @@ namespace SistemaOroAmbiental.DAL.Repository
         }
 
         /// <summary>
-        /// Calcula abonos Efectivo/Transferencia. Si el mismo producto está varias veces
-        /// (distintas listas), no duplica el importe: usa una fila por IdProducto.
+        /// Calcula abonos Efectivo/Transferencia según la lista asignada a cada producto
+        /// del establecimiento (no precios hipotéticos de todas las listas).
         /// </summary>
         private static (decimal Efectivo, decimal Transferencia) CalcularAbonosProductos(
-            IReadOnlyList<HojaRutaParadaProductoDto> productos)
+            IReadOnlyList<HojaRutaParadaProductoDto> productos,
+            IReadOnlyDictionary<string, int>? listasPorToken = null)
         {
             if (productos == null || productos.Count == 0)
                 return (0, 0);
 
+            int idEf = 0, idTr = 0;
+            if (listasPorToken != null)
+            {
+                if (listasPorToken.TryGetValue("efectivo", out var ef)) idEf = ef;
+                if (listasPorToken.TryGetValue("transf", out var tr)) idTr = tr;
+            }
+
             decimal efectivo = 0;
             decimal transferencia = 0;
-            foreach (var p in productos.GroupBy(x => x.IdProducto).Select(g => g.First()))
+            foreach (var p in productos)
             {
-                efectivo += Math.Round(p.Cantidad * p.PrecioEfectivo, 2);
-                transferencia += Math.Round(p.Cantidad * p.PrecioTransferencia, 2);
+                var importe = Math.Round(p.Cantidad * p.PrecioVenta, 2);
+                if (importe == 0) continue;
+
+                var idLista = p.IdListaPrecio ?? 0;
+                if (idEf > 0 && idLista == idEf)
+                {
+                    efectivo += importe;
+                    continue;
+                }
+                if (idTr > 0 && idLista == idTr)
+                {
+                    transferencia += importe;
+                    continue;
+                }
+
+                var nom = (p.ListaPrecio ?? "").Trim().ToLowerInvariant();
+                if (nom.Contains("efect"))
+                    efectivo += importe;
+                else if (nom.Contains("transf") || nom.Contains("banco") || nom.Contains("transfer"))
+                    transferencia += importe;
             }
 
             return (efectivo, transferencia);

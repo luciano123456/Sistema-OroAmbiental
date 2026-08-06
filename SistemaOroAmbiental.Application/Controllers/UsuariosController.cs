@@ -161,7 +161,7 @@ namespace SistemaOroAmbiental.Application.Controllers
                 Usuario = user.Usuario ?? "",
                 NombreCompleto = $"{user.Nombre} {user.Apellido}".Trim(),
                 EnLinea = _conexiones.EstaEnLinea(user.FechaUltimaActividad),
-                FechaUltimaActividad = user.FechaUltimaActividad,
+                FechaUltimaActividad = ComoUtc(user.FechaUltimaActividad),
                 TotalConexiones = eventos.Count(e => e.Tipo == UsuariosConexion.TipoConecto),
                 TotalDesconexiones = eventos.Count(e => e.Tipo == UsuariosConexion.TipoDesconecto || e.Tipo == UsuariosConexion.TipoExpiro),
                 Eventos = eventos.Select(e => new VMUsuarioConexion
@@ -170,14 +170,20 @@ namespace SistemaOroAmbiental.Application.Controllers
                     IdUsuario = e.IdUsuario,
                     Tipo = e.Tipo,
                     TipoNombre = NombreTipo(e.Tipo),
-                    Fecha = e.Fecha,
-                    Ip = e.Ip,
+                    Fecha = ComoUtc(e.Fecha),
+                    // Ip queda solo en BD / logs; no se expone en la UI.
                     Detalle = e.Detalle
                 }).ToList()
             };
 
             return Ok(vm);
         }
+
+        private static DateTime ComoUtc(DateTime value)
+            => DateTime.SpecifyKind(value, DateTimeKind.Utc);
+
+        private static DateTime? ComoUtc(DateTime? value)
+            => value.HasValue ? DateTime.SpecifyKind(value.Value, DateTimeKind.Utc) : null;
 
 
         [HttpPost]

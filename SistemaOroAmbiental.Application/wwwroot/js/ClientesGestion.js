@@ -31,17 +31,20 @@ const CG = {
     entregasDetalleCache: {},
     entregaHubExpandida: 0,
     wsLineas: [],
+    wsCobros: [],
     wsSugeridos: [],
     wsProductosCatalogo: [],
     wsEstablecimientos: [],
     wsListasPrecios: [],
     wsPreciosCache: {},
+    wsNextCobroKey: 1,
     secMoving: false,
     viewPref: "auto",
     listMeta: {},
     geoCache: { provincias: [] },
     idDiaRecoleccionLegacy: 0,
     hubActivo: "cliente",
+    hubActivoLock: null,
     hubs: { est: null },
     estHubBound: false
 };
@@ -54,13 +57,30 @@ function crearHubStateEstCg() {
         stockCliente: [],
         hubMesSel: null,
         wsLineas: [],
+        wsCobros: [],
         idEstablecimiento: 0,
         entregasHub: []
     };
 }
 
 function isHubEstCg() {
+    if (CG.hubActivoLock != null) return CG.hubActivoLock === "est";
     return CG.hubActivo === "est";
+}
+
+/** Fija el modo hub durante awaits para que $h / setHubProp no pinten en el DOM equivocado. */
+async function withHubModeCg(mode, fn) {
+    if (CG.hubActivoLock === mode) return await fn();
+    const prevLock = CG.hubActivoLock;
+    const prev = CG.hubActivo;
+    CG.hubActivoLock = mode;
+    CG.hubActivo = mode;
+    try {
+        return await fn();
+    } finally {
+        CG.hubActivoLock = prevLock;
+        CG.hubActivo = prev;
+    }
 }
 
 function hubEstStateCg() {
@@ -731,11 +751,7 @@ function wireEventosCg() {
         aplicarPresetAniosRecientesCg();
         cargarTabControlMensual(true);
     });
-    $h("btnGuardarControlMensualCg").on("click", busyHandler(guardarControlMensualCg));
-    $h("btnRegistrarVisitaMesHub").on("click", () => {
-        const now = new Date();
-        abrirWorkspaceMesCg(now.getFullYear(), now.getMonth() + 1);
-    });
+    $h("btnGuardarControlMensualCg").on("click", busyHandler(guardarVisitaUnificadaCg));
     $h("cgControlMensualBody").on("click", "tr[data-mes]", function (e) {
         if ($(e.target).closest(".cg-cm-int-eye").length) return;
         const anio = Number($(this).data("anio"));
@@ -769,6 +785,7 @@ function wireEventosCg() {
         $h("cgHubMesDetail").prop("hidden", true);
         setHubPropCg("hubMesSel", null);
         setHubPropCg("wsLineas", []);
+        setHubPropCg("wsCobros", []);
         $("#cgControlMensualBody tr").removeClass("is-selected");
         actualizarChipsAtrasosSeleccionCg(-1, -1);
     });
@@ -788,8 +805,26 @@ function wireEventosCg() {
         if (!anio || !mes) return;
         abrirModalInteresesHistCg(anio, mes);
     });
+    $h("cgCmSinEntrega").on("change", syncSinEntregaUiCg);
+    $h("cgCmFechaVisita").on("change", function () {
+        $h("cgWsFechaEntrega").val($(this).val() || "");
+    });
     $h("btnWsAgregarLinea").on("click", () => agregarLineaWsCg());
-    $h("btnWsRegistrarEntrega").on("click", busyHandler(registrarEntregaDesdeWsCg));
+    $h("btnWsAgregarCobro").on("click", () => agregarCobroWsCg());
+    $h("btnWsCobroMes").on("click", () => {
+        const fechaVisita = $h("cgCmFechaVisita").val();
+        abrirModalCobroCg();
+        if (fechaVisita) $("#cgCobroFecha").val(fechaVisita);
+    });
+    $h("cgWsCobrosBody").on("click", ".btn-ws-quitar-cobro", function () {
+        const key = Number($(this).data("key"));
+        setHubPropCg("wsCobros", (hubPropCg("wsCobros") || []).filter(c => Number(c._key) !== key));
+        renderCobrosWsCg();
+    });
+    $h("cgWsCobrosBody").on("change input", "select, input", function () {
+        sincronizarCobrosWsDesdeDomCg();
+        actualizarResumenCobrosWsCg();
+    });
     $h("cgWsEstablecimiento").on("change", async function () {
         await cargarSugeridosWsCg(Number($(this).val()) || null);
     });
@@ -806,8 +841,10 @@ function wireEventosCg() {
     });
     $h("cgWsLineasBody").on("click", ".btn-ws-quitar", function () {
         const idx = Number($(this).data("idx"));
+        if (Number.isNaN(idx)) return;
         hubPropCg("wsLineas").splice(idx, 1);
         renderLineasWsCg();
+        actualizarResumenCobrosWsCg();
     });
     $h("cgWsLineasBody").on("change input", "select, input", async function () {
         const idx = Number($(this).closest(".cg-ws-linea").data("idx"));
@@ -844,6 +881,7 @@ function wireEventosCg() {
         }
 
         $row.find(".ws-sub").text(fmtMoneyCg(linea.Cantidad * linea.PrecioVenta));
+        actualizarResumenCobrosWsCg();
     });
     $h("cgCmSinEntrega").on("change", syncSinEntregaUiCg);
     $("#cgInteresPct").on("input change", recalcularImporteInteresCg);
@@ -1949,10 +1987,9 @@ async function cargarHubEstablecimientoCg(force) {
         : "Cargando control del establecimiento…";
 
     await withCgLoading(msg, async () => {
-        CG.hubActivo = "est";
-        hubEstStateCg().idEstablecimiento = idEst || ids[0];
-        resetEstHubUiCg();
-        try {
+        await withHubModeCg("est", async () => {
+            hubEstStateCg().idEstablecimiento = idEst || ids[0];
+            resetEstHubUiCg();
             if (!hubFiltrosCg().anios?.length) {
                 const actual = new Date().getFullYear();
                 hubFiltrosCg().anios = [actual];
@@ -1989,21 +2026,19 @@ async function cargarHubEstablecimientoCg(force) {
                     : "Planilla, stock, visita y abonos de este establecimiento."
             );
 
-            $h("cgHubMesDetail").find(".cg-mes-ws-panel--productos, #btnEstWsRegistrarEntrega, #btnWsRegistrarEntrega")
+            $h("cgHubMesDetail").find(".cg-mes-ws-panel--productos")
                 .toggleClass("d-none", multi);
-            $h("btnRegistrarVisitaMesHub").toggleClass("d-none", multi);
-        } finally {
-            // Seguir en modo est si la solapa de control sigue activa
-            if ($("#tabBtnStockEst").hasClass("active")) CG.hubActivo = "est";
-        }
+            $h("btnWsAgregarLinea").toggleClass("d-none", multi);
+            $h("btnWsAgregarCobro").toggleClass("d-none", multi);
+            $h("btnGuardarControlMensualCg").toggleClass("d-none", multi);
+        });
+        if ($("#tabBtnStockEst").hasClass("active")) CG.hubActivo = "est";
     });
 }
 
 /** Vacía KPIs/listas del hub de establecimiento antes de pintar datos nuevos. */
 function resetEstHubUiCg() {
-    const prev = CG.hubActivo;
-    CG.hubActivo = "est";
-    try {
+    const run = () => {
         $h("cgControlStockActual").text(fmtQtyCg(0));
         $h("cgControlSaldoAnual").text(fmtMoneyCg(0))
             .removeClass("rp-money-pos rp-money-neg rp-money-zero");
@@ -2025,9 +2060,14 @@ function resetEstHubUiCg() {
         setHubPropCg("entregasHub", []);
         setHubPropCg("hubMesSel", null);
         setHubPropCg("wsLineas", []);
-    } finally {
-        CG.hubActivo = prev;
+    };
+    if (CG.hubActivoLock === "est" || CG.hubActivo === "est") {
+        run();
+        return;
     }
+    const prev = CG.hubActivo;
+    CG.hubActivo = "est";
+    try { run(); } finally { CG.hubActivo = prev; }
 }
 
 function ensureEstHubCloneCg() {
@@ -2041,7 +2081,11 @@ function ensureEstHubCloneCg() {
         const alertOk = document.getElementById("cgEstAtrasosTitulo")
             && document.getElementById("cgEstAtrasosLista")
             && document.getElementById("cgEstAtrasosAlert");
-        if (alertOk) return true;
+        const visitaOk = document.getElementById("cgEstWsCobrosBody")
+            && document.getElementById("cgEstWsCobrosMesBody")
+            && document.getElementById("cgEstCmFechaVisita")
+            && document.querySelector("#cgEstHubMesDetail .cg-ws-split");
+        if (alertOk && visitaOk) return true;
         mount.innerHTML = "";
     }
 
@@ -2124,17 +2168,13 @@ function bindEstHubEventsCg() {
     $(root).on("click", ".cg-preset-meses", function () {
         CG.hubActivo = "est";
         aplicarPresetMesesCg($(this).data("meses"));
-        cargarTabControlMensual(true);
+        cargarTabControlMensual(true, idsEstablecimientoSeleccionadosCg());
     });
     $(root).on("click", "#btnEstControlAniosRecientes", () => {
         CG.hubActivo = "est";
         aplicarPresetAniosRecientesCg();
-        cargarTabControlMensual(true);
+        cargarTabControlMensual(true, idsEstablecimientoSeleccionadosCg());
     });
-    $(root).on("click", "#btnEstGuardarControlMensualCg", busyHandler(() => {
-        CG.hubActivo = "est";
-        return guardarControlMensualCg();
-    }));
     $(root).on("click", "#btnEstRegistrarVisitaMesHub", () => {
         CG.hubActivo = "est";
         const now = new Date();
@@ -2155,6 +2195,7 @@ function bindEstHubEventsCg() {
         $h("cgHubMesDetail").prop("hidden", true);
         setHubPropCg("hubMesSel", null);
         setHubPropCg("wsLineas", []);
+        setHubPropCg("wsCobros", []);
         $h("cgControlMensualBody").find("tr").removeClass("is-selected");
         actualizarChipsAtrasosSeleccionCg(-1, -1);
     });
@@ -2166,20 +2207,46 @@ function bindEstHubEventsCg() {
         CG.hubActivo = "est";
         if (hubPropCg("hubMesSel")) abrirModalInteresesHistCg(hubPropCg("hubMesSel").anio, hubPropCg("hubMesSel").mes);
     });
+    $(root).on("change", "#cgEstCmSinEntrega", () => {
+        CG.hubActivo = "est";
+        syncSinEntregaUiCg();
+    });
+    $(root).on("change", "#cgEstCmFechaVisita", function () {
+        CG.hubActivo = "est";
+        $h("cgWsFechaEntrega").val($(this).val() || "");
+    });
     $(root).on("click", "#btnEstWsAgregarLinea", () => {
         CG.hubActivo = "est";
         agregarLineaWsCg();
     });
-    $(root).on("click", "#btnEstWsRegistrarEntrega", busyHandler(() => {
+    $(root).on("click", "#btnEstWsAgregarCobro", () => {
         CG.hubActivo = "est";
-        return registrarEntregaDesdeWsCg();
-    }));
+        agregarCobroWsCg();
+    });
+    $(root).on("click", "#btnEstWsCobroMes", () => {
+        CG.hubActivo = "est";
+        const fechaVisita = $h("cgCmFechaVisita").val();
+        abrirModalCobroCg();
+        if (fechaVisita) $("#cgCobroFecha").val(fechaVisita);
+    });
+    $(root).on("click", "#cgEstWsCobrosBody .btn-ws-quitar-cobro", function () {
+        CG.hubActivo = "est";
+        const key = Number($(this).data("key"));
+        setHubPropCg("wsCobros", (hubPropCg("wsCobros") || []).filter(c => Number(c._key) !== key));
+        renderCobrosWsCg();
+    });
+    $(root).on("change input", "#cgEstWsCobrosBody select, #cgEstWsCobrosBody input", function () {
+        CG.hubActivo = "est";
+        sincronizarCobrosWsDesdeDomCg();
+        actualizarResumenCobrosWsCg();
+    });
     $(root).on("click", ".btn-ws-quitar", function () {
         CG.hubActivo = "est";
         const idx = Number($(this).data("idx"));
         if (Number.isNaN(idx)) return;
         hubPropCg("wsLineas").splice(idx, 1);
         renderLineasWsCg();
+        actualizarResumenCobrosWsCg();
     });
     $(root).on("change", "#cgEstWsEstablecimiento", async function () {
         CG.hubActivo = "est";
@@ -2233,11 +2300,12 @@ function bindEstHubEventsCg() {
         }
 
         $row.find(".ws-sub").text(fmtMoneyCg(linea.Cantidad * linea.PrecioVenta));
+        actualizarResumenCobrosWsCg();
     });
-    $(root).on("change", "#cgEstCmSinEntrega", () => {
+    $(root).on("click", "#btnEstGuardarControlMensualCg", busyHandler(() => {
         CG.hubActivo = "est";
-        syncSinEntregaUiCg();
-    });
+        return guardarVisitaUnificadaCg();
+    }));
     $(root).on("click", "#btnEstVerInteresesCg", function (e) {
         e.preventDefault();
         CG.hubActivo = "est";
@@ -2265,9 +2333,8 @@ async function cargarHubEntregasEstCg(idsForzados) {
     const ids = Array.isArray(idsForzados) && idsForzados.length
         ? idsForzados.map(Number).filter(x => x > 0)
         : idsEstablecimientoSeleccionadosCg();
-    const prev = CG.hubActivo;
-    CG.hubActivo = "est";
-    try {
+
+    await withHubModeCg("est", async () => {
         if (!CG.id || !ids.length) {
             $h("cgHubEntregasList").html(`<div class="cg-hub-stock-empty">Sin entregas.</div>`);
             return;
@@ -2297,9 +2364,7 @@ async function cargarHubEntregasEstCg(idsForzados) {
             console.warn(e);
             $h("cgHubEntregasList").html(`<div class="cg-hub-stock-empty">No se pudieron cargar las entregas.</div>`);
         }
-    } finally {
-        CG.hubActivo = prev;
-    }
+    });
 }
 
 function renderStockEstablecimientoCg() {
@@ -2692,7 +2757,10 @@ function renderEstadoFiltrosControlCg(refreshData = true) {
     syncPresetButtonsCg();
     actualizarResumenFiltrosCg();
 
-    if (refreshData) cargarTabControlMensual(true);
+    if (refreshData) {
+        const idsEst = isHubEstCg() ? idsEstablecimientoSeleccionadosCg() : null;
+        cargarTabControlMensual(true, idsEst);
+    }
 }
 
 function toggleFiltroControlCg(tipo, val) {
@@ -2791,39 +2859,38 @@ async function cargarTabControlMensual(force, idsEstForzados) {
         : (isHubEstCg() ? idsEstablecimientoSeleccionadosCg() : []);
     const filtrarEst = idsEst.length > 0;
 
-    await withCgLoading("Actualizando planilla mensual…", async () => {
+    const run = async () => {
         if (force && !filtrarEst) CG.tabsLoaded.controlMensual = false;
 
-        const prev = CG.hubActivo;
-        if (filtrarEst) CG.hubActivo = "est";
-        try {
-            const { anios, meses } = leerFiltrosControlCg();
-            setHubPropCg("controlAnualError", false);
+        const { anios, meses } = leerFiltrosControlCg();
+        setHubPropCg("controlAnualError", false);
 
-            try {
-                const data = await fetchJsonCg(
-                    API_CG.controlMensual(CG.id, anios, meses, filtrarEst ? idsEst : null),
-                    { headers: authCg() }
-                );
-                setHubPropCg("controlFiltrado", data);
-                CG.controlAnio = anios[0] || new Date().getFullYear();
-                renderControlMensualCg(data);
-            } catch (e) {
-                console.warn("Control mensual no disponible:", e);
-                setHubPropCg("controlAnualError", true);
-                const empty = {
-                    Filas: [],
-                    StockActual: 0,
-                    TotalSaldo: 0,
-                    DatosParciales: true
-                };
-                setHubPropCg("controlFiltrado", empty);
-                renderControlMensualCg(empty);
-            }
-            if (!filtrarEst) CG.tabsLoaded.controlMensual = true;
-        } finally {
-            CG.hubActivo = prev;
+        try {
+            const data = await fetchJsonCg(
+                API_CG.controlMensual(CG.id, anios, meses, filtrarEst ? idsEst : null),
+                { headers: authCg() }
+            );
+            setHubPropCg("controlFiltrado", data);
+            CG.controlAnio = anios[0] || new Date().getFullYear();
+            renderControlMensualCg(data);
+        } catch (e) {
+            console.warn("Control mensual no disponible:", e);
+            setHubPropCg("controlAnualError", true);
+            const empty = {
+                Filas: [],
+                StockActual: 0,
+                TotalSaldo: 0,
+                DatosParciales: true
+            };
+            setHubPropCg("controlFiltrado", empty);
+            renderControlMensualCg(empty);
         }
+        if (!filtrarEst) CG.tabsLoaded.controlMensual = true;
+    };
+
+    await withCgLoading("Actualizando planilla mensual…", async () => {
+        if (filtrarEst) await withHubModeCg("est", run);
+        else await run();
     });
 }
 
@@ -3014,13 +3081,12 @@ async function abrirWorkspaceMesCg(anio, mes, keepScroll) {
     syncSinEntregaUiCg();
     $h("cgCmObservaciones").val(m.Observaciones || "");
 
-    const fechaEntregaDefault = m.FechaVisita
-        ? fechaInputCg(m.FechaVisita)
-        : fechaInputCg(new Date(anio, mes - 1, Math.min(new Date().getDate(), 28)));
-    $h("cgWsFechaEntrega").val(fechaEntregaDefault);
+    // Misma fecha para visita y entrega (un solo campo visible)
+    $h("cgWsFechaEntrega").val($h("cgCmFechaVisita").val());
     $h("btnWsAbrirModuloEntregas").attr("href", API_CG.entregaIndex(CG.id));
 
     await prepararComposerWsCg();
+    await cargarCobrosMesWsCg(anio, mes);
 
     $h("cgHubMesDetail").prop("hidden", false);
     actualizarBotonInteresMesHub(m, anio, mes);
@@ -3039,6 +3105,7 @@ function leerNumeroWsCg(valor) {
 
 async function prepararComposerWsCg() {
     setHubPropCg("wsLineas", []);
+    setHubPropCg("wsCobros", []);
     try {
         if (!CG.wsProductosCatalogo.length) {
             CG.wsProductosCatalogo = await fetchJsonCg(API_CG.productosCatalogo, { headers: authCg() }) || [];
@@ -3055,6 +3122,15 @@ async function prepararComposerWsCg() {
     } catch (e) {
         console.warn(e);
         CG.wsListasPrecios = [];
+    }
+
+    if (!CG.cuentas.length) {
+        try {
+            CG.cuentas = await fetchJsonCg(API_CG.cuentas, { headers: authCg() }) || [];
+        } catch (e) {
+            console.warn(e);
+            CG.cuentas = [];
+        }
     }
 
     try {
@@ -3085,6 +3161,7 @@ async function prepararComposerWsCg() {
     await cargarSugeridosWsCg(Number($sel.val()) || null);
     if (!hubPropCg("wsLineas").length) agregarLineaWsCg();
     else renderLineasWsCg();
+    renderCobrosWsCg();
 }
 
 async function obtenerPreciosProductoWsCg(idProducto) {
@@ -3141,6 +3218,7 @@ function agregarLineaWsCg(pref) {
         PrecioVenta: pref?.PrecioVenta || 0
     });
     renderLineasWsCg();
+    actualizarResumenCobrosWsCg();
 }
 
 function renderLineasWsCg() {
@@ -3165,9 +3243,6 @@ function renderLineasWsCg() {
         <div class="cg-ws-linea" data-idx="${i}">
             <div class="cg-ws-linea-top">
                 <span class="cg-ws-linea-num">#${i + 1}</span>
-                <button type="button" class="cg-btn cg-btn--ghost cg-btn--sm btn-ws-quitar" data-idx="${i}" title="Quitar">
-                    <i class="fa fa-trash"></i>
-                </button>
             </div>
             <div class="cg-ws-linea-grid">
                 <label class="cg-ws-field cg-ws-field--prod">
@@ -3199,10 +3274,15 @@ function renderLineasWsCg() {
                     <span>Precio</span>
                     <input type="text" class="form-control Inputmiles ws-precio" value="${l.PrecioVenta ? fmtQtyCg(l.PrecioVenta) : ""}" inputmode="decimal" />
                 </label>
-                <div class="cg-ws-field cg-ws-field--sub">
+            </div>
+            <div class="cg-ws-linea-foot">
+                <div class="cg-ws-linea-subtotal">
                     <span>Subtotal</span>
                     <strong class="ws-sub">${fmtMoneyCg((Number(l.Cantidad) || 0) * (Number(l.PrecioVenta) || 0))}</strong>
                 </div>
+                <button type="button" class="btn btn-outline-danger btn-sm btn-ws-quitar" data-idx="${i}" title="Quitar">
+                    <i class="fa fa-trash"></i>
+                </button>
             </div>
         </div>`).join(""));
 
@@ -3214,9 +3294,164 @@ function renderLineasWsCg() {
     });
 }
 
-async function registrarEntregaDesdeWsCg() {
+function agregarCobroWsCg(preset) {
+    const hoy = $h("cgCmFechaVisita").val() || $h("cgWsFechaEntrega").val() || new Date().toISOString().slice(0, 10);
+    const cobros = hubPropCg("wsCobros") || [];
+    const cobro = preset || {
+        _key: CG.wsNextCobroKey++,
+        Fecha: hoy,
+        IdCuenta: 0,
+        Concepto: "Cobro visita",
+        Importe: 0
+    };
+    if (!cobro._key) cobro._key = CG.wsNextCobroKey++;
+    if (!cobro.IdCuenta && (CG.cuentas || []).length === 1) {
+        cobro.IdCuenta = Number(CG.cuentas[0].Id) || 0;
+    }
+    cobros.push(cobro);
+    setHubPropCg("wsCobros", cobros);
+    renderCobrosWsCg();
+}
+
+function sincronizarCobrosWsDesdeDomCg() {
+    $h("cgWsCobrosBody").find(".cg-ws-cobro-row").each(function () {
+        const key = Number($(this).data("key"));
+        const cobro = (hubPropCg("wsCobros") || []).find(c => Number(c._key) === key);
+        if (!cobro) return;
+        cobro.Fecha = $(this).find(".ws-cobro-fecha").val() || "";
+        cobro.IdCuenta = Number($(this).find(".ws-cobro-cuenta").val()) || 0;
+        cobro.Concepto = ($(this).find(".ws-cobro-concepto").val() || "").trim();
+        cobro.Importe = leerNumeroWsCg($(this).find(".ws-cobro-importe").val());
+    });
+}
+
+function cobrosWsParaGuardarCg() {
+    sincronizarCobrosWsDesdeDomCg();
+    return (hubPropCg("wsCobros") || []).filter(c => Number(c.Importe) > 0 && Number(c.IdCuenta) > 0);
+}
+
+function totalEntregadoWsCg(lineas) {
+    return (lineas || [])
+        .filter(l => Number(l.TipoMovimiento || 1) === 1)
+        .reduce((s, l) => s + (Number(l.Cantidad) || 0) * (Number(l.PrecioVenta) || 0), 0);
+}
+
+function actualizarResumenCobrosWsCg() {
+    const lineas = (hubPropCg("wsLineas") || []).filter(l => l.IdProducto > 0 && l.Cantidad > 0);
+    const cobros = cobrosWsParaGuardarCg();
+    const totalEnt = totalEntregadoWsCg(lineas);
+    const totalPag = cobros.reduce((s, c) => s + Number(c.Importe || 0), 0);
+    $h("cgWsCobroTotEntrega").text(fmtMoneyCg(totalEnt));
+    $h("cgWsCobroTotPagado").text(fmtMoneyCg(totalPag));
+    $h("cgWsCobroSaldo").text(fmtMoneyCg(Math.max(0, totalEnt - totalPag)));
+}
+
+function renderCobrosWsCg() {
+    const cobros = hubPropCg("wsCobros") || [];
+    const $body = $h("cgWsCobrosBody");
+    if (!$body.length) return;
+
+    if (!cobros.length) {
+        $body.html(`<div class="cg-ws-lineas-empty">Sin cobros de entrega. Usá Agregar cobro si cobrás junto con la visita.</div>`);
+        actualizarResumenCobrosWsCg();
+        return;
+    }
+
+    const optsCuentas = (CG.cuentas || []).map(c =>
+        `<option value="${c.Id}">${escapeCg(c.Nombre || ("Cuenta #" + c.Id))}</option>`
+    ).join("");
+
+    $body.html(cobros.map(c => `
+        <div class="cg-ws-cobro-row" data-key="${c._key}">
+            <label>
+                <span>Fecha</span>
+                <input type="date" class="form-control ws-cobro-fecha" value="${escapeCg(c.Fecha || "")}" />
+            </label>
+            <label>
+                <span>Cuenta</span>
+                <select class="form-control ws-cobro-cuenta">
+                    <option value="">Seleccionar</option>
+                    ${optsCuentas}
+                </select>
+            </label>
+            <label>
+                <span>Concepto</span>
+                <input type="text" class="form-control ws-cobro-concepto" value="${escapeCg(c.Concepto || "")}" />
+            </label>
+            <label>
+                <span>Importe</span>
+                <input type="text" class="form-control Inputmiles ws-cobro-importe" inputmode="decimal"
+                       value="${c.Importe ? fmtQtyCg(c.Importe) : ""}" />
+            </label>
+            <button type="button" class="btn btn-outline-danger btn-sm btn-ws-quitar-cobro" data-key="${c._key}" title="Quitar">
+                <i class="fa fa-trash"></i>
+            </button>
+        </div>
+    `).join(""));
+
+    cobros.forEach(c => {
+        const $row = $body.find(`.cg-ws-cobro-row[data-key="${c._key}"]`);
+        if (c.IdCuenta) $row.find(".ws-cobro-cuenta").val(String(c.IdCuenta));
+        if (typeof prepararInputMiles === "function") {
+            $row.find(".ws-cobro-importe").each(function () { prepararInputMiles(this); });
+        }
+    });
+    actualizarResumenCobrosWsCg();
+}
+
+async function cargarCobrosMesWsCg(anio, mes) {
+    const $body = $h("cgWsCobrosMesBody");
+    if (!$body.length || !CG.id) return;
+    try {
+        const movs = await fetchJsonCg(API_CG.ccMovimientos, {
+            method: "POST",
+            headers: authCg(),
+            body: JSON.stringify({ IdCliente: CG.id, TipoMovimiento: "Cobro" })
+        }) || [];
+        const cobrosMes = (Array.isArray(movs) ? movs : []).filter(m => {
+            const f = m.Fecha || m.fecha;
+            if (!f) return false;
+            const d = new Date(f);
+            if (Number.isNaN(d.getTime())) return false;
+            const esCobro = String(m.TipoMovimiento || m.Origen || "").toLowerCase().includes("cobro");
+            return esCobro && d.getFullYear() === Number(anio) && (d.getMonth() + 1) === Number(mes);
+        });
+        if (!cobrosMes.length) {
+            $body.html(`<div class="cg-ws-lineas-empty">Sin cobros cargados en este mes.</div>`);
+            return;
+        }
+        $body.html(cobrosMes.map(m => `
+            <div class="cg-ws-cobro-mes-item">
+                <div>
+                    <div>${escapeCg(formatearFechaCortaCg(m.Fecha))}</div>
+                    <small>${escapeCg(m.Concepto || "Cobro")}</small>
+                </div>
+                <strong>${fmtMoneyCg(m.Haber || m.Importe || 0)}</strong>
+            </div>
+        `).join(""));
+    } catch (e) {
+        console.warn(e);
+        $body.html(`<div class="cg-ws-lineas-empty">No se pudieron cargar los cobros del mes.</div>`);
+    }
+}
+
+function clasificarAbonosDesdeCobrosWsCg(cobros) {
+    let efectivo = 0;
+    let transferencia = 0;
+    (cobros || []).forEach(c => {
+        const cuenta = (CG.cuentas || []).find(x => Number(x.Id) === Number(c.IdCuenta));
+        const tipo = String(cuenta?.TipoCuenta || cuenta?.Codigo || "Efectivo").toLowerCase();
+        const importe = Number(c.Importe) || 0;
+        if (tipo.includes("banco") || tipo.includes("transf")) transferencia += importe;
+        else efectivo += importe;
+    });
+    return { efectivo, transferencia };
+}
+
+async function guardarVisitaUnificadaCg() {
     if (!CG.id) return;
 
+    // Sync líneas
     $h("cgWsLineasBody").find(".cg-ws-linea").each(function () {
         const idx = Number($(this).data("idx"));
         const linea = hubPropCg("wsLineas")[idx];
@@ -3228,83 +3463,131 @@ async function registrarEntregaDesdeWsCg() {
         linea.PrecioVenta = leerNumeroWsCg($(this).find(".ws-precio").val());
     });
 
-    const lineas = hubPropCg("wsLineas").filter(l => l.IdProducto > 0 && l.Cantidad > 0);
-    if (!lineas.length) {
-        errorModal("Agregá al menos un producto con cantidad.");
+    const lineas = (hubPropCg("wsLineas") || []).filter(l => l.IdProducto > 0 && l.Cantidad > 0);
+    const cobros = cobrosWsParaGuardarCg();
+    const hayProductos = lineas.length > 0;
+
+    if (lineas.some(l => Number(l.TipoMovimiento) === 2 && !(Number(l.IdListaPrecio) > 0))) {
+        errorModal("Seleccioná la lista / tipo de pago en las líneas de retiro.");
         return;
     }
 
-    const fecha = $h("cgWsFechaEntrega").val();
-    if (!fecha) {
-        errorModal("Indicá la fecha de la entrega.");
+    if (cobros.length && (hubPropCg("wsCobros") || []).some(c => Number(c.Importe) > 0 && !(Number(c.IdCuenta) > 0))) {
+        errorModal("Cada cobro con importe debe tener una cuenta de caja.");
         return;
     }
 
-    const idEstWs = Number($h("cgWsEstablecimiento").val()) || hubIdEstablecimientoCg() || 0;
-    if (idEstWs <= 0) {
-        errorModal("Seleccioná el establecimiento de la entrega.");
-        return;
-    }
+    if (hayProductos) {
+        const fecha = $h("cgCmFechaVisita").val() || $h("cgWsFechaEntrega").val();
+        if (!fecha) {
+            errorModal("Indicá la fecha de la visita.");
+            return;
+        }
+        $h("cgWsFechaEntrega").val(fecha);
+        const idEstWs = Number($h("cgWsEstablecimiento").val()) || hubIdEstablecimientoCg() || 0;
+        if (idEstWs <= 0) {
+            errorModal("Seleccioná el establecimiento de la entrega.");
+            return;
+        }
 
-    const payload = {
-        Id: 0,
-        Fecha: fecha,
-        IdCliente: CG.id,
-        IdEstablecimiento: idEstWs,
-        IdContrato: null,
-        IdEstado: null,
-        IdCamion: null,
-        NotaInterna: `Desde control mensual${hubPropCg("hubMesSel") ? ` (${hubPropCg("hubMesSel").mes}/${hubPropCg("hubMesSel").anio})` : ""} · est ${idEstWs}`,
-        NotaCliente: null,
-        Lineas: lineas.map(l => ({
+        const totalEnt = totalEntregadoWsCg(lineas);
+        const sumaCobros = cobros.reduce((s, c) => s + Number(c.Importe || 0), 0);
+        if (sumaCobros > totalEnt + 0.01) {
+            errorModal("La suma de los cobros no puede superar el total de lo entregado.");
+            return;
+        }
+
+        const payload = {
             Id: 0,
-            IdProducto: l.IdProducto,
-            IdListaPrecio: l.IdListaPrecio > 0 ? l.IdListaPrecio : null,
-            TipoMovimiento: l.TipoMovimiento,
-            Cantidad: l.Cantidad,
-            PrecioVenta: l.PrecioVenta,
-            CostoUnitario: 0,
-            PorcDescuento: 0,
-            PorcIva: 0
-        })),
-        LineasRecuperadas: [],
-        Cobros: []
-    };
+            Fecha: fecha,
+            IdCliente: CG.id,
+            IdEstablecimiento: idEstWs,
+            IdContrato: null,
+            IdEstado: null,
+            IdCamion: null,
+            NotaInterna: `Desde control mensual${hubPropCg("hubMesSel") ? ` (${hubPropCg("hubMesSel").mes}/${hubPropCg("hubMesSel").anio})` : ""} · est ${idEstWs}`,
+            NotaCliente: null,
+            Lineas: lineas.map(l => ({
+                Id: 0,
+                IdProducto: l.IdProducto,
+                IdListaPrecio: l.IdListaPrecio > 0 ? l.IdListaPrecio : null,
+                TipoMovimiento: l.TipoMovimiento,
+                Cantidad: l.Cantidad,
+                PrecioVenta: l.PrecioVenta,
+                CostoUnitario: 0,
+                PorcDescuento: 0,
+                PorcIva: 0
+            })),
+            LineasRecuperadas: [],
+            Cobros: cobros.map(c => ({
+                IdCobro: 0,
+                IdMovimientoCc: 0,
+                IdCuenta: c.IdCuenta,
+                Fecha: c.Fecha,
+                Concepto: c.Concepto || "Cobro visita",
+                Importe: c.Importe
+            }))
+        };
 
-    let data;
-    try {
-        data = await fetchJsonCg(API_CG.entregaInsertar, {
-            method: "POST",
-            headers: authCg(),
-            body: JSON.stringify(payload)
-        });
-    } catch (e) {
-        console.error(e);
-        errorModal("Error al registrar la entrega.");
+        let dataEnt;
+        try {
+            dataEnt = await fetchJsonCg(API_CG.entregaInsertar, {
+                method: "POST",
+                headers: authCg(),
+                body: JSON.stringify(payload)
+            });
+        } catch (e) {
+            console.error(e);
+            errorModal("Error al registrar la entrega.");
+            return;
+        }
+        if (!dataEnt?.valor) {
+            errorModal(dataEnt?.mensaje || "No se pudo registrar la entrega.");
+            return;
+        }
+    } else if (cobros.length) {
+        errorModal("Los cobros de esta entrega necesitan al menos un producto. Para un cobro suelto usá «Cobro sin entrega».");
         return;
     }
 
-    if (!data?.valor) {
-        errorModal(data?.mensaje || "No se pudo registrar la entrega.");
-        return;
+    // Sync abonos planilla (hoja de ruta) con cobros de esta visita
+    if (cobros.length) {
+        const { efectivo, transferencia } = clasificarAbonosDesdeCobrosWsCg(cobros);
+        const prevEf = leerImporteInputCg("#" + mapHubDomIdCg("cgCmAbonoEfectivo"));
+        const prevTr = leerImporteInputCg("#" + mapHubDomIdCg("cgCmAbonoTransferencia"));
+        setImporteInputCg("#cgCmAbonoEfectivo", prevEf + efectivo);
+        setImporteInputCg("#cgCmAbonoTransferencia", prevTr + transferencia);
+        if (transferencia > 0 && !$h("cgCmFechaTransferencia").val()) {
+            $h("cgCmFechaTransferencia").val(cobros.find(c => c.Fecha)?.Fecha || $h("cgCmFechaVisita").val() || "");
+        }
     }
 
     try {
         await guardarControlMensualCg({ silent: true });
     } catch (e) {
-        console.warn("Visita no guardada tras entrega:", e);
+        errorModal("No se pudo guardar la visita.");
+        return;
     }
 
-    exitoModal(data.mensaje || "Entrega registrada correctamente.");
+    exitoModal(hayProductos
+        ? "Visita y entrega registradas correctamente."
+        : "Visita guardada correctamente.");
+
     setHubPropCg("wsLineas", []);
-    if (isHubEstCg()) {
-        await cargarHubEstablecimientoCg(true);
-    } else {
-        await cargarHubDatosCg(true);
-    }
+    setHubPropCg("wsCobros", []);
+    CG.tabsLoaded.cuentaCorriente = false;
+    CG.tabsLoaded.cobros = false;
+
+    if (isHubEstCg()) await cargarHubEstablecimientoCg(true);
+    else await cargarHubDatosCg(true);
+
     if (hubPropCg("hubMesSel")) {
         await abrirWorkspaceMesCg(hubPropCg("hubMesSel").anio, hubPropCg("hubMesSel").mes, true);
     }
+}
+
+async function registrarEntregaDesdeWsCg() {
+    return guardarVisitaUnificadaCg();
 }
 
 function mostrarDetalleMesHub(anio, mes, keepScroll) {
@@ -3668,7 +3951,8 @@ async function confirmarInteresCg() {
 
     CG.tabsLoaded.controlMensual = false;
     CG.tabsLoaded.cuentaCorriente = false;
-    await cargarTabControlMensual(true);
+    const idsEst = isHubEstCg() ? idsEstablecimientoSeleccionadosCg() : null;
+    await cargarTabControlMensual(true, idsEst);
     if (typeof cargarTabCuentaCorriente === "function") {
         try { await cargarTabCuentaCorriente(true); } catch { /* opcional */ }
     }
@@ -3686,8 +3970,9 @@ function syncSinEntregaUiCg() {
 }
 
 function setImporteInputCg(selector, valor) {
+    const id = String(selector || "").replace(/^#/, "");
+    const $el = (id && $h(id).length) ? $h(id) : $(selector);
     const n = Number(valor) || 0;
-    const $el = $(selector);
     if (n === 0) {
         $el.val("");
         return;
@@ -3699,7 +3984,9 @@ function setImporteInputCg(selector, valor) {
 }
 
 function leerImporteInputCg(selector) {
-    const raw = $(selector).val();
+    const id = String(selector || "").replace(/^#/, "");
+    const $el = (id && $h(id).length) ? $h(id) : $(selector);
+    const raw = $el.val();
     if (raw == null || String(raw).trim() === "") return 0;
     if (typeof parseNumero === "function") return parseNumero(raw) || 0;
     if (typeof formatearSinMiles === "function") return formatearSinMiles(raw) || 0;
@@ -3778,9 +4065,7 @@ async function cargarHubStockCg(force, idsEstForzados) {
 
     if (force && !filtrarEst) CG.tabsLoaded.stockCliente = false;
 
-    const prev = CG.hubActivo;
-    if (filtrarEst) CG.hubActivo = "est";
-    try {
+    const run = async () => {
         const url = filtrarEst
             ? API_CG.stockEstablecimiento(CG.id, idsEst)
             : API_CG.stockCliente(CG.id);
@@ -3788,9 +4073,10 @@ async function cargarHubStockCg(force, idsEstForzados) {
         setHubPropCg("stockCliente", Array.isArray(data) ? data : []);
         renderHubStockCg(hubPropCg("stockCliente"));
         if (!filtrarEst) CG.tabsLoaded.stockCliente = true;
-    } finally {
-        CG.hubActivo = prev;
-    }
+    };
+
+    if (filtrarEst) await withHubModeCg("est", run);
+    else await run();
 }
 
 function renderHubStockCg(items) {
@@ -3952,6 +4238,29 @@ async function confirmarCobroCg() {
     CG.modalCobro?.hide();
     CG.tabsLoaded.cuentaCorriente = false;
     CG.tabsLoaded.cobros = false;
+    CG.tabsLoaded.controlMensual = false;
+
+    // Si el cobro se cargó desde la visita, sumar a abonos planilla (efectivo/transf) para hoja de ruta
+    const mesSel = hubPropCg("hubMesSel");
+    if (mesSel && !$h("cgHubMesDetail").prop("hidden")) {
+        const { efectivo, transferencia } = clasificarAbonosDesdeCobrosWsCg([{ IdCuenta: idCuenta, Importe: importe }]);
+        const prevEf = leerImporteInputCg("#" + mapHubDomIdCg("cgCmAbonoEfectivo"));
+        const prevTr = leerImporteInputCg("#" + mapHubDomIdCg("cgCmAbonoTransferencia"));
+        setImporteInputCg("#cgCmAbonoEfectivo", prevEf + efectivo);
+        setImporteInputCg("#cgCmAbonoTransferencia", prevTr + transferencia);
+        if (transferencia > 0 && !$h("cgCmFechaTransferencia").val()) {
+            $h("cgCmFechaTransferencia").val($("#cgCobroFecha").val() || "");
+        }
+        try { await guardarControlMensualCg({ silent: true }); } catch { /* noop */ }
+        await cargarCobrosMesWsCg(mesSel.anio, mesSel.mes);
+        if (isHubEstCg()) await cargarHubEstablecimientoCg(true);
+        else await cargarTabControlMensual(true);
+        if (hubPropCg("hubMesSel")) {
+            await abrirWorkspaceMesCg(hubPropCg("hubMesSel").anio, hubPropCg("hubMesSel").mes, true);
+        }
+        return;
+    }
+
     if ($("#tabCuentaCorriente").hasClass("active") || $("#tabCuentaCorriente").hasClass("show")) {
         await cargarTabCuentaCorriente(true);
         await cargarTabCobros();

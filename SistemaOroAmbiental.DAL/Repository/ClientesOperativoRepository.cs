@@ -584,10 +584,10 @@ namespace SistemaOroAmbiental.DAL.Repository
             var abonoEfectivo = ov?.AbonoEfectivo ?? 0;
             var abonoTransferencia = ov?.AbonoTransferencia ?? 0;
 
-            // Fórmula planilla:
-            // Debe  = cargos del mes SIN intereses (los intereses van en columna aparte)
-            // Haber = retiros + abonos
-            // Intereses se asignan luego por periodo de referencia y el Saldo los incluye.
+            // Fórmula planilla (bruta, sin netear):
+            // Debe  = cargos del mes = subtotal de líneas ENTREGA
+            // Haber = retiros + abonos (planilla o cobros CC, el mayor para no duplicar)
+            // Intereses se asignan aparte y el Saldo acumulado los incluye.
             var inicioMes = new DateTime(anio, mes, 1);
             var finMes = inicioMes.AddMonths(1);
             var movsMes = movimientosCc
@@ -600,31 +600,19 @@ namespace SistemaOroAmbiental.DAL.Repository
                     StringComparison.OrdinalIgnoreCase))
                 .ToList();
 
-            decimal debe;
-            decimal haber;
-            if (movsMesSinInteres.Count > 0 || movsMes.Count > 0)
-            {
-                debe = movsMesSinInteres.Sum(m => m.Debe);
-                haber = movsMesSinInteres.Sum(m => m.Haber);
+            var cobrosCc = movsMesSinInteres
+                .Where(m => m.TipoMovimiento == ClientesCuentaCorrienteRepository.TIPO_COBRO_CLIENTE)
+                .Sum(m => m.Haber);
+            var abonosPlanilla = abonoEfectivo + abonoTransferencia;
+            var ajustesDebe = movsMesSinInteres
+                .Where(m => m.TipoMovimiento == ClientesCuentaCorrienteRepository.TIPO_AJUSTE_CLIENTE)
+                .Sum(m => m.Debe);
+            var ajustesHaber = movsMesSinInteres
+                .Where(m => m.TipoMovimiento == ClientesCuentaCorrienteRepository.TIPO_AJUSTE_CLIENTE)
+                .Sum(m => m.Haber);
 
-                // Datos viejos: entrega en CC con Debe 0 pero líneas con precio → usar operativo.
-                if (debe == 0 && subtotalEntregas > 0)
-                    debe = subtotalEntregas;
-                if (haber == 0 && subtotalRetiros > 0)
-                    haber = subtotalRetiros;
-
-                var abonosPlanilla = abonoEfectivo + abonoTransferencia;
-                var cobrosCc = movsMesSinInteres
-                    .Where(m => m.TipoMovimiento == ClientesCuentaCorrienteRepository.TIPO_COBRO_CLIENTE)
-                    .Sum(m => m.Haber);
-                if (abonosPlanilla > cobrosCc)
-                    haber += abonosPlanilla - cobrosCc;
-            }
-            else
-            {
-                debe = subtotalEntregas;
-                haber = subtotalRetiros + abonoEfectivo + abonoTransferencia;
-            }
+            var debe = subtotalEntregas + ajustesDebe;
+            var haber = subtotalRetiros + Math.Max(abonosPlanilla, cobrosCc) + ajustesHaber;
 
             DateTime? fechaVisita = ov?.FechaVisita;
             if (!fechaVisita.HasValue && entregasMes.Count > 0)

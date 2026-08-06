@@ -11,7 +11,7 @@
     <link href="~/css/Productora.css?v=6.2" rel="stylesheet" />
     <link href="~/css/disenopantallas.css?v=6.2" rel="stylesheet" />
     <link href="~/css/M_Generico.css?v=6.2" rel="stylesheet" />
-    <link href="~/css/ClientesGestion.css?v=15.3" rel="stylesheet" />
+    <link href="~/css/ClientesGestion.css?v=15.7" rel="stylesheet" />
     <link href="~/css/ClientesEstablecimientos.css?v=5.6" rel="stylesheet" />
     <link href="~/css/ContratosModal.css?v=5.4" rel="stylesheet" />
 }
@@ -459,12 +459,9 @@
                          aria-controls="cgSecControlPagos">
                         <div>
                             <h5 class="cg-hub-title mb-0"><i class="fa fa-calendar-check-o"></i> Control de pagos y stock</h5>
-                            <p class="cg-hub-sub">Planilla del a&ntilde;o: lo entregado, retirado, abonos y saldo. Registr&aacute; la visita y la entrega desde el mes sin salir de ac&aacute;. El inventario del dep&oacute;sito se mueve al <strong>Registrar entrega</strong>.</p>
+                            <p class="cg-hub-sub">Planilla del a&ntilde;o: entregado, retirado, abonos y saldo. Abr&iacute; un mes para cargar visita, entrega y cobros en un solo guardado.</p>
                         </div>
                         <div class="d-flex gap-2 flex-wrap align-items-center" >
-                            <button type="button" id="btnRegistrarVisitaMesHub" class="cg-btn cg-btn--success cg-btn--sm" title="Abrir el mes actual para cargar visita / entrega">
-                                <i class="fa fa-plus-circle"></i> Registrar visita del mes
-                            </button>
                             <a id="btnNuevaEntregaHub" class="cg-btn cg-btn--ghost cg-btn--sm" href="#" title="Abrir m&oacute;dulo Entregas">
                                 <i class="fa fa-external-link"></i> M&oacute;dulo entregas
                             </a>
@@ -600,7 +597,7 @@
                             </table>
                         </div>
 
-                        <!-- Workspace del mes: visita + compositor entrega + pagos -->
+                        <!-- Workspace del mes: visita + entrega + cobros (un solo guardado) -->
                         <div class="cg-mes-ws" id="cgHubMesDetail" hidden>
                             <div class="cg-mes-ws-head">
                                 <div>
@@ -609,10 +606,13 @@
                                 </div>
                                 <div class="cg-mes-ws-head-actions">
                                     <button type="button" class="cg-btn cg-btn--warn cg-btn--sm d-none" id="btnInteresMesHub" title="Sugerir inter&eacute;s por atraso">
-                                        <i class="fa fa-percent"></i> Cargar inter&eacute;s
+                                        <i class="fa fa-percent"></i> Inter&eacute;s
                                     </button>
                                     <button type="button" class="cg-btn cg-btn--ghost cg-btn--sm d-none" id="btnVerInteresesMesHub" title="Ver intereses de este mes">
-                                        <i class="fa fa-eye"></i> Ver intereses
+                                        <i class="fa fa-eye"></i> Intereses
+                                    </button>
+                                    <button type="button" class="cg-btn cg-btn--success cg-btn--sm" id="btnGuardarControlMensualCg">
+                                        <i class="fa fa-check"></i> Guardar
                                     </button>
                                     <button type="button" class="cg-btn cg-btn--ghost cg-btn--sm" id="btnCerrarMesDetail">
                                         <i class="fa fa-times"></i> Cerrar
@@ -622,103 +622,97 @@
 
                             <div class="cg-mes-ws-kpis" id="cgMesWsKpis"></div>
 
-                            <div class="cg-mes-ws-grid">
+                            <input type="hidden" id="cgCmAnio" />
+                            <input type="hidden" id="cgCmMes" />
+                            <input type="hidden" id="cgCmIdControl" />
+                            <input type="hidden" id="cgCmAbonoEfectivo" value="" />
+                            <input type="hidden" id="cgCmAbonoTransferencia" value="" />
+                            <input type="hidden" id="cgCmFechaTransferencia" value="" />
+
+                            <div class="cg-mes-ws-compact">
                                 <section class="cg-mes-ws-panel cg-mes-ws-panel--productos">
-                                    <div class="cg-mes-ws-panel-head">
+                                    <div class="cg-mes-ws-panel-head cg-mes-ws-panel-head--sm">
                                         <i class="fa fa-cube"></i>
                                         <span>Productos del mes</span>
                                     </div>
-                                    <div id="cgHubMesProductos" class="cg-mes-ws-panel-body"></div>
+                                    <div id="cgHubMesProductos" class="cg-mes-ws-panel-body cg-mes-ws-panel-body--sm"></div>
                                 </section>
 
-                                <section class="cg-mes-ws-panel cg-mes-ws-panel--composer">
-                                    <div class="cg-mes-ws-panel-head">
-                                        <i class="fa fa-truck"></i>
-                                        <span>Registrar entrega / retiro</span>
+                                <div class="cg-ws-meta-bar">
+                                    <div class="cg-ws-meta-field">
+                                        <label class="form-label cg-ws-label" for="cgCmFechaVisita">Fecha</label>
+                                        <input type="date" id="cgCmFechaVisita" class="form-control" />
+                                        <input type="hidden" id="cgWsFechaEntrega" />
                                     </div>
-                                    <div class="cg-mes-ws-panel-body">
-                                        <div class="row g-3 mb-3 cg-ws-meta">
-                                            <div class="col-sm-5 col-lg-4">
-                                                <label class="form-label cg-ws-label">Fecha entrega</label>
-                                                <input type="date" id="cgWsFechaEntrega" class="form-control" />
-                                            </div>
-                                            <div class="col-sm-7 col-lg-8">
-                                                <label class="form-label cg-ws-label">Establecimiento</label>
-                                                <select id="cgWsEstablecimiento" class="form-control"></select>
+                                    <div class="cg-ws-meta-field cg-ws-meta-field--grow">
+                                        <label class="form-label cg-ws-label" for="cgWsEstablecimiento">Establecimiento</label>
+                                        <select id="cgWsEstablecimiento" class="form-control"></select>
+                                    </div>
+                                    <div class="cg-ws-meta-field">
+                                        <label class="form-label cg-ws-label" for="cgCmCajasAFavor">Cajas a favor</label>
+                                        <input type="number" id="cgCmCajasAFavor" class="form-control" min="0" step="1" />
+                                    </div>
+                                    <div class="cg-ws-meta-field cg-ws-meta-field--switch">
+                                        <div class="cg-cm-sin-entrega-box" id="cgCmSinEntregaBox">
+                                            <label class="cg-cm-sin-entrega-toggle mb-0" for="cgCmSinEntrega">
+                                                <input type="checkbox" id="cgCmSinEntrega" class="rp-switch-input">
+                                                <span class="rp-switch-slider"></span>
+                                                <span class="cg-cm-sin-entrega-copy">
+                                                    <strong id="lblCgCmSinEntrega">Con entrega</strong>
+                                                    <small>Sin recolecci&oacute;n</small>
+                                                </span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="cg-ws-obs-row">
+                                    <label class="form-label cg-ws-label" for="cgCmObservaciones">Observaciones</label>
+                                    <textarea id="cgCmObservaciones" class="form-control" rows="1" maxlength="500"></textarea>
+                                </div>
+
+                                <div class="cg-ws-split">
+                                    <section class="cg-ws-col">
+                                        <div class="cg-ws-col-head">
+                                            <span>Entrega / retiro</span>
+                                            <div class="cg-ws-col-actions">
+                                                <a href="#" class="cg-hub-link" id="btnWsAbrirModuloEntregas" target="_blank">M&oacute;dulo</a>
+                                                <button type="button" class="cg-btn cg-btn--ghost cg-btn--xs" id="btnWsAgregarLinea">
+                                                    <i class="fa fa-plus"></i> L&iacute;nea
+                                                </button>
                                             </div>
                                         </div>
                                         <div class="cg-ws-sugeridos" id="cgWsSugeridos"></div>
                                         <div class="cg-ws-lineas-wrap">
                                             <div class="cg-ws-lineas-list" id="cgWsLineasBody"></div>
                                         </div>
-                                        <div class="cg-ws-composer-actions">
-                                            <button type="button" class="cg-btn cg-btn--ghost" id="btnWsAgregarLinea">
-                                                <i class="fa fa-plus"></i> Agregar l&iacute;nea
-                                            </button>
-                                            <button type="button" class="cg-btn cg-btn--success" id="btnWsRegistrarEntrega">
-                                                <i class="fa fa-check"></i> Registrar entrega
-                                            </button>
-                                            <a href="#" class="cg-hub-link" id="btnWsAbrirModuloEntregas" target="_blank">
-                                                Abrir en m&oacute;dulo Entregas
-                                            </a>
-                                        </div>
-                                    </div>
-                                </section>
+                                    </section>
 
-                                <section class="cg-mes-ws-panel cg-mes-ws-panel--pagos">
-                                    <div class="cg-mes-ws-panel-head">
-                                        <i class="fa fa-money"></i>
-                                        <span>Visita y abonos</span>
-                                    </div>
-                                    <div class="cg-mes-ws-panel-body">
-                                        <input type="hidden" id="cgCmAnio" />
-                                        <input type="hidden" id="cgCmMes" />
-                                        <input type="hidden" id="cgCmIdControl" />
-                                        <div class="row g-3">
-                                            <div class="col-sm-6">
-                                                <label class="form-label cg-ws-label">Fecha visita</label>
-                                                <input type="date" id="cgCmFechaVisita" class="form-control" />
-                                            </div>
-                                            <div class="col-sm-6">
-                                                <label class="form-label cg-ws-label">Cajas a favor</label>
-                                                <input type="number" id="cgCmCajasAFavor" class="form-control" min="0" step="1" />
-                                            </div>
-                                            <div class="col-sm-6">
-                                                <label class="form-label cg-ws-label">Abono efectivo</label>
-                                                <input type="text" id="cgCmAbonoEfectivo" class="form-control Inputmiles" inputmode="decimal" autocomplete="off" />
-                                            </div>
-                                            <div class="col-sm-6">
-                                                <label class="form-label cg-ws-label">Abono transferencia</label>
-                                                <input type="text" id="cgCmAbonoTransferencia" class="form-control Inputmiles" inputmode="decimal" autocomplete="off" />
-                                            </div>
-                                            <div class="col-sm-6">
-                                                <label class="form-label cg-ws-label">Fecha transferencia</label>
-                                                <input type="date" id="cgCmFechaTransferencia" class="form-control" />
-                                            </div>
-                                            <div class="col-12">
-                                                <div class="cg-cm-sin-entrega-box" id="cgCmSinEntregaBox">
-                                                    <label class="cg-cm-sin-entrega-toggle mb-0" for="cgCmSinEntrega">
-                                                        <input type="checkbox" id="cgCmSinEntrega" class="rp-switch-input">
-                                                        <span class="rp-switch-slider"></span>
-                                                        <span class="cg-cm-sin-entrega-copy">
-                                                            <strong id="lblCgCmSinEntrega">Con entrega este mes</strong>
-                                                            <small>Marca si no se realizo recoleccion en el periodo</small>
-                                                        </span>
-                                                    </label>
-                                                </div>
-                                            </div>
-                                            <div class="col-12">
-                                                <label class="form-label cg-ws-label">Observaciones</label>
-                                                <textarea id="cgCmObservaciones" class="form-control" rows="3" maxlength="500"></textarea>
-                                            </div>
-                                        </div>
-                                        <div class="cg-ws-pagos-actions">
-                                            <button type="button" class="cg-btn cg-btn--primary" id="btnGuardarControlMensualCg">
-                                                <i class="fa fa-check"></i> Guardar visita
+                                    <section class="cg-ws-col">
+                                        <div class="cg-ws-col-head">
+                                            <span>Cobros de la entrega</span>
+                                            <button type="button" class="cg-btn cg-btn--ghost cg-btn--xs" id="btnWsAgregarCobro">
+                                                <i class="fa fa-plus"></i> Cobro
                                             </button>
                                         </div>
-                                    </div>
-                                </section>
+                                        <div class="cg-ws-cobros-kpis" id="cgWsCobrosKpis">
+                                            <div class="cg-ws-cobro-kpi"><span>Entregado</span><strong id="cgWsCobroTotEntrega">$ 0,00</strong></div>
+                                            <div class="cg-ws-cobro-kpi"><span>Cobrado</span><strong id="cgWsCobroTotPagado">$ 0,00</strong></div>
+                                            <div class="cg-ws-cobro-kpi"><span>Saldo</span><strong id="cgWsCobroSaldo">$ 0,00</strong></div>
+                                        </div>
+                                        <div class="cg-ws-cobros-list" id="cgWsCobrosBody"></div>
+
+                                        <div class="cg-ws-col-head cg-ws-col-head--sub">
+                                            <span>Otros cobros del mes</span>
+                                            <button type="button" class="cg-btn cg-btn--ghost cg-btn--xs" id="btnWsCobroMes">
+                                                <i class="fa fa-money"></i> Sin entrega
+                                            </button>
+                                        </div>
+                                        <div class="cg-ws-cobros-mes-list" id="cgWsCobrosMesBody">
+                                            <div class="cg-ws-lineas-empty">Sin cobros sueltos en este mes.</div>
+                                        </div>
+                                    </section>
+                                </div>
                             </div>
                         </div>
                         </div>
@@ -1126,5 +1120,5 @@
     <script src="~/js/Entities/M_ClientesEstablecimientos.js?v=7.0"></script>
     <script src="~/js/ContratosDocumentos.js?v=5.3"></script>
     <script src="~/js/Entities/M_Contratos.js?v=5.4"></script>
-    <script src="~/js/ClientesGestion.js?v=17.9"></script>
+    <script src="~/js/ClientesGestion.js?v=18.5"></script>
 }

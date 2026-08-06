@@ -1413,11 +1413,23 @@ function escapeHtml(str) {
    HISTORIAL CONEXIONES
 ========================= */
 
+function parseFechaUtcUsr(d) {
+    if (!d) return null;
+    if (d instanceof Date) return d;
+    const s = String(d).trim();
+    if (!s) return null;
+    // Con Z u offset: el motor ya interpreta bien.
+    if (/[zZ]|[+\-]\d{2}:\d{2}$/.test(s)) return new Date(s);
+    // Sin zona: en BD se guarda UTC → forzar interpretación UTC.
+    const iso = s.includes("T") ? s : s.replace(" ", "T");
+    return new Date(iso.endsWith("Z") ? iso : `${iso}Z`);
+}
+
 function fmtFechaConexionUsr(d) {
-    if (!d) return "—";
-    const dt = new Date(d);
-    if (Number.isNaN(dt.getTime())) return "—";
+    const dt = parseFechaUtcUsr(d);
+    if (!dt || Number.isNaN(dt.getTime())) return "—";
     return dt.toLocaleString("es-AR", {
+        timeZone: "America/Argentina/Buenos_Aires",
         day: "2-digit", month: "2-digit", year: "numeric",
         hour: "2-digit", minute: "2-digit", second: "2-digit"
     });
@@ -1510,7 +1522,6 @@ window.verHistorialConexionesUsuario = async function (id, usuarioNombre) {
                         <time>${fmtFechaConexionUsr(ev.Fecha)}</time>
                     </div>
                     <div class="usr-conn-meta">
-                        ${ev.Ip ? `<span><i class="fa fa-globe"></i> ${escapeHtml(ev.Ip)}</span>` : ""}
                         ${ev.Detalle ? `<span>${escapeHtml(ev.Detalle)}</span>` : ""}
                     </div>
                 </div>

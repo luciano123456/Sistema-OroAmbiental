@@ -361,10 +361,25 @@ namespace SistemaOroAmbiental.DAL.Repository
         private async Task RegistrarMovimientoCuentaCorriente(
             ClientesCuentaCorriente cc,
             ClientesEntrega entrega,
+            IEnumerable<ClientesEntregasProducto> lineas,
             Cliente cliente,
             int idUsuario,
             DateTime ahora)
         {
+            // Debe = lo entregado (cargo). Haber = lo retirado (crédito).
+            // El saldo (Debe - Haber) coincide con ImporteTotal neto.
+            var lista = (lineas ?? Enumerable.Empty<ClientesEntregasProducto>()).ToList();
+            var debe = lista.Where(l => !EsRetiro(l)).Sum(l => l.SubtotalFinal);
+            var haber = lista.Where(EsRetiro).Sum(l => l.SubtotalFinal);
+
+            if (debe == 0 && haber == 0 && entrega.ImporteTotal != 0)
+            {
+                if (entrega.ImporteTotal >= 0)
+                    debe = entrega.ImporteTotal;
+                else
+                    haber = Math.Abs(entrega.ImporteTotal);
+            }
+
             var movCc = new ClientesCuentaCorrienteMovimiento
             {
                 IdCuentaCorriente = cc.Id,
@@ -372,8 +387,8 @@ namespace SistemaOroAmbiental.DAL.Repository
                 IdMovimiento = entrega.Id,
                 Fecha = entrega.Fecha,
                 Concepto = $"Entrega #{entrega.Id} - {cliente.Nombre}",
-                Debe = entrega.ImporteTotal >= 0 ? entrega.ImporteTotal : 0,
-                Haber = entrega.ImporteTotal < 0 ? Math.Abs(entrega.ImporteTotal) : 0,
+                Debe = debe,
+                Haber = haber,
                 IdUsuarioRegistra = idUsuario,
                 FechaUsuarioRegistra = ahora
             };
@@ -497,7 +512,7 @@ namespace SistemaOroAmbiental.DAL.Repository
                         idUsuario);
                 }
 
-                await RegistrarMovimientoCuentaCorriente(cc, entrega, cliente, idUsuario, ahora);
+                await RegistrarMovimientoCuentaCorriente(cc, entrega, lineas, cliente, idUsuario, ahora);
                 await _db.SaveChangesAsync();
 
                 foreach (var cobro in cobros)
@@ -630,7 +645,7 @@ namespace SistemaOroAmbiental.DAL.Repository
                         idUsuario);
                 }
 
-                await RegistrarMovimientoCuentaCorriente(cc, entity, cliente, idUsuario, ahora);
+                await RegistrarMovimientoCuentaCorriente(cc, entity, lineas, cliente, idUsuario, ahora);
                 await SincronizarCobrosEntrega(entity.Id, idCliente, entity.Fecha, cobros, idUsuario);
                 await ActualizarImporteAbonadoYSaldo(entity.Id);
                 await _db.SaveChangesAsync();

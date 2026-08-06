@@ -318,7 +318,7 @@
         if (suma > totalEntrega + 0.01) {
             return {
                 ok: false,
-                mensaje: "La suma de los cobros no puede superar el total de la entrega."
+                mensaje: "La suma de los cobros no puede superar el total de lo entregado."
             };
         }
 
@@ -378,6 +378,14 @@
             const cantidadInvalida = CM.lineas.some(l => l.IdProducto > 0 && !(Number(l.Cantidad) > 0));
             if (cantidadInvalida) {
                 erroresProductos.push("Las cantidades deben ser mayores a cero.");
+            }
+
+            const sinListaRetiro = CM.lineas.some(l =>
+                l.IdProducto > 0
+                && Number(l.TipoMovimiento) === TIPO_LINEA_RETIRO
+                && !(Number(l.IdListaPrecio) > 0));
+            if (sinListaRetiro) {
+                erroresProductos.push("Seleccioná la lista / tipo de pago en las líneas de retiro.");
             }
 
             const costoInvalido = CM.lineas.some(l => l.IdProducto > 0 && Number(l.PrecioVenta) < 0);
@@ -765,6 +773,7 @@
             CM.lineas = [...lineasOperacion, ...lineasRecuperadasApi];
 
             renderLineas();
+            refrescarSelectsProducto();
             recalcularTotalesUI();
 
             if (CM.soloLectura) aplicarSoloLectura();
@@ -823,9 +832,12 @@
     }
 
     function calcularTotalEntregaDesdeLineas() {
+        // Solo líneas de ENTREGA: es el monto cobrable (los retiros no se cobran).
         let tot = 0;
         CM.lineas.forEach(l => {
-            tot += calcularLinea(l).subtotalFinal;
+            if (Number(l.TipoMovimiento || TIPO_LINEA_ENTREGA) === TIPO_LINEA_ENTREGA) {
+                tot += calcularLinea(l).subtotalFinal;
+            }
         });
         return tot;
     }
@@ -1151,6 +1163,15 @@
             $sel.html(`<option value="">Seleccionar</option>${opts}`);
             $sel.val(val && $sel.find(`option[value="${val}"]`).length ? val : "");
             ensureSelect2Cm($sel, { placeholder: "Producto", dropdownParent: $(".entregas-nuevo") });
+
+            const $lista = $sel.closest(".en-linea").find(".linea-lista");
+            if ($lista.length) {
+                const valLista = Number(linea.IdListaPrecio) > 0 ? String(linea.IdListaPrecio) : "";
+                if ($lista.data("select2")) $lista.select2("destroy");
+                $lista.html(`<option value="">Seleccionar</option>${htmlOpcionesListaPrecio(linea)}`);
+                $lista.val(valLista && $lista.find(`option[value="${valLista}"]`).length ? valLista : "");
+                ensureSelect2Cm($lista, { placeholder: "Lista / Tipo pago", allowClear: true, dropdownParent: $(".entregas-nuevo") });
+            }
         });
     }
 
@@ -1260,10 +1281,15 @@
             const $sel = $row.find(".linea-producto");
             const $tipo = $row.find(".linea-tipo");
             const $lista = $row.find(".linea-lista");
+            const valProd = linea.IdProducto > 0 ? String(linea.IdProducto) : "";
+            const valLista = Number(linea.IdListaPrecio) > 0 ? String(linea.IdListaPrecio) : "";
+            $sel.val(valProd && $sel.find(`option[value="${valProd}"]`).length ? valProd : "");
+            $lista.val(valLista && $lista.find(`option[value="${valLista}"]`).length ? valLista : "");
             ensureSelect2Cm($sel, { placeholder: "Producto", dropdownParent: $(".entregas-nuevo") });
             ensureSelect2Cm($lista, { placeholder: "Lista / Tipo pago", allowClear: true, dropdownParent: $(".entregas-nuevo") });
 
             $tipo.on("change", function () {
+                if (CM.cargandoEntrega) return;
                 linea.TipoMovimiento = parseInt($(this).val(), 10) || TIPO_LINEA_ENTREGA;
                 syncLineaFromRow($row, linea);
                 refrescarSelectsProducto();
@@ -1273,6 +1299,7 @@
             });
 
             $lista.on("change", async function () {
+                if (CM.cargandoEntrega) return;
                 linea.IdListaPrecio = parseInt($(this).val(), 10) || 0;
                 if (linea.IdProducto > 0 && linea.IdListaPrecio > 0) {
                     await aplicarPrecioDesdeListaEntrega($row, linea, { forzar: true });
@@ -1285,6 +1312,7 @@
             });
 
             $sel.on("change", async function () {
+                if (CM.cargandoEntrega) return;
                 linea.IdProducto = parseInt($(this).val(), 10) || 0;
                 const prod = CM.productos.find(p => p.Id === linea.IdProducto);
                 if (prod) {
@@ -1383,10 +1411,15 @@
 
             const $sel = $row.find(".linea-producto");
             const $lista = $row.find(".linea-lista");
+            const valProd = linea.IdProducto > 0 ? String(linea.IdProducto) : "";
+            const valLista = Number(linea.IdListaPrecio) > 0 ? String(linea.IdListaPrecio) : "";
+            $sel.val(valProd && $sel.find(`option[value="${valProd}"]`).length ? valProd : "");
+            $lista.val(valLista && $lista.find(`option[value="${valLista}"]`).length ? valLista : "");
             ensureSelect2Cm($sel, { placeholder: "Producto", dropdownParent: $(".entregas-nuevo") });
             ensureSelect2Cm($lista, { placeholder: "Lista / Tipo pago", allowClear: true, dropdownParent: $(".entregas-nuevo") });
 
             $lista.on("change", async function () {
+                if (CM.cargandoEntrega) return;
                 linea.IdListaPrecio = parseInt($(this).val(), 10) || 0;
                 if (linea.IdProducto > 0 && linea.IdListaPrecio > 0) {
                     await aplicarPrecioDesdeListaEntrega($row, linea, { forzar: true });
@@ -1399,6 +1432,7 @@
             });
 
             $sel.on("change", async function () {
+                if (CM.cargandoEntrega) return;
                 linea.IdProducto = parseInt($(this).val(), 10) || 0;
                 const prod = CM.productos.find(p => p.Id === linea.IdProducto);
                 if (prod) {
@@ -1513,15 +1547,15 @@
     function mapLineaDesdeApi(l, tipoMovimiento) {
         return {
             _key: CM.nextLineId++,
-            Id: l.Id,
-            IdProducto: l.IdProducto,
-            IdListaPrecio: Number(l.IdListaPrecio || 0),
+            Id: Number(l.Id ?? l.id ?? 0) || 0,
+            IdProducto: Number(l.IdProducto ?? l.idProducto ?? 0) || 0,
+            IdListaPrecio: Number(l.IdListaPrecio ?? l.idListaPrecio ?? 0) || 0,
             TipoMovimiento: tipoMovimiento,
-            Cantidad: Number(l.Cantidad || 0),
-            PrecioVenta: Number(l.PrecioVenta || 0),
-            CostoUnitario: Number(l.CostoUnitario || 0),
-            PorcDescuento: Number(l.PorcDescuento || 0),
-            PorcIva: Number(l.PorcIva || 0)
+            Cantidad: Number(l.Cantidad ?? l.cantidad ?? 0) || 0,
+            PrecioVenta: Number(l.PrecioVenta ?? l.precioVenta ?? 0) || 0,
+            CostoUnitario: Number(l.CostoUnitario ?? l.costoUnitario ?? 0) || 0,
+            PorcDescuento: Number(l.PorcDescuento ?? l.porcDescuento ?? 0) || 0,
+            PorcIva: Number(l.PorcIva ?? l.porcIva ?? 0) || 0
         };
     }
 

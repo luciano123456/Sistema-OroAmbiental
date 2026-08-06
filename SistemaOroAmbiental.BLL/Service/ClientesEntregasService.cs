@@ -200,6 +200,14 @@ namespace SistemaOroAmbiental.BLL.Service
                     return false;
                 }
 
+                // Lista / tipo de pago: obligatorio solo en retiros.
+                if (tipo == ClientesEntregasRepository.TIPO_LINEA_RETIRO
+                    && l.IdListaPrecio is null or <= 0)
+                {
+                    error = "Seleccioná la lista / tipo de pago en las líneas de retiro.";
+                    return false;
+                }
+
                 if (l.PrecioVenta < 0)
                 {
                     error = "El precio de venta no puede ser negativo.";
@@ -252,9 +260,10 @@ namespace SistemaOroAmbiental.BLL.Service
             foreach (var l in lineas)
                 ClientesEntregasRepository.RecalcularLinea(l);
 
-            var entregaCalc = new ClientesEntrega();
-            ClientesEntregasRepository.RecalcularTotalesEntrega(entregaCalc, lineas);
-            var totalEntrega = entregaCalc.ImporteTotal;
+            // Los cobros se imputan al cargo de lo entregado (no al neto con retiros).
+            var totalCobrar = lineas
+                .Where(l => l.TipoMovimiento != ClientesEntregasRepository.TIPO_LINEA_RETIRO)
+                .Sum(l => l.SubtotalFinal);
 
             decimal sumaCobros = 0;
 
@@ -281,9 +290,9 @@ namespace SistemaOroAmbiental.BLL.Service
                 sumaCobros += c.Importe;
             }
 
-            if (sumaCobros > totalEntrega + 0.01m)
+            if (sumaCobros > totalCobrar + 0.01m)
             {
-                error = "La suma de los cobros no puede superar el total de la entrega.";
+                error = "La suma de los cobros no puede superar el total de lo entregado.";
                 return false;
             }
 
