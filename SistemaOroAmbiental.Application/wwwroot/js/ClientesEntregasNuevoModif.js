@@ -1039,10 +1039,22 @@
             }
             repoblarCuentasCobro(true);
 
+            function syncImporteHabilitadoCobroEntrega() {
+                const idCuenta = parseInt($cta.val(), 10) || 0;
+                const habilitar = idCuenta > 0 && !CM.soloLectura;
+                $imp.prop("disabled", !habilitar);
+                if (!habilitar && !CM.soloLectura) {
+                    $imp.val("");
+                    cobro.Importe = 0;
+                }
+                $imp.attr("title", habilitar || CM.soloLectura ? "" : "Seleccioná la cuenta para cargar el importe");
+            }
+
             $suc.on("change", function () {
                 cobro.IdSucursal = parseInt($(this).val(), 10) || 0;
                 cobro.IdCuenta = 0;
                 repoblarCuentasCobro(false);
+                syncImporteHabilitadoCobroEntrega();
                 actualizarResumenCobrosUI();
             });
 
@@ -1053,8 +1065,11 @@
 
             $cta.on("change", function () {
                 syncCobroFromRow(tr, cobro);
+                syncImporteHabilitadoCobroEntrega();
                 actualizarResumenCobrosUI();
             });
+
+            syncImporteHabilitadoCobroEntrega();
 
             tr.find(".btn-quitar-cobro-linea").on("click", () => quitarCobroLinea(k));
         });

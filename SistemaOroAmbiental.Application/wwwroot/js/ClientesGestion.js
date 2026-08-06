@@ -822,6 +822,10 @@ function wireEventosCg() {
         renderCobrosWsCg();
     });
     $h("cgWsCobrosBody").on("change input", "select, input", function () {
+        const $row = $(this).closest(".cg-ws-cobro-row");
+        if ($(this).hasClass("ws-cobro-cuenta")) {
+            syncImporteHabilitadoCobroWsCg($row);
+        }
         sincronizarCobrosWsDesdeDomCg();
         actualizarResumenCobrosWsCg();
     });
@@ -2237,6 +2241,10 @@ function bindEstHubEventsCg() {
     });
     $(root).on("change input", "#cgEstWsCobrosBody select, #cgEstWsCobrosBody input", function () {
         CG.hubActivo = "est";
+        const $row = $(this).closest(".cg-ws-cobro-row");
+        if ($(this).hasClass("ws-cobro-cuenta")) {
+            syncImporteHabilitadoCobroWsCg($row);
+        }
         sincronizarCobrosWsDesdeDomCg();
         actualizarResumenCobrosWsCg();
     });
@@ -3325,6 +3333,22 @@ function sincronizarCobrosWsDesdeDomCg() {
     });
 }
 
+/** El importe solo se edita después de elegir la cuenta de caja. */
+function syncImporteHabilitadoCobroWsCg($row) {
+    if (!$row?.length) return;
+    const idCuenta = Number($row.find(".ws-cobro-cuenta").val()) || 0;
+    const $imp = $row.find(".ws-cobro-importe");
+    const habilitar = idCuenta > 0;
+    $imp.prop("disabled", !habilitar);
+    if (!habilitar) {
+        $imp.val("");
+        const key = Number($row.data("key"));
+        const cobro = (hubPropCg("wsCobros") || []).find(c => Number(c._key) === key);
+        if (cobro) cobro.Importe = 0;
+    }
+    $imp.attr("title", habilitar ? "" : "Seleccioná la cuenta para cargar el importe");
+}
+
 function cobrosWsParaGuardarCg() {
     sincronizarCobrosWsDesdeDomCg();
     return (hubPropCg("wsCobros") || []).filter(c => Number(c.Importe) > 0 && Number(c.IdCuenta) > 0);
@@ -3395,6 +3419,7 @@ function renderCobrosWsCg() {
         if (typeof prepararInputMiles === "function") {
             $row.find(".ws-cobro-importe").each(function () { prepararInputMiles(this); });
         }
+        syncImporteHabilitadoCobroWsCg($row);
     });
     actualizarResumenCobrosWsCg();
 }
