@@ -2,7 +2,7 @@
    CLIENTES GESTION - Hub unificado por cliente
    (cliente + establecimientos: lineas completas + importe tras cuenta)
 ========================================================= */
-window.__OA_CG_BUILD = "inline-guard-v21-20260806";
+window.__OA_CG_BUILD = "inline-guard-v22-20260806";
 
 const CG = {
     id: 0,
@@ -3039,38 +3039,46 @@ async function abrirWorkspaceMesCg(anio, mes, keepScroll) {
     if (!prods.length) {
         wrap.html(`<div class="cg-hub-stock-empty">Sin productos en entregas de este mes. Cargalos abajo en el compositor.</div>`);
     } else {
-        wrap.html(`<div class="cg-hub-prod-table-wrap"><table class="cg-hub-prod-table">
+        wrap.html(`<div class="cg-hub-prod-table-wrap"><table class="cg-hub-prod-table cg-hub-prod-table--mes">
             <thead>
-                <tr>
-                    <th>Producto</th>
-                    <th>Lista / tipo pago</th>
-                    <th class="text-end">Entregadas</th>
-                    <th class="text-end">P. unit.</th>
-                    <th class="text-end">Subtotal</th>
-                    <th class="text-end">Retiradas</th>
-                    <th class="text-end">P. unit.</th>
-                    <th class="text-end">Subtotal</th>
+                <tr class="cg-hub-prod-grp">
+                    <th rowspan="2" class="cg-prod-th-prod">Producto</th>
+                    <th rowspan="2" class="cg-prod-th-lista">Lista / tipo pago</th>
+                    <th colspan="3" class="cg-prod-th-grp cg-prod-th-grp--ent"><i class="fa fa-arrow-up"></i> Entregadas</th>
+                    <th colspan="3" class="cg-prod-th-grp cg-prod-th-grp--ret"><i class="fa fa-arrow-down"></i> Retiradas</th>
+                </tr>
+                <tr class="cg-hub-prod-cols">
+                    <th class="text-end cg-prod-th-ent">Cant.</th>
+                    <th class="text-end cg-prod-th-ent">P. unit.</th>
+                    <th class="text-end cg-prod-th-ent">Subtotal</th>
+                    <th class="text-end cg-prod-th-ret">Cant.</th>
+                    <th class="text-end cg-prod-th-ret">P. unit.</th>
+                    <th class="text-end cg-prod-th-ret">Subtotal</th>
                 </tr>
             </thead>
             <tbody>
                 ${prods.map(p => {
                     const lista = p.ListaPrecio || p.listaPrecio || "";
+                    const ent = Number(p.Entregadas) || 0;
+                    const ret = Number(p.Retiradas) || 0;
+                    const subEnt = Number(p.SubtotalEntregas) || 0;
+                    const subRet = Number(p.SubtotalRetiros) || 0;
                     return `<tr>
-                    <td>
+                    <td class="cg-prod-td-prod">
                         <div class="cg-hub-prod-name">${escapeCg(p.Producto)}</div>
                         ${p.Abreviatura ? `<div class="cg-hub-prod-abrev">${escapeCg(p.Abreviatura)}</div>` : ""}
                     </td>
-                    <td>
+                    <td class="cg-prod-td-lista">
                         ${lista
                             ? `<span class="cg-hub-prod-lista">${escapeCg(lista)}</span>`
                             : `<span class="cg-hub-prod-lista cg-hub-prod-lista--empty">—</span>`}
                     </td>
-                    <td class="text-end">${fmtQtyCg(p.Entregadas)}</td>
-                    <td class="text-end">${fmtMoneyCg(p.PrecioUnitarioEntrega)}</td>
-                    <td class="text-end fw-semibold">${fmtMoneyCg(p.SubtotalEntregas)}</td>
-                    <td class="text-end">${fmtQtyCg(p.Retiradas)}</td>
-                    <td class="text-end">${fmtMoneyCg(p.PrecioUnitarioRetiro)}</td>
-                    <td class="text-end fw-semibold">${fmtMoneyCg(p.SubtotalRetiros)}</td>
+                    <td class="text-end cg-prod-td-ent ${ent ? "is-filled" : "is-zero"}">${fmtQtyCg(p.Entregadas)}</td>
+                    <td class="text-end cg-prod-td-ent ${ent ? "is-filled" : "is-zero"}">${fmtMoneyCg(p.PrecioUnitarioEntrega)}</td>
+                    <td class="text-end cg-prod-td-ent cg-prod-td-sub ${subEnt ? "is-filled" : "is-zero"}">${fmtMoneyCg(p.SubtotalEntregas)}</td>
+                    <td class="text-end cg-prod-td-ret ${ret ? "is-filled" : "is-zero"}">${fmtQtyCg(p.Retiradas)}</td>
+                    <td class="text-end cg-prod-td-ret ${ret ? "is-filled" : "is-zero"}">${fmtMoneyCg(p.PrecioUnitarioRetiro)}</td>
+                    <td class="text-end cg-prod-td-ret cg-prod-td-sub ${subRet ? "is-filled" : "is-zero"}">${fmtMoneyCg(p.SubtotalRetiros)}</td>
                 </tr>`;
                 }).join("")}
             </tbody>
