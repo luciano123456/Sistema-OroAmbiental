@@ -187,10 +187,14 @@ namespace SistemaOroAmbiental.BLL.Service
                     return false;
                 }
 
-                var keyProducto = $"{l.IdProducto}_{tipo}";
+                // Misma combinación exacta: producto + tipo (entrega/retiro) + lista/tipo de pago.
+                // Se permite el mismo producto y tipo si la lista / tipo de pago es distinta
+                // (ej. retiro Efectivo y retiro Transferencia).
+                var idLista = l.IdListaPrecio is > 0 ? l.IdListaPrecio.Value : 0;
+                var keyProducto = $"{l.IdProducto}_{tipo}_{idLista}";
                 if (!productosOperacion.Add(keyProducto))
                 {
-                    error = "No puede repetir el mismo producto con el mismo tipo en productos.";
+                    error = "No puede repetir el mismo producto con el mismo tipo y la misma lista / tipo de pago.";
                     return false;
                 }
 

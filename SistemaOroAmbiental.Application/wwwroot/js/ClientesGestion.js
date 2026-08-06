@@ -3472,6 +3472,20 @@ async function guardarVisitaUnificadaCg() {
         return;
     }
 
+    {
+        const claves = new Set();
+        for (const l of lineas) {
+            const tipo = Number(l.TipoMovimiento || 1);
+            const idLista = Number(l.IdListaPrecio) > 0 ? Number(l.IdListaPrecio) : 0;
+            const clave = `${l.IdProducto}_${tipo}_${idLista}`;
+            if (claves.has(clave)) {
+                errorModal("No puede repetir el mismo producto con el mismo tipo y la misma lista / tipo de pago.");
+                return;
+            }
+            claves.add(clave);
+        }
+    }
+
     if (cobros.length && (hubPropCg("wsCobros") || []).some(c => Number(c.Importe) > 0 && !(Number(c.IdCuenta) > 0))) {
         errorModal("Cada cobro con importe debe tener una cuenta de caja.");
         return;

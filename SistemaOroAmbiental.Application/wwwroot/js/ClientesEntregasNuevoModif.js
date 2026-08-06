@@ -388,6 +388,28 @@
                 erroresProductos.push("Seleccioná la lista / tipo de pago en las líneas de retiro.");
             }
 
+            const clavesOp = new Set();
+            const clavesRec = new Set();
+            let dupOperacion = false;
+            let dupRecuperado = false;
+            for (const l of lineasConProducto) {
+                const clave = claveUnicaLineaProducto(l);
+                if (esLineaRecuperada(l)) {
+                    if (clavesRec.has(clave)) dupRecuperado = true;
+                    else clavesRec.add(clave);
+                } else if (clavesOp.has(clave)) {
+                    dupOperacion = true;
+                } else {
+                    clavesOp.add(clave);
+                }
+            }
+            if (dupOperacion) {
+                erroresProductos.push("No puede repetir el mismo producto con el mismo tipo y la misma lista / tipo de pago.");
+            }
+            if (dupRecuperado) {
+                erroresProductos.push("No puede repetir el mismo producto en productos recuperados.");
+            }
+
             const costoInvalido = CM.lineas.some(l => l.IdProducto > 0 && Number(l.PrecioVenta) < 0);
             if (costoInvalido) {
                 erroresProductos.push("El precio de venta no puede ser negativo.");
@@ -685,11 +707,29 @@
 
     function htmlOpcionesListaPrecio(linea) {
         const idSel = Number(linea.IdListaPrecio || 0);
-        return (CM.listasPrecios || []).map(l => {
-            const id = Number(l.Id || l.id || 0);
-            const nom = l.Nombre || l.nombre || `Lista #${id}`;
-            return `<option value="${id}" ${id === idSel ? "selected" : ""}>${nom}</option>`;
-        }).join("");
+        const tipo = Number(linea.TipoMovimiento || TIPO_LINEA_ENTREGA);
+        const idProd = Number(linea.IdProducto || 0);
+        const listasUsadas = new Set();
+        // Misma producto+tipo: no ofrecer listas / tipos de pago ya cargados en otra línea.
+        if (idProd > 0 && tipo !== TIPO_LINEA_RECUPERADO) {
+            CM.lineas.forEach(l => {
+                if (l._key === linea._key) return;
+                if (Number(l.IdProducto) !== idProd) return;
+                if (Number(l.TipoMovimiento || TIPO_LINEA_ENTREGA) !== tipo) return;
+                const idLista = Number(l.IdListaPrecio) > 0 ? Number(l.IdListaPrecio) : 0;
+                if (idLista > 0) listasUsadas.add(idLista);
+            });
+        }
+        return (CM.listasPrecios || [])
+            .filter(l => {
+                const id = Number(l.Id || l.id || 0);
+                return !listasUsadas.has(id) || id === idSel;
+            })
+            .map(l => {
+                const id = Number(l.Id || l.id || 0);
+                const nom = l.Nombre || l.nombre || `Lista #${id}`;
+                return `<option value="${id}" ${id === idSel ? "selected" : ""}>${nom}</option>`;
+            }).join("");
     }
 
     function ensureSelect2Cm($el, opts) {
@@ -1126,12 +1166,26 @@
         recalcularTotalesUI();
     }
 
-    /** IDs de producto ya elegidos en otras lineas (no repetir en la misma entrega). */
+    /**
+     * Clave de unicidad por línea:
+     * - Recuperados: solo producto (no se repite).
+     * - Entrega/retiro: producto + tipo + lista/tipo de pago (mismo producto/tipo OK si la lista difiere).
+     */
+    function claveUnicaLineaProducto(l) {
+        const tipo = Number(l.TipoMovimiento || TIPO_LINEA_ENTREGA);
+        if (tipo === TIPO_LINEA_RECUPERADO) {
+            return `${l.IdProducto}_${TIPO_LINEA_RECUPERADO}`;
+        }
+        const idLista = Number(l.IdListaPrecio) > 0 ? Number(l.IdListaPrecio) : 0;
+        return `${l.IdProducto}_${tipo}_${idLista}`;
+    }
+
+    /** Claves ya usadas en otras líneas (no repetir combinación exacta). */
     function idsProductosEnOtrasLineas(excluirKey) {
         const ids = new Set();
         CM.lineas.forEach(l => {
             if (l._key !== excluirKey && l.IdProducto > 0) {
-                ids.add(`${l.IdProducto}_${Number(l.TipoMovimiento || TIPO_LINEA_ENTREGA)}`);
+                ids.add(claveUnicaLineaProducto(l));
             }
         });
         return ids;
@@ -1139,9 +1193,15 @@
 
     function htmlOpcionesProducto(linea) {
         const usados = idsProductosEnOtrasLineas(linea._key);
-        const tipo = Number(linea.TipoMovimiento || TIPO_LINEA_ENTREGA);
         return (CM.productos || [])
-            .filter(p => !usados.has(`${p.Id}_${tipo}`) || p.Id === linea.IdProducto)
+            .filter(p => {
+                const clave = claveUnicaLineaProducto({
+                    IdProducto: p.Id,
+                    TipoMovimiento: linea.TipoMovimiento,
+                    IdListaPrecio: linea.IdListaPrecio
+                });
+                return !usados.has(clave) || p.Id === linea.IdProducto;
+            })
             .map(p =>
                 `<option value="${p.Id}" ${String(p.Id) === String(linea.IdProducto) ? "selected" : ""}>${p.Nombre}</option>`
             )
@@ -1176,24 +1236,21 @@
     }
 
     function hayProductosDisponiblesParaTipo(tipoMovimiento) {
-        const usados = new Set(
-            CM.lineas
-                .filter(l => l.IdProducto > 0)
-                .map(l => `${l.IdProducto}_${Number(l.TipoMovimiento || TIPO_LINEA_ENTREGA)}`)
-        );
-        return (CM.productos || []).some(p => !usados.has(`${p.Id}_${tipoMovimiento}`));
+        // Recuperados: un producto solo una vez. Entrega/retiro: siempre se puede agregar
+        // otra línea (misma combinación con distinta lista / tipo de pago).
+        if (Number(tipoMovimiento) === TIPO_LINEA_RECUPERADO) {
+            const usados = new Set(
+                CM.lineas
+                    .filter(l => l.IdProducto > 0 && Number(l.TipoMovimiento) === TIPO_LINEA_RECUPERADO)
+                    .map(l => l.IdProducto)
+            );
+            return (CM.productos || []).some(p => !usados.has(p.Id));
+        }
+        return (CM.productos || []).length > 0;
     }
 
     function hayProductosDisponiblesEnSeccionProductos() {
-        const usados = new Set(
-            CM.lineas
-                .filter(l => l.IdProducto > 0)
-                .map(l => `${l.IdProducto}_${Number(l.TipoMovimiento || TIPO_LINEA_ENTREGA)}`)
-        );
-        return (CM.productos || []).some(p =>
-            !usados.has(`${p.Id}_${TIPO_LINEA_ENTREGA}`) ||
-            !usados.has(`${p.Id}_${TIPO_LINEA_RETIRO}`)
-        );
+        return (CM.productos || []).length > 0;
     }
 
     function actualizarBotonesAgregarLinea() {
