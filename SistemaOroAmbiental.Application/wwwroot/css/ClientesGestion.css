@@ -3703,6 +3703,18 @@ body.layout-modulo .container-fluid {
     font-size: 0.8rem;
 }
 
+.cg-hub-prod-lista {
+    display: inline-block;
+    color: #c5d4e8;
+    font-size: 0.86rem;
+    font-weight: 600;
+}
+
+.cg-hub-prod-lista--empty {
+    color: #6b7c94;
+    font-weight: 500;
+}
+
 .cg-hub-kpi {
     transition: transform 0.15s ease, border-color 0.15s ease;
 }

@@ -83,6 +83,9 @@ public class ClienteControlProductoMesDto
     public int IdProducto { get; set; }
     public string Producto { get; set; } = "";
     public string? Abreviatura { get; set; }
+    public int? IdListaPrecio { get; set; }
+    /// <summary>Nombre de lista / tipo de pago (Efectivo, Transferencia, C/C, etc.).</summary>
+    public string? ListaPrecio { get; set; }
     public decimal Entregadas { get; set; }
     public decimal Retiradas { get; set; }
     public decimal PrecioUnitarioEntrega { get; set; }

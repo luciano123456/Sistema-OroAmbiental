@@ -2,7 +2,7 @@
    CLIENTES GESTION - Hub unificado por cliente
    (cliente + establecimientos: lineas completas + importe tras cuenta)
 ========================================================= */
-window.__OA_CG_BUILD = "inline-guard-v20-20260806";
+window.__OA_CG_BUILD = "inline-guard-v21-20260806";
 
 const CG = {
     id: 0,
@@ -2957,8 +2957,16 @@ function renderControlMensualCg(data) {
         const badgeAtraso = atrasado
             ? `<span class="cg-cm-badge-atraso" title="Pago atrasado más de 1 mes">Atrasado</span>`
             : "";
+        // Productos del mes puede traer varias filas del mismo producto (distinta lista/precio):
+        // en la planilla anual se suman cantidades por IdProducto.
         const mapaProd = {};
-        (m.Productos || []).forEach(p => { mapaProd[p.IdProducto] = p; });
+        (m.Productos || []).forEach(p => {
+            const id = Number(p.IdProducto) || 0;
+            if (id <= 0) return;
+            if (!mapaProd[id]) mapaProd[id] = { Entregadas: 0, Retiradas: 0 };
+            mapaProd[id].Entregadas += Number(p.Entregadas) || 0;
+            mapaProd[id].Retiradas += Number(p.Retiradas) || 0;
+        });
 
         const celdasEnt = nProd
             ? columnas.map(c => {
@@ -3035,6 +3043,7 @@ async function abrirWorkspaceMesCg(anio, mes, keepScroll) {
             <thead>
                 <tr>
                     <th>Producto</th>
+                    <th>Lista / tipo pago</th>
                     <th class="text-end">Entregadas</th>
                     <th class="text-end">P. unit.</th>
                     <th class="text-end">Subtotal</th>
@@ -3044,10 +3053,17 @@ async function abrirWorkspaceMesCg(anio, mes, keepScroll) {
                 </tr>
             </thead>
             <tbody>
-                ${prods.map(p => `<tr>
+                ${prods.map(p => {
+                    const lista = p.ListaPrecio || p.listaPrecio || "";
+                    return `<tr>
                     <td>
                         <div class="cg-hub-prod-name">${escapeCg(p.Producto)}</div>
                         ${p.Abreviatura ? `<div class="cg-hub-prod-abrev">${escapeCg(p.Abreviatura)}</div>` : ""}
+                    </td>
+                    <td>
+                        ${lista
+                            ? `<span class="cg-hub-prod-lista">${escapeCg(lista)}</span>`
+                            : `<span class="cg-hub-prod-lista cg-hub-prod-lista--empty">—</span>`}
                     </td>
                     <td class="text-end">${fmtQtyCg(p.Entregadas)}</td>
                     <td class="text-end">${fmtMoneyCg(p.PrecioUnitarioEntrega)}</td>
@@ -3055,7 +3071,8 @@ async function abrirWorkspaceMesCg(anio, mes, keepScroll) {
                     <td class="text-end">${fmtQtyCg(p.Retiradas)}</td>
                     <td class="text-end">${fmtMoneyCg(p.PrecioUnitarioRetiro)}</td>
                     <td class="text-end fw-semibold">${fmtMoneyCg(p.SubtotalRetiros)}</td>
-                </tr>`).join("")}
+                </tr>`;
+                }).join("")}
             </tbody>
         </table></div>`);
     }
