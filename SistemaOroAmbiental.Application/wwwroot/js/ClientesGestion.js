@@ -2,7 +2,7 @@
    CLIENTES GESTION - Hub unificado por cliente
    (cliente + establecimientos: lineas completas + importe tras cuenta)
 ========================================================= */
-window.__OA_CG_BUILD = "entrega-lineas-completas-20260806b";
+window.__OA_CG_BUILD = "dup-alert-live-20260806";
 
 const CG = {
     id: 0,
@@ -897,6 +897,7 @@ function wireEventosCg() {
 
         $row.find(".ws-sub").text(fmtMoneyCg(linea.Cantidad * linea.PrecioVenta));
         actualizarResumenCobrosWsCg();
+        actualizarAlertaDuplicadosLineasWsCg();
     });
     $h("cgCmSinEntrega").on("change", syncSinEntregaUiCg);
     $("#cgInteresPct").on("input change", recalcularImporteInteresCg);
@@ -2316,6 +2317,7 @@ function bindEstHubEventsCg() {
 
         $row.find(".ws-sub").text(fmtMoneyCg(linea.Cantidad * linea.PrecioVenta));
         actualizarResumenCobrosWsCg();
+        actualizarAlertaDuplicadosLineasWsCg();
     });
     $(root).on("click", "#btnEstGuardarControlMensualCg", busyHandler(() => {
         CG.hubActivo = "est";
@@ -3236,6 +3238,63 @@ function agregarLineaWsCg(pref) {
     actualizarResumenCobrosWsCg();
 }
 
+function normNumClaveWsCg(n) {
+    const v = Number(n);
+    if (!Number.isFinite(v)) return "0";
+    return (Math.round(v * 10000) / 10000).toString();
+}
+
+/** Huella completa: solo bloquea si TODO coincide. */
+function claveLineaWsCompletaCg(l) {
+    const tipo = Number(l.TipoMovimiento || 1);
+    const idLista = Number(l.IdListaPrecio) > 0 ? Number(l.IdListaPrecio) : 0;
+    return [
+        Number(l.IdProducto) || 0,
+        tipo,
+        idLista,
+        normNumClaveWsCg(l.Cantidad),
+        normNumClaveWsCg(l.PrecioVenta),
+        normNumClaveWsCg(l.PorcDescuento || 0),
+        normNumClaveWsCg(l.PorcIva || 0)
+    ].join("|");
+}
+
+function indicesLineasDuplicadasWsCg(lineas) {
+    const map = new Map();
+    const dups = new Set();
+    (lineas || []).forEach((l, i) => {
+        if (!(Number(l.IdProducto) > 0)) return;
+        const k = claveLineaWsCompletaCg(l);
+        if (map.has(k)) {
+            dups.add(map.get(k));
+            dups.add(i);
+        } else {
+            map.set(k, i);
+        }
+    });
+    return dups;
+}
+
+function hayLineasDuplicadasWsCg(lineas) {
+    return indicesLineasDuplicadasWsCg(lineas).size > 0;
+}
+
+function actualizarAlertaDuplicadosLineasWsCg() {
+    const lineas = hubPropCg("wsLineas") || [];
+    const dups = indicesLineasDuplicadasWsCg(lineas);
+    const hayDup = dups.size > 0;
+
+    $h("cgWsLineasBody").find(".cg-ws-linea").each(function () {
+        const idx = Number($(this).data("idx"));
+        $(this).toggleClass("cg-ws-linea--dup", dups.has(idx));
+    });
+
+    const $alert = $h("cgWsLineasDupAlert");
+    if ($alert.length) $alert.toggleClass("d-none", !hayDup);
+
+    return !hayDup;
+}
+
 function renderLineasWsCg() {
     const optsProd = (CG.wsProductosCatalogo || []).map(p => {
         const id = p.Id || p.id;
@@ -3251,6 +3310,7 @@ function renderLineasWsCg() {
 
     if (!hubPropCg("wsLineas").length) {
         $h("cgWsLineasBody").html(`<div class="cg-ws-lineas-empty">Sin líneas. Agregá un producto o usá un sugerido arriba.</div>`);
+        actualizarAlertaDuplicadosLineasWsCg();
         return;
     }
 
@@ -3307,6 +3367,7 @@ function renderLineasWsCg() {
         if (l.IdListaPrecio) $row.find(".ws-lista").val(String(l.IdListaPrecio));
         $row.find(".ws-tipo").val(String(l.TipoMovimiento || 1));
     });
+    actualizarAlertaDuplicadosLineasWsCg();
 }
 
 function agregarCobroWsCg(preset) {
@@ -3575,20 +3636,13 @@ async function guardarVisitaUnificadaCg() {
         return;
     }
 
-    {
-        const claves = new Set();
-        for (const l of lineas) {
-            const tipo = Number(l.TipoMovimiento || 1);
-            const idLista = Number(l.IdListaPrecio) > 0 ? Number(l.IdListaPrecio) : 0;
-            const cant = Number(l.Cantidad) || 0;
-            const precio = Number(l.PrecioVenta) || 0;
-            const clave = `${l.IdProducto}|${tipo}|${idLista}|${cant}|${precio}|0|0`;
-            if (claves.has(clave)) {
-                errorModal("Hay líneas de productos completamente iguales. Cambiá al menos un dato (precio, cantidad, lista, etc.).");
-                return;
-            }
-            claves.add(clave);
+    if (!actualizarAlertaDuplicadosLineasWsCg() || hayLineasDuplicadasWsCg(lineas)) {
+        errorModal("No podés repetir una línea 100% igual (producto, tipo, lista, cantidad y precio). Si cambia algún dato, sí se permite.");
+        const $a = $h("cgWsLineasDupAlert");
+        if ($a.length && $a.offset()) {
+            $("html, body").animate({ scrollTop: $a.offset().top - 100 }, 200);
         }
+        return;
     }
 
     if (cobros.length && (hubPropCg("wsCobros") || []).some(c => Number(c.Importe) > 0 && !(Number(c.IdCuenta) > 0))) {

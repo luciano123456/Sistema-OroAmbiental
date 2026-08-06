@@ -11,7 +11,7 @@
     <link href="~/css/Productora.css?v=6.2" rel="stylesheet" />
     <link href="~/css/disenopantallas.css?v=6.2" rel="stylesheet" />
     <link href="~/css/M_Generico.css?v=6.2" rel="stylesheet" />
-    <link href="~/css/ClientesGestion.css?v=15.8" rel="stylesheet" />
+    <link href="~/css/ClientesGestion.css?v=15.9" rel="stylesheet" />
     <link href="~/css/ClientesEstablecimientos.css?v=5.6" rel="stylesheet" />
     <link href="~/css/ContratosModal.css?v=5.4" rel="stylesheet" />
 }
@@ -686,6 +686,13 @@
                                         <div class="cg-ws-lineas-wrap">
                                             <div class="cg-ws-lineas-list" id="cgWsLineasBody"></div>
                                         </div>
+                                        <div id="cgWsLineasDupAlert" class="cg-ws-dup-alert d-none" role="alert">
+                                            <i class="fa fa-exclamation-triangle"></i>
+                                            <div>
+                                                <strong>L&iacute;neas repetidas</strong>
+                                                <span>No pod&eacute;s cargar dos l&iacute;neas 100% iguales (producto, tipo, lista, cantidad y precio). Si cambia alg&uacute;n dato, s&iacute; se permite.</span>
+                                            </div>
+                                        </div>
                                     </section>
 
                                     <section class="cg-ws-col">
@@ -1120,5 +1127,5 @@
     <script src="~/js/Entities/M_ClientesEstablecimientos.js?v=7.1" asp-append-version="true"></script>
     <script src="~/js/ContratosDocumentos.js?v=5.3"></script>
     <script src="~/js/Entities/M_Contratos.js?v=5.4"></script>
-    <script src="~/js/ClientesGestion.js?v=19.1" asp-append-version="true"></script>
+    <script src="~/js/ClientesGestion.js?v=19.2" asp-append-version="true"></script>
 }

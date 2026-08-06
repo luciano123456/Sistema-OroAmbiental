@@ -2,7 +2,7 @@
    ENTREGAS NUEVO/MODIF  estilo VentasNuevoModif (Levels)
    Build: lineas-completas + importe-tras-cuenta
 ========================================================= */
-window.__OA_ENTREGA_BUILD = "entrega-lineas-completas-20260806";
+window.__OA_ENTREGA_BUILD = "dup-alert-live-20260806";
 
 (function () {
     "use strict";
@@ -437,10 +437,10 @@ window.__OA_ENTREGA_BUILD = "entrega-lineas-completas-20260806";
                 }
             }
             if (dupOperacion) {
-                erroresProductos.push("Hay líneas de productos completamente iguales. Cambiá al menos un dato (precio, cantidad, lista, etc.).");
+                erroresProductos.push("No podés repetir una línea 100% igual (producto, tipo, lista, cantidad, precio, desc. e IVA). Si cambia algún dato, sí se permite.");
             }
             if (dupRecuperado) {
-                erroresProductos.push("Hay líneas recuperadas completamente iguales. Cambiá al menos un dato.");
+                erroresProductos.push("No podés repetir una línea recuperada 100% igual. Si cambia algún dato, sí se permite.");
             }
 
             const costoInvalido = CM.lineas.some(l => l.IdProducto > 0 && Number(l.PrecioVenta) < 0);
@@ -1059,10 +1059,12 @@ window.__OA_ENTREGA_BUILD = "entrega-lineas-completas-20260806";
                 const habilitar = idCuenta > 0 && !CM.soloLectura;
                 $imp.prop("disabled", !habilitar);
                 $imp.prop("readonly", !habilitar);
+                $imp.attr("tabindex", habilitar ? "0" : "-1");
                 if (!habilitar && !CM.soloLectura) {
                     $imp.val("");
                     cobro.Importe = 0;
                 }
+                $imp.attr("placeholder", habilitar || CM.soloLectura ? "" : "Elegí cuenta");
                 $imp.attr("title", habilitar || CM.soloLectura ? "" : "Seleccioná la cuenta para cargar el importe");
             }
 
@@ -1200,17 +1202,56 @@ window.__OA_ENTREGA_BUILD = "entrega-lineas-completas-20260806";
     /**
      * Huella de línea: solo se considera duplicada si todos los campos editables coinciden.
      */
+    function normNumClaveLinea(n) {
+        const v = Number(n);
+        if (!Number.isFinite(v)) return "0";
+        return (Math.round(v * 10000) / 10000).toString();
+    }
+
     function claveUnicaLineaProducto(l) {
         const tipo = Number(l.TipoMovimiento || TIPO_LINEA_ENTREGA);
         const idLista = Number(l.IdListaPrecio) > 0 ? Number(l.IdListaPrecio) : 0;
-        const cant = Number(l.Cantidad) || 0;
-        const precio = Number(l.PrecioVenta) || 0;
-        const desc = Number(l.PorcDescuento) || 0;
-        const iva = Number(l.PorcIva) || 0;
+        const cant = normNumClaveLinea(l.Cantidad);
+        const precio = normNumClaveLinea(l.PrecioVenta);
+        const desc = normNumClaveLinea(l.PorcDescuento);
+        const iva = normNumClaveLinea(l.PorcIva);
         if (tipo === TIPO_LINEA_RECUPERADO) {
             return `${l.IdProducto}|${TIPO_LINEA_RECUPERADO}|${idLista}|${cant}|${precio}|${desc}|${iva}`;
         }
         return `${l.IdProducto}|${tipo}|${idLista}|${cant}|${precio}|${desc}|${iva}`;
+    }
+
+    function keysLineasDuplicadasEntrega() {
+        const map = new Map();
+        const dups = new Set();
+        (CM.lineas || []).forEach(l => {
+            if (!(Number(l.IdProducto) > 0) || !l._key) return;
+            const k = claveUnicaLineaProducto(l);
+            if (map.has(k)) {
+                dups.add(map.get(k));
+                dups.add(l._key);
+            } else {
+                map.set(k, l._key);
+            }
+        });
+        return dups;
+    }
+
+    function actualizarAlertaDuplicadosLineasEntrega() {
+        const dups = keysLineasDuplicadasEntrega();
+        const hayDup = dups.size > 0;
+
+        $("#tbodyLineasEntrega .en-linea, #tbodyLineasRecuperadas .en-linea").each(function () {
+            const key = Number($(this).data("key"));
+            $(this).toggleClass("en-linea--dup", dups.has(key));
+        });
+
+        const $alert = $("#alertLineasDuplicadasEntrega");
+        if ($alert.length) {
+            if (hayDup) $alert.removeAttr("hidden");
+            else $alert.attr("hidden", true);
+        }
+        return !hayDup;
     }
 
     function htmlOpcionesProducto(linea) {
@@ -1602,6 +1643,7 @@ window.__OA_ENTREGA_BUILD = "entrega-lineas-completas-20260806";
         $("#totImporte").text(fmtMoney(tot));
         actualizarResumenCobrosUI();
         actualizarAvisoProductosCruzados();
+        actualizarAlertaDuplicadosLineasEntrega();
     }
 
     function mapLineaDesdeApi(l, tipoMovimiento) {

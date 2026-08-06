@@ -12,7 +12,7 @@
     <link href="~/css/disenopantallas.css?v=8.1" rel="stylesheet" />
     <link href="~/css/M_Generico.css?v=5.2" rel="stylesheet" />
     <link href="~/css/VentasNuevoModif.css?v=5.2" rel="stylesheet" />
-    <link href="~/css/ClientesEntregas.css?v=5.6" rel="stylesheet" />
+    <link href="~/css/ClientesEntregas.css?v=5.7" rel="stylesheet" />
     <link href="~/css/ContratosModal.css?v=5.4" rel="stylesheet" />
 }
 
@@ -164,6 +164,14 @@
 
                     <div class="vn-gridtable en-lineas-wrap" id="tblLineasEntrega">
                         <div class="en-lineas" id="tbodyLineasEntrega"></div>
+                    </div>
+
+                    <div id="alertLineasDuplicadasEntrega" class="vn-alert-warning mb-3" hidden>
+                        <i class="fa fa-exclamation-triangle"></i>
+                        <span>
+                            <strong>Líneas repetidas.</strong>
+                            No podés cargar dos líneas 100% iguales (producto, tipo, lista, cantidad, precio, desc. e IVA). Si cambia algún dato, sí se permite.
+                        </span>
                     </div>
 
                     <div id="lblSinLineas" class="vn-empty vn-empty-entrega">
@@ -335,5 +343,5 @@
     <script src="~/js/Entities/M_Productos.js?v=5.5"></script>
     <script src="~/js/ContratosDocumentos.js?v=5.3"></script>
     <script src="~/js/Entities/M_Contratos.js?v=5.4"></script>
-    <script src="~/js/ClientesEntregasNuevoModif.js?v=6.8" asp-append-version="true"></script>
+    <script src="~/js/ClientesEntregasNuevoModif.js?v=6.9" asp-append-version="true"></script>
 }

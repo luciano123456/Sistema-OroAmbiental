@@ -223,7 +223,7 @@ namespace SistemaOroAmbiental.BLL.Service
                 var keyProducto = ClaveLineaOperacion(l, tipo);
                 if (!productosOperacion.Add(keyProducto))
                 {
-                    error = "Hay líneas de productos completamente iguales. Cambiá al menos un dato (precio, cantidad, lista, etc.).";
+                    error = "No podés repetir una línea 100% igual (producto, tipo, lista, cantidad, precio, desc. e IVA). Si cambia algún dato, sí se permite.";
                     return false;
                 }
 
@@ -261,7 +261,7 @@ namespace SistemaOroAmbiental.BLL.Service
                 var keyRecuperado = ClaveLineaRecuperada(l);
                 if (!productosRecuperados.Add(keyRecuperado))
                 {
-                    error = "Hay líneas recuperadas completamente iguales. Cambiá al menos un dato.";
+                    error = "No podés repetir una línea recuperada 100% igual. Si cambia algún dato, sí se permite.";
                     return false;
                 }
 
