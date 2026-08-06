@@ -202,6 +202,8 @@ namespace SistemaOroAmbiental.DAL.Repository
                     .AsNoTracking()
                     .Include(e => e.ClientesEntregasProductos)
                         .ThenInclude(p => p.IdProductoNavigation)
+                    .Include(e => e.ClientesEntregasProductos)
+                        .ThenInclude(p => p.IdListaPrecioNavigation)
                     .Include(e => e.IdEstablecimientoNavigation)
                     .Include(e => e.IdContratoNavigation)
                     .Where(e =>
@@ -652,11 +654,17 @@ namespace SistemaOroAmbiental.DAL.Repository
             if (!fechaVisita.HasValue && entregasMes.Count > 0)
                 fechaVisita = entregasMes.Max(e => e.Fecha).Date;
 
+            // Una fila por combinación producto + lista/tipo de pago + precio/%desc/%IVA.
+            // Si solo cambia la lista o el precio, no se unifican (evita mezclar 3 cajas distintas).
             var productos = lineas
                 .Where(l => l.TipoMovimiento == TIPO_ENTREGA || l.TipoMovimiento == TIPO_RETIRO)
                 .GroupBy(l => new
                 {
                     l.IdProducto,
+                    IdListaPrecio = l.IdListaPrecio ?? 0,
+                    PrecioVenta = decimal.Round(l.PrecioVenta, 4),
+                    PorcDescuento = decimal.Round(l.PorcDescuento, 4),
+                    PorcIva = decimal.Round(l.PorcIva, 4),
                     Nombre = l.IdProductoNavigation?.Nombre ?? $"Producto {l.IdProducto}"
                 })
                 .Select(g =>
@@ -667,12 +675,16 @@ namespace SistemaOroAmbiental.DAL.Repository
                     var cantRet = ret.Sum(x => x.Cantidad);
                     var subEnt = ent.Sum(ImporteLineaControl);
                     var subRet = ret.Sum(ImporteLineaControl);
+                    var listaNombre = g.Select(x => x.IdListaPrecioNavigation?.Nombre)
+                        .FirstOrDefault(n => !string.IsNullOrWhiteSpace(n));
                     return new ClienteControlProductoMesDto
                     {
                         IdProducto = g.Key.IdProducto,
                         Producto = g.Key.Nombre,
                         Abreviatura = g.Select(x => x.IdProductoNavigation?.Abreviatura)
                             .FirstOrDefault(a => !string.IsNullOrWhiteSpace(a)),
+                        IdListaPrecio = g.Key.IdListaPrecio > 0 ? g.Key.IdListaPrecio : null,
+                        ListaPrecio = listaNombre,
                         Entregadas = cantEnt,
                         Retiradas = cantRet,
                         PrecioUnitarioEntrega = cantEnt > 0 ? subEnt / cantEnt : 0,
@@ -682,6 +694,9 @@ namespace SistemaOroAmbiental.DAL.Repository
                     };
                 })
                 .OrderBy(p => p.Producto)
+                .ThenBy(p => p.ListaPrecio ?? "")
+                .ThenBy(p => p.PrecioUnitarioRetiro)
+                .ThenBy(p => p.PrecioUnitarioEntrega)
                 .ToList();
 
             return new ClienteControlMensualDto
