@@ -9,12 +9,12 @@ using SistemaOroAmbiental.Models;
 namespace SistemaOroAmbiental.Application.Controllers
 {
     [Authorize]
-    public class ListasPreciosController : Controller
+    public class TiposPagoController : Controller
     {
-        private readonly IListasPreciosService _service;
+        private readonly ITiposPagoService _service;
         private readonly IDeleteConflictChecker _deleteChecker;
 
-        public ListasPreciosController(IListasPreciosService service, IDeleteConflictChecker deleteChecker)
+        public TiposPagoController(ITiposPagoService service, IDeleteConflictChecker deleteChecker)
         {
             _service = service;
             _deleteChecker = deleteChecker;
@@ -25,15 +25,12 @@ namespace SistemaOroAmbiental.Application.Controllers
         public async Task<IActionResult> Lista()
         {
             var items = (await _service.ObtenerTodos())
-                .Include(x => x.IdTipoPagoNavigation)
                 .OrderBy(x => x.Nombre)
-                .Select(x => new VMGenericModelConfCombo
+                .Select(x => new VMGenericModel
                 {
                     Id = x.Id,
                     Nombre = x.Nombre,
-                    IdCombo = x.IdTipoPago ?? 0,
-                    NombreCombo = x.IdTipoPagoNavigation != null ? x.IdTipoPagoNavigation.Nombre : null,
-                    Codigo = x.IdTipoPagoNavigation != null ? x.IdTipoPagoNavigation.Codigo : null
+                    Codigo = x.Codigo
                 })
                 .ToList();
 
@@ -41,18 +38,26 @@ namespace SistemaOroAmbiental.Application.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> Insertar([FromBody] VMGenericModelConfCombo model)
+        public async Task<IActionResult> Insertar([FromBody] VMGenericModel model)
         {
             int idUsuario = int.Parse(User.FindFirst("Id")!.Value);
             var nombre = (model.Nombre ?? "").Trim();
+            var codigo = NormalizarCodigo(model.Codigo, nombre);
 
             if (string.IsNullOrWhiteSpace(nombre))
                 return Ok(new { valor = false, mensaje = "El nombre es obligatorio." });
+            if (string.IsNullOrWhiteSpace(codigo))
+                return Ok(new { valor = false, mensaje = "El código es obligatorio (Efectivo o Transferencia)." });
 
-            var entity = new ListasPrecio
+            var existe = (await _service.ObtenerTodos()).Any(x =>
+                x.Codigo.Equals(codigo, StringComparison.OrdinalIgnoreCase));
+            if (existe)
+                return Ok(new { valor = false, mensaje = $"Ya existe un tipo de pago con código {codigo}." });
+
+            var entity = new TiposPago
             {
                 Nombre = nombre,
-                IdTipoPago = model.IdCombo > 0 ? model.IdCombo : null,
+                Codigo = codigo,
                 IdUsuarioRegistra = idUsuario,
                 FechaUsuarioRegistra = DateTime.Now
             };
@@ -62,20 +67,28 @@ namespace SistemaOroAmbiental.Application.Controllers
         }
 
         [HttpPut]
-        public async Task<IActionResult> Actualizar([FromBody] VMGenericModelConfCombo model)
+        public async Task<IActionResult> Actualizar([FromBody] VMGenericModel model)
         {
             int idUsuario = int.Parse(User.FindFirst("Id")!.Value);
-
             var entity = await _service.Obtener(model.Id);
             if (entity == null)
                 return NotFound(new { valor = false });
 
             var nombre = (model.Nombre ?? "").Trim();
+            var codigo = NormalizarCodigo(model.Codigo, nombre);
             if (string.IsNullOrWhiteSpace(nombre))
                 return Ok(new { valor = false, mensaje = "El nombre es obligatorio." });
+            if (string.IsNullOrWhiteSpace(codigo))
+                return Ok(new { valor = false, mensaje = "El código es obligatorio (Efectivo o Transferencia)." });
+
+            var existe = (await _service.ObtenerTodos()).Any(x =>
+                x.Id != entity.Id &&
+                x.Codigo.Equals(codigo, StringComparison.OrdinalIgnoreCase));
+            if (existe)
+                return Ok(new { valor = false, mensaje = $"Ya existe un tipo de pago con código {codigo}." });
 
             entity.Nombre = nombre;
-            entity.IdTipoPago = model.IdCombo > 0 ? model.IdCombo : null;
+            entity.Codigo = codigo;
             entity.IdUsuarioModifica = idUsuario;
             entity.FechaUsuarioModifica = DateTime.Now;
 
@@ -86,7 +99,7 @@ namespace SistemaOroAmbiental.Application.Controllers
         [HttpDelete]
         public async Task<IActionResult> Eliminar(int id)
         {
-            var bloqueo = await _deleteChecker.ListaPrecioAsync(id);
+            var bloqueo = await _deleteChecker.TipoPagoAsync(id);
             if (!string.IsNullOrWhiteSpace(bloqueo))
                 return Ok(new { valor = false, mensaje = bloqueo, tipo = "relacion" });
 
@@ -102,7 +115,7 @@ namespace SistemaOroAmbiental.Application.Controllers
             }
             catch (DbUpdateException)
             {
-                var msg = await _deleteChecker.ListaPrecioAsync(id)
+                var msg = await _deleteChecker.TipoPagoAsync(id)
                     ?? "No se pudo eliminar porque tiene registros relacionados.";
                 return Ok(new { valor = false, mensaje = msg, tipo = "relacion" });
             }
@@ -115,12 +128,27 @@ namespace SistemaOroAmbiental.Application.Controllers
             if (entity == null)
                 return NotFound();
 
-            return Ok(new VMGenericModelConfCombo
+            return Ok(new VMGenericModel
             {
                 Id = entity.Id,
                 Nombre = entity.Nombre,
-                IdCombo = entity.IdTipoPago ?? 0
+                Codigo = entity.Codigo
             });
+        }
+
+        private static string NormalizarCodigo(string? codigo, string nombre)
+        {
+            var raw = (codigo ?? nombre ?? "").Trim();
+            if (string.IsNullOrWhiteSpace(raw)) return "";
+
+            if (raw.Contains("efect", StringComparison.OrdinalIgnoreCase))
+                return "Efectivo";
+            if (raw.Contains("transf", StringComparison.OrdinalIgnoreCase)
+                || raw.Contains("banco", StringComparison.OrdinalIgnoreCase))
+                return "Transferencia";
+
+            // Mantener el texto limpio si es otro código custom.
+            return raw.Length > 30 ? raw[..(0, 30) : raw;
         }
     }
 }

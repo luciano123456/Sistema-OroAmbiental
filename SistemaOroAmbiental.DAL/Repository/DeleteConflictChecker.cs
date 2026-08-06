@@ -127,6 +127,15 @@ namespace SistemaOroAmbiental.DAL.Repository
             return null;
         }
 
+        public async Task<string?> TipoPagoAsync(int id)
+        {
+            var listas = await _db.ListasPrecios.CountAsync(x => x.IdTipoPago == id);
+            if (listas > 0)
+                return $"No se pudo eliminar este tipo de pago porque tiene {listas} lista(s) de precio asociadas.";
+
+            return null;
+        }
+
         public async Task<string?> SucursalAsync(int id)
         {
             var clientes = await _db.Clientes.CountAsync(x => x.IdSucursal == id);

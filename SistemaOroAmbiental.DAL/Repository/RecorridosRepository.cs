@@ -321,6 +321,9 @@ namespace SistemaOroAmbiental.DAL.Repository
             if (secciones.Count == 0)
                 return null;
 
+            var totalEf = secciones.SelectMany(s => s.Paradas).Sum(p => p.AbonoEfectivo);
+            var totalTr = secciones.SelectMany(s => s.Paradas).Sum(p => p.AbonoTransferencia);
+
             return new HojaRutaDto
             {
                 IdCamion = idCamion,
@@ -329,6 +332,8 @@ namespace SistemaOroAmbiental.DAL.Repository
                 FechaReferencia = fecha.Date,
                 PrecioDescartadorGrande = preciosReferencia.grande,
                 PrecioDescartadorChico = preciosReferencia.chico,
+                TotalAbonoEfectivo = totalEf,
+                TotalAbonoTransferencia = totalTr,
                 Secciones = secciones,
                 ListasPrecios = await ObtenerListasPrecioHoja()
             };
@@ -361,6 +366,7 @@ namespace SistemaOroAmbiental.DAL.Repository
                 .Include(r => r.IdEstablecimientoNavigation)
                     .ThenInclude(e => e!.ClientesEstablecimientosProductos)
                         .ThenInclude(p => p.IdListaPrecioNavigation)
+                            .ThenInclude(l => l!.IdTipoPagoNavigation)
                 .Where(r =>
                     r.IdCamion == idCamion &&
                     r.IdSemana == idSemana &&
@@ -406,6 +412,8 @@ namespace SistemaOroAmbiental.DAL.Repository
                 Salida = salida,
                 PrecioDescartadorGrande = preciosReferencia.grande,
                 PrecioDescartadorChico = preciosReferencia.chico,
+                TotalAbonoEfectivo = paradas.Sum(p => p.AbonoEfectivo),
+                TotalAbonoTransferencia = paradas.Sum(p => p.AbonoTransferencia),
                 Paradas = paradas,
                 ListasPrecios = await ObtenerListasPrecioHoja()
             };
@@ -414,11 +422,15 @@ namespace SistemaOroAmbiental.DAL.Repository
         private async Task<List<HojaRutaListaPrecioDto>> ObtenerListasPrecioHoja()
         {
             return await _db.ListasPrecios.AsNoTracking()
+                .Include(l => l.IdTipoPagoNavigation)
                 .OrderBy(l => l.Nombre)
                 .Select(l => new HojaRutaListaPrecioDto
                 {
                     Id = l.Id,
-                    Nombre = l.Nombre
+                    Nombre = l.Nombre,
+                    IdTipoPago = l.IdTipoPago,
+                    TipoPago = l.IdTipoPagoNavigation != null ? l.IdTipoPagoNavigation.Nombre : null,
+                    TipoPagoCodigo = l.IdTipoPagoNavigation != null ? l.IdTipoPagoNavigation.Codigo : null
                 })
                 .ToListAsync();
         }
@@ -629,6 +641,7 @@ namespace SistemaOroAmbiental.DAL.Repository
                 {
                     var precioEfectivo = ResolverPrecioLista(p.IdProducto, idListaEfectivo, listas, p.PrecioVenta);
                     var precioTransf = ResolverPrecioLista(p.IdProducto, idListaTransf, listas, p.PrecioVenta);
+                    var tipo = p.IdListaPrecioNavigation?.IdTipoPagoNavigation;
                     return new HojaRutaParadaProductoDto
                     {
                         Id = p.Id,
@@ -640,6 +653,9 @@ namespace SistemaOroAmbiental.DAL.Repository
                         Cantidad = p.Cantidad,
                         IdListaPrecio = p.IdListaPrecio,
                         ListaPrecio = p.IdListaPrecioNavigation?.Nombre,
+                        IdTipoPago = tipo?.Id ?? p.IdListaPrecioNavigation?.IdTipoPago,
+                        TipoPago = tipo?.Nombre,
+                        TipoPagoCodigo = tipo?.Codigo,
                         PrecioVenta = p.PrecioVenta,
                         PrecioEfectivo = precioEfectivo,
                         PrecioTransferencia = precioTransf
@@ -649,8 +665,8 @@ namespace SistemaOroAmbiental.DAL.Repository
         }
 
         /// <summary>
-        /// Calcula abonos Efectivo/Transferencia según la lista asignada a cada producto
-        /// del establecimiento (no precios hipotéticos de todas las listas).
+        /// Calcula abonos Efectivo/Transferencia según el tipo de pago de la lista
+        /// asignada a cada producto (fallback por nombre si aún no hay IdTipoPago).
         /// </summary>
         private static (decimal Efectivo, decimal Transferencia) CalcularAbonosProductos(
             IReadOnlyList<HojaRutaParadaProductoDto> productos,
@@ -673,6 +689,18 @@ namespace SistemaOroAmbiental.DAL.Repository
                 var importe = Math.Round(p.Cantidad * p.PrecioVenta, 2);
                 if (importe == 0) continue;
 
+                var codigo = (p.TipoPagoCodigo ?? "").Trim();
+                if (EsCodigoEfectivo(codigo))
+                {
+                    efectivo += importe;
+                    continue;
+                }
+                if (EsCodigoTransferencia(codigo))
+                {
+                    transferencia += importe;
+                    continue;
+                }
+
                 var idLista = p.IdListaPrecio ?? 0;
                 if (idEf > 0 && idLista == idEf)
                 {
@@ -694,6 +722,15 @@ namespace SistemaOroAmbiental.DAL.Repository
 
             return (efectivo, transferencia);
         }
+
+        private static bool EsCodigoEfectivo(string codigo)
+            => !string.IsNullOrWhiteSpace(codigo)
+               && codigo.Contains("efect", StringComparison.OrdinalIgnoreCase);
+
+        private static bool EsCodigoTransferencia(string codigo)
+            => !string.IsNullOrWhiteSpace(codigo)
+               && (codigo.Contains("transf", StringComparison.OrdinalIgnoreCase)
+                   || codigo.Contains("banco", StringComparison.OrdinalIgnoreCase));
 
         private static decimal ResolverPrecioLista(
             int idProducto,
@@ -736,49 +773,63 @@ namespace SistemaOroAmbiental.DAL.Repository
             if (idsProductos == null || idsProductos.Count == 0)
             {
                 var todasVacias = await _db.ListasPrecios.AsNoTracking()
-                    .Select(l => new { l.Id, l.Nombre })
+                    .Include(l => l.IdTipoPagoNavigation)
+                    .Select(l => new { l.Id, l.Nombre, TipoCodigo = l.IdTipoPagoNavigation != null ? l.IdTipoPagoNavigation.Codigo : null })
                     .ToListAsync();
-                RegistrarTokensLista(todasVacias.Select(l => (l.Id, l.Nombre)), listasPorToken);
+                RegistrarTokensLista(todasVacias.Select(l => (l.Id, l.Nombre, l.TipoCodigo)), listasPorToken);
                 return (precios, listasPorToken);
             }
 
             var rows = await (
                 from pp in _db.ProductosPrecios.AsNoTracking()
                 join lp in _db.ListasPrecios.AsNoTracking() on pp.IdListaPrecio equals lp.Id
+                join tp in _db.TiposPagos.AsNoTracking() on lp.IdTipoPago equals tp.Id into tps
+                from tp in tps.DefaultIfEmpty()
                 where idsProductos.Contains(pp.IdProducto)
                 select new
                 {
                     pp.IdProducto,
                     pp.IdListaPrecio,
                     pp.PrecioVenta,
-                    Lista = lp.Nombre
+                    Lista = lp.Nombre,
+                    TipoCodigo = tp != null ? tp.Codigo : null
                 }).ToListAsync();
 
             foreach (var row in rows)
             {
                 precios[(row.IdProducto, row.IdListaPrecio)] = row.PrecioVenta;
-                RegistrarTokenLista(row.IdListaPrecio, row.Lista, listasPorToken);
+                RegistrarTokenLista(row.IdListaPrecio, row.Lista, listasPorToken, row.TipoCodigo);
             }
 
             if (!listasPorToken.ContainsKey("efectivo") || !listasPorToken.ContainsKey("transf"))
             {
                 var todas = await _db.ListasPrecios.AsNoTracking()
-                    .Select(l => new { l.Id, l.Nombre })
+                    .Include(l => l.IdTipoPagoNavigation)
+                    .Select(l => new { l.Id, l.Nombre, TipoCodigo = l.IdTipoPagoNavigation != null ? l.IdTipoPagoNavigation.Codigo : null })
                     .ToListAsync();
-                RegistrarTokensLista(todas.Select(l => (l.Id, l.Nombre)), listasPorToken);
+                RegistrarTokensLista(todas.Select(l => (l.Id, l.Nombre, l.TipoCodigo)), listasPorToken);
             }
 
             return (precios, listasPorToken);
         }
 
-        private static void RegistrarTokensLista(IEnumerable<(int Id, string? Nombre)> listas, Dictionary<string, int> dest)
+        private static void RegistrarTokensLista(IEnumerable<(int Id, string? Nombre, string? TipoCodigo)> listas, Dictionary<string, int> dest)
         {
-            foreach (var (id, nombre) in listas)
-                RegistrarTokenLista(id, nombre, dest);
+            foreach (var (id, nombre, tipoCodigo) in listas)
+                RegistrarTokenLista(id, nombre, dest, tipoCodigo);
         }
 
-        private static void RegistrarTokenLista(int idLista, string? nombre, Dictionary<string, int> dest)
+        private static void RegistrarTokenLista(int idLista, string? nombre, Dictionary<string, int> dest, string? tipoCodigo = null)
         {
+            if (!string.IsNullOrWhiteSpace(tipoCodigo))
+            {
+                if (EsCodigoEfectivo(tipoCodigo) && !dest.ContainsKey("efectivo"))
+                    dest["efectivo"] = idLista;
+                if (EsCodigoTransferencia(tipoCodigo) && !dest.ContainsKey("transf"))
+                    dest["transf"] = idLista;
+                return;
+            }
+
             var n = (nombre ?? "").Trim();
             if (string.IsNullOrWhiteSpace(n)) return;
 
