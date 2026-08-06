@@ -1,6 +1,8 @@
 /* =========================================================
    ENTREGAS NUEVO/MODIF  estilo VentasNuevoModif (Levels)
+   Build: lineas-completas + importe-tras-cuenta
 ========================================================= */
+window.__OA_ENTREGA_BUILD = "entrega-lineas-completas-20260806";
 
 (function () {
     "use strict";
@@ -981,7 +983,7 @@
                         </div>
                     </td>
                     <td><input type="text" class="form-control vn-input vn-mini cobro-concepto" maxlength="200" /></td>
-                    <td><input type="text" inputmode="decimal" autocomplete="off" class="form-control vn-input vn-mini Inputmiles cobro-importe text-end" value="${fmtInputNum(cobro.Importe)}" /></td>
+                    <td><input type="text" inputmode="decimal" autocomplete="off" class="form-control vn-input vn-mini Inputmiles cobro-importe text-end" value="${Number(cobro.IdCuenta) > 0 ? fmtInputNum(cobro.Importe) : ""}" ${Number(cobro.IdCuenta) > 0 && !CM.soloLectura ? "" : "disabled"} title="${Number(cobro.IdCuenta) > 0 ? "" : "Seleccioná la cuenta para cargar el importe"}" /></td>
                     <td class="text-center">
                         <button type="button" class="btn btn-outline-danger btn-sm btn-quitar-cobro-linea" title="Quitar">
                             <i class="fa fa-trash"></i>
@@ -1025,6 +1027,7 @@
                 const idCuenta = parseInt($cta.val(), 10) || 0;
                 const habilitar = idCuenta > 0 && !CM.soloLectura;
                 $imp.prop("disabled", !habilitar);
+                $imp.prop("readonly", !habilitar);
                 if (!habilitar && !CM.soloLectura) {
                     $imp.val("");
                     cobro.Importe = 0;

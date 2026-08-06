@@ -1,6 +1,8 @@
 /* =========================================================
    CLIENTES GESTION - Hub unificado por cliente
+   (cliente + establecimientos: lineas completas + importe tras cuenta)
 ========================================================= */
+window.__OA_CG_BUILD = "entrega-lineas-completas-20260806";
 
 const CG = {
     id: 0,
@@ -821,13 +823,19 @@ function wireEventosCg() {
         setHubPropCg("wsCobros", (hubPropCg("wsCobros") || []).filter(c => Number(c._key) !== key));
         renderCobrosWsCg();
     });
-    $h("cgWsCobrosBody").on("change input", "select, input", function () {
+    // Cliente + Establecimientos (clon cgEst*): importe solo tras cuenta
+    $(document).on("change", "#cgWsCobrosBody .ws-cobro-cuenta, #cgEstWsCobrosBody .ws-cobro-cuenta", function () {
         const $row = $(this).closest(".cg-ws-cobro-row");
-        if ($(this).hasClass("ws-cobro-cuenta")) {
-            syncImporteHabilitadoCobroWsCg($row);
-        }
+        syncImporteHabilitadoCobroWsCg($row);
         sincronizarCobrosWsDesdeDomCg();
         actualizarResumenCobrosWsCg();
+    });
+    $h("cgWsCobrosBody").on("change input", "input:not(.ws-cobro-cuenta), select:not(.ws-cobro-cuenta)", function () {
+        sincronizarCobrosWsDesdeDomCg();
+        actualizarResumenCobrosWsCg();
+    });
+    $("#cgCobroCuenta").on("change", function () {
+        syncImporteHabilitadoModalCobroCg();
     });
     $h("cgWsEstablecimiento").on("change", async function () {
         await cargarSugeridosWsCg(Number($(this).val()) || null);
@@ -2239,12 +2247,8 @@ function bindEstHubEventsCg() {
         setHubPropCg("wsCobros", (hubPropCg("wsCobros") || []).filter(c => Number(c._key) !== key));
         renderCobrosWsCg();
     });
-    $(root).on("change input", "#cgEstWsCobrosBody select, #cgEstWsCobrosBody input", function () {
+    $(root).on("change input", "#cgEstWsCobrosBody input:not(.ws-cobro-cuenta), #cgEstWsCobrosBody select:not(.ws-cobro-cuenta)", function () {
         CG.hubActivo = "est";
-        const $row = $(this).closest(".cg-ws-cobro-row");
-        if ($(this).hasClass("ws-cobro-cuenta")) {
-            syncImporteHabilitadoCobroWsCg($row);
-        }
         sincronizarCobrosWsDesdeDomCg();
         actualizarResumenCobrosWsCg();
     });
@@ -3340,12 +3344,22 @@ function syncImporteHabilitadoCobroWsCg($row) {
     const $imp = $row.find(".ws-cobro-importe");
     const habilitar = idCuenta > 0;
     $imp.prop("disabled", !habilitar);
+    $imp.prop("readonly", !habilitar);
     if (!habilitar) {
         $imp.val("");
         const key = Number($row.data("key"));
         const cobro = (hubPropCg("wsCobros") || []).find(c => Number(c._key) === key);
         if (cobro) cobro.Importe = 0;
     }
+    $imp.attr("title", habilitar ? "" : "Seleccioná la cuenta para cargar el importe");
+}
+
+function syncImporteHabilitadoModalCobroCg() {
+    const idCuenta = parseInt($("#cgCobroCuenta").val(), 10) || 0;
+    const $imp = $("#cgCobroImporte");
+    const habilitar = idCuenta > 0;
+    $imp.prop("disabled", !habilitar).prop("readonly", !habilitar);
+    if (!habilitar) $imp.val("");
     $imp.attr("title", habilitar ? "" : "Seleccioná la cuenta para cargar el importe");
 }
 
@@ -3385,7 +3399,9 @@ function renderCobrosWsCg() {
         `<option value="${c.Id}">${escapeCg(c.Nombre || ("Cuenta #" + c.Id))}</option>`
     ).join("");
 
-    $body.html(cobros.map(c => `
+    $body.html(cobros.map(c => {
+        const tieneCuenta = Number(c.IdCuenta) > 0;
+        return `
         <div class="cg-ws-cobro-row" data-key="${c._key}">
             <label>
                 <span>Fecha</span>
@@ -3405,20 +3421,24 @@ function renderCobrosWsCg() {
             <label>
                 <span>Importe</span>
                 <input type="text" class="form-control Inputmiles ws-cobro-importe" inputmode="decimal"
-                       value="${c.Importe ? fmtQtyCg(c.Importe) : ""}" />
+                       value="${tieneCuenta && c.Importe ? fmtQtyCg(c.Importe) : ""}"
+                       ${tieneCuenta ? "" : "disabled"}
+                       title="${tieneCuenta ? "" : "Seleccioná la cuenta para cargar el importe"}" />
             </label>
             <button type="button" class="btn btn-outline-danger btn-sm btn-ws-quitar-cobro" data-key="${c._key}" title="Quitar">
                 <i class="fa fa-trash"></i>
             </button>
-        </div>
-    `).join(""));
+        </div>`;
+    }).join(""));
 
     cobros.forEach(c => {
         const $row = $body.find(`.cg-ws-cobro-row[data-key="${c._key}"]`);
         if (c.IdCuenta) $row.find(".ws-cobro-cuenta").val(String(c.IdCuenta));
+        syncImporteHabilitadoCobroWsCg($row);
         if (typeof prepararInputMiles === "function") {
             $row.find(".ws-cobro-importe").each(function () { prepararInputMiles(this); });
         }
+        // Reafirmar por si prepararInputMiles toca el input
         syncImporteHabilitadoCobroWsCg($row);
     });
     actualizarResumenCobrosWsCg();
@@ -4249,6 +4269,7 @@ function abrirModalCobroCg() {
     $("#cgCobroFecha").val(new Date().toISOString().slice(0, 10));
     $("#cgCobroImporte, #cgCobroConcepto").val("");
     $("#cgCobroCuenta").val("").trigger("change");
+    syncImporteHabilitadoModalCobroCg();
     CG.modalCobro?.show();
 }
 

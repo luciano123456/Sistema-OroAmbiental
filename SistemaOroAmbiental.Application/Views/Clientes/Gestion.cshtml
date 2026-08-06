@@ -1016,14 +1016,14 @@
                         <input type="date" id="cgCobroFecha" class="form-control" />
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label">Importe</label>
-                        <input type="text" id="cgCobroImporte" class="form-control Inputmiles" />
-                    </div>
-                    <div class="col-12">
                         <label class="form-label">Cuenta</label>
                         <select id="cgCobroCuenta" class="form-control"></select>
                     </div>
-                    <div class="col-12">
+                    <div class="col-md-6">
+                        <label class="form-label">Importe</label>
+                        <input type="text" id="cgCobroImporte" class="form-control Inputmiles" disabled title="Seleccioná la cuenta para cargar el importe" />
+                    </div>
+                    <div class="col-md-6">
                         <label class="form-label">Concepto</label>
                         <input type="text" id="cgCobroConcepto" class="form-control" />
                     </div>
@@ -1117,8 +1117,8 @@
     </script>
     <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-    <script src="~/js/Entities/M_ClientesEstablecimientos.js?v=7.0"></script>
+    <script src="~/js/Entities/M_ClientesEstablecimientos.js" asp-append-version="true"></script>
     <script src="~/js/ContratosDocumentos.js?v=5.3"></script>
     <script src="~/js/Entities/M_Contratos.js?v=5.4"></script>
-    <script src="~/js/ClientesGestion.js?v=18.8"></script>
+    <script src="~/js/ClientesGestion.js" asp-append-version="true"></script>
 }
