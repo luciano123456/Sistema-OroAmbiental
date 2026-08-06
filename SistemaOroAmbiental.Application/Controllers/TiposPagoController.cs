@@ -148,7 +148,7 @@ namespace SistemaOroAmbiental.Application.Controllers
                 return "Transferencia";
 
             // Mantener el texto limpio si es otro código custom.
-            return raw.Length > 30 ? raw[..(0, 30) : raw;
+            return raw.Length > 30 ? raw.Substring(0, 30) : raw;
         }
     }
 }
