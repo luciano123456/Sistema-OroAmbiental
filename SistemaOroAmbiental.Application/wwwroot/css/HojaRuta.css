@@ -381,6 +381,74 @@ body.hr-page {
     }
 }
 
+.hr-totales-pago {
+    margin-top: 0.85rem;
+    padding: 0.65rem 0.75rem;
+    border: 2px solid #1e293b;
+    background: #f8fafc;
+    break-inside: avoid;
+}
+
+.hr-totales-pago-title {
+    font-size: 0.78rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #334155;
+    margin-bottom: 0.45rem;
+}
+
+.hr-totales-pago-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+}
+
+.hr-total-pago {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    padding: 0.45rem 0.55rem;
+    border: 1px solid #cbd5e1;
+    background: #fff;
+}
+
+.hr-total-pago span {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: #64748b;
+}
+
+.hr-total-pago strong {
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: #0f172a;
+    font-variant-numeric: tabular-nums;
+}
+
+.hr-total-pago--efect {
+    border-color: #86efac;
+    background: #f0fdf4;
+}
+
+.hr-total-pago--efect strong { color: #166534; }
+
+.hr-total-pago--transf {
+    border-color: #93c5fd;
+    background: #eff6ff;
+}
+
+.hr-total-pago--transf strong { color: #1d4ed8; }
+
+.hr-total-pago--suma {
+    border-color: #fcd34d;
+    background: #fffbeb;
+}
+
+.hr-total-pago--suma strong { color: #92400e; }
+
 @media screen and (max-width: 1100px) {
     .hr-sheet {
         width: auto;

@@ -114,6 +114,8 @@ builder.Services.AddScoped<ISucursalesService, SucursalesService>();
 
 builder.Services.AddScoped<IListasPreciosRepository, ListasPreciosRepository>();
 builder.Services.AddScoped<IListasPreciosService, ListasPreciosService>();
+builder.Services.AddScoped<ITiposPagoRepository, TiposPagoRepository>();
+builder.Services.AddScoped<ITiposPagoService, TiposPagoService>();
 
 builder.Services.AddScoped<ICuentasRepository, CuentasRepository>();
 builder.Services.AddScoped<ICuentasService, CuentasService>();

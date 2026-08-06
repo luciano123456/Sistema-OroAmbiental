@@ -125,6 +125,9 @@ function getPerfilConfigGeo(controller) {
             return { codigo: true, provincia: true, partido: true };
         case "ClientesTiposGenerador":
             return { codigo: true };
+        case "TiposPago":
+            // Código estable: Efectivo / Transferencia (para totales de hoja de ruta)
+            return { codigo: true };
         default:
             return null;
     }

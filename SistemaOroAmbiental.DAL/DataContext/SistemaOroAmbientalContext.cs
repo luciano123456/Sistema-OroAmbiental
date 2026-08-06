@@ -118,6 +118,8 @@ public partial class SistemaOroAmbientalContext : DbContext
 
     public virtual DbSet<ListasPrecio> ListasPrecios { get; set; }
 
+    public virtual DbSet<TiposPago> TiposPagos { get; set; }
+
     public virtual DbSet<Producto> Productos { get; set; }
 
     public virtual DbSet<ProductosCategoria> ProductosCategorias { get; set; }
@@ -1222,6 +1224,10 @@ public partial class SistemaOroAmbientalContext : DbContext
                 .HasMaxLength(100)
                 .IsUnicode(false);
 
+            entity.HasOne(d => d.IdTipoPagoNavigation).WithMany(p => p.ListasPrecios)
+                .HasForeignKey(d => d.IdTipoPago)
+                .HasConstraintName("FK_ListasPrecios_TiposPago");
+
             entity.HasOne(d => d.IdUsuarioModificaNavigation).WithMany(p => p.ListasPrecioIdUsuarioModificaNavigations)
                 .HasForeignKey(d => d.IdUsuarioModifica)
                 .HasConstraintName("FK_ListasPreciosUsuariosIdUsuarioModifica");
@@ -1230,6 +1236,29 @@ public partial class SistemaOroAmbientalContext : DbContext
                 .HasForeignKey(d => d.IdUsuarioRegistra)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_ListasPreciosUsuariosIdUsuarioRegistra");
+        });
+
+        modelBuilder.Entity<TiposPago>(entity =>
+        {
+            entity.ToTable("TiposPago");
+
+            entity.Property(e => e.FechaUsuarioModifica).HasColumnType("datetime");
+            entity.Property(e => e.FechaUsuarioRegistra).HasColumnType("datetime");
+            entity.Property(e => e.Nombre)
+                .HasMaxLength(100)
+                .IsUnicode(false);
+            entity.Property(e => e.Codigo)
+                .HasMaxLength(30)
+                .IsUnicode(false);
+
+            entity.HasOne(d => d.IdUsuarioModificaNavigation).WithMany()
+                .HasForeignKey(d => d.IdUsuarioModifica)
+                .HasConstraintName("FK_TiposPago_Usuarios_Modifica");
+
+            entity.HasOne(d => d.IdUsuarioRegistraNavigation).WithMany()
+                .HasForeignKey(d => d.IdUsuarioRegistra)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_TiposPago_Usuarios_Registra");
         });
 
         modelBuilder.Entity<ProductosCostoHistorial>(entity =>

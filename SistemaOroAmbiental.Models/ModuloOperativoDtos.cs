@@ -286,6 +286,10 @@ public class HojaRutaDto
     public string? Salida { get; set; }
     public decimal PrecioDescartadorGrande { get; set; }
     public decimal PrecioDescartadorChico { get; set; }
+    /// <summary>Suma de abonos Efectivo de todas las paradas / secciones.</summary>
+    public decimal TotalAbonoEfectivo { get; set; }
+    /// <summary>Suma de abonos Transferencia de todas las paradas / secciones.</summary>
+    public decimal TotalAbonoTransferencia { get; set; }
     public List<HojaRutaParadaDto> Paradas { get; set; } = new();
     public List<HojaRutaSeccionDto> Secciones { get; set; } = new();
     public List<HojaRutaListaPrecioDto> ListasPrecios { get; set; } = new();
@@ -295,6 +299,9 @@ public class HojaRutaListaPrecioDto
 {
     public int Id { get; set; }
     public string Nombre { get; set; } = "";
+    public int? IdTipoPago { get; set; }
+    public string? TipoPago { get; set; }
+    public string? TipoPagoCodigo { get; set; }
 }
 
 public class HojaRutaSeccionDto
@@ -341,6 +348,9 @@ public class HojaRutaParadaProductoDto
     public decimal Cantidad { get; set; }
     public int? IdListaPrecio { get; set; }
     public string? ListaPrecio { get; set; }
+    public int? IdTipoPago { get; set; }
+    public string? TipoPago { get; set; }
+    public string? TipoPagoCodigo { get; set; }
     public decimal PrecioVenta { get; set; }
     public decimal PrecioEfectivo { get; set; }
     public decimal PrecioTransferencia { get; set; }

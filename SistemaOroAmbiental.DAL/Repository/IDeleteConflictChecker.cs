@@ -13,6 +13,7 @@ namespace SistemaOroAmbiental.DAL.Repository
         Task<string?> CompraAsync(int id);
         Task<string?> EntregaAsync(int id);
         Task<string?> ListaPrecioAsync(int id);
+        Task<string?> TipoPagoAsync(int id);
         Task<string?> SucursalAsync(int id);
         Task<string?> GastoAsync(int id);
         Task<string?> CuentaAsync(int id);
