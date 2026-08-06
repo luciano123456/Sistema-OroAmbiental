@@ -343,6 +343,90 @@ select.is-valid + .select2 .select2-selection {
     margin-bottom: 18px;
 }
 
+/* Solapas modernas (modales M_Productos, M_Contratos, etc.)
+   Deben vivir acá: páginas como Entregas/Compras no cargan Productora.css. */
+.rp-tabs-modern {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 6px;
+    margin: 0;
+    list-style: none;
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.rp-tabs-modern .nav-item {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.rp-tabs-modern .nav-link {
+    width: 100%;
+    border: none !important;
+    background: transparent !important;
+    color: #9fa6c2 !important;
+    font-weight: 600;
+    font-size: 14px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    text-align: center;
+    transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    box-shadow: none !important;
+    appearance: none;
+    -webkit-appearance: none;
+    cursor: pointer;
+    line-height: 1.2;
+}
+
+.rp-tabs-modern .nav-link i {
+    color: inherit;
+    opacity: 0.9;
+}
+
+.rp-tabs-modern .nav-link:hover,
+.rp-tabs-modern .nav-link:focus {
+    background: rgba(255, 255, 255, 0.07) !important;
+    color: #f1f5f9 !important;
+    outline: none;
+}
+
+.rp-tabs-modern .nav-link.active,
+.rp-tabs-modern .nav-link.active:hover,
+.rp-tabs-modern .nav-link.active:focus {
+    background: linear-gradient(135deg, #2d5cff, #4f7cff) !important;
+    color: #fff !important;
+    box-shadow: 0 4px 12px rgba(45, 92, 255, 0.35) !important;
+}
+
+.rp-tabs-modern::after,
+.rp-tabs-modern .nav-link::after {
+    display: none !important;
+}
+
+/* Modal producto: un poco más de aire entre solapas y el formulario */
+[data-producto-modal] .rp-tabs-shell {
+    margin-bottom: 8px;
+}
+
+[data-producto-modal] .tab-content {
+    margin-top: 1rem !important;
+}
+
+[data-producto-modal] .form-text {
+    color: #8fa3bf !important;
+}
+
+[data-producto-modal] .form-label {
+    color: #d7e3f4;
+    font-weight: 600;
+}
+
 .rp-contact-page {
     display: flex;
     flex-direction: column;
