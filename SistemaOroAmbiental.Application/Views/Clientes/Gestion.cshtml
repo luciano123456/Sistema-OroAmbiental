@@ -11,7 +11,7 @@
     <link href="~/css/Productora.css?v=6.2" rel="stylesheet" />
     <link href="~/css/disenopantallas.css?v=6.2" rel="stylesheet" />
     <link href="~/css/M_Generico.css?v=6.2" rel="stylesheet" />
-    <link href="~/css/ClientesGestion.css?v=15.7" rel="stylesheet" />
+    <link href="~/css/ClientesGestion.css?v=16.0" rel="stylesheet" />
     <link href="~/css/ClientesEstablecimientos.css?v=5.6" rel="stylesheet" />
     <link href="~/css/ContratosModal.css?v=5.4" rel="stylesheet" />
 }
@@ -674,7 +674,7 @@
                                 <div class="cg-ws-split">
                                     <section class="cg-ws-col">
                                         <div class="cg-ws-col-head">
-                                            <span>Entrega / retiro</span>
+                                            <span>Entrega / retiro <small id="cgWsBuildBadge" class="cg-ws-build-badge">fix·v20</small></span>
                                             <div class="cg-ws-col-actions">
                                                 <a href="#" class="cg-hub-link" id="btnWsAbrirModuloEntregas" target="_blank">M&oacute;dulo</a>
                                                 <button type="button" class="cg-btn cg-btn--ghost cg-btn--xs" id="btnWsAgregarLinea">
@@ -685,6 +685,13 @@
                                         <div class="cg-ws-sugeridos" id="cgWsSugeridos"></div>
                                         <div class="cg-ws-lineas-wrap">
                                             <div class="cg-ws-lineas-list" id="cgWsLineasBody"></div>
+                                        </div>
+                                        <div id="cgWsLineasDupAlert" class="cg-ws-dup-alert d-none" role="alert">
+                                            <i class="fa fa-exclamation-triangle"></i>
+                                            <div>
+                                                <strong>L&iacute;neas repetidas</strong>
+                                                <span>No pod&eacute;s cargar dos l&iacute;neas 100% iguales (producto, tipo, lista, cantidad y precio). Si cambia alg&uacute;n dato, s&iacute; se permite.</span>
+                                            </div>
                                         </div>
                                     </section>
 
@@ -1017,14 +1024,14 @@
                         <input type="date" id="cgCobroFecha" class="form-control" />
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label">Importe</label>
-                        <input type="text" id="cgCobroImporte" class="form-control Inputmiles" />
-                    </div>
-                    <div class="col-12">
                         <label class="form-label">Cuenta</label>
                         <select id="cgCobroCuenta" class="form-control"></select>
                     </div>
-                    <div class="col-12">
+                    <div class="col-md-6">
+                        <label class="form-label">Importe</label>
+                        <input type="text" id="cgCobroImporte" class="form-control Inputmiles" disabled title="Seleccioná la cuenta para cargar el importe" />
+                    </div>
+                    <div class="col-md-6">
                         <label class="form-label">Concepto</label>
                         <input type="text" id="cgCobroConcepto" class="form-control" />
                     </div>
@@ -1118,8 +1125,153 @@
     </script>
     <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-    <script src="~/js/Entities/M_ClientesEstablecimientos.js?v=7.0"></script>
+    <script src="~/js/Entities/M_ClientesEstablecimientos.js?v=7.1" asp-append-version="true"></script>
     <script src="~/js/ContratosDocumentos.js?v=5.3"></script>
     <script src="~/js/Entities/M_Contratos.js?v=5.4"></script>
-    <script src="~/js/ClientesGestion.js?v=18.7"></script>
+    <script src="~/js/ClientesGestion.js?v=20.0" asp-append-version="true"></script>
+    <script>
+        /* Guardia inline: corre aunque el .js esté cacheado viejo */
+        (function () {
+            window.__OA_CG_BUILD = "inline-guard-v20-20260806";
+            console.info("[OA] ClientesGestion guard v20", window.__OA_CG_BUILD);
+
+            function parseNum(v) {
+                if (v == null || v === "") return 0;
+                if (typeof window.leerNumeroWsCg === "function") return Number(window.leerNumeroWsCg(v)) || 0;
+                if (typeof window.parseNumero === "function") return Number(window.parseNumero(v)) || 0;
+                const s = String(v).replace(/\./g, "").replace(",", ".");
+                const n = Number(s);
+                return Number.isFinite(n) ? n : 0;
+            }
+            function norm(n) {
+                const v = Number(n);
+                if (!Number.isFinite(v)) return "0";
+                return (Math.round(v * 10000) / 10000).toString();
+            }
+            function claveFromRow(row) {
+                const prod = Number(row.querySelector(".ws-prod")?.value || 0) || 0;
+                if (!prod) return null;
+                const tipo = Number(row.querySelector(".ws-tipo")?.value || 1) || 1;
+                const lista = Number(row.querySelector(".ws-lista")?.value || 0) || 0;
+                const cant = norm(parseNum(row.querySelector(".ws-cant")?.value));
+                const precio = norm(parseNum(row.querySelector(".ws-precio")?.value));
+                return prod + "|" + tipo + "|" + lista + "|" + cant + "|" + precio;
+            }
+            function syncImporteRow(row) {
+                if (!row) return;
+                const cuenta = Number(row.querySelector(".ws-cobro-cuenta")?.value || 0) || 0;
+                const imp = row.querySelector(".ws-cobro-importe");
+                if (!imp) return;
+                const ok = cuenta > 0;
+                imp.disabled = !ok;
+                imp.readOnly = !ok;
+                imp.tabIndex = ok ? 0 : -1;
+                if (!ok) imp.value = "";
+                imp.placeholder = ok ? "" : "Elegí cuenta";
+                imp.title = ok ? "" : "Seleccioná la cuenta para cargar el importe";
+                imp.classList.toggle("ws-cobro-importe--locked", !ok);
+            }
+            function syncAllImportes(root) {
+                (root || document).querySelectorAll(".cg-ws-cobro-row").forEach(syncImporteRow);
+                const modalImp = document.getElementById("cgCobroImporte");
+                const modalCta = document.getElementById("cgCobroCuenta");
+                if (modalImp && modalCta) {
+                    const ok = (parseInt(modalCta.value || "0", 10) || 0) > 0;
+                    modalImp.disabled = !ok;
+                    modalImp.readOnly = !ok;
+                    if (!ok) modalImp.value = "";
+                }
+            }
+            function syncDups(root) {
+                const scope = root || document;
+                const bodies = [
+                    scope.querySelector("#cgWsLineasBody"),
+                    scope.querySelector("#cgEstWsLineasBody")
+                ].filter(Boolean);
+                bodies.forEach(body => {
+                    const rows = Array.from(body.querySelectorAll(".cg-ws-linea"));
+                    const map = new Map();
+                    const dups = new Set();
+                    rows.forEach((row, i) => {
+                        const k = claveFromRow(row);
+                        if (!k) return;
+                        if (map.has(k)) {
+                            dups.add(map.get(k));
+                            dups.add(i);
+                        } else map.set(k, i);
+                    });
+                    rows.forEach((row, i) => row.classList.toggle("cg-ws-linea--dup", dups.has(i)));
+                    const isEst = body.id === "cgEstWsLineasBody";
+                    const alertId = isEst ? "cgEstWsLineasDupAlert" : "cgWsLineasDupAlert";
+                    const alert = document.getElementById(alertId);
+                    if (alert) alert.classList.toggle("d-none", dups.size === 0);
+                });
+            }
+            function tick() {
+                syncAllImportes(document);
+                syncDups(document);
+            }
+
+            document.addEventListener("change", function (e) {
+                if (e.target?.matches?.(".ws-cobro-cuenta, #cgCobroCuenta")) {
+                    const row = e.target.closest(".cg-ws-cobro-row");
+                    if (row) syncImporteRow(row);
+                    else syncAllImportes(document);
+                }
+                if (e.target?.closest?.("#cgWsLineasBody, #cgEstWsLineasBody")) syncDups(document);
+            }, true);
+            document.addEventListener("input", function (e) {
+                const imp = e.target?.closest?.(".ws-cobro-importe, #cgCobroImporte");
+                if (imp) {
+                    const row = imp.closest(".cg-ws-cobro-row");
+                    const cuenta = row
+                        ? (Number(row.querySelector(".ws-cobro-cuenta")?.value || 0) || 0)
+                        : (parseInt(document.getElementById("cgCobroCuenta")?.value || "0", 10) || 0);
+                    if (cuenta <= 0) {
+                        imp.value = "";
+                        e.stopImmediatePropagation();
+                    }
+                }
+                if (e.target?.closest?.("#cgWsLineasBody, #cgEstWsLineasBody")) syncDups(document);
+            }, true);
+            document.addEventListener("focusin", function (e) {
+                const imp = e.target?.closest?.(".ws-cobro-importe, #cgCobroImporte");
+                if (!imp) return;
+                const row = imp.closest(".cg-ws-cobro-row");
+                const cuenta = row
+                    ? (Number(row.querySelector(".ws-cobro-cuenta")?.value || 0) || 0)
+                    : (parseInt(document.getElementById("cgCobroCuenta")?.value || "0", 10) || 0);
+                if (cuenta <= 0) {
+                    imp.blur();
+                    imp.value = "";
+                    e.stopImmediatePropagation();
+                }
+            }, true);
+            document.addEventListener("keydown", function (e) {
+                const imp = e.target?.closest?.(".ws-cobro-importe, #cgCobroImporte");
+                if (!imp) return;
+                const row = imp.closest(".cg-ws-cobro-row");
+                const cuenta = row
+                    ? (Number(row.querySelector(".ws-cobro-cuenta")?.value || 0) || 0)
+                    : (parseInt(document.getElementById("cgCobroCuenta")?.value || "0", 10) || 0);
+                if (cuenta <= 0) {
+                    e.preventDefault();
+                    e.stopImmediatePropagation();
+                    imp.value = "";
+                }
+            }, true);
+
+            const obs = new MutationObserver(function () { tick(); });
+            function arm() {
+                ["cgWsCobrosBody", "cgEstWsCobrosBody", "cgWsLineasBody", "cgEstWsLineasBody", "cgEstHubMount"].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) obs.observe(el, { childList: true, subtree: true });
+                });
+                tick();
+            }
+            if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", arm);
+            else arm();
+            setInterval(tick, 800);
+        })();
+    </script>
 }

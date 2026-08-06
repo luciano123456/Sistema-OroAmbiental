@@ -3327,6 +3327,20 @@ body.layout-modulo .container-fluid {
     margin-bottom: 0.5rem;
 }
 
+.cg-ws-build-badge {
+    display: inline-block;
+    margin-left: 0.35rem;
+    padding: 0.05rem 0.35rem;
+    border-radius: 999px;
+    border: 1px solid rgba(56, 189, 248, 0.45);
+    background: rgba(14, 165, 233, 0.15);
+    color: #7dd3fc;
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    vertical-align: middle;
+}
+
 .cg-ws-cobro-kpi {
     border-radius: 8px;
     border: 1px solid rgba(255, 255, 255, 0.1);
@@ -3348,6 +3362,62 @@ body.layout-modulo .container-fluid {
     font-size: 0.86rem;
     color: #e2e8f0;
     font-variant-numeric: tabular-nums;
+}
+
+.cg-ws-cobro-row .ws-cobro-importe:disabled,
+.cg-ws-cobro-row .ws-cobro-importe.ws-cobro-importe--locked,
+#cgCobroImporte:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    background: rgba(15, 23, 42, 0.65) !important;
+    pointer-events: none;
+}
+
+.cg-ws-dup-alert {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.65rem;
+    margin-top: 0.55rem;
+    padding: 0.7rem 0.85rem;
+    border-radius: 10px;
+    border: 1px solid rgba(251, 191, 36, 0.45);
+    background: linear-gradient(135deg, rgba(251, 191, 36, 0.16), rgba(245, 158, 11, 0.08));
+    color: #fbbf24;
+    font-size: 0.82rem;
+    line-height: 1.35;
+    animation: cgDupPulse 1.8s ease-in-out infinite;
+}
+
+.cg-ws-dup-alert.d-none {
+    display: none !important;
+}
+
+.cg-ws-dup-alert i {
+    margin-top: 0.15rem;
+    flex: 0 0 auto;
+}
+
+.cg-ws-dup-alert strong {
+    display: block;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    margin-bottom: 0.1rem;
+}
+
+.cg-ws-dup-alert span {
+    color: #fde68a;
+    font-weight: 500;
+}
+
+.cg-ws-linea--dup {
+    border-color: rgba(251, 191, 36, 0.55) !important;
+    box-shadow: 0 0 0 1px rgba(251, 191, 36, 0.25);
+}
+
+@keyframes cgDupPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(251, 191, 36, 0.2); }
+    50% { box-shadow: 0 0 0 4px rgba(251, 191, 36, 0.08); }
 }
 
 .cg-ws-cobros-list,

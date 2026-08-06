@@ -1,6 +1,8 @@
 /* =========================================================
    ENTREGAS NUEVO/MODIF  estilo VentasNuevoModif (Levels)
+   Build: lineas-completas + importe-tras-cuenta
 ========================================================= */
+window.__OA_ENTREGA_BUILD = "dup-alert-live-20260806";
 
 (function () {
     "use strict";
@@ -217,6 +219,37 @@
         });
 
         $("#btnAgregarCobroEntrega").on("click", () => agregarCobroLinea());
+
+        // Red de seguridad: sin cuenta no se puede tipear importe
+        if (!window.__oaBloqueoImporteEntrega) {
+            window.__oaBloqueoImporteEntrega = true;
+            const sel = "#tbodyCobrosEntrega .cobro-importe";
+            const cuentaOk = (el) => {
+                const tr = el?.closest?.("tr");
+                if (!tr) return false;
+                return (parseInt(tr.querySelector(".cobro-cuenta")?.value || "0", 10) || 0) > 0;
+            };
+            document.addEventListener("focusin", (e) => {
+                const el = e.target?.closest?.(sel);
+                if (!el || cuentaOk(el)) return;
+                el.blur();
+                el.value = "";
+                e.stopImmediatePropagation();
+            }, true);
+            document.addEventListener("keydown", (e) => {
+                const el = e.target?.closest?.(sel);
+                if (!el || cuentaOk(el)) return;
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                el.value = "";
+            }, true);
+            document.addEventListener("input", (e) => {
+                const el = e.target?.closest?.(sel);
+                if (!el || cuentaOk(el)) return;
+                el.value = "";
+                e.stopImmediatePropagation();
+            }, true);
+        }
     }
 
     window.cerrarErrorEntrega = function () {
@@ -349,6 +382,7 @@
 
     function validarEntregaLocal() {
         sincronizarLineasDesdeDom();
+        actualizarAlertaDuplicadosLineasEntrega();
 
         const erroresDatos = [];
         const erroresProductos = [];
@@ -386,6 +420,28 @@
                 && !(Number(l.IdListaPrecio) > 0));
             if (sinListaRetiro) {
                 erroresProductos.push("Seleccioná la lista / tipo de pago en las líneas de retiro.");
+            }
+
+            const clavesOp = new Set();
+            const clavesRec = new Set();
+            let dupOperacion = false;
+            let dupRecuperado = false;
+            for (const l of lineasConProducto) {
+                const clave = claveUnicaLineaProducto(l);
+                if (esLineaRecuperada(l)) {
+                    if (clavesRec.has(clave)) dupRecuperado = true;
+                    else clavesRec.add(clave);
+                } else if (clavesOp.has(clave)) {
+                    dupOperacion = true;
+                } else {
+                    clavesOp.add(clave);
+                }
+            }
+            if (dupOperacion) {
+                erroresProductos.push("No podés repetir una línea 100% igual (producto, tipo, lista, cantidad, precio, desc. e IVA). Si cambia algún dato, sí se permite.");
+            }
+            if (dupRecuperado) {
+                erroresProductos.push("No podés repetir una línea recuperada 100% igual. Si cambia algún dato, sí se permite.");
             }
 
             const costoInvalido = CM.lineas.some(l => l.IdProducto > 0 && Number(l.PrecioVenta) < 0);
@@ -986,7 +1042,7 @@
                         </div>
                     </td>
                     <td><input type="text" class="form-control vn-input vn-mini cobro-concepto" maxlength="200" /></td>
-                    <td><input type="text" inputmode="decimal" autocomplete="off" class="form-control vn-input vn-mini Inputmiles cobro-importe text-end" value="${fmtInputNum(cobro.Importe)}" /></td>
+                    <td><input type="text" inputmode="decimal" autocomplete="off" class="form-control vn-input vn-mini Inputmiles cobro-importe text-end" value="${Number(cobro.IdCuenta) > 0 ? fmtInputNum(cobro.Importe) : ""}" ${Number(cobro.IdCuenta) > 0 && !CM.soloLectura ? "" : "disabled"} title="${Number(cobro.IdCuenta) > 0 ? "" : "Seleccioná la cuenta para cargar el importe"}" /></td>
                     <td class="text-center">
                         <button type="button" class="btn btn-outline-danger btn-sm btn-quitar-cobro-linea" title="Quitar">
                             <i class="fa fa-trash"></i>
@@ -1026,10 +1082,25 @@
             }
             repoblarCuentasCobro(true);
 
+            function syncImporteHabilitadoCobroEntrega() {
+                const idCuenta = parseInt($cta.val(), 10) || 0;
+                const habilitar = idCuenta > 0 && !CM.soloLectura;
+                $imp.prop("disabled", !habilitar);
+                $imp.prop("readonly", !habilitar);
+                $imp.attr("tabindex", habilitar ? "0" : "-1");
+                if (!habilitar && !CM.soloLectura) {
+                    $imp.val("");
+                    cobro.Importe = 0;
+                }
+                $imp.attr("placeholder", habilitar || CM.soloLectura ? "" : "Elegí cuenta");
+                $imp.attr("title", habilitar || CM.soloLectura ? "" : "Seleccioná la cuenta para cargar el importe");
+            }
+
             $suc.on("change", function () {
                 cobro.IdSucursal = parseInt($(this).val(), 10) || 0;
                 cobro.IdCuenta = 0;
                 repoblarCuentasCobro(false);
+                syncImporteHabilitadoCobroEntrega();
                 actualizarResumenCobrosUI();
             });
 
@@ -1040,8 +1111,11 @@
 
             $cta.on("change", function () {
                 syncCobroFromRow(tr, cobro);
+                syncImporteHabilitadoCobroEntrega();
                 actualizarResumenCobrosUI();
             });
+
+            syncImporteHabilitadoCobroEntrega();
 
             tr.find(".btn-quitar-cobro-linea").on("click", () => quitarCobroLinea(k));
         });
@@ -1155,22 +1229,63 @@
         recalcularTotalesUI();
     }
 
-    /** IDs de producto ya elegidos en otras lineas (no repetir en la misma entrega). */
-    function idsProductosEnOtrasLineas(excluirKey) {
-        const ids = new Set();
-        CM.lineas.forEach(l => {
-            if (l._key !== excluirKey && l.IdProducto > 0) {
-                ids.add(`${l.IdProducto}_${Number(l.TipoMovimiento || TIPO_LINEA_ENTREGA)}`);
+    /**
+     * Huella de línea: solo se considera duplicada si todos los campos editables coinciden.
+     */
+    function normNumClaveLinea(n) {
+        const v = Number(n);
+        if (!Number.isFinite(v)) return "0";
+        return (Math.round(v * 10000) / 10000).toString();
+    }
+
+    function claveUnicaLineaProducto(l) {
+        const tipo = Number(l.TipoMovimiento || TIPO_LINEA_ENTREGA);
+        const idLista = Number(l.IdListaPrecio) > 0 ? Number(l.IdListaPrecio) : 0;
+        const cant = normNumClaveLinea(l.Cantidad);
+        const precio = normNumClaveLinea(l.PrecioVenta);
+        const desc = normNumClaveLinea(l.PorcDescuento);
+        const iva = normNumClaveLinea(l.PorcIva);
+        if (tipo === TIPO_LINEA_RECUPERADO) {
+            return `${l.IdProducto}|${TIPO_LINEA_RECUPERADO}|${idLista}|${cant}|${precio}|${desc}|${iva}`;
+        }
+        return `${l.IdProducto}|${tipo}|${idLista}|${cant}|${precio}|${desc}|${iva}`;
+    }
+
+    function keysLineasDuplicadasEntrega() {
+        const map = new Map();
+        const dups = new Set();
+        (CM.lineas || []).forEach(l => {
+            if (!(Number(l.IdProducto) > 0) || !l._key) return;
+            const k = claveUnicaLineaProducto(l);
+            if (map.has(k)) {
+                dups.add(map.get(k));
+                dups.add(l._key);
+            } else {
+                map.set(k, l._key);
             }
         });
-        return ids;
+        return dups;
+    }
+
+    function actualizarAlertaDuplicadosLineasEntrega() {
+        const dups = keysLineasDuplicadasEntrega();
+        const hayDup = dups.size > 0;
+
+        $("#tbodyLineasEntrega .en-linea, #tbodyLineasRecuperadas .en-linea").each(function () {
+            const key = Number($(this).data("key"));
+            $(this).toggleClass("en-linea--dup", dups.has(key));
+        });
+
+        const $alert = $("#alertLineasDuplicadasEntrega");
+        if ($alert.length) {
+            if (hayDup) $alert.removeAttr("hidden");
+            else $alert.attr("hidden", true);
+        }
+        return !hayDup;
     }
 
     function htmlOpcionesProducto(linea) {
-        const usados = idsProductosEnOtrasLineas(linea._key);
-        const tipo = Number(linea.TipoMovimiento || TIPO_LINEA_ENTREGA);
         return (CM.productos || [])
-            .filter(p => !usados.has(`${p.Id}_${tipo}`) || p.Id === linea.IdProducto)
             .map(p =>
                 `<option value="${p.Id}" ${String(p.Id) === String(linea.IdProducto) ? "selected" : ""}>${p.Nombre}</option>`
             )
@@ -1204,30 +1319,17 @@
         });
     }
 
-    function hayProductosDisponiblesParaTipo(tipoMovimiento) {
-        const usados = new Set(
-            CM.lineas
-                .filter(l => l.IdProducto > 0)
-                .map(l => `${l.IdProducto}_${Number(l.TipoMovimiento || TIPO_LINEA_ENTREGA)}`)
-        );
-        return (CM.productos || []).some(p => !usados.has(`${p.Id}_${tipoMovimiento}`));
+    function hayProductosDisponiblesParaTipo() {
+        return (CM.productos || []).length > 0;
     }
 
     function hayProductosDisponiblesEnSeccionProductos() {
-        const usados = new Set(
-            CM.lineas
-                .filter(l => l.IdProducto > 0)
-                .map(l => `${l.IdProducto}_${Number(l.TipoMovimiento || TIPO_LINEA_ENTREGA)}`)
-        );
-        return (CM.productos || []).some(p =>
-            !usados.has(`${p.Id}_${TIPO_LINEA_ENTREGA}`) ||
-            !usados.has(`${p.Id}_${TIPO_LINEA_RETIRO}`)
-        );
+        return (CM.productos || []).length > 0;
     }
 
     function actualizarBotonesAgregarLinea() {
         $("#btnAgregarLinea").prop("disabled", CM.soloLectura || !hayProductosDisponiblesEnSeccionProductos());
-        $("#btnAgregarRecuperado").prop("disabled", CM.soloLectura || !hayProductosDisponiblesParaTipo(TIPO_LINEA_RECUPERADO));
+        $("#btnAgregarRecuperado").prop("disabled", CM.soloLectura || !hayProductosDisponiblesParaTipo());
     }
 
     function renderLineas() {
@@ -1578,6 +1680,7 @@
         $("#totImporte").text(fmtMoney(tot));
         actualizarResumenCobrosUI();
         actualizarAvisoProductosCruzados();
+        actualizarAlertaDuplicadosLineasEntrega();
     }
 
     function mapLineaDesdeApi(l, tipoMovimiento) {

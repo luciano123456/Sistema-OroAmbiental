@@ -1,6 +1,8 @@
 /* =========================================================
    CLIENTES GESTION - Hub unificado por cliente
+   (cliente + establecimientos: lineas completas + importe tras cuenta)
 ========================================================= */
+window.__OA_CG_BUILD = "inline-guard-v20-20260806";
 
 const CG = {
     id: 0,
@@ -286,6 +288,7 @@ const authCg = () => ({
 
 $(document).ready(async () => {
     CG.id = Number(window.CG_INIT?.id || $("#cgId").val() || 0);
+    instalarBloqueoImporteSinCuentaCg();
 
     initModalesCg();
     wireEventosCg();
@@ -821,10 +824,22 @@ function wireEventosCg() {
         setHubPropCg("wsCobros", (hubPropCg("wsCobros") || []).filter(c => Number(c._key) !== key));
         renderCobrosWsCg();
     });
-    $h("cgWsCobrosBody").on("change input", "select, input", function () {
+    // Cliente + Establecimientos (clon cgEst*): importe solo tras cuenta
+    $(document).on("change", "#cgWsCobrosBody .ws-cobro-cuenta, #cgEstWsCobrosBody .ws-cobro-cuenta", function () {
+        const $row = $(this).closest(".cg-ws-cobro-row");
+        syncImporteHabilitadoCobroWsCg($row);
         sincronizarCobrosWsDesdeDomCg();
         actualizarResumenCobrosWsCg();
     });
+    $h("cgWsCobrosBody").on("change input", "input:not(.ws-cobro-cuenta), select:not(.ws-cobro-cuenta)", function () {
+        sincronizarCobrosWsDesdeDomCg();
+        actualizarResumenCobrosWsCg();
+    });
+    $("#cgCobroCuenta").on("change", function () {
+        syncImporteHabilitadoModalCobroCg();
+    });
+    instalarBloqueoImporteSinCuentaCg();
+    syncImporteHabilitadoModalCobroCg();
     $h("cgWsEstablecimiento").on("change", async function () {
         await cargarSugeridosWsCg(Number($(this).val()) || null);
     });
@@ -866,6 +881,7 @@ function wireEventosCg() {
 
         $row.find(".ws-sub").text(fmtMoneyCg(linea.Cantidad * linea.PrecioVenta));
         actualizarResumenCobrosWsCg();
+        actualizarAlertaDuplicadosLineasWsCg();
     });
     $h("cgCmSinEntrega").on("change", syncSinEntregaUiCg);
     $("#cgInteresPct").on("input change", recalcularImporteInteresCg);
@@ -2225,7 +2241,7 @@ function bindEstHubEventsCg() {
         setHubPropCg("wsCobros", (hubPropCg("wsCobros") || []).filter(c => Number(c._key) !== key));
         renderCobrosWsCg();
     });
-    $(root).on("change input", "#cgEstWsCobrosBody select, #cgEstWsCobrosBody input", function () {
+    $(root).on("change input", "#cgEstWsCobrosBody input:not(.ws-cobro-cuenta), #cgEstWsCobrosBody select:not(.ws-cobro-cuenta)", function () {
         CG.hubActivo = "est";
         sincronizarCobrosWsDesdeDomCg();
         actualizarResumenCobrosWsCg();
@@ -2275,6 +2291,7 @@ function bindEstHubEventsCg() {
 
         $row.find(".ws-sub").text(fmtMoneyCg(linea.Cantidad * linea.PrecioVenta));
         actualizarResumenCobrosWsCg();
+        actualizarAlertaDuplicadosLineasWsCg();
     });
     $(root).on("click", "#btnEstGuardarControlMensualCg", busyHandler(() => {
         CG.hubActivo = "est";
@@ -3240,6 +3257,63 @@ function agregarLineaWsCg(pref) {
     actualizarResumenCobrosWsCg();
 }
 
+function normNumClaveWsCg(n) {
+    const v = Number(n);
+    if (!Number.isFinite(v)) return "0";
+    return (Math.round(v * 10000) / 10000).toString();
+}
+
+/** Huella completa: solo bloquea si TODO coincide. */
+function claveLineaWsCompletaCg(l) {
+    const tipo = Number(l.TipoMovimiento || 1);
+    const idLista = Number(l.IdListaPrecio) > 0 ? Number(l.IdListaPrecio) : 0;
+    return [
+        Number(l.IdProducto) || 0,
+        tipo,
+        idLista,
+        normNumClaveWsCg(l.Cantidad),
+        normNumClaveWsCg(l.PrecioVenta),
+        normNumClaveWsCg(l.PorcDescuento || 0),
+        normNumClaveWsCg(l.PorcIva || 0)
+    ].join("|");
+}
+
+function indicesLineasDuplicadasWsCg(lineas) {
+    const map = new Map();
+    const dups = new Set();
+    (lineas || []).forEach((l, i) => {
+        if (!(Number(l.IdProducto) > 0)) return;
+        const k = claveLineaWsCompletaCg(l);
+        if (map.has(k)) {
+            dups.add(map.get(k));
+            dups.add(i);
+        } else {
+            map.set(k, i);
+        }
+    });
+    return dups;
+}
+
+function hayLineasDuplicadasWsCg(lineas) {
+    return indicesLineasDuplicadasWsCg(lineas).size > 0;
+}
+
+function actualizarAlertaDuplicadosLineasWsCg() {
+    const lineas = hubPropCg("wsLineas") || [];
+    const dups = indicesLineasDuplicadasWsCg(lineas);
+    const hayDup = dups.size > 0;
+
+    $h("cgWsLineasBody").find(".cg-ws-linea").each(function () {
+        const idx = Number($(this).data("idx"));
+        $(this).toggleClass("cg-ws-linea--dup", dups.has(idx));
+    });
+
+    const $alert = $h("cgWsLineasDupAlert");
+    if ($alert.length) $alert.toggleClass("d-none", !hayDup);
+
+    return !hayDup;
+}
+
 function renderLineasWsCg() {
     const optsProd = (CG.wsProductosCatalogo || []).map(p => {
         const id = p.Id || p.id;
@@ -3255,6 +3329,7 @@ function renderLineasWsCg() {
 
     if (!hubPropCg("wsLineas").length) {
         $h("cgWsLineasBody").html(`<div class="cg-ws-lineas-empty">Sin líneas. Agregá un producto o usá un sugerido arriba.</div>`);
+        actualizarAlertaDuplicadosLineasWsCg();
         return;
     }
 
@@ -3311,6 +3386,7 @@ function renderLineasWsCg() {
         if (l.IdListaPrecio) $row.find(".ws-lista").val(String(l.IdListaPrecio));
         $row.find(".ws-tipo").val(String(l.TipoMovimiento || 1));
     });
+    actualizarAlertaDuplicadosLineasWsCg();
 }
 
 function agregarCobroWsCg(preset) {
@@ -3342,6 +3418,86 @@ function sincronizarCobrosWsDesdeDomCg() {
         cobro.Concepto = ($(this).find(".ws-cobro-concepto").val() || "").trim();
         cobro.Importe = leerNumeroWsCg($(this).find(".ws-cobro-importe").val());
     });
+}
+
+/** El importe solo se edita después de elegir la cuenta de caja. */
+function syncImporteHabilitadoCobroWsCg($row) {
+    if (!$row?.length) return;
+    const idCuenta = Number($row.find(".ws-cobro-cuenta").val()) || 0;
+    const $imp = $row.find(".ws-cobro-importe");
+    const habilitar = idCuenta > 0;
+    $imp.prop("disabled", !habilitar);
+    $imp.prop("readonly", !habilitar);
+    $imp.attr("tabindex", habilitar ? "0" : "-1");
+    $imp.toggleClass("ws-cobro-importe--locked", !habilitar);
+    if (!habilitar) {
+        $imp.val("");
+        const key = Number($row.data("key"));
+        const cobro = (hubPropCg("wsCobros") || []).find(c => Number(c._key) === key);
+        if (cobro) cobro.Importe = 0;
+    }
+    $imp.attr("placeholder", habilitar ? "" : "Elegí cuenta");
+    $imp.attr("title", habilitar ? "" : "Seleccioná la cuenta para cargar el importe");
+}
+
+function syncImporteHabilitadoModalCobroCg() {
+    const idCuenta = parseInt($("#cgCobroCuenta").val(), 10) || 0;
+    const $imp = $("#cgCobroImporte");
+    const habilitar = idCuenta > 0;
+    $imp.prop("disabled", !habilitar).prop("readonly", !habilitar);
+    $imp.attr("tabindex", habilitar ? "0" : "-1");
+    if (!habilitar) $imp.val("");
+    $imp.attr("placeholder", habilitar ? "" : "Elegí cuenta");
+    $imp.attr("title", habilitar ? "" : "Seleccioná la cuenta para cargar el importe");
+}
+
+/** Red de seguridad: si no hay cuenta, no deja tipear/pegar/enfocar el importe. */
+function instalarBloqueoImporteSinCuentaCg() {
+    if (window.__oaBloqueoImporteSinCuenta) return;
+    window.__oaBloqueoImporteSinCuenta = true;
+
+    const selector = ".ws-cobro-importe, #cgCobroImporte";
+    const cuentaDe = (el) => {
+        if (!el) return 0;
+        if (el.id === "cgCobroImporte") return parseInt($("#cgCobroCuenta").val(), 10) || 0;
+        const $row = $(el).closest(".cg-ws-cobro-row");
+        return Number($row.find(".ws-cobro-cuenta").val()) || 0;
+    };
+
+    document.addEventListener("focusin", (e) => {
+        const el = e.target?.closest?.(selector);
+        if (!el) return;
+        if (cuentaDe(el) > 0) return;
+        el.blur();
+        el.value = "";
+        e.stopImmediatePropagation();
+    }, true);
+
+    document.addEventListener("keydown", (e) => {
+        const el = e.target?.closest?.(selector);
+        if (!el) return;
+        if (cuentaDe(el) > 0) return;
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        el.value = "";
+    }, true);
+
+    document.addEventListener("paste", (e) => {
+        const el = e.target?.closest?.(selector);
+        if (!el) return;
+        if (cuentaDe(el) > 0) return;
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        el.value = "";
+    }, true);
+
+    document.addEventListener("input", (e) => {
+        const el = e.target?.closest?.(selector);
+        if (!el) return;
+        if (cuentaDe(el) > 0) return;
+        el.value = "";
+        e.stopImmediatePropagation();
+    }, true);
 }
 
 function cobrosWsParaGuardarCg() {
@@ -3391,7 +3547,9 @@ function renderCobrosWsCg() {
         `<option value="${c.Id}">${escapeCg(c.Nombre || ("Cuenta #" + c.Id))}</option>`
     ).join("");
 
-    $body.html(cobros.map(c => `
+    $body.html(cobros.map(c => {
+        const tieneCuenta = Number(c.IdCuenta) > 0;
+        return `
         <div class="cg-ws-cobro-row" data-key="${c._key}">
             <label>
                 <span>Fecha</span>
@@ -3411,20 +3569,26 @@ function renderCobrosWsCg() {
             <label>
                 <span>Importe</span>
                 <input type="text" class="form-control Inputmiles ws-cobro-importe" inputmode="decimal"
-                       value="${c.Importe ? fmtQtyCg(c.Importe) : ""}" />
+                       value="${tieneCuenta && c.Importe ? fmtQtyCg(c.Importe) : ""}"
+                       ${tieneCuenta ? "" : "disabled readonly tabindex=\"-1\""}
+                       placeholder="${tieneCuenta ? "" : "Elegí cuenta"}"
+                       title="${tieneCuenta ? "" : "Seleccioná la cuenta para cargar el importe"}" />
             </label>
             <button type="button" class="btn btn-outline-danger btn-sm btn-ws-quitar-cobro" data-key="${c._key}" title="Quitar">
                 <i class="fa fa-trash"></i>
             </button>
-        </div>
-    `).join(""));
+        </div>`;
+    }).join(""));
 
     cobros.forEach(c => {
         const $row = $body.find(`.cg-ws-cobro-row[data-key="${c._key}"]`);
         if (c.IdCuenta) $row.find(".ws-cobro-cuenta").val(String(c.IdCuenta));
+        syncImporteHabilitadoCobroWsCg($row);
         if (typeof prepararInputMiles === "function") {
             $row.find(".ws-cobro-importe").each(function () { prepararInputMiles(this); });
         }
+        // Reafirmar por si prepararInputMiles toca el input
+        syncImporteHabilitadoCobroWsCg($row);
     });
     actualizarResumenCobrosWsCg();
 }
@@ -3499,6 +3663,15 @@ async function guardarVisitaUnificadaCg() {
 
     if (lineas.some(l => Number(l.TipoMovimiento) === 2 && !(Number(l.IdListaPrecio) > 0))) {
         errorModal("Seleccioná la lista / tipo de pago en las líneas de retiro.");
+        return;
+    }
+
+    if (!actualizarAlertaDuplicadosLineasWsCg() || hayLineasDuplicadasWsCg(lineas)) {
+        errorModal("No podés repetir una línea 100% igual (producto, tipo, lista, cantidad y precio). Si cambia algún dato, sí se permite.");
+        const $a = $h("cgWsLineasDupAlert");
+        if ($a.length && $a.offset()) {
+            $("html, body").animate({ scrollTop: $a.offset().top - 100 }, 200);
+        }
         return;
     }
 
@@ -4238,6 +4411,7 @@ function abrirModalCobroCg() {
     $("#cgCobroFecha").val(new Date().toISOString().slice(0, 10));
     $("#cgCobroImporte, #cgCobroConcepto").val("");
     $("#cgCobroCuenta").val("").trigger("change");
+    syncImporteHabilitadoModalCobroCg();
     CG.modalCobro?.show();
 }
 
