@@ -46,7 +46,8 @@ namespace SistemaOroAmbiental.Application.Controllers
                 return NotFound();
 
             var puedeEliminar = mov.TipoMovimiento is ClientesCuentaCorrienteRepository.TIPO_COBRO_CLIENTE
-                or ClientesCuentaCorrienteRepository.TIPO_AJUSTE_CLIENTE;
+                or ClientesCuentaCorrienteRepository.TIPO_AJUSTE_CLIENTE
+                or ClientesCuentaCorrienteRepository.TIPO_INTERES_CLIENTE;
 
             return Ok(new VMClienteCCDetalleMovimiento
             {
@@ -102,7 +103,8 @@ namespace SistemaOroAmbiental.Application.Controllers
                 saldo += m.Debe - m.Haber;
 
                 var puedeEliminar = m.TipoMovimiento is ClientesCuentaCorrienteRepository.TIPO_COBRO_CLIENTE
-                    or ClientesCuentaCorrienteRepository.TIPO_AJUSTE_CLIENTE;
+                    or ClientesCuentaCorrienteRepository.TIPO_AJUSTE_CLIENTE
+                    or ClientesCuentaCorrienteRepository.TIPO_INTERES_CLIENTE;
 
                 filasMov.Add(new VMClienteCCMovimiento
                 {
@@ -184,6 +186,31 @@ namespace SistemaOroAmbiental.Application.Controllers
             return Ok(new { valor = result.Ok, mensaje = result.Mensaje, tipo = result.Tipo });
         }
 
+        [HttpPost]
+        public async Task<IActionResult> RegistrarInteres([FromBody] VMClienteCCInteres model)
+        {
+            int idUsuario = int.Parse(User.FindFirst("Id")!.Value);
+
+            var concepto = (model.Concepto ?? "").Trim();
+            if (model.AnioRef is >= 2000 and <= 2100 && model.MesRef is >= 1 and <= 12)
+            {
+                var tag = $"ref:{model.AnioRef.Value}-{model.MesRef.Value:D2}";
+                if (!concepto.Contains(tag, StringComparison.OrdinalIgnoreCase))
+                    concepto = string.IsNullOrWhiteSpace(concepto)
+                        ? $"Interés · {tag}"
+                        : $"{concepto} · {tag}";
+            }
+
+            var result = await _service.RegistrarInteres(
+                model.IdCliente,
+                model.Fecha,
+                concepto,
+                model.Importe,
+                idUsuario);
+
+            return Ok(new { valor = result.Ok, mensaje = result.Mensaje, tipo = result.Tipo });
+        }
+
         [HttpDelete]
         public async Task<IActionResult> Eliminar(int id)
         {
@@ -195,6 +222,7 @@ namespace SistemaOroAmbiental.Application.Controllers
         {
             ClientesCuentaCorrienteRepository.TIPO_COBRO_CLIENTE => "Cobro",
             ClientesCuentaCorrienteRepository.TIPO_AJUSTE_CLIENTE => "Ajuste",
+            ClientesCuentaCorrienteRepository.TIPO_INTERES_CLIENTE => "Interés",
             "ENTREGA" => "Entrega",
             _ => tipo
         };
@@ -203,6 +231,7 @@ namespace SistemaOroAmbiental.Application.Controllers
         {
             ClientesCuentaCorrienteRepository.TIPO_COBRO_CLIENTE => "COBRO",
             ClientesCuentaCorrienteRepository.TIPO_AJUSTE_CLIENTE => "AJUSTE",
+            ClientesCuentaCorrienteRepository.TIPO_INTERES_CLIENTE => "INTERES",
             "ENTREGA" => "ENTREGAS",
             _ => "SISTEMA"
         };

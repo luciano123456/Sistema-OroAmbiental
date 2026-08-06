@@ -339,11 +339,11 @@ async function configurarDataTable(data) {
                 { data: "Cuenta", defaultContent: "" },
                 { data: "NumReferencia", defaultContent: "" },
                 { data: "Concepto" },
-                { data: "ImporteNeto", className: "text-end", render: d => formatearMonedaARS(d) },
+                { data: "ImporteNeto", className: "text-end", render: d => `<span class="rp-money-out">${formatearMonedaARS(d)}</span>` },
                 { data: "PorcIva", className: "text-end", render: d => `${Number(d || 0).toFixed(2)}%` },
                 { data: "TotalIva", className: "text-end", render: d => formatearMonedaARS(d) },
                 { data: "OtrosImpuestos", className: "text-end", render: d => formatearMonedaARS(d) },
-                { data: "ImporteTotal", className: "text-end", render: d => formatearMonedaARS(d) },
+                { data: "ImporteTotal", className: "text-end", render: d => `<span class="rp-money-out">${formatearMonedaARS(d)}</span>` },
                 { data: "NotaInterna", defaultContent: "" }
             ],
             dom: "Bfrtip",
@@ -410,7 +410,7 @@ function actualizarKpis(data) {
     $("#gsKpiCant").text(rows.length);
     const total = rows.reduce((s, x) => s + (Number(x.ImporteTotal) || 0), 0);
     const iva = rows.reduce((s, x) => s + (Number(x.TotalIva) || 0), 0);
-    $("#gsKpiTotal").text(formatearMonedaARS(total));
+    $("#gsKpiTotal").text(formatearMonedaARS(total)).attr("class", "val rp-money-out");
     $("#gsKpiIva").text(formatearMonedaARS(iva));
 }
 

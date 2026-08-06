@@ -39,7 +39,7 @@ public partial class ClientesEstablecimiento
 
     public int IdSemanaRecoleccion { get; set; }
 
-    public int IdListaPrecio { get; set; }
+    public int? IdListaPrecio { get; set; }
 
     public TimeSpan HorarioRecoleccionDesde { get; set; }
 
@@ -74,6 +74,8 @@ public partial class ClientesEstablecimiento
     public virtual ICollection<ClientesEstablecimientosProducto> ClientesEstablecimientosProductos { get; set; } = new List<ClientesEstablecimientosProducto>();
 
     public virtual ICollection<Contrato> Contratos { get; set; } = new List<Contrato>();
+
+    public virtual ICollection<ClientesEntrega> ClientesEntregas { get; set; } = new List<ClientesEntrega>();
 
     public virtual Cliente IdClienteNavigation { get; set; } = null!;
 

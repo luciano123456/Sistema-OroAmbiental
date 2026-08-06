@@ -404,7 +404,7 @@
             const btnGuardar = this._id("btnGuardar");
             if (btnGuardar) btnGuardar.classList.toggle("d-none", disabled);
 
-            this.modalEl.querySelectorAll(".rp-btn-plus").forEach(btn => {
+            this.modalEl.querySelectorAll(".rp-btn-plus, .rp-config-atajo").forEach(btn => {
                 btn.disabled = disabled;
                 btn.style.display = disabled ? "none" : "";
             });
@@ -508,6 +508,7 @@
 
             this._setFieldValue("txtId", modelo.Id || "");
             this._setFieldValue("txtNombre", modelo.Nombre || "");
+            this._setFieldValue("txtAbreviatura", modelo.Abreviatura || "");
             this._setFieldValue("txtCostoUnitario", this._formatearCostoUnitario(modelo.CostoUnitario));
             const stockMin = modelo.StockMinimo ?? 0;
             this._setFieldValue("txtStockMinimo",
@@ -676,9 +677,11 @@
 
             const id = this._getFieldValue("txtId");
 
+            const abrev = (this._getFieldValue("txtAbreviatura") || "").trim();
             const modelo = {
                 Id: id !== "" ? parseInt(id, 10) : 0,
                 Nombre: this._getFieldValue("txtNombre"),
+                Abreviatura: abrev || null,
                 IdCategoria: this._getIntOrNull("cmbCategoria"),
                 IdMedida: this._getIntOrNull("cmbMedida"),
                 CostoUnitario: this._getDecimal("txtCostoUnitario"),
@@ -785,8 +788,16 @@
             const gridPrecios = this._id("gridPreciosLista");
             if (gridPrecios) gridPrecios.innerHTML = "";
             this._id("lblPreciosSinListas")?.classList.add("d-none");
+            this._activarTabDatos();
             this._refreshAllSelect2();
             this._actualizarBtnHistorialCosto();
+        }
+
+        _activarTabDatos() {
+            const btn = this._id("tabBtnDatosProd");
+            if (btn && typeof bootstrap !== "undefined") {
+                try { bootstrap.Tab.getOrCreateInstance(btn).show(); } catch (_) { /* ignore */ }
+            }
         }
 
         _valorCampoValido(el) {
@@ -834,8 +845,10 @@
 
         async _onConfiguracionActualizada(detail) {
             if (detail?.tipo === "ListasPrecios") {
+                const valores = this._capturarPreciosEnEdicion();
                 const idProducto = this.getId();
                 await this.cargarPreciosPorLista(idProducto);
+                this._restaurarPreciosEnEdicion(valores);
                 return;
             }
 
@@ -849,6 +862,31 @@
                 const el = this._id(cfg.selectId);
                 if (el) this._validacion?.onSelect2Change(el);
             }
+        }
+
+        _capturarPreciosEnEdicion() {
+            const map = {};
+            this.modalEl.querySelectorAll(".rp-precio-card").forEach(card => {
+                const idLista = card.dataset.idLista;
+                if (!idLista) return;
+                map[idLista] = {
+                    precio: card.querySelector(".precio-lista-precio")?.value ?? "",
+                    rent: card.querySelector(".precio-lista-rent")?.value ?? ""
+                };
+            });
+            return map;
+        }
+
+        _restaurarPreciosEnEdicion(valores) {
+            if (!valores) return;
+            this.modalEl.querySelectorAll(".rp-precio-card").forEach(card => {
+                const prev = valores[card.dataset.idLista];
+                if (!prev) return;
+                const inpP = card.querySelector(".precio-lista-precio");
+                const inpR = card.querySelector(".precio-lista-rent");
+                if (inpP && prev.precio !== "") inpP.value = prev.precio;
+                if (inpR && prev.rent !== "") inpR.value = prev.rent;
+            });
         }
 
         _bindConfiguracionActualizada() {
@@ -964,7 +1002,7 @@
             const guardarBtn = this._id("btnGuardar");
             if (guardarBtn) {
                 guardarBtn.removeAttribute("onclick");
-                guardarBtn.addEventListener("click", () => this.guardar());
+                guardarBtn.addEventListener("click", () => withBusy(guardarBtn, () => this.guardar()));
             }
 
             const cerrarErrorBtn = this.modalEl.querySelector("#errorCampos .rp-error-close");

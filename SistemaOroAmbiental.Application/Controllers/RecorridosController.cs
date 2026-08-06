@@ -12,11 +12,16 @@ namespace SistemaOroAmbiental.Application.Controllers
     {
         private readonly IRecorridosService _service;
         private readonly ICamionesService _camionesService;
+        private readonly IClientesEstablecimientosProductosService _productosEstService;
 
-        public RecorridosController(IRecorridosService service, ICamionesService camionesService)
+        public RecorridosController(
+            IRecorridosService service,
+            ICamionesService camionesService,
+            IClientesEstablecimientosProductosService productosEstService)
         {
             _service = service;
             _camionesService = camionesService;
+            _productosEstService = productosEstService;
         }
 
         [AllowAnonymous]
@@ -114,6 +119,143 @@ namespace SistemaOroAmbiental.Application.Controllers
                 return NotFound();
 
             return View(model);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> HojaRutaDatos(int idCamion, int idSemana, int idDia, DateTime? fecha, string? recorridos)
+        {
+            if (idCamion <= 0)
+                return NotFound();
+
+            var lista = ParseRecorridosHojaRuta(recorridos, idSemana, idDia);
+            if (lista.Count == 0)
+                return NotFound();
+
+            var model = await _service.ObtenerHojaRuta(idCamion, lista, fecha?.Date ?? DateTime.Today);
+            if (model == null)
+                return NotFound();
+
+            return Ok(model);
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> HojaRutaImprimir([FromBody] VMHojaRutaImprimirRequest request)
+        {
+            if (request == null || request.IdCamion <= 0)
+                return NotFound();
+
+            var lista = ParseRecorridosHojaRuta(request.Recorridos, request.IdSemana, request.IdDia);
+            if (lista.Count == 0)
+                return NotFound();
+
+            var model = await _service.ObtenerHojaRuta(request.IdCamion, lista, request.Fecha?.Date ?? DateTime.Today);
+            if (model == null)
+                return NotFound();
+
+            AplicarOverridesProductosHoja(model, request.Paradas);
+
+            if (request.PersistirProductos)
+            {
+                var idClaim = User.FindFirst("Id")?.Value;
+                if (int.TryParse(idClaim, out var idUsuario) && idUsuario > 0)
+                    await PersistirProductosHojaRuta(request.Paradas, idUsuario);
+            }
+
+            return View("HojaRuta", model);
+        }
+
+        private async Task PersistirProductosHojaRuta(List<VMHojaRutaParadaOverride>? paradas, int idUsuario)
+        {
+            if (paradas == null) return;
+
+            foreach (var parada in paradas)
+            {
+                if (parada.Productos == null) continue;
+                foreach (var prod in parada.Productos)
+                {
+                    if (prod.Id <= 0) continue;
+                    var entity = new ClientesEstablecimientosProducto
+                    {
+                        Id = prod.Id,
+                        IdEstablecimiento = parada.IdEstablecimiento ?? 0,
+                        IdProducto = prod.IdProducto,
+                        Cantidad = prod.Cantidad,
+                        IdListaPrecio = prod.IdListaPrecio > 0 ? prod.IdListaPrecio : null,
+                        PrecioVenta = prod.PrecioVenta,
+                        IdUsuarioModifica = idUsuario,
+                        FechaUsuarioModifica = DateTime.Now
+                    };
+                    await _productosEstService.Actualizar(entity);
+                }
+            }
+        }
+
+        private static void AplicarOverridesProductosHoja(HojaRutaDto model, List<VMHojaRutaParadaOverride>? overrides)
+        {
+            if (model == null || overrides == null || overrides.Count == 0)
+                return;
+
+            var map = overrides
+                .Where(o => o != null)
+                .GroupBy(o => (o.IdCliente, o.IdEstablecimiento ?? 0))
+                .ToDictionary(g => g.Key, g => g.Last());
+
+            void AplicarAParada(HojaRutaParadaDto p)
+            {
+                var key = (p.IdCliente, p.IdEstablecimiento ?? 0);
+                if (!map.TryGetValue(key, out var ov) || ov.Productos == null)
+                    return;
+
+                p.Productos = ov.Productos.Select(x => new HojaRutaParadaProductoDto
+                {
+                    Id = x.Id,
+                    IdProducto = x.IdProducto,
+                    Producto = x.Producto ?? "",
+                    Abreviatura = x.Abreviatura,
+                    Cantidad = x.Cantidad,
+                    IdListaPrecio = x.IdListaPrecio,
+                    ListaPrecio = x.ListaPrecio,
+                    PrecioVenta = x.PrecioVenta,
+                    PrecioEfectivo = x.PrecioEfectivo,
+                    PrecioTransferencia = x.PrecioTransferencia
+                }).ToList();
+
+                p.ProductosResumen = FormatearProductosResumenHoja(p.Productos);
+                if (p.Productos.Count > 0)
+                {
+                    // Mismo producto con distintas listas: no duplicar abonos.
+                    var unicos = p.Productos.GroupBy(x => x.IdProducto).Select(g => g.First());
+                    p.AbonoEfectivo = unicos.Sum(x => Math.Round(x.Cantidad * x.PrecioEfectivo, 2));
+                    p.AbonoTransferencia = unicos.Sum(x => Math.Round(x.Cantidad * x.PrecioTransferencia, 2));
+                }
+            }
+
+            foreach (var p in model.Paradas ?? new List<HojaRutaParadaDto>())
+                AplicarAParada(p);
+
+            foreach (var s in model.Secciones ?? new List<HojaRutaSeccionDto>())
+            {
+                foreach (var p in s.Paradas ?? new List<HojaRutaParadaDto>())
+                    AplicarAParada(p);
+            }
+        }
+
+        private static string? FormatearProductosResumenHoja(IReadOnlyList<HojaRutaParadaProductoDto> productos)
+        {
+            if (productos == null || productos.Count == 0)
+                return null;
+
+            return string.Join(" · ", productos.Select(p =>
+            {
+                var abrev = !string.IsNullOrWhiteSpace(p.Abreviatura)
+                    ? p.Abreviatura.Trim()
+                    : (string.IsNullOrWhiteSpace(p.Producto) ? "PROD" : p.Producto.Trim());
+                var cant = p.Cantidad % 1 == 0
+                    ? ((int)p.Cantidad).ToString()
+                    : p.Cantidad.ToString("0.####");
+                var lista = string.IsNullOrWhiteSpace(p.ListaPrecio) ? "" : $" ({p.ListaPrecio.Trim()})";
+                return $"{cant} {abrev}{lista} x $ {p.PrecioVenta:N0}";
+            }));
         }
 
         private static List<(int IdSemana, int IdDia)> ParseRecorridosHojaRuta(string? recorridos, int idSemana, int idDia)

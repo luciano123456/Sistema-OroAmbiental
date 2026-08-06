@@ -33,15 +33,20 @@
                     contactosInsertar: "/ClientesEstablecimientosContactos/Insertar",
                     contactosActualizar: "/ClientesEstablecimientosContactos/Actualizar",
                     contactosEliminar: "/ClientesEstablecimientosContactos/Eliminar?id={id}",
+                    productosCatalogo: "/Productos/Lista?soloActivos=true",
+                    productosPrecios: "/ProductosPrecios/ListaPorProducto?idProducto={idProducto}",
                     productosLista: "/ClientesEstablecimientosProductos/ListaPorEstablecimiento?idEstablecimiento={idEstablecimiento}",
                     productosInsertar: "/ClientesEstablecimientosProductos/Insertar",
                     productosActualizar: "/ClientesEstablecimientosProductos/Actualizar",
                     productosEliminar: "/ClientesEstablecimientosProductos/Eliminar?id={id}"
                 },
+                mode: null,
+                lockClienteId: null,
                 onSaved: null,
                 onDeleted: null,
                 onBeforeOpen: null,
                 onOpen: null,
+                onClosed: null,
                 onGuardarModelo: null
             }, options || {});
 
@@ -53,13 +58,19 @@
                 throw new Error("No se encontr\u00F3 [data-establecimiento-modal].");
             }
 
-            this.bsModal = new bootstrap.Modal(this.modalEl);
+            this.mode = this.options.mode
+                || this.modalEl.getAttribute("data-mode")
+                || (this.modalEl.classList.contains("modal") ? "modal" : "inline");
+            this.bsModal = this.mode === "modal" ? new bootstrap.Modal(this.modalEl) : null;
             this._ultimoModo = "nuevo";
             this._modeloActual = null;
             this._contactosCache = [];
             this._contactoSeleccionadoId = 0;
             this._productosCache = [];
             this._productoSeleccionadoId = 0;
+            this._productosPrecioBound = false;
+            this._precioListaSeq = 0;
+            this._omitirAutoPrecio = false;
             this._cargarCombosSeq = 0;
             this._cargarPartidosSeq = 0;
             this._cargarLocalidadesSeq = 0;
@@ -68,8 +79,7 @@
             this._localidadLegacy = null;
 
             this._camposObligatorios = [
-                "cmbClienteEst", "txtNombreEst", "cmbDiaEst", "cmbSemanaEst",
-                "cmbListaPrecioEst"
+                "cmbClienteEst", "txtNombreEst", "cmbDiaEst", "cmbSemanaEst"
             ];
             this._validacion = new ValidacionModalAbm({
                 modalEl: this.modalEl,
@@ -78,8 +88,7 @@
                     { id: "cmbClienteEst", nombre: "Cliente" },
                     { id: "txtNombreEst", nombre: "Nombre establecimiento" },
                     { id: "cmbDiaEst", nombre: "D\u00EDa recolecci\u00F3n" },
-                    { id: "cmbSemanaEst", nombre: "Semana recolecci\u00F3n" },
-                    { id: "cmbListaPrecioEst", nombre: "Lista de precios" }
+                    { id: "cmbSemanaEst", nombre: "Semana recolecci\u00F3n" }
                 ],
                 esCampoValido: (el) => this._valorCampoValido(el),
                 isSoloLectura: () => this.isSoloLectura(),
@@ -93,7 +102,7 @@
                 Localidades: { selectId: "cmbLocalidadEst", dependent: true },
                 Dias: { selectId: "cmbDiaEst", url: this.options.endpoints.dias },
                 Semanas: { selectId: "cmbSemanaEst", url: this.options.endpoints.semanas },
-                ListasPrecios: { selectId: "cmbListaPrecioEst", url: this.options.endpoints.listasPrecios },
+                ListasPrecios: { selectId: "cmbListaPrecioProdEst", url: this.options.endpoints.listasPrecios },
                 ClientesTiposGenerador: { selectId: "cmbTipoGeneradorEst", url: this.options.endpoints.tiposGenerador, textField: "Etiqueta" },
                 Camiones: { selectId: "cmbCamionEst", url: this.options.endpoints.camiones }
             };
@@ -242,7 +251,8 @@
             [
                 "cmbClienteEst", "cmbCondicionIvaEst", "cmbProvinciaEst", "cmbPartidoEst",
                 "cmbLocalidadEst", "cmbTipoGeneradorEst",
-                "cmbDiaEst", "cmbSemanaEst", "cmbListaPrecioEst", "cmbCamionEst", "cmbProductoEst"
+                "cmbDiaEst", "cmbSemanaEst", "cmbCamionEst",
+                "cmbProductoEst", "cmbListaPrecioProdEst"
             ].forEach(id => {
                 this.ensureSelect2(window.jQuery(this._id(id)), opts);
             });
@@ -629,7 +639,7 @@
             if (habilitar) {
                 section.classList.remove("rp-section-disabled");
                 hint.classList.add("success");
-                hint.innerHTML = `<i class="fa fa-check-circle"></i> Ya pod\u00E9s asignar productos al establecimiento.`;
+                hint.innerHTML = `<i class="fa fa-check-circle"></i> Ya pod\u00E9s asignar productos. El mismo producto se puede agregar m\u00E1s de una vez con distintas listas (ej. Efectivo y Transferencia).`;
             } else {
                 section.classList.add("rp-section-disabled");
                 hint.classList.remove("success");
@@ -640,7 +650,7 @@
         }
 
         bloquearControlesProductos(bloquear) {
-            const ids = ["cmbProductoEst", "txtCantidadEst"];
+            const ids = ["cmbProductoEst", "txtCantidadEst", "cmbListaPrecioProdEst", "txtPrecioVentaEst"];
             ids.forEach(id => {
                 const el = this._id(id);
                 if (el) el.disabled = !!bloquear;
@@ -651,14 +661,16 @@
             if (btnGuardar) btnGuardar.disabled = !!bloquear;
             if (btnNuevo) btnNuevo.disabled = !!bloquear;
 
-            const cmb = this._id("cmbProductoEst");
-            if (cmb && window.jQuery) {
-                const $el = window.jQuery(cmb);
-                if ($el.data("select2")) {
-                    $el.prop("disabled", !!bloquear);
-                    $el.trigger("change.select2");
+            ["cmbProductoEst", "cmbListaPrecioProdEst"].forEach(id => {
+                const cmb = this._id(id);
+                if (cmb && window.jQuery) {
+                    const $el = window.jQuery(cmb);
+                    if ($el.data("select2")) {
+                        $el.prop("disabled", !!bloquear);
+                        $el.trigger("change.select2");
+                    }
                 }
-            }
+            });
 
             const lista = this._id("listaProductosEst");
             if (lista) {
@@ -673,16 +685,42 @@
             this._setFieldValue("txtProductoEstId", "");
             this._setFieldValue("cmbProductoEst", "", true);
             this._setCantidadField("");
+            this._setFieldValue("cmbListaPrecioProdEst", "", true);
+            this._setPrecioField("");
             const titulo = this._id("productoEstFormTitulo");
             if (titulo) titulo.textContent = "Agregar producto";
             this._id("listaProductosEst")?.querySelectorAll(".rp-sub-item")
                 .forEach(el => el.classList.remove("active"));
         }
 
+        _setPrecioField(valor) {
+            const el = this._id("txtPrecioVentaEst");
+            if (!el) return;
+            if (valor === null || valor === undefined || valor === "") {
+                el.value = "";
+                return;
+            }
+            const n = Number(valor);
+            if (Number.isNaN(n)) {
+                el.value = String(valor);
+                return;
+            }
+            el.value = typeof formatearNumero === "function"
+                ? formatearNumero(n)
+                : n.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            if (typeof formatearMilesInput === "function") formatearMilesInput(el);
+        }
+
         _formatCantidad(valor) {
             const n = Number(valor);
             if (Number.isNaN(n)) return String(valor ?? "");
             return n.toLocaleString("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: 4 });
+        }
+
+        _formatPrecioLista(valor) {
+            const n = Number(valor);
+            if (Number.isNaN(n)) return String(valor ?? "");
+            return n.toLocaleString("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
         }
 
         renderListaProductos() {
@@ -708,12 +746,19 @@
             cont.innerHTML = items.map(p => {
                 const active = p.Id === this._productoSeleccionadoId ? " active" : "";
                 const nombre = p.Producto || `Producto #${p.IdProducto}`;
+                const abrev = (p.Abreviatura || "").trim();
                 const qty = this._formatCantidad(p.Cantidad);
+                const lista = (p.ListaPrecio || "").trim() || "Sin lista";
+                const precio = this._formatPrecioLista(p.PrecioVenta);
+                const sub = abrev
+                    ? `${this._escapeHtml(abrev)} · ${this._escapeHtml(lista)} · $ ${this._escapeHtml(precio)}`
+                    : `${this._escapeHtml(lista)} · $ ${this._escapeHtml(precio)}`;
                 return `
                     <div class="rp-sub-item${active}" data-id="${p.Id}">
                         <div class="rp-sub-item-avatar product"><i class="fa fa-cube"></i></div>
                         <div class="rp-sub-item-body">
                             <span class="rp-sub-item-title">${this._escapeHtml(nombre)}</span>
+                            <span class="rp-sub-item-meta">${sub}</span>
                         </div>
                         <span class="rp-qty-badge"><i class="fa fa-sort-numeric-asc"></i> ${this._escapeHtml(qty)}</span>
                         <div class="rp-sub-item-actions">
@@ -730,9 +775,13 @@
             if (!item) return;
 
             this._productoSeleccionadoId = id;
+            this._omitirAutoPrecio = true;
             this._setFieldValue("txtProductoEstId", item.Id);
             this._setFieldValue("cmbProductoEst", item.IdProducto, true);
             this._setCantidadField(item.Cantidad);
+            this._setFieldValue("cmbListaPrecioProdEst", item.IdListaPrecio || "", true);
+            this._setPrecioField(item.PrecioVenta);
+            setTimeout(() => { this._omitirAutoPrecio = false; }, 0);
 
             const titulo = this._id("productoEstFormTitulo");
             if (titulo) titulo.textContent = "Editar producto";
@@ -758,6 +807,22 @@
             if (cantidad <= 0) {
                 if (typeof errorModal === "function") {
                     errorModal("La cantidad debe ser mayor a cero.");
+                }
+                return false;
+            }
+
+            const idLista = this._getIntOrNull("cmbListaPrecioProdEst");
+            if (!idLista) {
+                if (typeof errorModal === "function") {
+                    errorModal("Debe seleccionar una lista de precios.");
+                }
+                return false;
+            }
+
+            const precio = this._leerNumero(this._getFieldValue("txtPrecioVentaEst"));
+            if (precio < 0) {
+                if (typeof errorModal === "function") {
+                    errorModal("El precio no puede ser negativo.");
                 }
                 return false;
             }
@@ -804,7 +869,9 @@
                 Id: idItem,
                 IdEstablecimiento: idEstablecimiento,
                 IdProducto: this._getIntOrNull("cmbProductoEst"),
-                Cantidad: this._leerNumero(this._getFieldValue("txtCantidadEst"))
+                Cantidad: this._leerNumero(this._getFieldValue("txtCantidadEst")),
+                IdListaPrecio: this._getIntOrNull("cmbListaPrecioProdEst"),
+                PrecioVenta: this._leerNumero(this._getFieldValue("txtPrecioVentaEst"))
             };
 
             const esNuevo = !modelo.Id;
@@ -834,8 +901,10 @@
                 }
 
                 await this.cargarProductos(idEstablecimiento);
-                if (esNuevo && data.id) {
-                    this.seleccionarProducto(data.id);
+                // Tras un alta, dejamos el formulario listo para agregar el mismo producto
+                // con otra lista de precios (ej. Efectivo y luego Transferencia).
+                if (!esNuevo && idItem > 0) {
+                    this.seleccionarProducto(idItem);
                 }
             } catch (e) {
                 console.error(e);
@@ -900,6 +969,45 @@
                     }
                 });
             }
+
+            // Delegado en el modal: Select2 hace destroy/off('.select2') y borra handlers
+            // namespaced en el select; change sin namespace + delegacion sobrevive.
+            if (window.jQuery && !this._productosPrecioBound) {
+                this._productosPrecioBound = true;
+                const $modal = window.jQuery(this.modalEl);
+                $modal.on("change.rpEstProducto", "#cmbProductoEst, #cmbListaPrecioProdEst", () => {
+                    this.aplicarPrecioDesdeLista();
+                });
+            }
+        }
+
+        async aplicarPrecioDesdeLista() {
+            if (this.isSoloLectura() || this._omitirAutoPrecio) return;
+            const idProducto = this._getIntOrNull("cmbProductoEst");
+            const idLista = this._getIntOrNull("cmbListaPrecioProdEst");
+            if (!idProducto || !idLista) return;
+
+            this._precioListaSeq = (this._precioListaSeq || 0) + 1;
+            const seq = this._precioListaSeq;
+
+            try {
+                const url = this._replaceUrl(this.options.endpoints.productosPrecios, { idProducto });
+                const data = await this._fetchJson(url, {
+                    method: "GET",
+                    headers: this._headers(false)
+                });
+
+                if (seq !== this._precioListaSeq) return;
+
+                const rows = Array.isArray(data) ? data : [];
+                const match = rows.find(r => Number(r.IdListaPrecio) === Number(idLista));
+                if (!match) return;
+
+                // Trae el precio de la lista (aunque sea 0); el usuario puede editarlo.
+                this._setPrecioField(match.PrecioVenta ?? 0);
+            } catch (e) {
+                console.warn("No se pudo obtener el precio de la lista.", e);
+            }
         }
 
         _syncIvaCardUI() {
@@ -956,9 +1064,10 @@
 
                 await this.cargarCombos();
 
-                if (idClientePreseleccionado) {
-                    this._setFieldValue("cmbClienteEst", idClientePreseleccionado, true);
-                    await this.prefillDesdeCliente(idClientePreseleccionado);
+                const idCliente = idClientePreseleccionado || this.options.lockClienteId || null;
+                if (idCliente) {
+                    this._setFieldValue("cmbClienteEst", idCliente, true);
+                    await this.prefillDesdeCliente(idCliente);
                 } else {
                     await this.limpiarGeoEspecifico();
                 }
@@ -978,10 +1087,10 @@
                 this._id("modalEstablecimientoLabel").textContent = "Nuevo Establecimiento";
                 this._id("btnGuardarEst").innerHTML = `<i class="fa fa-check"></i> Registrar`;
 
-                this.bsModal.show();
+                this._mostrarUi();
 
                 if (typeof this.options.onOpen === "function") {
-                    await this.options.onOpen("nuevo", this);
+                    await this.options.onOpen("nuevo", this, null);
                 }
             } catch (e) {
                 console.error(e);
@@ -1022,7 +1131,46 @@
         }
 
         cerrar() {
-            this.bsModal.hide();
+            this._ocultarUi();
+            if (typeof this.options.onClosed === "function") {
+                this.options.onClosed(this);
+            }
+        }
+
+        _mostrarUi() {
+            this._aplicarLockCliente();
+            if (this.mode === "inline") {
+                this.modalEl.classList.remove("d-none");
+                document.getElementById("cgEstEditorEmpty")?.classList.add("d-none");
+                // Select2 necesita el panel visible
+                setTimeout(() => this.inicializarSelect2Modal(), 0);
+                return;
+            }
+            this.bsModal?.show();
+        }
+
+        _ocultarUi() {
+            if (this.mode === "inline") {
+                this.modalEl.classList.add("d-none");
+                document.getElementById("cgEstEditorEmpty")?.classList.remove("d-none");
+                return;
+            }
+            this.bsModal?.hide();
+        }
+
+        _aplicarLockCliente() {
+            const lockId = Number(this.options.lockClienteId) || 0;
+            const wrap = this._id("wrapClienteEst");
+            if (!lockId) {
+                wrap?.classList.remove("d-none");
+                return;
+            }
+            wrap?.classList.add("d-none");
+            this._setFieldValue("cmbClienteEst", lockId, true);
+        }
+
+        isInline() {
+            return this.mode === "inline";
         }
 
         async mostrarModal(modelo, soloLectura = false) {
@@ -1062,7 +1210,6 @@
             if (modelo.IdTipoGenerador) this._setFieldValue("cmbTipoGeneradorEst", modelo.IdTipoGenerador, true);
             if (modelo.IdDiaRecoleccion) this._setFieldValue("cmbDiaEst", modelo.IdDiaRecoleccion, true);
             if (modelo.IdSemanaRecoleccion) this._setFieldValue("cmbSemanaEst", modelo.IdSemanaRecoleccion, true);
-            if (modelo.IdListaPrecio) this._setFieldValue("cmbListaPrecioEst", modelo.IdListaPrecio, true);
             if (modelo.IdCamion) this._setFieldValue("cmbCamionEst", modelo.IdCamion, true);
 
             this._setAuditoria(modelo);
@@ -1084,7 +1231,7 @@
                 this.prepararProductosNuevo();
             }
 
-            this.bsModal.show();
+            this._mostrarUi();
             this.setModalSoloLectura(soloLectura);
 
             if (typeof this.options.onOpen === "function") {
@@ -1240,9 +1387,9 @@
             this.resetSelect("cmbTipoGeneradorEst", "Seleccionar");
             this.resetSelect("cmbDiaEst", "Seleccionar");
             this.resetSelect("cmbSemanaEst", "Seleccionar");
-            this.resetSelect("cmbListaPrecioEst", "Seleccionar");
             this.resetSelect("cmbCamionEst", "Seleccionar");
             this.resetSelect("cmbProductoEst", "Seleccionar");
+            this.resetSelect("cmbListaPrecioProdEst", "Seleccionar");
             this._setLocalidadDisabled(true);
 
             await Promise.all([
@@ -1252,8 +1399,9 @@
                 this._llenarComboTiposGenerador(seq),
                 this._llenarCombo("cmbDiaEst", this.options.endpoints.dias, seq),
                 this._llenarCombo("cmbSemanaEst", this.options.endpoints.semanas, seq),
-                this._llenarCombo("cmbListaPrecioEst", this.options.endpoints.listasPrecios, seq),
-                this._llenarCombo("cmbCamionEst", this.options.endpoints.camiones, seq)
+                this._llenarCombo("cmbCamionEst", this.options.endpoints.camiones, seq),
+                this._llenarCombo("cmbProductoEst", this.options.endpoints.productosCatalogo, seq),
+                this._llenarCombo("cmbListaPrecioProdEst", this.options.endpoints.listasPrecios, seq)
             ]);
 
             if (seq !== this._cargarCombosSeq) return;
@@ -1288,7 +1436,7 @@
                 CodPostal: this._getFieldValue("txtCodPostalEst") || null,
                 IdDiaRecoleccion: this._getIntOrNull("cmbDiaEst") ?? 0,
                 IdSemanaRecoleccion: this._getIntOrNull("cmbSemanaEst") ?? 0,
-                IdListaPrecio: this._getIntOrNull("cmbListaPrecioEst") ?? 0,
+                IdListaPrecio: null,
                 IdCamion: this._getIntOrNull("cmbCamionEst"),
                 DiasHorarios: (this._getFieldValue("txtDiasHorariosEst") || "").trim() || null
             };
@@ -1325,6 +1473,15 @@
                     } catch (contactoError) {
                         console.warn("El establecimiento se guardo, pero no se pudo copiar el contacto principal.", contactoError);
                     }
+                    this._setFieldValue("txtIdEst", data.id);
+                    this._modeloActual = { ...(this._modeloActual || modelo), Id: data.id };
+                    this._id("btnGuardarEst").innerHTML = `<i class="fa fa-check"></i> Guardar`;
+                    this._id("modalEstablecimientoLabel").textContent = "Editar Establecimiento";
+                    this.actualizarBadgeEstablecimiento();
+                    await Promise.all([
+                        this.cargarContactos(data.id),
+                        this.cargarProductos(data.id)
+                    ]);
                 }
                 if (typeof exitoModal === "function") {
                     exitoModal(data.mensaje || (esNuevo
@@ -1332,7 +1489,9 @@
                         : "Establecimiento modificado correctamente"));
                 }
 
-                this.cerrar();
+                if (this.mode !== "inline") {
+                    this.cerrar();
+                }
 
                 if (typeof this.options.onSaved === "function") {
                     const modeloGuardado = esNuevo && data.id
@@ -1385,6 +1544,10 @@
 
                 if (typeof this.options.onDeleted === "function") {
                     await this.options.onDeleted(data, id, this);
+                }
+
+                if (this.mode === "inline") {
+                    this.cerrar();
                 }
 
                 return true;
@@ -1550,7 +1713,7 @@
             const guardarBtn = this._id("btnGuardarEst");
             if (guardarBtn) {
                 guardarBtn.removeAttribute("onclick");
-                guardarBtn.addEventListener("click", () => this.guardar());
+                guardarBtn.addEventListener("click", () => withBusy(guardarBtn, () => this.guardar()));
             }
 
             const cerrarErrorBtn = this.modalEl.querySelector("#errorCamposEst .rp-error-close");
@@ -1621,18 +1784,28 @@
         }
 
         _bindModalEvents() {
-            this.modalEl.addEventListener("shown.bs.modal", () => {
-                this.inicializarSelect2Modal();
-            });
+            if (this.mode === "modal") {
+                this.modalEl.addEventListener("shown.bs.modal", () => {
+                    this.inicializarSelect2Modal();
+                });
+                return;
+            }
+
+            const btnCancel = this._id("btnCancelarEstInline");
+            if (btnCancel) {
+                btnCancel.addEventListener("click", () => this.cerrar());
+            }
         }
     }
 
     window.guardarEstablecimiento = function () {
-        return window.establecimientoModal?.guardar?.();
+        const btn = document.getElementById("btnGuardarEst");
+        return withBusy(btn, () => window.establecimientoModal?.guardar?.());
     };
 
     window.guardarContactoEstablecimiento = function () {
-        return window.establecimientoModal?.guardarContacto?.();
+        const btn = document.getElementById("btnGuardarContactoEst");
+        return withBusy(btn, () => window.establecimientoModal?.guardarContacto?.());
     };
 
     window.nuevoContactoEstablecimiento = function () {
@@ -1654,9 +1827,17 @@
     window.EstablecimientoModal = EstablecimientoModal;
 
     function initEstablecimientoModal(options = {}) {
-        const root = document.querySelector("[data-establecimiento-modal]");
+        let root = null;
+        if (options.root) {
+            root = typeof options.root === "string"
+                ? document.querySelector(options.root)
+                : options.root;
+        }
         if (!root) {
-            console.warn("initEstablecimientoModal: incluya el partial M_ClientesEstablecimientos en la vista.");
+            root = document.querySelector("[data-establecimiento-modal]");
+        }
+        if (!root) {
+            console.warn("initEstablecimientoModal: incluya el partial M_ClientesEstablecimientos o el editor inline en la vista.");
             return null;
         }
 
@@ -1666,6 +1847,7 @@
             window.establecimientoModal = new EstablecimientoModal(root, merged);
         } else {
             Object.assign(window.establecimientoModal.options, merged);
+            if (merged.mode) window.establecimientoModal.mode = merged.mode;
         }
 
         const abrirVer = (id) => window.establecimientoModal?.abrirVer?.(id);

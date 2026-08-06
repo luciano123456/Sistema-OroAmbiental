@@ -991,14 +991,18 @@ async function configurarDataTable(data) {
                     data: 'Ingreso',
                     className: "text-end",
                     render: function (v) {
-                        return fmtMoney(v);
+                        const n = Number(v || 0);
+                        if (!n) return fmtMoney(v);
+                        return `<span class="rp-money-in">${fmtMoney(v)}</span>`;
                     }
                 },
                 {
                     data: 'Egreso',
                     className: "text-end",
                     render: function (v) {
-                        return fmtMoney(v);
+                        const n = Number(v || 0);
+                        if (!n) return fmtMoney(v);
+                        return `<span class="rp-money-out">${fmtMoney(v)}</span>`;
                     }
                 },
                 {
@@ -1006,9 +1010,7 @@ async function configurarDataTable(data) {
                     className: "text-end",
                     render: function (v) {
                         const n = Number(v || 0);
-                        let cls = "saldo-cero";
-                        if (n > 0) cls = "saldo-deuda";
-                        if (n < 0) cls = "saldo-favor";
+                        const cls = typeof clsSaldoMoney === "function" ? clsSaldoMoney(n) : "rp-money-zero";
                         return `<strong class="${cls}">${fmtMoney(n)}</strong>`;
                     }
                 }
@@ -1137,10 +1139,10 @@ function actualizarKpis() {
     const saldoActual = CJ.resumen.saldoActual ?? (saldoAnterior + ingresos - egresos);
     const cantidad = CJ.resumen.cantidadMovimientos ?? (CJ.movimientos || []).filter(m => tipoMov(m) !== "SALDO_ANTERIOR").length;
 
-    $("#kpiSaldoAnterior").text(fmtMoney(saldoAnterior));
-    $("#kpiIngresos").text(fmtMoney(ingresos));
-    $("#kpiEgresos").text(fmtMoney(egresos));
-    $("#kpiSaldoActual").text(fmtMoney(saldoActual));
+    $("#kpiSaldoAnterior").text(fmtMoney(saldoAnterior)).attr("class", "val " + (typeof clsSaldoMoney === "function" ? clsSaldoMoney(saldoAnterior) : ""));
+    $("#kpiIngresos").text(fmtMoney(ingresos)).attr("class", "val rp-money-in");
+    $("#kpiEgresos").text(fmtMoney(egresos)).attr("class", "val rp-money-out");
+    $("#kpiSaldoActual").text(fmtMoney(saldoActual)).attr("class", "val " + (typeof clsSaldoMoney === "function" ? clsSaldoMoney(saldoActual) : ""));
     $("#kpiMovimientos").text(cantidad);
 
     const chip = $("#chipCajaEstado");
@@ -1163,14 +1165,15 @@ function actualizarKpisConsolidado() {
     const egrE = Number(data.EgresosEfectivo || 0);
     const ingB = Number(data.IngresosBanco || 0);
     const egrB = Number(data.EgresosBanco || 0);
-    $("#kpiSaldoEfectivo").text(fmtMoney(data.SaldoEfectivo || 0));
-    $("#kpiSaldoBanco").text(fmtMoney(data.SaldoBanco || 0));
-    $("#kpiSaldoTotal").text(fmtMoney(data.SaldoTotal || 0));
-    $("#kpiIngEfectivo").text(fmtMoney(ingE));
-    $("#kpiEgrEfectivo").text(fmtMoney(egrE));
-    $("#kpiIngBanco").text(fmtMoney(ingB));
-    $("#kpiEgrBanco").text(fmtMoney(egrB));
-    $("#kpiNetoConsolidado").text(fmtMoney((ingE + ingB) - (egrE + egrB)));
+    $("#kpiSaldoEfectivo").text(fmtMoney(data.SaldoEfectivo || 0)).attr("class", "val " + (typeof clsSaldoMoney === "function" ? clsSaldoMoney(data.SaldoEfectivo) : ""));
+    $("#kpiSaldoBanco").text(fmtMoney(data.SaldoBanco || 0)).attr("class", "val " + (typeof clsSaldoMoney === "function" ? clsSaldoMoney(data.SaldoBanco) : ""));
+    $("#kpiSaldoTotal").text(fmtMoney(data.SaldoTotal || 0)).attr("class", "val " + (typeof clsSaldoMoney === "function" ? clsSaldoMoney(data.SaldoTotal) : ""));
+    $("#kpiIngEfectivo").text(fmtMoney(ingE)).attr("class", "val rp-money-in");
+    $("#kpiEgrEfectivo").text(fmtMoney(egrE)).attr("class", "val rp-money-out");
+    $("#kpiIngBanco").text(fmtMoney(ingB)).attr("class", "val rp-money-in");
+    $("#kpiEgrBanco").text(fmtMoney(egrB)).attr("class", "val rp-money-out");
+    const neto = (ingE + ingB) - (egrE + egrB);
+    $("#kpiNetoConsolidado").text(fmtMoney(neto)).attr("class", "val " + (typeof clsSaldoMoney === "function" ? clsSaldoMoney(neto) : ""));
 }
 
 /* =========================
@@ -1190,9 +1193,9 @@ async function verMovimiento(id) {
         $("#vmSucursal").text(m.Sucursal || "");
         $("#vmCuenta").text(m.Cuenta || "");
         $("#vmConcepto").text(m.Concepto || "");
-        $("#vmIngreso").text(fmtMoney(m.Ingreso || 0));
-        $("#vmEgreso").text(fmtMoney(m.Egreso || 0));
-        $("#vmSaldo").text(fmtMoney(m.Saldo || 0));
+        $("#vmIngreso").text(fmtMoney(m.Ingreso || 0)).attr("class", "v rp-money-in");
+        $("#vmEgreso").text(fmtMoney(m.Egreso || 0)).attr("class", "v rp-money-out");
+        $("#vmSaldo").text(fmtMoney(m.Saldo || 0)).attr("class", "v " + (typeof clsSaldoMoney === "function" ? clsSaldoMoney(m.Saldo) : ""));
 
         $("#modalVerMovimiento").modal("show");
     } catch (e) {
@@ -1449,6 +1452,7 @@ function validarIngreso() {
 async function guardarIngreso() {
     if (!validarIngreso()) return;
 
+    return withBusy("#btnGuardarIngreso", async () => {
     const id = ($("#iId").val() || "").trim();
 
     const modelo = {
@@ -1488,6 +1492,7 @@ async function guardarIngreso() {
         console.error(e);
         mostrarErrorCamposIngreso("Ha ocurrido un error inesperado al guardar.");
     }
+    });
 }
 
 function mostrarErrorCamposIngreso(mensaje) {
@@ -1552,6 +1557,7 @@ function validarEgreso() {
 async function guardarEgreso() {
     if (!validarEgreso()) return;
 
+    return withBusy("#btnGuardarEgreso", async () => {
     const id = ($("#eId").val() || "").trim();
 
     const modelo = {
@@ -1591,6 +1597,7 @@ async function guardarEgreso() {
         console.error(e);
         mostrarErrorCamposEgreso("Ha ocurrido un error inesperado al guardar.");
     }
+    });
 }
 
 function mostrarErrorCamposEgreso(mensaje) {
@@ -1669,6 +1676,7 @@ function validarTransferencia() {
 async function guardarTransferencia() {
     if (!validarTransferencia()) return;
 
+    return withBusy("#btnGuardarTransferencia", async () => {
     const idGrupo = ($("#tIdMovimientoGrupo").val() || "").trim();
 
     const modelo = {
@@ -1709,6 +1717,7 @@ async function guardarTransferencia() {
         console.error(e);
         mostrarErrorCamposTransferencia("Ha ocurrido un error inesperado al guardar.");
     }
+    });
 }
 
 function mostrarErrorCamposTransferencia(mensaje) {

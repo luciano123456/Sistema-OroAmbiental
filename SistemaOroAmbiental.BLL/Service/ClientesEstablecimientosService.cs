@@ -22,11 +22,11 @@ namespace SistemaOroAmbiental.BLL.Service
             var validacion = Validar(model);
             if (validacion != null) return validacion;
 
-            var dup = await _repo.BuscarDuplicado(null, model.IdCliente, model.Nombre.Trim());
+            var dup = await _repo.BuscarDuplicado(null, model.IdEstablecimientoCliente);
             if (dup != null)
             {
                 return ServiceResult.Error(
-                    $"Ya existe un establecimiento '{dup.Nombre}' para este cliente.",
+                    $"Ya existe un establecimiento con Id del ministerio '{dup.IdEstablecimientoCliente}' ({dup.Nombre}).",
                     "duplicado",
                     dup.Id);
             }
@@ -42,11 +42,11 @@ namespace SistemaOroAmbiental.BLL.Service
             var validacion = Validar(model);
             if (validacion != null) return validacion;
 
-            var dup = await _repo.BuscarDuplicado(model.Id, model.IdCliente, model.Nombre.Trim());
+            var dup = await _repo.BuscarDuplicado(model.Id, model.IdEstablecimientoCliente);
             if (dup != null)
             {
                 return ServiceResult.Error(
-                    $"Ya existe un establecimiento '{dup.Nombre}' para este cliente.",
+                    $"Ya existe un establecimiento con Id del ministerio '{dup.IdEstablecimientoCliente}' ({dup.Nombre}).",
                     "duplicado",
                     dup.Id);
             }
@@ -77,8 +77,8 @@ namespace SistemaOroAmbiental.BLL.Service
             if (string.IsNullOrWhiteSpace(model.Nombre))
                 return ServiceResult.Error("El nombre es obligatorio.", "validacion");
 
-            if (model.IdDiaRecoleccion <= 0 || model.IdSemanaRecoleccion <= 0 || model.IdListaPrecio <= 0)
-                return ServiceResult.Error("Día, semana y lista de precios son obligatorios.", "validacion");
+            if (model.IdDiaRecoleccion <= 0 || model.IdSemanaRecoleccion <= 0)
+                return ServiceResult.Error("Día y semana de recolección son obligatorios.", "validacion");
 
             if (string.IsNullOrWhiteSpace(model.DiasHorarios)
                 && model.HorarioRecoleccionHasta <= model.HorarioRecoleccionDesde)

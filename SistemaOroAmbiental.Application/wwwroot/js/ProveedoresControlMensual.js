@@ -17,7 +17,7 @@ function initControlMensualPg() {
         aplicarPresetMesesPg(String($(this).data("meses") || ""));
     });
     $("#btnControlAniosRecientesPg").on("click", aplicarPresetAniosRecientesPg);
-    $("#btnGuardarControlMensualPg").on("click", guardarControlMensualPg);
+    $("#btnGuardarControlMensualPg").on("click", busyHandler(guardarControlMensualPg));
     $("#pgControlMensualBody").on("click", "tr[data-mes]", function () {
         abrirModalControlMensualPg(Number($(this).data("anio")), Number($(this).data("mes")));
     });

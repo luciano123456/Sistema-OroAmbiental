@@ -143,7 +143,7 @@ async function inicializarLibroDiarioModulo() {
     $("#btnFiltrarLd, #btnRefreshLd").off("click.ld").on("click.ld", aplicarFiltrosLd);
     $("#btnLimpiarLd").off("click.ld").on("click.ld", limpiarFiltrosLd);
     $("#btnNuevoLd").off("click.ld").on("click.ld", () => abrirModalLd());
-    $("#btnGuardarLd").off("click.ld").on("click.ld", guardarMovimientoLd);
+    $("#btnGuardarLd").off("click.ld").on("click.ld", busyHandler(guardarMovimientoLd));
     $("#fTextoLd").off("keydown.ld").on("keydown.ld", e => { if (e.key === "Enter") aplicarFiltrosLd(); });
 
     $("#btnLdEfectivo, #btnLdBancario").off("click.ldTipo").on("click.ldTipo", function () {
@@ -289,7 +289,7 @@ function renderCardsLd(movimientos) {
         </div>
     </div>
     <div class="rp-data-card-body cg-data-card-body">
-        <div class="rp-card-field rp-card-field--full"><span>Saldo</span><strong class="ld-val-saldo">${fmtNumLd(row.Saldo)}</strong></div>
+        <div class="rp-card-field rp-card-field--full"><span>Saldo</span><strong class="${typeof clsSaldoMoney === "function" ? clsSaldoMoney(row.Saldo) : "ld-val-saldo"}">${fmtNumLd(row.Saldo)}</strong></div>
     </div>
 </article>`;
         }
@@ -315,7 +315,7 @@ function renderCardsLd(movimientos) {
         <div class="rp-card-field"><span>Debe</span><strong class="ld-val-debe">${row.Debe ? fmtNumLd(row.Debe) : "-"}</strong></div>
         <div class="rp-card-field"><span>Haber</span><strong class="ld-val-haber">${row.Haber ? fmtNumLd(row.Haber) : "-"}</strong></div>
         <div class="rp-card-field"><span>Total</span><strong>${fmtNumLd(row.Total)}</strong></div>
-        <div class="rp-card-field rp-card-field--full"><span>Saldo</span><strong class="ld-val-saldo">${fmtNumLd(row.Saldo)}</strong></div>
+        <div class="rp-card-field rp-card-field--full"><span>Saldo</span><strong class="${typeof clsSaldoMoney === "function" ? clsSaldoMoney(row.Saldo) : "ld-val-saldo"}">${fmtNumLd(row.Saldo)}</strong></div>
         <div class="rp-card-field rp-card-field--full"><span>Forma pago</span><strong>${escapeHtmlLd(row.FormaPago || "-")}</strong></div>
     </div>
     <div class="rp-data-card-foot cg-data-card-foot">${acc}</div>
@@ -467,10 +467,10 @@ async function aplicarFiltrosLd() {
 
     if (rRes.ok) {
         const res = await rRes.json();
-        $("#kpiSaldoAnteriorLd").text(fmtMoneyLd(res.SaldoAnterior));
-        $("#kpiTotalDebeLd").text(fmtMoneyLd(res.TotalDebe));
-        $("#kpiTotalHaberLd").text(fmtMoneyLd(res.TotalHaber));
-        $("#kpiSaldoFinalLd").text(fmtMoneyLd(res.SaldoFinal));
+        $("#kpiSaldoAnteriorLd").text(fmtMoneyLd(res.SaldoAnterior)).attr("class", "val " + (typeof clsSaldoMoney === "function" ? clsSaldoMoney(res.SaldoAnterior) : ""));
+        $("#kpiTotalDebeLd").text(fmtMoneyLd(res.TotalDebe)).attr("class", "val ld-val-debe");
+        $("#kpiTotalHaberLd").text(fmtMoneyLd(res.TotalHaber)).attr("class", "val ld-val-haber");
+        $("#kpiSaldoFinalLd").text(fmtMoneyLd(res.SaldoFinal)).attr("class", "val " + (typeof clsSaldoMoney === "function" ? clsSaldoMoney(res.SaldoFinal) : "ld-val-saldo"));
         $("#kpiCantidadLd").text(res.CantidadMovimientos ?? 0);
     }
 
@@ -516,7 +516,7 @@ function renderTablaLd() {
             <td class="ld-num">${esSaldoAnt ? "" : fmtNumLd(row.Iva)}</td>
             <td class="ld-num">${esSaldoAnt ? "" : fmtNumLd(row.OtrosImp)}</td>
             <td class="ld-num">${esSaldoAnt ? "" : fmtNumLd(row.Total)}</td>
-            <td class="ld-num ld-col-saldo"><strong>${fmtNumLd(row.Saldo)}</strong></td>
+            <td class="ld-num ld-col-saldo"><strong class="${typeof clsSaldoMoney === "function" ? clsSaldoMoney(row.Saldo) : "ld-val-saldo"}">${fmtNumLd(row.Saldo)}</strong></td>
             <td>${escapeHtmlLd(row.FormaPago || "")}</td>
         </tr>`;
     }).join("");

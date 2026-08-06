@@ -11,6 +11,8 @@ public partial class ClientesEntregasProductosRecuperado
 
     public int IdProducto { get; set; }
 
+    public int? IdListaPrecio { get; set; }
+
     public decimal Cantidad { get; set; }
 
     public decimal PrecioVenta { get; set; }
@@ -50,6 +52,8 @@ public partial class ClientesEntregasProductosRecuperado
     public DateTime? FechaUsuarioModifica { get; set; }
 
     public virtual ClientesEntrega IdEntregaNavigation { get; set; } = null!;
+
+    public virtual ListasPrecio? IdListaPrecioNavigation { get; set; }
 
     public virtual Producto IdProductoNavigation { get; set; } = null!;
 

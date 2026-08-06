@@ -319,9 +319,7 @@ function renderClientes() {
 
         const active = ACC.ClienteSel && ACC.ClienteSel.Id === a.Id ? "active" : "";
 
-        let saldoClass = "saldo-cero";
-        if (saldo > 0) saldoClass = "saldo-deuda";
-        if (saldo < 0) saldoClass = "saldo-favor";
+        let saldoClass = typeof clsSaldoDeudaMoney === "function" ? clsSaldoDeudaMoney(saldo) : "saldo-cero";
 
         cont.append(`
             <div class="cc-artist-item ${active}" onclick="seleccionarCliente(${a.Id})">
@@ -560,28 +558,24 @@ async function configurarDataTable(data) {
                     data: 'Debe',
                     className: "text-end",
                     render: function (v) {
-                        return formatearNumero(v);
+                        const n = Number(v || 0);
+                        return n ? `<span class="rp-money-out">${formatearNumero(n)}</span>` : formatearNumero(n);
                     }
                 },
                 {
                     data: 'Haber',
                     className: "text-end",
                     render: function (v) {
-                        return formatearNumero(v);
+                        const n = Number(v || 0);
+                        return n ? `<span class="rp-money-in">${formatearNumero(n)}</span>` : formatearNumero(n);
                     }
                 },
                 {
                     data: 'Saldo',
                     className: "text-end",
                     render: function (v) {
-
                         const n = Number(v || 0);
-
-                        let cls = "saldo-cero";
-
-                        if (n > 0) cls = "saldo-deuda";
-                        if (n < 0) cls = "saldo-favor";
-
+                        const cls = typeof clsSaldoDeudaMoney === "function" ? clsSaldoDeudaMoney(n) : "rp-money-zero";
                         return `<strong class="${cls}">${formatearNumero(n)}</strong>`;
                     }
                 },
@@ -677,10 +671,10 @@ function actualizarKpis() {
         cantidadMovimientos: 0
     };
 
-    $("#kpiSaldoAnterior").text(fmtMoney(r.saldoAnterior));
-    $("#kpiDebe").text(fmtMoney(r.debe));
-    $("#kpiHaber").text(fmtMoney(r.haber));
-    $("#kpiSaldoActual").text(fmtMoney(r.saldoActual));
+    $("#kpiSaldoAnterior").text(fmtMoney(r.saldoAnterior)).attr("class", "val " + (typeof clsSaldoDeudaMoney === "function" ? clsSaldoDeudaMoney(r.saldoAnterior) : ""));
+    $("#kpiDebe").text(fmtMoney(r.debe)).attr("class", "val rp-money-out");
+    $("#kpiHaber").text(fmtMoney(r.haber)).attr("class", "val rp-money-in");
+    $("#kpiSaldoActual").text(fmtMoney(r.saldoActual)).attr("class", "val " + (typeof clsSaldoDeudaMoney === "function" ? clsSaldoDeudaMoney(r.saldoActual) : ""));
     $("#kpiMovimientos").text(r.cantidadMovimientos || 0);
 
     const chip = $("#chipSaldoEstado");
@@ -731,9 +725,9 @@ function verMovimiento(id) {
             $("#vmFecha").text(formatearFecha(m.Fecha));
             $("#vmTipo").text(m.TipoMovimiento || "");
             $("#vmConcepto").text(m.Concepto || "");
-            $("#vmDebe").text(fmtMoney(m.Debe || 0));
-            $("#vmHaber").text(fmtMoney(m.Haber || 0));
-            $("#vmSaldo").text(fmtMoney(m.Saldo ?? m.saldo ?? 0));
+            $("#vmDebe").text(fmtMoney(m.Debe || 0)).attr("class", "v rp-money-out");
+            $("#vmHaber").text(fmtMoney(m.Haber || 0)).attr("class", "v rp-money-in");
+            $("#vmSaldo").text(fmtMoney(m.Saldo ?? m.saldo ?? 0)).attr("class", "v " + (typeof clsSaldoDeudaMoney === "function" ? clsSaldoDeudaMoney(m.Saldo ?? m.saldo ?? 0) : ""));
 
             if (m.Sucursal) {
                 $("#vmSucursal").text(m.Sucursal);
@@ -953,6 +947,7 @@ async function guardarPago() {
 
     if (!validarPago()) return;
 
+    return withBusy("#btnGuardarPago", async () => {
     const modelo = {
         IdCliente: ACC.ClienteSel.Id,
         Fecha: $("#pFecha").val(),
@@ -1001,6 +996,7 @@ async function guardarPago() {
         console.error(e);
         mostrarErrorCamposPago("Ha ocurrido un error inesperado al guardar.");
     }
+    });
 }
 
 function mostrarErrorCamposPago(mensaje) {
@@ -1055,6 +1051,7 @@ async function guardarAjuste() {
 
     if (!validarAjuste()) return;
 
+    return withBusy("#btnGuardarAjuste", async () => {
     const idCuenta = $("#aCuenta").val();
 
     const modelo = {
@@ -1106,6 +1103,7 @@ async function guardarAjuste() {
         console.error(e);
         mostrarErrorCamposAjuste("Ha ocurrido un error inesperado al guardar.");
     }
+    });
 }
 
 function mostrarErrorCamposAjuste(mensaje) {

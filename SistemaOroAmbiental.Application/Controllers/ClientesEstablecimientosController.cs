@@ -234,7 +234,7 @@ namespace SistemaOroAmbiental.Application.Controllers
                 ImpuestoIva = model.ImpuestoIva,
                 IdDiaRecoleccion = model.IdDiaRecoleccion,
                 IdSemanaRecoleccion = model.IdSemanaRecoleccion,
-                IdListaPrecio = model.IdListaPrecio,
+                IdListaPrecio = model.IdListaPrecio is > 0 ? model.IdListaPrecio : null,
                 IdCamion = model.IdCamion,
                 OrdenRecorrido = model.OrdenRecorrido,
                 Kilos = model.Kilos,

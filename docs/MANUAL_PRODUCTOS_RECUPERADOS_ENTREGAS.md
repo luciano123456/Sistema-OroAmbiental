@@ -15,8 +15,8 @@ Hay **tres cosas distintas** en una entrega. No mezclar:
 
 | Concepto | Dónde vive | Efecto en stock |
 |----------|------------|-----------------|
-| **Entrega** (tipo 1) | `ClientesEntregasProductos` | Baja **inventario vendible** |
-| **Retiro** (tipo 2) | `ClientesEntregasProductos` | Sube **inventario vendible** (devolución al depósito) |
+| **Entrega** (tipo 1) | `ClientesEntregasProductos` | Baja **inventario vendible** (automático) |
+| **Retiro** (tipo 2) | `ClientesEntregasProductos` | **No** toca inventario vendible (sale del cliente; va a tratamiento) |
 | **Producto recuperado** | `ClientesEntregasProductosRecuperados` | Solo **InventarioRecuperado** (no toca stock vendible) |
 
 Reglas acordadas:
@@ -25,7 +25,8 @@ Reglas acordadas:
 - Eso **no debe bloquear** el guardado.
 - Si hay cruce, mostrar **cartel amarillo** informativo (no error rojo).
 - Los recuperados **no suman al total $** de la entrega (signo 0 en totales).
-- **Retiro ≠ recuperado**. Retiro es movimiento de stock vendible; recuperado es otro inventario.
+- **Retiro ≠ recuperado**. Retiro = dejaron de estar en poder del cliente (tratamiento). Recuperados = cajas que volvés a stock recuperado a mano / solapa recuperados.
+- El control mensual del hub **no mueve inventario**: solo resume entregas. El descuento de depósito ocurre al guardar una **Entrega** con líneas tipo Entrega.
 
 ---
 
@@ -231,7 +232,7 @@ El usuario pidió ver stock recuperado **también en Inventario** (junto al stoc
 ## 9. Checklist de prueba manual
 
 - [ ] Nueva entrega: solo productos entrega → stock vendible baja.
-- [ ] Nueva entrega: solo retiro → stock vendible sube.
+- [ ] Nueva entrega: solo retiro → stock vendible **no cambia**; baja “en poder del cliente”.
 - [ ] Nueva entrega: solo recuperados → stock recuperado sube; total $ entrega = 0 por esas líneas.
 - [ ] Misma caja en entrega y recuperado → guarda OK + cartel amarillo.
 - [ ] Editar entrega: cambiar cantidades recuperadas → stock recuperado se revierte y reaplica.

@@ -188,16 +188,13 @@ namespace SistemaOroAmbiental.Application.Controllers
                 var idSemana = model.IdSemanaRecoleccion > 0
                     ? model.IdSemanaRecoleccion
                     : await _establecimientosRepo.ObtenerPrimerIdCatalogo("Semanas");
-                var idLista = model.IdListaPrecio > 0
-                    ? model.IdListaPrecio
-                    : await _establecimientosRepo.ObtenerPrimerIdCatalogo("ListasPrecios");
 
-                if (idDia <= 0 || idSemana <= 0 || idLista <= 0)
+                if (idDia <= 0 || idSemana <= 0)
                 {
                     return Ok(new
                     {
                         valor = false,
-                        mensaje = "Configure catalogos de dia, semana y lista de precios.",
+                        mensaje = "Configure catalogos de dia y semana.",
                         tipo = "validacion"
                     });
                 }
@@ -216,7 +213,7 @@ namespace SistemaOroAmbiental.Application.Controllers
                     CodPostal = cliente.CodPostal,
                     IdDiaRecoleccion = idDia,
                     IdSemanaRecoleccion = idSemana,
-                    IdListaPrecio = idLista,
+                    IdListaPrecio = null,
                     HorarioRecoleccionDesde = new TimeSpan(8, 0, 0),
                     HorarioRecoleccionHasta = new TimeSpan(18, 0, 0),
                     IdUsuarioRegistra = idUsuario,

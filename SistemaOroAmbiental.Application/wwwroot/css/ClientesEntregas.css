@@ -421,7 +421,20 @@ body.layout-modulo .container-fluid {
 
 /* ========== NUEVO/MODIF ========== */
 .entregas-nuevo.ventanew {
-    padding-bottom: 24px;
+    padding: 8px 12px 40px;
+    max-width: 95vw;
+    width: 95vw;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.entregas-nuevo .vn-grid {
+    gap: 18px;
+    align-items: start;
+}
+
+.entregas-nuevo .vn-actions-pro {
+    margin-bottom: 16px;
 }
 
 .entregas-nuevo .vn-stat-total {
@@ -470,7 +483,9 @@ body.layout-modulo .container-fluid {
 }
 
 .entregas-nuevo .vn-table .form-control,
-.entregas-nuevo .vn-table .form-select {
+.entregas-nuevo .vn-table .form-select,
+.entregas-nuevo .en-linea .form-control,
+.entregas-nuevo .en-linea .form-select {
     min-height: 38px;
     font-size: 13px;
 }
@@ -503,6 +518,7 @@ table.fixedHeader-locked thead tr.filters {
     border: 1px dashed rgba(148, 163, 184, 0.35);
     border-radius: 14px;
     margin-top: 4px;
+    padding: 22px 16px;
 }
 
 .entregas-nuevo .vn-agregar-wrap {
@@ -601,8 +617,10 @@ table.fixedHeader-locked thead tr.filters {
 }
 
 /* Pestaña productos recuperados en entrega */
-.entregas-nuevo .vn-section-recuperados .vn-subtitle-rec {
-    background: rgba(62, 207, 142, 0.15);
+.entregas-nuevo .vn-section-recuperados .vn-subtitle-rec,
+.entregas-nuevo .vn-sec-recuperados .vn-subtitle .i {
+    background: rgba(62, 207, 142, 0.18);
+    border-color: rgba(62, 207, 142, 0.28);
     color: #7dffb8;
 }
 
@@ -620,4 +638,339 @@ table.fixedHeader-locked thead tr.filters {
 
 .entregas-nuevo .vn-empty-recuperados i {
     color: #7dffb8;
+}
+
+/* Vista unica NuevoModif: paneles con aire */
+.entregas-nuevo .vn-section,
+.entregas-nuevo .vn-section.active {
+    display: block !important;
+}
+
+.entregas-nuevo .vn-card--entrega-unica {
+    overflow: visible;
+}
+
+.entregas-nuevo .vn-card--entrega-unica > .vn-card-head {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    padding: 16px 20px;
+}
+
+.entregas-nuevo .vn-card-head-hint {
+    color: #8fa3bf;
+    font-size: 0.78rem;
+    margin-left: auto;
+    font-weight: 500;
+}
+
+.entregas-nuevo .vn-entrega-body {
+    padding: 18px 18px 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.entregas-nuevo .vn-section-block {
+    margin: 0;
+    padding: 18px 18px 20px;
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    border-radius: 16px;
+    background: rgba(10, 14, 28, 0.45);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.entregas-nuevo .vn-section-block.has-error {
+    border-color: rgba(248, 113, 113, 0.5);
+    background: rgba(127, 29, 29, 0.14);
+    box-shadow: 0 0 0 1px rgba(248, 113, 113, 0.2);
+}
+
+.entregas-nuevo .vn-section-block .vn-subtitle {
+    margin: 0 0 16px;
+    padding: 12px 14px;
+}
+
+.entregas-nuevo .vn-section-block .row.g-3 {
+    --bs-gutter-y: 1rem;
+    --bs-gutter-x: 1rem;
+}
+
+.entregas-nuevo .vn-section-block .vn-agregar-wrap {
+    margin-top: 4px;
+    margin-bottom: 0;
+}
+
+.entregas-nuevo .vn-section-block .vn-sec-toolbar {
+    margin-bottom: 14px;
+    gap: 0.75rem !important;
+}
+
+.entregas-nuevo .vn-section-block .cm-cobros-hint {
+    margin-bottom: 14px;
+}
+
+.entregas-nuevo .vn-section-block .cm-cobros-kpis {
+    margin-bottom: 16px;
+}
+
+.entregas-nuevo .vn-section-block .vn-gridtable {
+    margin-top: 4px;
+}
+
+.entregas-nuevo .vn-section-block .vn-empty {
+    margin-top: 10px;
+}
+
+.entregas-nuevo .vn-section-block .form-label {
+    margin-bottom: 0.4rem;
+}
+
+.entregas-nuevo .vn-section-block .vn-table td,
+.entregas-nuevo .vn-section-block .vn-table th {
+    padding-top: 0.7rem;
+    padding-bottom: 0.7rem;
+}
+
+/* Acentos por seccion */
+.entregas-nuevo .vn-sec-datos {
+    border-left: 3px solid rgba(91, 140, 255, 0.75);
+}
+
+.entregas-nuevo .vn-sec-productos {
+    border-left: 3px solid rgba(168, 85, 247, 0.7);
+}
+
+.entregas-nuevo .vn-sec-productos .vn-subtitle .i {
+    background: rgba(168, 85, 247, 0.16);
+    border-color: rgba(168, 85, 247, 0.28);
+    color: #d8b4fe;
+}
+
+.entregas-nuevo .vn-sec-recuperados {
+    border-left: 3px solid rgba(62, 207, 142, 0.75);
+}
+
+.entregas-nuevo .vn-sec-cobros {
+    border-left: 3px solid rgba(255, 178, 0, 0.75);
+}
+
+.entregas-nuevo .vn-sec-cobros .vn-subtitle .i {
+    background: rgba(255, 178, 0, 0.14);
+    border-color: rgba(255, 178, 0, 0.28);
+    color: #ffd666;
+}
+
+.entregas-nuevo .vn-sec-count {
+    color: #93c5fd;
+    font-weight: 700;
+    font-size: 0.85em;
+}
+
+.entregas-nuevo .vn-sec-productos .vn-sec-count {
+    color: #d8b4fe;
+}
+
+.entregas-nuevo .vn-sec-recuperados .vn-sec-count {
+    color: #7dffb8;
+}
+
+.entregas-nuevo .vn-sec-cobros .vn-sec-count {
+    color: #ffd666;
+}
+
+/* Resumen sticky */
+.entregas-nuevo .vn-card--resumen-sticky {
+    position: sticky;
+    top: 16px;
+}
+
+.entregas-nuevo .vn-card--resumen-sticky .vn-summary {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+@media (max-width: 1200px) {
+    .entregas-nuevo .vn-card--resumen-sticky {
+        position: static;
+    }
+
+    .entregas-nuevo.ventanew {
+        max-width: 100%;
+        width: 100%;
+        padding-left: 8px;
+        padding-right: 8px;
+    }
+}
+
+/* ========== Lineas de productos / recuperados (cards) ========== */
+.entregas-nuevo .en-lineas-wrap {
+    overflow: visible;
+}
+
+.entregas-nuevo .en-lineas {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 12px;
+}
+
+.entregas-nuevo .en-linea {
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    border-radius: 14px;
+    background: rgba(10, 18, 32, 0.55);
+    padding: 12px 14px 10px;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.entregas-nuevo .en-linea-grid {
+    display: grid;
+    grid-template-columns:
+        minmax(0, 2.2fr)
+        minmax(7.5rem, 0.75fr)
+        minmax(9rem, 1.1fr)
+        minmax(5.5rem, 0.6fr)
+        minmax(7.5rem, 0.85fr)
+        minmax(5.25rem, 0.55fr)
+        minmax(5.25rem, 0.55fr);
+    gap: 0.7rem 0.85rem;
+    align-items: end;
+}
+
+.entregas-nuevo .en-linea-grid--rec {
+    grid-template-columns:
+        minmax(0, 2.2fr)
+        minmax(9rem, 1.1fr)
+        minmax(5.5rem, 0.6fr)
+        minmax(7.5rem, 0.85fr)
+        minmax(5.25rem, 0.55fr)
+        minmax(5.25rem, 0.55fr);
+}
+
+.entregas-nuevo .en-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    margin: 0;
+    min-width: 0;
+}
+
+.entregas-nuevo .en-field > span {
+    font-size: 0.7rem;
+    font-weight: 800;
+    color: #8fa3bf;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    line-height: 1.2;
+}
+
+.entregas-nuevo .en-field .form-control,
+.entregas-nuevo .en-field .form-select,
+.entregas-nuevo .en-field .select2-container {
+    width: 100% !important;
+}
+
+.entregas-nuevo .en-field .select2-container .select2-selection--single {
+    min-height: 38px;
+    display: flex;
+    align-items: center;
+}
+
+.entregas-nuevo .en-field--num .form-control {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    padding-left: 0.45rem;
+    padding-right: 0.55rem;
+}
+
+.entregas-nuevo .en-linea-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.entregas-nuevo .en-linea-subtotal {
+    display: flex;
+    align-items: baseline;
+    gap: 0.65rem;
+    min-width: 0;
+}
+
+.entregas-nuevo .en-linea-subtotal > span {
+    font-size: 0.72rem;
+    font-weight: 800;
+    color: #8fa3bf;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.entregas-nuevo .en-linea-subtotal .linea-subtotal {
+    font-size: 1.05rem;
+    font-weight: 900;
+    font-variant-numeric: tabular-nums;
+    color: #8ff0b6;
+}
+
+.entregas-nuevo .en-linea--rec .en-linea-subtotal .linea-subtotal {
+    color: #7dffb8;
+}
+
+.entregas-nuevo .en-linea-foot .btn-quitar-linea {
+    flex-shrink: 0;
+}
+
+@media (max-width: 1280px) {
+    .entregas-nuevo .en-linea-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .entregas-nuevo .en-field--prod {
+        grid-column: 1 / -1;
+    }
+
+    .entregas-nuevo .en-field--tipo,
+    .entregas-nuevo .en-field--lista {
+        grid-column: span 2;
+    }
+
+    .entregas-nuevo .en-linea-grid--rec {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .entregas-nuevo .en-linea-grid--rec .en-field--lista {
+        grid-column: span 2;
+    }
+}
+
+@media (max-width: 700px) {
+    .entregas-nuevo .en-lineas {
+        padding: 10px;
+        gap: 10px;
+    }
+
+    .entregas-nuevo .en-linea {
+        padding: 10px 12px 8px;
+    }
+
+    .entregas-nuevo .en-linea-grid,
+    .entregas-nuevo .en-linea-grid--rec {
+        grid-template-columns: 1fr 1fr;
+        gap: 0.6rem 0.7rem;
+    }
+
+    .entregas-nuevo .en-field--prod,
+    .entregas-nuevo .en-field--lista,
+    .entregas-nuevo .en-field--tipo {
+        grid-column: 1 / -1;
+    }
+
+    .entregas-nuevo .en-field--precio {
+        grid-column: 1 / -1;
+    }
 }

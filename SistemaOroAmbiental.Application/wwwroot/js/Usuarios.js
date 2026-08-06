@@ -29,6 +29,10 @@ registrarFiltrosGrilla('grd_Usuarios', columnConfig, {
 
 $(document).ready(() => {
     listaUsuarios();
+    // Solo presencia (payload mínimo), sin recargar DataTables
+    setInterval(() => {
+        if (document.visibilityState === "visible") refrescarPresenciaUsuarios();
+    }, 60000);
     cargarTodasSucursalesParaAsignar();
 
     document.addEventListener("configuracionActualizada", async (e) => {
@@ -71,6 +75,7 @@ async function guardarCambios() {
 
     if (!validarCampos()) return false;
 
+    return withBusy("#btnGuardar", async () => {
     const idUsuario = $("#txtId").val();
 
     const nuevoModelo = {
@@ -183,6 +188,7 @@ async function guardarCambios() {
         console.error(err);
         errorModal("Error al guardar usuario y permisos.");
     }
+    });
 }
 function nuevoUsuario() {
     limpiarModal();
@@ -335,9 +341,41 @@ async function configurarDataTable(data) {
                     ver: "verUsuario",
                     editar: "editarUsuario",
                     eliminar: "eliminarUsuario"
-                }, "Usuarios"),
+                }, "Usuarios", (id, type, row) => {
+                    const user = String(row?.Usuario || "").replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+                    return `
+                    <div class="rp-row-actions" data-id="${id}">
+                        <button type="button" class="btn btn-sm rp-act rp-act-view" title="Ver" onclick="verUsuario(${id})">
+                            <i class="fa fa-file-text-o"></i>
+                        </button>
+                        <button type="button" class="btn btn-sm rp-act rp-act-edit" title="Editar" onclick="editarUsuario(${id})">
+                            <i class="fa fa-pencil-square-o"></i>
+                        </button>
+                        <button type="button" class="btn btn-sm rp-act rp-act-eye" title="Historial de conexiones"
+                            onclick="verHistorialConexionesUsuario(${id}, '${user}')">
+                            <i class="fa fa-eye"></i>
+                        </button>
+                        <button type="button" class="btn btn-sm rp-act rp-act-del" title="Eliminar" onclick="eliminarUsuario(${id})">
+                            <i class="fa fa-trash-o"></i>
+                        </button>
+                    </div>`;
+                }),
                 columnaGridId(),
-                { data: 'Usuario' },
+                {
+                    data: 'Usuario',
+                    render: function (data, type, row) {
+                        if (type === "sort" || type === "filter" || type === "type") return data || "";
+                        if (type === "export" || type === "print") return data || "";
+                        const online = !!row?.EnLinea;
+                        return `<span class="usr-user-cell">
+                            <span class="usr-presence ${online ? "is-online" : "is-offline"}" title="${online ? "En línea" : "Desconectado"}">
+                                <span class="usr-presence-dot"></span>
+                            </span>
+                            <span class="usr-user-name">${escapeHtml(data)}</span>
+                            <span class="usr-presence-label ${online ? "is-online" : "is-offline"}">${online ? "En línea" : "Offline"}</span>
+                        </span>`;
+                    }
+                },
                 { data: 'Nombre' },
                 { data: 'Apellido' },
                 { data: 'Dni' },
@@ -1370,3 +1408,128 @@ function escapeHtml(str) {
         .replaceAll(`"`, "&quot;")
         .replaceAll(`'`, "&#039;");
 }
+
+/* =========================
+   HISTORIAL CONEXIONES
+========================= */
+
+function parseFechaUtcUsr(d) {
+    if (!d) return null;
+    if (d instanceof Date) return d;
+    const s = String(d).trim();
+    if (!s) return null;
+    // Con Z u offset: el motor ya interpreta bien.
+    if (/[zZ]|[+\-]\d{2}:\d{2}$/.test(s)) return new Date(s);
+    // Sin zona: en BD se guarda UTC → forzar interpretación UTC.
+    const iso = s.includes("T") ? s : s.replace(" ", "T");
+    return new Date(iso.endsWith("Z") ? iso : `${iso}Z`);
+}
+
+function fmtFechaConexionUsr(d) {
+    const dt = parseFechaUtcUsr(d);
+    if (!dt || Number.isNaN(dt.getTime())) return "—";
+    return dt.toLocaleString("es-AR", {
+        timeZone: "America/Argentina/Buenos_Aires",
+        day: "2-digit", month: "2-digit", year: "numeric",
+        hour: "2-digit", minute: "2-digit", second: "2-digit"
+    });
+}
+
+async function refrescarPresenciaUsuarios() {
+    if (!gridUsuarios) return;
+    try {
+        const response = await fetch(`/Usuarios/Presencia`, {
+            headers: { Authorization: "Bearer " + token }
+        });
+        if (!response.ok) return;
+        const data = await response.json();
+        const map = new Map((data || []).map(x => [Number(x.Id), !!x.EnLinea]));
+
+        gridUsuarios.rows({ page: "current" }).every(function () {
+            const row = this.data();
+            if (!row) return true;
+            const id = Number(row.Id);
+            const online = map.has(id) ? map.get(id) : !!row.EnLinea;
+            if (row.EnLinea === online) return true;
+            row.EnLinea = online;
+
+            const $tr = $(this.node());
+            const $cell = $tr.find(".usr-user-cell");
+            if (!$cell.length) return true;
+            $cell.find(".usr-presence")
+                .toggleClass("is-online", online)
+                .toggleClass("is-offline", !online)
+                .attr("title", online ? "En línea" : "Desconectado");
+            $cell.find(".usr-presence-label")
+                .toggleClass("is-online", online)
+                .toggleClass("is-offline", !online)
+                .text(online ? "En línea" : "Offline");
+            return true;
+        });
+    } catch {
+        /* silencioso: no impacta UX */
+    }
+}
+
+window.verHistorialConexionesUsuario = async function (id, usuarioNombre) {
+    const modalEl = document.getElementById("modalHistorialConexionesUsr");
+    if (!modalEl) return;
+
+    $("#usrConnTitulo").text(usuarioNombre || ("Usuario #" + id));
+    $("#usrConnSub").text("Cargando movimientos…");
+    $("#usrConnKpis").html("");
+    $("#usrConnTimeline").html(`<div class="usr-conn-loading"><i class="fa fa-spinner fa-spin"></i> Cargando historial…</div>`);
+
+    const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+    modal.show();
+
+    try {
+        const response = await fetch(`/Usuarios/HistorialConexiones?id=${id}&take=150`, {
+            headers: { Authorization: "Bearer " + token }
+        });
+        if (!response.ok) throw new Error("No se pudo cargar el historial");
+        const data = await response.json();
+
+        const online = !!data.EnLinea;
+        $("#usrConnTitulo").text(data.Usuario || usuarioNombre || ("#" + id));
+        $("#usrConnSub").html(
+            `${escapeHtml(data.NombreCompleto || "")} · ` +
+            `<span class="usr-presence-label ${online ? "is-online" : "is-offline"}">${online ? "En línea ahora" : "Desconectado"}</span>` +
+            (data.FechaUltimaActividad ? ` · última actividad ${fmtFechaConexionUsr(data.FechaUltimaActividad)}` : "")
+        );
+
+        $("#usrConnKpis").html(`
+            <div class="usr-conn-kpi"><span>Conexiones</span><strong>${data.TotalConexiones || 0}</strong></div>
+            <div class="usr-conn-kpi"><span>Salidas</span><strong>${data.TotalDesconexiones || 0}</strong></div>
+            <div class="usr-conn-kpi"><span>Eventos</span><strong>${(data.Eventos || []).length}</strong></div>
+        `);
+
+        const eventos = Array.isArray(data.Eventos) ? data.Eventos : [];
+        if (!eventos.length) {
+            $("#usrConnTimeline").html(`<div class="usr-conn-empty">Todavía no hay conexiones registradas para este usuario.</div>`);
+            return;
+        }
+
+        $("#usrConnTimeline").html(eventos.map(ev => {
+            const tipo = Number(ev.Tipo);
+            const cls = tipo === 1 ? "is-in" : (tipo === 3 ? "is-exp" : "is-out");
+            const icon = tipo === 1 ? "fa-sign-in" : (tipo === 3 ? "fa-clock-o" : "fa-sign-out");
+            return `<article class="usr-conn-item ${cls}">
+                <div class="usr-conn-icon"><i class="fa ${icon}"></i></div>
+                <div class="usr-conn-body">
+                    <div class="usr-conn-head">
+                        <strong>${escapeHtml(ev.TipoNombre || "Evento")}</strong>
+                        <time>${fmtFechaConexionUsr(ev.Fecha)}</time>
+                    </div>
+                    <div class="usr-conn-meta">
+                        ${ev.Detalle ? `<span>${escapeHtml(ev.Detalle)}</span>` : ""}
+                    </div>
+                </div>
+            </article>`;
+        }).join(""));
+    } catch (e) {
+        console.error(e);
+        $("#usrConnTimeline").html(`<div class="usr-conn-empty">No se pudo cargar el historial de conexiones.</div>`);
+        $("#usrConnSub").text("Error al cargar");
+    }
+};

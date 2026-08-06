@@ -180,7 +180,7 @@ $(document).ready(async () => {
 
     $("#btnNuevoRecuperado").on("click", abrirModalRecuperadoManual);
 
-    $("#btnGuardarRecuperadoManual").on("click", guardarRecuperadoManual);
+    $("#btnGuardarRecuperadoManual").on("click", busyHandler(guardarRecuperadoManual));
 
     $("#txtBuscarHistorialRec").on("input", () => renderHistorialRec());
     $("#fOrigenRec").on("change", () => renderHistorialRec());

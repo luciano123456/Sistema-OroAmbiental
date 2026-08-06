@@ -143,8 +143,8 @@ function initModalesPg() {
 }
 
 function wireEventosPg() {
-    $("#btnGuardarProveedorPg").on("click", guardarProveedorPg);
-    $("#btnEliminarProveedorPg").on("click", eliminarProveedorPg);
+    $("#btnGuardarProveedorPg").on("click", busyHandler(guardarProveedorPg));
+    $("#btnEliminarProveedorPg").on("click", busyHandler(eliminarProveedorPg));
     $("#btnCerrarErrorPg").on("click", cerrarErrorPg);
     $("#pgActivo").on("change", function () {
         $("#lblActivoPg").text(this.checked ? "Activo" : "Inactivo");
@@ -156,7 +156,7 @@ function wireEventosPg() {
         if (debeMostrarTablaPg()) RpGridView.programarAjuste();
     });
 
-    $("#btnGuardarContactoPg").on("click", guardarContactoPg);
+    $("#btnGuardarContactoPg").on("click", busyHandler(guardarContactoPg));
     $("#btnNuevoContactoPg").on("click", limpiarFormContactoPg);
     $("#pgListaContactos").on("click", function (e) {
         const btnDel = e.target.closest(".btn-eliminar-contacto-pg");
@@ -175,8 +175,8 @@ function wireEventosPg() {
     $("#btnRefreshComprasPg").on("click", () => cargarTabCompras(true));
     $("#btnPagoPg, #btnPagoTabPg").on("click", abrirModalPagoPg);
     $("#btnAjustePg").on("click", abrirModalAjustePg);
-    $("#btnConfirmarPagoPg").on("click", confirmarPagoPg);
-    $("#btnConfirmarAjustePg").on("click", confirmarAjustePg);
+    $("#btnConfirmarPagoPg").on("click", busyHandler(confirmarPagoPg));
+    $("#btnConfirmarAjustePg").on("click", busyHandler(confirmarAjustePg));
 
     $("#pgPagoSucursal").on("change", filtrarCuentasPorSucursalPg);
 

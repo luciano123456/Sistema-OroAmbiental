@@ -1,8 +1,9 @@
 @{
     Layout = "_LayoutModulo";
     ViewData["Title"] = "Entregas - Nuevo / Modificar";
-    var id = (int)(ViewBag.Id ?? 0);
+    var id = (int)(ViewBag.IdEntrega ?? ViewBag.Id ?? 0);
     var idCliente = (int)(ViewBag.IdCliente ?? 0);
+    var volverCliente = ViewBag.VolverCliente == true;
 }
 
 @section Estilos {
@@ -11,7 +12,7 @@
     <link href="~/css/disenopantallas.css?v=8.1" rel="stylesheet" />
     <link href="~/css/M_Generico.css?v=5.2" rel="stylesheet" />
     <link href="~/css/VentasNuevoModif.css?v=5.2" rel="stylesheet" />
-    <link href="~/css/ClientesEntregas.css?v=5.2" rel="stylesheet" />
+    <link href="~/css/ClientesEntregas.css?v=5.6" rel="stylesheet" />
     <link href="~/css/ContratosModal.css?v=5.4" rel="stylesheet" />
 }
 
@@ -19,7 +20,9 @@
 
     <div class="vn-actions-pro">
         <div class="vn-actions-header">
-            <a href="@Url.Action("Index", "ClientesEntregas")" class="vn-btn-soft text-decoration-none" title="Volver al listado">
+            <a href="@(volverCliente && idCliente > 0 ? Url.Action("Gestion", "Clientes", new { id = idCliente }) : Url.Action("Index", "ClientesEntregas"))"
+               class="vn-btn-soft text-decoration-none"
+               title="@(volverCliente && idCliente > 0 ? "Volver al cliente" : "Volver al listado")">
                 <i class="fa fa-arrow-left"></i>
             </a>
             <div class="icon">
@@ -41,37 +44,16 @@
 
     <div class="vn-grid">
 
-        <div class="vn-card">
-            <div class="vn-card-head vn-head-tabs">
-                <ul class="vn-head-nav">
-                    <li>
-                        <button class="vn-head-btn active" data-sec="datos" type="button">
-                            <i class="fa fa-info-circle"></i>
-                            Datos de la entrega
-                        </button>
-                    </li>
-                    <li>
-                        <button class="vn-head-btn" data-sec="productos" type="button">
-                            <i class="fa fa-cubes"></i>
-                            Productos <span id="cntProductos">(0)</span>
-                        </button>
-                    </li>
-                    <li>
-                        <button class="vn-head-btn" data-sec="recuperados" type="button">
-                            <i class="fa fa-recycle"></i>
-                            Productos recuperados <span id="cntRecuperados">(0)</span>
-                        </button>
-                    </li>
-                    <li>
-                        <button class="vn-head-btn" data-sec="cobros" type="button" id="tabBtnCobros">
-                            <i class="fa fa-money"></i>
-                            Cobros <span id="cntCobros">(0)</span>
-                        </button>
-                    </li>
-                </ul>
+        <div class="vn-card vn-card--entrega-unica">
+            <div class="vn-card-head">
+                <div class="t">
+                    <i class="fa fa-truck"></i>
+                    Entrega completa
+                </div>
+                <small class="vn-card-head-hint">Datos, productos, recuperados y cobros en una sola vista</small>
             </div>
 
-            <div class="p-3">
+            <div class="vn-entrega-body">
 
                 <div id="errorCamposEntrega" class="rp-error-panel d-none mb-3">
                     <div class="rp-error-icon"><i class="fa fa-exclamation-triangle"></i></div>
@@ -86,7 +68,7 @@
 
                 <div id="alertEntregaCobros" class="vn-alert-warning mb-3" hidden>
                     <i class="fa fa-info-circle"></i>
-                    Esta entrega tiene cobros. Podes editarlos en la pestana Cobros; los cambios se aplican al guardar (caja y cuenta corriente).
+                    Esta entrega tiene cobros. Podes editarlos abajo; los cambios se aplican al guardar (caja y cuenta corriente).
                 </div>
 
                 <div id="alertProductoEntregaRecuperado" class="vn-alert-warning mb-3" hidden>
@@ -97,13 +79,13 @@
                 <input type="hidden" id="Entrega_Id" value="@id" />
 
                 <!-- DATOS -->
-                <div class="vn-section active" id="sec-datos">
+                <div class="vn-section active vn-section-block vn-sec-datos" id="sec-datos" data-sec="datos">
 
                     <div class="vn-subtitle">
-                        <div class="i"><i class="fa fa-truck"></i></div>
+                        <div class="i"><i class="fa fa-info-circle"></i></div>
                         <div class="txt">
-                            <div class="t1">Datos generales</div>
-                            <div class="t2">Cliente, estado de la entrega y fecha</div>
+                            <div class="t1">Datos de la entrega</div>
+                            <div class="t2">Cliente, estado, fecha y notas</div>
                         </div>
                     </div>
 
@@ -139,6 +121,11 @@
                                 </button>
                             </div>
                         </div>
+                        <div class="col-md-4">
+                            <label class="form-label vn-label">Establecimiento</label>
+                            <select id="cEstablecimiento" class="form-select vn-input" required></select>
+                            <div class="form-text text-muted">Obligatorio: la entrega se imputa al establecimiento.</div>
+                        </div>
                         <div class="col-12">
                             <label class="form-label vn-label">Nota al cliente</label>
                             <textarea id="cNotaCliente" class="form-control vn-input" rows="2" placeholder="Visible para el cliente..."></textarea>
@@ -151,17 +138,17 @@
                 </div>
 
                 <!-- PRODUCTOS -->
-                <div class="vn-section" id="sec-productos">
+                <div class="vn-section active vn-section-block vn-sec-productos" id="sec-productos" data-sec="productos">
 
                     <div class="vn-subtitle">
                         <div class="i"><i class="fa fa-cubes"></i></div>
                         <div class="txt">
-                            <div class="t1">Productos</div>
-                            <div class="t2">Entrega o retiro - afectan el inventario vendible</div>
+                            <div class="t1">Productos <span class="vn-sec-count" id="cntProductos">(0)</span></div>
+                            <div class="t2">Entrega descuenta inventario · Retiro baja stock en poder del cliente</div>
                         </div>
                     </div>
 
-                    <div class="d-flex gap-2 flex-wrap align-items-center mb-3">
+                    <div class="d-flex gap-2 flex-wrap align-items-center vn-sec-toolbar">
                         <div class="vn-agregar-wrap" id="wrapAgregarLinea">
                             <span class="vn-agregar-arrow" aria-hidden="true">
                                 <i class="fa fa-long-arrow-down"></i> Agrega productos aca
@@ -175,22 +162,8 @@
                         </button>
                     </div>
 
-                    <div class="vn-gridtable">
-                        <table class="table vn-table" id="tblLineasEntrega">
-                            <thead>
-                                <tr>
-                                    <th style="min-width:220px">Producto</th>
-                                    <th style="min-width:120px">Tipo</th>
-                                    <th>Cant.</th>
-                                    <th>Precio venta</th>
-                                    <th>% Desc</th>
-                                    <th>% IVA</th>
-                                    <th class="text-end">Subtotal</th>
-                                    <th style="width:48px"></th>
-                                </tr>
-                            </thead>
-                            <tbody id="tbodyLineasEntrega"></tbody>
-                        </table>
+                    <div class="vn-gridtable en-lineas-wrap" id="tblLineasEntrega">
+                        <div class="en-lineas" id="tbodyLineasEntrega"></div>
                     </div>
 
                     <div id="lblSinLineas" class="vn-empty vn-empty-entrega">
@@ -201,17 +174,17 @@
                 </div>
 
                 <!-- PRODUCTOS RECUPERADOS -->
-                <div class="vn-section" id="sec-recuperados">
+                <div class="vn-section active vn-section-block vn-sec-recuperados" id="sec-recuperados" data-sec="recuperados">
 
                     <div class="vn-subtitle">
-                        <div class="i text-success"><i class="fa fa-recycle"></i></div>
+                        <div class="i"><i class="fa fa-recycle"></i></div>
                         <div class="txt">
-                            <div class="t1">Productos recuperados</div>
-                            <div class="t2">Ingresan al inventario de recuperados (no al stock vendible)</div>
+                            <div class="t1">Productos recuperados <span class="vn-sec-count" id="cntRecuperados">(0)</span></div>
+                            <div class="t2">Entran a inventario recuperado (no al stock vendible)</div>
                         </div>
                     </div>
 
-                    <div class="d-flex gap-2 flex-wrap align-items-center mb-3">
+                    <div class="d-flex gap-2 flex-wrap align-items-center vn-sec-toolbar">
                         <div class="vn-agregar-wrap" id="wrapAgregarRecuperado">
                             <span class="vn-agregar-arrow" aria-hidden="true">
                                 <i class="fa fa-long-arrow-down"></i> Agrega recuperados aca
@@ -222,21 +195,8 @@
                         </div>
                     </div>
 
-                    <div class="vn-gridtable">
-                        <table class="table vn-table" id="tblLineasRecuperados">
-                            <thead>
-                                <tr>
-                                    <th style="min-width:220px">Producto</th>
-                                    <th>Cant.</th>
-                                    <th>Precio ref.</th>
-                                    <th>% Desc</th>
-                                    <th>% IVA</th>
-                                    <th class="text-end">Subtotal</th>
-                                    <th style="width:48px"></th>
-                                </tr>
-                            </thead>
-                            <tbody id="tbodyLineasRecuperados"></tbody>
-                        </table>
+                    <div class="vn-gridtable en-lineas-wrap" id="tblLineasRecuperados">
+                        <div class="en-lineas" id="tbodyLineasRecuperados"></div>
                     </div>
 
                     <div id="lblSinRecuperados" class="vn-empty vn-empty-entrega">
@@ -247,13 +207,13 @@
                 </div>
 
                 <!-- COBROS -->
-                <div class="vn-section" id="sec-cobros">
+                <div class="vn-section active vn-section-block vn-sec-cobros" id="sec-cobros" data-sec="cobros">
 
                     <div class="vn-subtitle">
                         <div class="i"><i class="fa fa-money"></i></div>
                         <div class="txt">
-                            <div class="t1">Cobros al contrato</div>
-                            
+                            <div class="t1">Cobros <span class="vn-sec-count" id="cntCobros">(0)</span></div>
+                            <div class="t2">Se registran en caja y cuenta corriente al guardar</div>
                         </div>
                     </div>
 
@@ -278,7 +238,7 @@
                             </div>
                         </div>
 
-                        <div class="d-flex gap-2 flex-wrap mb-3">
+                        <div class="d-flex gap-2 flex-wrap vn-sec-toolbar">
                             <div class="vn-agregar-wrap vn-agregar-wrap--cobros" id="wrapAgregarCobro">
                                 <span class="vn-agregar-arrow" aria-hidden="true">
                                     <i class="fa fa-long-arrow-down"></i> Agrega cobros aca
@@ -317,11 +277,11 @@
         </div>
 
         <!-- PANEL RESUMEN -->
-        <div class="vn-card">
+        <aside class="vn-card vn-card--resumen-sticky">
             <div class="vn-card-head">
                 <div class="t">
                     <i class="fa fa-line-chart"></i>
-                    Resumen de entrega
+                    Resumen
                 </div>
             </div>
 
@@ -351,7 +311,7 @@
                     <div class="val cm-resumen-saldo" id="totSaldoResumen">$ 0,00</div>
                 </div>
             </div>
-        </div>
+        </aside>
 
     </div>
 </div>
@@ -361,11 +321,19 @@
 
 @section Scripts {
     <script>
-        window.CM_INIT = { id: @id, idCliente: @idCliente };
+        window.CM_INIT = {
+            id: @(id),
+            idCliente: @(idCliente),
+            volverCliente: @(volverCliente ? "true" : "false"),
+            urlVolverCliente: null
+        };
+        if (window.CM_INIT.volverCliente && window.CM_INIT.idCliente > 0) {
+            window.CM_INIT.urlVolverCliente = "/Clientes/Gestion?id=" + window.CM_INIT.idCliente;
+        }
     </script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-    <script src="~/js/Entities/M_Productos.js?v=5.2"></script>
+    <script src="~/js/Entities/M_Productos.js?v=5.5"></script>
     <script src="~/js/ContratosDocumentos.js?v=5.3"></script>
     <script src="~/js/Entities/M_Contratos.js?v=5.4"></script>
-    <script src="~/js/ClientesEntregasNuevoModif.js?v=5.3"></script>
+    <script src="~/js/ClientesEntregasNuevoModif.js?v=6.4"></script>
 }

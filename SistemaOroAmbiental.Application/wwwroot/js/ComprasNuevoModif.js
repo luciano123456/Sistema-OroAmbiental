@@ -110,7 +110,7 @@
     }
 
     function wireEventosCompra() {
-        $("#btnGuardarCompra").on("click", guardarCompra);
+    $("#btnGuardarCompra").on("click", busyHandler(guardarCompra));
         $("#btnEliminarCompra").on("click", eliminarCompraActual);
         $("#btnAgregarLinea").on("click", () => agregarLinea());
 

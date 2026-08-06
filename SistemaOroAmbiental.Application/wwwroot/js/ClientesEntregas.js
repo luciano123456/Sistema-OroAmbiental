@@ -5,6 +5,7 @@
 let gridEntregas;
 let contratosEntregas = [];
 let estadosEntregaEntregas = [];
+const CE = window.CE_INIT || { idCliente: 0 };
 
 const API = {
     lista: "/ClientesEntregas/ListaFiltrada",
@@ -16,7 +17,8 @@ const API = {
         return url;
     },
     contratos: "/Contratos/Lista",
-    estadosEntrega: "/EntregasEstados/Lista"
+    estadosEntrega: "/EntregasEstados/Lista",
+    clienteInfo: id => `/Clientes/EditarInfo?id=${id}`
 };
 
 const authHeaders = () => ({
@@ -51,13 +53,15 @@ $(document).ready(async () => {
 
     wireEventosEntregas();
     inicializarFechasEntregas();
+    await aplicarFiltroClienteDesdeUrl();
     await cargarCombosEntregas();
     await cargarEntregas();
 });
 
 function wireEventosEntregas() {
     $("#btnNuevaEntrega").on("click", () => {
-        window.location.href = API.nuevoModif(0);
+        const idCli = Number(CE.idCliente || 0);
+        window.location.href = API.nuevoModif(0, idCli > 0 ? idCli : null);
     });
 
     $("#btnRefreshEntregas").on("click", cargarEntregas);
@@ -81,6 +85,40 @@ function inicializarFechasEntregas() {
     desde.setDate(desde.getDate() - 30);
     $("#fFechaDesde").val(desde.toISOString().slice(0, 10));
     $("#fFechaHasta").val(hoy.toISOString().slice(0, 10));
+}
+
+async function aplicarFiltroClienteDesdeUrl() {
+    const idCli = Number(CE.idCliente || 0);
+    if (idCli <= 0) return;
+
+    // Sin rango de fechas: ver historial completo del cliente
+    $("#fFechaDesde").val("");
+    $("#fFechaHasta").val("");
+
+    const $panel = $("#panelFiltrosEntregas");
+    if ($panel.length && !$panel.hasClass("show")) {
+        $panel.addClass("show");
+    }
+
+    try {
+        const r = await fetch(API.clienteInfo(idCli), { headers: authHeaders() });
+        if (r.ok) {
+            const cli = await r.json();
+            const nombre = cli.Nombre || cli.nombre || `Cliente #${idCli}`;
+            $("#lblFiltroClienteEntregas")
+                .text(`Cliente: ${nombre}`)
+                .prop("hidden", false);
+        } else {
+            $("#lblFiltroClienteEntregas")
+                .text(`Filtrado por cliente #${idCli}`)
+                .prop("hidden", false);
+        }
+    } catch (e) {
+        console.warn(e);
+        $("#lblFiltroClienteEntregas")
+            .text(`Filtrado por cliente #${idCli}`)
+            .prop("hidden", false);
+    }
 }
 
 async function cargarCombosEntregas() {
@@ -115,9 +153,11 @@ function ensureSelect2Entregas($el, opts) {
 }
 
 function obtenerFiltrosEntregas() {
+    const idCliUrl = Number(CE.idCliente || 0);
     return {
         FechaDesde: $("#fFechaDesde").val() || null,
         FechaHasta: $("#fFechaHasta").val() || null,
+        IdCliente: idCliUrl > 0 ? idCliUrl : null,
         IdContrato: $("#fCliente").val() ? parseInt($("#fCliente").val(), 10) : null,
         IdEstado: $("#fEstado").val() ? parseInt($("#fEstado").val(), 10) : null,
         Texto: ($("#fTexto").val() || "").trim() || null
@@ -129,6 +169,11 @@ async function aplicarFiltrosEntregas() {
 }
 
 async function limpiarFiltrosEntregas() {
+    CE.idCliente = 0;
+    $("#lblFiltroClienteEntregas").prop("hidden", true).text("");
+    if (window.history?.replaceState) {
+        window.history.replaceState({}, "", "/ClientesEntregas/Index");
+    }
     inicializarFechasEntregas();
     $("#fCliente").val("").trigger("change");
     $("#fEstado").val("").trigger("change");
@@ -421,6 +466,7 @@ function renderModalProductosEntrega(detalle) {
     const cards = lineas.map(l => {
         const nombre = l.Producto || l.producto || "Producto";
         const medida = l.Medida || l.medida || "";
+        const lista = l.ListaPrecio || l.listaPrecio || "";
         const cant = l.Cantidad ?? l.cantidad ?? 0;
         const costo = l.PrecioVenta ?? l.costoUnitario ?? 0;
         const porcDesc = l.PorcDescuento ?? l.porcDescuento ?? 0;
@@ -433,6 +479,7 @@ function renderModalProductosEntrega(detalle) {
                     <div class="cm-prod-card-icon"><i class="fa fa-cube"></i></div>
                     <div class="cm-prod-card-title">
                         <div class="cm-prod-card-name">${escapeHtmlEntregas(nombre)}</div>
+                        ${lista ? `<span class="cm-prod-card-medida">${escapeHtmlEntregas(lista)}</span>` : ""}
                         ${medida ? `<span class="cm-prod-card-medida">${escapeHtmlEntregas(medida)}</span>` : ""}
                     </div>
                 </div>

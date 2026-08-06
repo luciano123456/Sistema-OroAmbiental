@@ -27,11 +27,17 @@ namespace SistemaOroAmbiental.BLL.Service
             if (model.Cantidad <= 0)
                 return ServiceResult.Error("La cantidad debe ser mayor a cero.", "validacion");
 
-            var dup = await _repo.BuscarDuplicado(null, model.IdEstablecimiento, model.IdProducto);
+            if (model.IdListaPrecio is null or <= 0)
+                return ServiceResult.Error("Debe seleccionar una lista de precios.", "validacion");
+
+            if (model.PrecioVenta < 0)
+                return ServiceResult.Error("El precio no puede ser negativo.", "validacion");
+
+            var dup = await _repo.BuscarDuplicado(null, model.IdEstablecimiento, model.IdProducto, model.IdListaPrecio.Value);
             if (dup != null)
             {
                 return ServiceResult.Error(
-                    "El producto ya está asignado a este establecimiento.",
+                    "El producto ya está asignado a este establecimiento con esa lista de precios.",
                     "duplicado",
                     dup.Id);
             }
@@ -53,11 +59,17 @@ namespace SistemaOroAmbiental.BLL.Service
             if (model.Cantidad <= 0)
                 return ServiceResult.Error("La cantidad debe ser mayor a cero.", "validacion");
 
-            var dup = await _repo.BuscarDuplicado(model.Id, model.IdEstablecimiento, model.IdProducto);
+            if (model.IdListaPrecio is null or <= 0)
+                return ServiceResult.Error("Debe seleccionar una lista de precios.", "validacion");
+
+            if (model.PrecioVenta < 0)
+                return ServiceResult.Error("El precio no puede ser negativo.", "validacion");
+
+            var dup = await _repo.BuscarDuplicado(model.Id, model.IdEstablecimiento, model.IdProducto, model.IdListaPrecio.Value);
             if (dup != null)
             {
                 return ServiceResult.Error(
-                    "El producto ya está asignado a este establecimiento.",
+                    "El producto ya está asignado a este establecimiento con esa lista de precios.",
                     "duplicado",
                     dup.Id);
             }

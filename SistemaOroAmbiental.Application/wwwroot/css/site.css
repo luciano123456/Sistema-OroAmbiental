@@ -1510,6 +1510,56 @@ table.dt-dark tbody tr {
     to { transform: scaleX(0); }
 }
 
+/* Busy lock buttons */
+button.is-busy,
+.btn.is-busy,
+input[type="submit"].is-busy {
+    cursor: wait !important;
+    pointer-events: none;
+    opacity: 0.85;
+}
+
+button.is-busy .spinner-border,
+.btn.is-busy .spinner-border {
+    vertical-align: -0.125em;
+}
+
+/* =========================================================
+   Money tones — ingresos / egresos / saldo
+   Ingreso-Haber = verde | Egreso-Debe = rojo
+   Saldo: 0 = amarillo | + = verde | - = rojo
+========================================================= */
+
+.rp-money-in,
+.rp-val-ingreso,
+.rp-val-haber {
+    color: #86efac !important;
+}
+
+.rp-money-out,
+.rp-val-egreso,
+.rp-val-debe {
+    color: #fca5a5 !important;
+}
+
+.rp-money-pos,
+.rp-val-saldo-pos {
+    color: #86efac !important;
+    font-weight: 700;
+}
+
+.rp-money-neg,
+.rp-val-saldo-neg {
+    color: #fca5a5 !important;
+    font-weight: 700;
+}
+
+.rp-money-zero,
+.rp-val-saldo-cero {
+    color: #fbbf24 !important;
+    font-weight: 700;
+}
+
 @media (max-width: 576px) {
     .rp-toast-stack {
         right: 0.65rem;

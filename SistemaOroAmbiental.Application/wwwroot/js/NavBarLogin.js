@@ -901,16 +901,19 @@ function filtrarSeccionesConfiguraciones() {
     });
 
 function cerrarSesion() {
+    const go = () => { window.location.href = '/Login/Logout'; };
     if (window.SessionManager?.beginVoluntaryLogout) {
-        window.SessionManager.beginVoluntaryLogout();
-    } else {
-        sessionStorage.removeItem('sesionExpirada');
-        sessionStorage.setItem('logoutVoluntario', '1');
-        localStorage.removeItem('JwtToken');
-        localStorage.removeItem('userSession');
-        localStorage.removeItem('sessionExpiresAt');
+        Promise.resolve(window.SessionManager.beginVoluntaryLogout())
+            .catch(() => { })
+            .finally(go);
+        return;
     }
-    window.location.href = '/Login/Logout';
+    sessionStorage.removeItem('sesionExpirada');
+    sessionStorage.setItem('logoutVoluntario', '1');
+    localStorage.removeItem('JwtToken');
+    localStorage.removeItem('userSession');
+    localStorage.removeItem('sessionExpiresAt');
+    go();
 }
 
 function volverConfiguraciones() {

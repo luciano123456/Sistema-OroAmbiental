@@ -6,6 +6,8 @@ namespace SistemaOroAmbiental.Application.Models.ViewModels
 
         public string Nombre { get; set; } = "";
 
+        public string? Abreviatura { get; set; }
+
         public int IdCategoria { get; set; }
 
         public int IdMedida { get; set; }

@@ -50,6 +50,7 @@ namespace SistemaOroAmbiental.DAL.Repository
                 var costoAnterior = entity.CostoUnitario;
 
                 entity.Nombre = model.Nombre;
+                entity.Abreviatura = string.IsNullOrWhiteSpace(model.Abreviatura) ? null : model.Abreviatura.Trim();
                 entity.IdCategoria = model.IdCategoria;
                 entity.IdMedida = model.IdMedida;
                 entity.CostoUnitario = model.CostoUnitario;

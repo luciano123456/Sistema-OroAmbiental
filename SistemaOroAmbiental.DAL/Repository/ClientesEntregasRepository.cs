@@ -38,6 +38,7 @@ namespace SistemaOroAmbiental.DAL.Repository
             var query = _db.ClientesEntregas
                 .AsNoTracking()
                 .Include(x => x.IdClienteNavigation)
+                .Include(x => x.IdEstablecimientoNavigation)
                 .Include(x => x.IdContratoNavigation)
                     .ThenInclude(c => c!.IdEstablecimientoNavigation)
                 .Include(x => x.IdEstadoNavigation)
@@ -70,6 +71,7 @@ namespace SistemaOroAmbiental.DAL.Repository
                     (x.NotaInterna != null && x.NotaInterna.Contains(t)) ||
                     (x.NotaCliente != null && x.NotaCliente.Contains(t)) ||
                     x.IdClienteNavigation.Nombre.Contains(t) ||
+                    (x.IdEstablecimientoNavigation != null && x.IdEstablecimientoNavigation.Nombre.Contains(t)) ||
                     (x.IdContratoNavigation != null && x.IdContratoNavigation.IdEstablecimientoNavigation != null &&
                      x.IdContratoNavigation.IdEstablecimientoNavigation.Nombre.Contains(t)));
             }
@@ -85,6 +87,7 @@ namespace SistemaOroAmbiental.DAL.Repository
             return await _db.ClientesEntregas
                 .Include(x => x.IdClienteNavigation)
                     .ThenInclude(cl => cl.IdSucursalNavigation)
+                .Include(x => x.IdEstablecimientoNavigation)
                 .Include(x => x.IdContratoNavigation)
                     .ThenInclude(c => c!.IdEstablecimientoNavigation)
                 .Include(x => x.IdEstadoNavigation)
@@ -92,9 +95,13 @@ namespace SistemaOroAmbiental.DAL.Repository
                 .Include(x => x.ClientesEntregasProductos)
                     .ThenInclude(l => l.IdProductoNavigation)
                         .ThenInclude(p => p.IdMedidaNavigation)
+                .Include(x => x.ClientesEntregasProductos)
+                    .ThenInclude(l => l.IdListaPrecioNavigation)
                 .Include(x => x.ClientesEntregasProductosRecuperados)
                     .ThenInclude(l => l.IdProductoNavigation)
                         .ThenInclude(p => p.IdMedidaNavigation)
+                .Include(x => x.ClientesEntregasProductosRecuperados)
+                    .ThenInclude(l => l.IdListaPrecioNavigation)
                 .FirstOrDefaultAsync(x => x.Id == id);
         }
 
@@ -232,6 +239,40 @@ namespace SistemaOroAmbiental.DAL.Repository
             throw new InvalidOperationException("Debe indicar un cliente para la entrega.");
         }
 
+        /// <summary>
+        /// La entrega se imputa al establecimiento. El contrato es opcional:
+        /// si hay uno solo para ese establecimiento, se asocia como referencia.
+        /// </summary>
+        private async Task AsegurarEstablecimientoYContrato(ClientesEntrega entrega)
+        {
+            if (entrega.IdEstablecimiento <= 0)
+                throw new InvalidOperationException("Debe indicar el establecimiento de la entrega.");
+
+            var est = await _db.ClientesEstablecimientos
+                .AsNoTracking()
+                .FirstOrDefaultAsync(x => x.Id == entrega.IdEstablecimiento);
+
+            if (est == null)
+                throw new InvalidOperationException("El establecimiento indicado no existe.");
+
+            if (entrega.IdCliente <= 0)
+                entrega.IdCliente = est.IdCliente;
+            else if (est.IdCliente != entrega.IdCliente)
+                throw new InvalidOperationException("El establecimiento no pertenece al cliente de la entrega.");
+
+            if (entrega.IdContrato is > 0)
+                return;
+
+            var contratos = await _db.Contratos
+                .AsNoTracking()
+                .Where(c => c.IdEstablecimiento == entrega.IdEstablecimiento)
+                .Select(c => c.Id)
+                .ToListAsync();
+
+            if (contratos.Count == 1)
+                entrega.IdContrato = contratos[0];
+        }
+
         private async Task RegistrarStockRecuperadoEntrega(
             int idEntrega,
             int idSucursal,
@@ -260,30 +301,14 @@ namespace SistemaOroAmbiental.DAL.Repository
             int idUsuario,
             DateTime ahora)
         {
-            var producto = await _db.Productos.FirstAsync(x => x.Id == linea.IdProducto);
-
-            var inv = await _invRepo.ObtenerOCrearInventario(idSucursal, linea.IdProducto);
-
+            // Retiro: baja el "en poder del cliente" (entregadas - retiradas) pero NO vuelve al
+            // inventario vendible. Esas cajas van a tratamiento; si se recuperan, se cargan
+            // manualmente / en la solapa Productos recuperados (InventarioRecuperado).
             if (EsRetiro(linea))
-            {
-                var movRetiro = new InventarioMovimiento
-                {
-                    IdInventario = inv.Id,
-                    TipoMovimiento = InventarioRepository.TIPO_ENTREGA,
-                    IdMovimiento = idEntrega,
-                    Fecha = fecha,
-                    Concepto = $"Retiro #{idEntrega} - {producto.Nombre}",
-                    Entrada = linea.Cantidad,
-                    Salida = 0,
-                    IdUsuarioRegistra = idUsuario,
-                    FechaUsuarioRegistra = ahora
-                };
-
-                _db.InventarioMovimientos.Add(movRetiro);
-                inv.Stock += linea.Cantidad;
-                await _db.SaveChangesAsync();
                 return;
-            }
+
+            var producto = await _db.Productos.FirstAsync(x => x.Id == linea.IdProducto);
+            var inv = await _invRepo.ObtenerOCrearInventario(idSucursal, linea.IdProducto);
 
             if (inv.Stock < linea.Cantidad)
                 throw new InvalidOperationException(
@@ -336,10 +361,25 @@ namespace SistemaOroAmbiental.DAL.Repository
         private async Task RegistrarMovimientoCuentaCorriente(
             ClientesCuentaCorriente cc,
             ClientesEntrega entrega,
+            IEnumerable<ClientesEntregasProducto> lineas,
             Cliente cliente,
             int idUsuario,
             DateTime ahora)
         {
+            // Debe = lo entregado (cargo). Haber = lo retirado (crédito).
+            // El saldo (Debe - Haber) coincide con ImporteTotal neto.
+            var lista = (lineas ?? Enumerable.Empty<ClientesEntregasProducto>()).ToList();
+            var debe = lista.Where(l => !EsRetiro(l)).Sum(l => l.SubtotalFinal);
+            var haber = lista.Where(EsRetiro).Sum(l => l.SubtotalFinal);
+
+            if (debe == 0 && haber == 0 && entrega.ImporteTotal != 0)
+            {
+                if (entrega.ImporteTotal >= 0)
+                    debe = entrega.ImporteTotal;
+                else
+                    haber = Math.Abs(entrega.ImporteTotal);
+            }
+
             var movCc = new ClientesCuentaCorrienteMovimiento
             {
                 IdCuentaCorriente = cc.Id,
@@ -347,8 +387,8 @@ namespace SistemaOroAmbiental.DAL.Repository
                 IdMovimiento = entrega.Id,
                 Fecha = entrega.Fecha,
                 Concepto = $"Entrega #{entrega.Id} - {cliente.Nombre}",
-                Debe = entrega.ImporteTotal >= 0 ? entrega.ImporteTotal : 0,
-                Haber = entrega.ImporteTotal < 0 ? Math.Abs(entrega.ImporteTotal) : 0,
+                Debe = debe,
+                Haber = haber,
                 IdUsuarioRegistra = idUsuario,
                 FechaUsuarioRegistra = ahora
             };
@@ -413,6 +453,8 @@ namespace SistemaOroAmbiental.DAL.Repository
                 foreach (var l in lineasRecuperadas)
                     RecalcularLineaRecuperado(l);
 
+                await AsegurarEstablecimientoYContrato(entrega);
+
                 RecalcularTotalesEntrega(entrega, lineas);
                 entrega.ImporteAbonado = 0;
                 entrega.Saldo = entrega.ImporteTotal;
@@ -434,10 +476,23 @@ namespace SistemaOroAmbiental.DAL.Repository
                     linea.IdUsuarioRegistra = idUsuario;
                     linea.FechaUsuarioRegistra = ahora;
                     RecalcularLinea(linea);
-
                     _db.ClientesEntregasProductos.Add(linea);
+                }
+
+                foreach (var lineaRec in lineasRecuperadas)
+                {
+                    lineaRec.IdEntrega = entrega.Id;
+                    lineaRec.IdUsuarioRegistra = idUsuario;
+                    lineaRec.FechaUsuarioRegistra = ahora;
+                    RecalcularLineaRecuperado(lineaRec);
+                    _db.ClientesEntregasProductosRecuperados.Add(lineaRec);
+                }
+
+                if (lineas.Count > 0 || lineasRecuperadas.Count > 0)
                     await _db.SaveChangesAsync();
 
+                foreach (var linea in lineas)
+                {
                     await RegistrarStockEntrega(
                         entrega.Id,
                         idSucursal,
@@ -449,14 +504,6 @@ namespace SistemaOroAmbiental.DAL.Repository
 
                 foreach (var lineaRec in lineasRecuperadas)
                 {
-                    lineaRec.IdEntrega = entrega.Id;
-                    lineaRec.IdUsuarioRegistra = idUsuario;
-                    lineaRec.FechaUsuarioRegistra = ahora;
-                    RecalcularLineaRecuperado(lineaRec);
-
-                    _db.ClientesEntregasProductosRecuperados.Add(lineaRec);
-                    await _db.SaveChangesAsync();
-
                     await RegistrarStockRecuperadoEntrega(
                         entrega.Id,
                         idSucursal,
@@ -465,7 +512,7 @@ namespace SistemaOroAmbiental.DAL.Repository
                         idUsuario);
                 }
 
-                await RegistrarMovimientoCuentaCorriente(cc, entrega, cliente, idUsuario, ahora);
+                await RegistrarMovimientoCuentaCorriente(cc, entrega, lineas, cliente, idUsuario, ahora);
                 await _db.SaveChangesAsync();
 
                 foreach (var cobro in cobros)
@@ -540,8 +587,11 @@ namespace SistemaOroAmbiental.DAL.Repository
                 foreach (var l in lineasRecuperadas)
                     RecalcularLineaRecuperado(l);
 
+                await AsegurarEstablecimientoYContrato(entrega);
+
                 entity.Fecha = entrega.Fecha;
                 entity.IdCliente = entrega.IdCliente;
+                entity.IdEstablecimiento = entrega.IdEstablecimiento;
                 entity.IdContrato = entrega.IdContrato;
                 entity.IdEstado = entrega.IdEstado;
                 entity.NotaInterna = entrega.NotaInterna;
@@ -595,7 +645,7 @@ namespace SistemaOroAmbiental.DAL.Repository
                         idUsuario);
                 }
 
-                await RegistrarMovimientoCuentaCorriente(cc, entity, cliente, idUsuario, ahora);
+                await RegistrarMovimientoCuentaCorriente(cc, entity, lineas, cliente, idUsuario, ahora);
                 await SincronizarCobrosEntrega(entity.Id, idCliente, entity.Fecha, cobros, idUsuario);
                 await ActualizarImporteAbonadoYSaldo(entity.Id);
                 await _db.SaveChangesAsync();

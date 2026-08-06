@@ -12,9 +12,12 @@ namespace SistemaOroAmbiental.BLL.Service
         Task<ClienteControlFiltradoDto?> ObtenerControlMensualFiltrado(
             int idCliente,
             IReadOnlyList<int> anios,
-            IReadOnlyList<int> meses);
+            IReadOnlyList<int> meses,
+            IReadOnlyList<int>? idsEstablecimiento = null);
 
-        Task<List<ClienteStockDto>> ObtenerStockCliente(int idCliente);
+        Task<List<ClienteStockDto>> ObtenerStockCliente(int idCliente, IReadOnlyList<int>? idsEstablecimiento = null);
+
+        Task<List<ClienteProductoSugeridoDto>> ObtenerProductosSugeridos(int idCliente, IReadOnlyList<int>? idsEstablecimiento = null);
 
         Task<ServiceResult> GuardarControlMensual(ClientesControlMensual model, int idUsuario);
     }

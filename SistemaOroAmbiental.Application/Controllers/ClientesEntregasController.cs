@@ -19,13 +19,20 @@ namespace SistemaOroAmbiental.Application.Controllers
         }
 
         [AllowAnonymous]
-        public IActionResult Index() => View();
+        public IActionResult Index(int idCliente = 0)
+        {
+            ViewBag.IdCliente = idCliente;
+            return View();
+        }
 
         [AllowAnonymous]
-        public IActionResult NuevoModif(int id = 0, int idCliente = 0)
+        public IActionResult NuevoModif(int id = 0, int idCliente = 0, bool volverCliente = false)
         {
-            ViewBag.Id = id;
+            // Usar IdEntrega (no ViewBag.Id): en algunos layouts/filtros "Id" se pisa y la pantalla queda en alta.
+            ViewBag.IdEntrega = id;
+            ViewBag.Id = id; // compat vistas que aún lean Id
             ViewBag.IdCliente = idCliente;
+            ViewBag.VolverCliente = volverCliente && idCliente > 0;
             return View();
         }
 
@@ -51,9 +58,14 @@ namespace SistemaOroAmbiental.Application.Controllers
                     Id = e.Id,
                     Fecha = e.Fecha,
                     IdContrato = e.IdContrato,
+                    IdEstablecimiento = e.IdEstablecimiento > 0
+                        ? e.IdEstablecimiento
+                        : e.IdContratoNavigation?.IdEstablecimiento,
                     IdCliente = e.IdCliente,
                     Cliente = e.IdClienteNavigation?.Nombre ?? "",
-                    Establecimiento = e.IdContratoNavigation?.IdEstablecimientoNavigation?.Nombre ?? "",
+                    Establecimiento = e.IdEstablecimientoNavigation?.Nombre
+                        ?? e.IdContratoNavigation?.IdEstablecimientoNavigation?.Nombre
+                        ?? "",
                     IdEstado = e.IdEstado,
                     Estado = e.IdEstadoNavigation?.Nombre,
                     Subtotal = e.Subtotal,
@@ -75,48 +87,60 @@ namespace SistemaOroAmbiental.Application.Controllers
         [HttpGet]
         public async Task<IActionResult> EditarInfo(int id)
         {
-            var e = await _service.Obtener(id);
-            if (e == null)
-                return NotFound();
-
-            var resumenCobros = await _service.ObtenerCobros(id);
-            var cliente = e.IdClienteNavigation;
-            var contrato = e.IdContratoNavigation;
-
-            var detalle = new VMClienteEntregaDetalle
+            try
             {
-                Id = e.Id,
-                Fecha = e.Fecha,
-                IdContrato = e.IdContrato,
-                IdCliente = e.IdCliente,
-                Cliente = cliente?.Nombre ?? "",
-                Establecimiento = contrato?.IdEstablecimientoNavigation?.Nombre ?? "",
-                IdSucursal = cliente?.IdSucursal ?? 0,
-                Sucursal = cliente?.IdSucursalNavigation?.Nombre ?? "",
-                IdEstado = e.IdEstado,
-                Estado = e.IdEstadoNavigation?.Nombre,
-                IdCamion = e.IdCamion,
-                Camion = e.IdCamionNavigation?.Nombre,
-                NotaInterna = e.NotaInterna,
-                NotaCliente = e.NotaCliente,
-                Subtotal = e.Subtotal,
-                Descuentos = e.Descuentos,
-                TotalIva = e.TotalIva,
-                ImporteTotal = e.ImporteTotal,
-                ImporteAbonado = resumenCobros?.TotalCobrado ?? e.ImporteAbonado,
-                Saldo = resumenCobros?.SaldoPendiente ?? e.Saldo,
-                TieneCobros = resumenCobros?.TieneCobros ?? false,
-                PuedeEditar = true,
-                PuedeEliminar = true,
-                Lineas = (e.ClientesEntregasProductos ?? new List<ClientesEntregasProducto>())
-                    .Where(l => l.TipoMovimiento != ClientesEntregasRepository.TIPO_LINEA_RECUPERADO)
-                    .OrderBy(x => x.Id)
-                    .Select(MapLineaOperacionVm)
-                    .ToList(),
-                LineasRecuperadas = MapearLineasRecuperadas(e)
-            };
+                var e = await _service.Obtener(id);
+                if (e == null)
+                    return NotFound();
 
-            return Ok(detalle);
+                var resumenCobros = await _service.ObtenerCobros(id);
+                var cliente = e.IdClienteNavigation;
+                var contrato = e.IdContratoNavigation;
+
+                var detalle = new VMClienteEntregaDetalle
+                {
+                    Id = e.Id,
+                    Fecha = e.Fecha,
+                    IdContrato = e.IdContrato,
+                    IdEstablecimiento = e.IdEstablecimiento > 0
+                        ? e.IdEstablecimiento
+                        : contrato?.IdEstablecimiento,
+                    IdCliente = e.IdCliente,
+                    Cliente = cliente?.Nombre ?? "",
+                    Establecimiento = e.IdEstablecimientoNavigation?.Nombre
+                        ?? contrato?.IdEstablecimientoNavigation?.Nombre
+                        ?? "",
+                    IdSucursal = cliente?.IdSucursal ?? 0,
+                    Sucursal = cliente?.IdSucursalNavigation?.Nombre ?? "",
+                    IdEstado = e.IdEstado,
+                    Estado = e.IdEstadoNavigation?.Nombre,
+                    IdCamion = e.IdCamion,
+                    Camion = e.IdCamionNavigation?.Nombre,
+                    NotaInterna = e.NotaInterna,
+                    NotaCliente = e.NotaCliente,
+                    Subtotal = e.Subtotal,
+                    Descuentos = e.Descuentos,
+                    TotalIva = e.TotalIva,
+                    ImporteTotal = e.ImporteTotal,
+                    ImporteAbonado = resumenCobros?.TotalCobrado ?? e.ImporteAbonado,
+                    Saldo = resumenCobros?.SaldoPendiente ?? e.Saldo,
+                    TieneCobros = resumenCobros?.TieneCobros ?? false,
+                    PuedeEditar = true,
+                    PuedeEliminar = true,
+                    Lineas = (e.ClientesEntregasProductos ?? new List<ClientesEntregasProducto>())
+                        .Where(l => l.TipoMovimiento != ClientesEntregasRepository.TIPO_LINEA_RECUPERADO)
+                        .OrderBy(x => x.Id)
+                        .Select(MapLineaOperacionVm)
+                        .ToList(),
+                    LineasRecuperadas = MapearLineasRecuperadas(e)
+                };
+
+                return Ok(detalle);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { mensaje = "Error al obtener la entrega.", detalle = ex.Message });
+            }
         }
 
         [HttpPost]
@@ -209,6 +233,7 @@ namespace SistemaOroAmbiental.Application.Controllers
                 Id = model.Id,
                 Fecha = model.Fecha == default ? DateTime.Now : model.Fecha,
                 IdCliente = model.IdCliente,
+                IdEstablecimiento = model.IdEstablecimiento,
                 IdContrato = model.IdContrato,
                 IdEstado = model.IdEstado,
                 IdCamion = model.IdCamion,
@@ -250,6 +275,7 @@ namespace SistemaOroAmbiental.Application.Controllers
             {
                 Id = x.Id,
                 IdProducto = x.IdProducto,
+                IdListaPrecio = x.IdListaPrecio > 0 ? x.IdListaPrecio : null,
                 TipoMovimiento = MapTipoMovimientoLinea(x.TipoMovimiento),
                 Cantidad = x.Cantidad,
                 PrecioVenta = x.PrecioVenta,
@@ -263,6 +289,7 @@ namespace SistemaOroAmbiental.Application.Controllers
             {
                 Id = x.Id,
                 IdProducto = x.IdProducto,
+                IdListaPrecio = x.IdListaPrecio > 0 ? x.IdListaPrecio : null,
                 Cantidad = x.Cantidad,
                 PrecioVenta = x.PrecioVenta,
                 CostoUnitario = x.CostoUnitario,
@@ -299,9 +326,11 @@ namespace SistemaOroAmbiental.Application.Controllers
             {
                 Id = l.Id,
                 IdProducto = l.IdProducto,
+                IdListaPrecio = l.IdListaPrecio,
                 TipoMovimiento = l.TipoMovimiento,
                 Producto = l.IdProductoNavigation?.Nombre ?? "",
                 Medida = l.IdProductoNavigation?.IdMedidaNavigation?.Nombre,
+                ListaPrecio = l.IdListaPrecioNavigation?.Nombre,
                 Cantidad = l.Cantidad,
                 PrecioVenta = l.PrecioVenta,
                 CostoUnitario = l.CostoUnitario,
@@ -323,9 +352,11 @@ namespace SistemaOroAmbiental.Application.Controllers
             {
                 Id = l.Id,
                 IdProducto = l.IdProducto,
+                IdListaPrecio = l.IdListaPrecio,
                 TipoMovimiento = ClientesEntregasRepository.TIPO_LINEA_RECUPERADO,
                 Producto = l.IdProductoNavigation?.Nombre ?? "",
                 Medida = l.IdProductoNavigation?.IdMedidaNavigation?.Nombre,
+                ListaPrecio = l.IdListaPrecioNavigation?.Nombre,
                 Cantidad = l.Cantidad,
                 PrecioVenta = l.PrecioVenta,
                 CostoUnitario = l.CostoUnitario,

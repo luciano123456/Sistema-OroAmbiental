@@ -15,6 +15,7 @@ namespace SistemaOroAmbiental.Application.Models.ViewModels
         public int Id { get; set; }
         public DateTime Fecha { get; set; }
         public int? IdContrato { get; set; }
+        public int? IdEstablecimiento { get; set; }
         public int IdCliente { get; set; }
         public string Cliente { get; set; } = "";
         public string Establecimiento { get; set; } = "";
@@ -35,9 +36,11 @@ namespace SistemaOroAmbiental.Application.Models.ViewModels
     {
         public int Id { get; set; }
         public int IdProducto { get; set; }
+        public int? IdListaPrecio { get; set; }
         public int TipoMovimiento { get; set; } = 1; // 1=Entrega, 2=Retiro, 3=Recuperado (inv. recuperado)
         public string Producto { get; set; } = "";
         public string? Medida { get; set; }
+        public string? ListaPrecio { get; set; }
         public decimal Cantidad { get; set; }
         public decimal PrecioVenta { get; set; }
         public decimal CostoUnitario { get; set; }
@@ -59,6 +62,7 @@ namespace SistemaOroAmbiental.Application.Models.ViewModels
         public int Id { get; set; }
         public DateTime Fecha { get; set; }
         public int? IdContrato { get; set; }
+        public int? IdEstablecimiento { get; set; }
         public int IdCliente { get; set; }
         public string Cliente { get; set; } = "";
         public string Establecimiento { get; set; } = "";
@@ -90,6 +94,7 @@ namespace SistemaOroAmbiental.Application.Models.ViewModels
         public int Id { get; set; }
         public DateTime Fecha { get; set; }
         public int IdCliente { get; set; }
+        public int IdEstablecimiento { get; set; }
         public int? IdContrato { get; set; }
         public int? IdEstado { get; set; }
         public int? IdCamion { get; set; }
@@ -106,6 +111,7 @@ namespace SistemaOroAmbiental.Application.Models.ViewModels
     {
         public int Id { get; set; }
         public int IdProducto { get; set; }
+        public int? IdListaPrecio { get; set; }
         public int TipoMovimiento { get; set; } = 1; // 1=Entrega, 2=Retiro, 3=Recuperado (inv. recuperado)
         public decimal Cantidad { get; set; }
         public decimal PrecioVenta { get; set; }

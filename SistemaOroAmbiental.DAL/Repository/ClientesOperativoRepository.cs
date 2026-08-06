@@ -136,7 +136,8 @@ namespace SistemaOroAmbiental.DAL.Repository
             var filtrado = await ObtenerControlMensualFiltrado(
                 idCliente,
                 new List<int> { anio },
-                Enumerable.Range(1, 12).ToList());
+                Enumerable.Range(1, 12).ToList(),
+                null);
 
             if (filtrado == null)
                 return null;
@@ -159,7 +160,8 @@ namespace SistemaOroAmbiental.DAL.Repository
         public async Task<ClienteControlFiltradoDto?> ObtenerControlMensualFiltrado(
             int idCliente,
             IReadOnlyList<int> anios,
-            IReadOnlyList<int> meses)
+            IReadOnlyList<int> meses,
+            IReadOnlyList<int>? idsEstablecimiento = null)
         {
             var cliente = await _db.Clientes
                 .AsNoTracking()
@@ -185,18 +187,38 @@ namespace SistemaOroAmbiental.DAL.Repository
             if (!mesesNorm.Any())
                 mesesNorm = Enumerable.Range(1, 12).ToList();
 
+            var idsEst = (idsEstablecimiento ?? Array.Empty<int>())
+                .Where(x => x > 0)
+                .Distinct()
+                .ToList();
+            var filtrarEst = idsEst.Count > 0;
+            var idEstUnico = idsEst.Count == 1 ? idsEst[0] : (int?)null;
             var datosParciales = false;
 
             List<ClientesEntrega> entregas = new();
             try
             {
-                entregas = await _db.ClientesEntregas
+                var queryEntregas = _db.ClientesEntregas
                     .AsNoTracking()
                     .Include(e => e.ClientesEntregasProductos)
+                        .ThenInclude(p => p.IdProductoNavigation)
+                    .Include(e => e.IdEstablecimientoNavigation)
+                    .Include(e => e.IdContratoNavigation)
                     .Where(e =>
                         e.IdCliente == idCliente &&
-                        aniosNorm.Contains(e.Fecha.Year))
-                    .ToListAsync();
+                        aniosNorm.Contains(e.Fecha.Year));
+
+                if (filtrarEst)
+                {
+                    // Preferir IdEstablecimiento; si falta (legado), usar el del contrato.
+                    queryEntregas = queryEntregas.Where(e =>
+                        idsEst.Contains(e.IdEstablecimiento)
+                        || (e.IdEstablecimiento <= 0
+                            && e.IdContratoNavigation != null
+                            && idsEst.Contains(e.IdContratoNavigation.IdEstablecimiento)));
+                }
+
+                entregas = await queryEntregas.ToListAsync();
             }
             catch
             {
@@ -206,40 +228,67 @@ namespace SistemaOroAmbiental.DAL.Repository
             var overrides = new Dictionary<(int Anio, int Mes), ClientesControlMensual>();
             try
             {
-                var items = await _db.ClientesControlMensuales
+                var itemsQuery = _db.ClientesControlMensuales
                     .AsNoTracking()
                     .Where(c =>
                         c.IdCliente == idCliente &&
                         aniosNorm.Contains(c.Anio) &&
-                        mesesNorm.Contains(c.Mes))
-                    .ToListAsync();
+                        mesesNorm.Contains(c.Mes));
 
-                overrides = items.ToDictionary(c => (c.Anio, c.Mes));
+                if (filtrarEst)
+                    itemsQuery = itemsQuery.Where(c =>
+                        c.IdEstablecimiento != null &&
+                        idsEst.Contains(c.IdEstablecimiento.Value));
+                else
+                    itemsQuery = itemsQuery.Where(c => c.IdEstablecimiento == null);
+
+                var items = await itemsQuery.ToListAsync();
+                overrides = items
+                    .GroupBy(c => (c.Anio, c.Mes))
+                    .ToDictionary(
+                        g => g.Key,
+                        g => FusionarOverridesControl(g.ToList()));
             }
             catch
             {
                 datosParciales = true;
             }
 
-            List<LibroDiarioMovimiento> movimientosLibro = new();
-            try
+            // Cuenta corriente e intereses:
+            // - Vista cliente: planilla con CC completa.
+            // - Vista por establecimiento: solo operativo (entregas/abonos del est).
+            //   Si no, un establecimiento nuevo hereda el saldo de toda la CC del cliente.
+            List<ClientesCuentaCorrienteMovimiento> movimientosCc = new();
+            if (!filtrarEst)
             {
-                movimientosLibro = await _db.LibroDiarioMovimientos
-                    .AsNoTracking()
-                    .Where(m =>
-                        m.IdCliente == idCliente &&
-                        aniosNorm.Contains(m.Fecha.Year))
-                    .ToListAsync();
-            }
-            catch
-            {
-                datosParciales = true;
+                try
+                {
+                    var cc = await _db.ClientesCuentaCorrientes
+                        .AsNoTracking()
+                        .FirstOrDefaultAsync(x => x.IdCliente == idCliente);
+
+                    if (cc != null)
+                    {
+                        movimientosCc = await _db.ClientesCuentaCorrienteMovimientos
+                            .AsNoTracking()
+                            .Where(m => m.IdCuentaCorriente == cc.Id)
+                            .ToListAsync();
+                    }
+                }
+                catch
+                {
+                    datosParciales = true;
+                }
             }
 
             var recorridos = new List<ClientesRecorridoDto>();
             try
             {
                 recorridos = await ListarRecorridosCliente(idCliente);
+                if (filtrarEst)
+                    recorridos = recorridos
+                        .Where(r => r.IdEstablecimiento.HasValue && idsEst.Contains(r.IdEstablecimiento.Value))
+                        .ToList();
             }
             catch
             {
@@ -249,7 +298,7 @@ namespace SistemaOroAmbiental.DAL.Repository
             decimal stockTotal = 0;
             try
             {
-                stockTotal = await CalcularStockUnidadesCliente(idCliente);
+                stockTotal = await CalcularStockUnidadesCliente(idCliente, filtrarEst ? idsEst : null);
             }
             catch
             {
@@ -257,52 +306,263 @@ namespace SistemaOroAmbiental.DAL.Repository
             }
 
             var filas = new List<ClienteControlMensualDto>();
+
+            var periodos = aniosNorm
+                .SelectMany(a => mesesNorm.Select(m => (Anio: a, Mes: m)))
+                .OrderBy(p => p.Anio)
+                .ThenBy(p => p.Mes)
+                .ToList();
+
+            foreach (var p in periodos)
+            {
+                filas.Add(ConstruirFilaControlMensual(
+                    p.Anio,
+                    p.Mes,
+                    entregas,
+                    overrides,
+                    movimientosCc));
+            }
+
+            decimal saldoAcumulado = 0;
+            var intereses = MapearInteresesCliente(movimientosCc);
+            if (periodos.Count > 0)
+            {
+                var primero = periodos[0];
+                var inicio = new DateTime(primero.Anio, primero.Mes, 1);
+                var periodosSet = periodos.Select(p => (p.Anio, p.Mes)).ToHashSet();
+
+                saldoAcumulado = movimientosCc
+                    .Where(m => m.Fecha < inicio)
+                    .Sum(m => m.Debe - m.Haber);
+
+                var interesesReasignados = intereses
+                    .Where(i =>
+                        i.AnioRef.HasValue &&
+                        i.MesRef.HasValue &&
+                        periodosSet.Contains((i.AnioRef.Value, i.MesRef.Value)) &&
+                        i.Fecha < inicio)
+                    .Sum(i => i.Importe);
+                saldoAcumulado -= interesesReasignados;
+            }
+
+            var filasCronologicas = filas.OrderBy(f => f.Anio).ThenBy(f => f.Mes).ToList();
+            AsignarInteresesAFilas(filasCronologicas, intereses);
+
             decimal totalDebe = 0;
             decimal totalHaber = 0;
-
-            foreach (var anio in aniosNorm)
+            foreach (var fila in filasCronologicas)
             {
-                foreach (var mes in mesesNorm)
-                {
-                    var fila = ConstruirFilaControlMensual(
-                        anio,
-                        mes,
-                        entregas,
-                        overrides,
-                        movimientosLibro);
-
-                    totalDebe += fila.Debe;
-                    totalHaber += fila.Haber;
-                    filas.Add(fila);
-                }
+                totalDebe += fila.Debe + fila.TotalIntereses;
+                totalHaber += fila.Haber;
+                saldoAcumulado += fila.Debe + fila.TotalIntereses - fila.Haber;
+                fila.Saldo = saldoAcumulado;
             }
+
+            var filasOrdenadas = aniosNorm
+                .SelectMany(a => mesesNorm.Select(m => filas.First(f => f.Anio == a && f.Mes == m)))
+                .ToList();
+
+            var productosColumnas = await ConstruirProductosColumnas(idCliente, filasOrdenadas, filtrarEst ? idsEst : null);
 
             return new ClienteControlFiltradoDto
             {
                 IdCliente = idCliente,
+                IdEstablecimiento = idEstUnico,
                 Cliente = cliente.Nombre,
                 NumeroCliente = cliente.NumeroCliente,
                 StockActual = stockTotal,
                 TotalDebe = totalDebe,
                 TotalHaber = totalHaber,
-                TotalSaldo = totalDebe - totalHaber,
+                TotalSaldo = saldoAcumulado,
                 DatosParciales = datosParciales,
-                Filas = filas,
-                Recorridos = recorridos
+                Filas = filasOrdenadas,
+                Recorridos = recorridos,
+                Intereses = intereses,
+                ProductosColumnas = productosColumnas
             };
         }
 
-        private static bool EsAbonoTransferenciaLibroDiario(LibroDiarioMovimiento movimiento)
-            => movimiento.EsBancario ||
-               (!string.IsNullOrWhiteSpace(movimiento.FormaPago) &&
-                movimiento.FormaPago.Contains("Transferencia", StringComparison.OrdinalIgnoreCase));
+        private static ClientesControlMensual FusionarOverridesControl(List<ClientesControlMensual> items)
+        {
+            if (items.Count == 1)
+                return items[0];
+
+            var primero = items[0];
+            return new ClientesControlMensual
+            {
+                Id = primero.Id,
+                IdCliente = primero.IdCliente,
+                IdEstablecimiento = items.Count == 1 ? primero.IdEstablecimiento : null,
+                Anio = primero.Anio,
+                Mes = primero.Mes,
+                FechaVisita = items.Where(x => x.FechaVisita.HasValue).Select(x => x.FechaVisita).DefaultIfEmpty().Max(),
+                SinEntrega = items.All(x => x.SinEntrega),
+                CajasAFavor = items.Sum(x => x.CajasAFavor),
+                Observaciones = string.Join(" · ", items
+                    .Select(x => x.Observaciones)
+                    .Where(x => !string.IsNullOrWhiteSpace(x))
+                    .Distinct()),
+                AbonoEfectivo = items.Sum(x => x.AbonoEfectivo),
+                AbonoTransferencia = items.Sum(x => x.AbonoTransferencia),
+                FechaTransferencia = items.Where(x => x.FechaTransferencia.HasValue).Select(x => x.FechaTransferencia).DefaultIfEmpty().Max()
+            };
+        }
+
+        private async Task<List<ClienteControlProductoColumnaDto>> ConstruirProductosColumnas(
+            int idCliente,
+            List<ClienteControlMensualDto> filas,
+            IReadOnlyList<int>? idsEstablecimiento = null)
+        {
+            var mapa = new Dictionary<int, ClienteControlProductoColumnaDto>();
+
+            foreach (var p in filas.SelectMany(f => f.Productos ?? new List<ClienteControlProductoMesDto>()))
+            {
+                if (p.IdProducto <= 0) continue;
+                if (!mapa.ContainsKey(p.IdProducto))
+                {
+                    mapa[p.IdProducto] = new ClienteControlProductoColumnaDto
+                    {
+                        IdProducto = p.IdProducto,
+                        Nombre = p.Producto,
+                        Abreviatura = p.Abreviatura
+                    };
+                }
+            }
+
+            try
+            {
+                var cepQuery = _db.ClientesEstablecimientosProductos
+                    .AsNoTracking()
+                    .Include(x => x.IdProductoNavigation)
+                    .Include(x => x.IdEstablecimientoNavigation)
+                    .Where(x =>
+                        x.IdEstablecimientoNavigation.IdCliente == idCliente &&
+                        x.IdProductoNavigation != null);
+
+                if (idsEstablecimiento is { Count: > 0 })
+                    cepQuery = cepQuery.Where(x => idsEstablecimiento.Contains(x.IdEstablecimiento));
+
+                var cep = await cepQuery.ToListAsync();
+
+                foreach (var row in cep)
+                {
+                    if (mapa.ContainsKey(row.IdProducto)) continue;
+                    mapa[row.IdProducto] = new ClienteControlProductoColumnaDto
+                    {
+                        IdProducto = row.IdProducto,
+                        Nombre = row.IdProductoNavigation?.Nombre ?? $"Producto {row.IdProducto}",
+                        Abreviatura = row.IdProductoNavigation?.Abreviatura
+                    };
+                }
+            }
+            catch
+            {
+                // Si falla CEP, igual devolvemos columnas de movimientos.
+            }
+
+            return mapa.Values
+                .OrderBy(x => x.Nombre)
+                .ToList();
+        }
+
+        private static List<ClienteInteresMovDto> MapearInteresesCliente(
+            List<ClientesCuentaCorrienteMovimiento> movimientosCc)
+        {
+            return movimientosCc
+                .Where(m => string.Equals(
+                    m.TipoMovimiento,
+                    ClientesCuentaCorrienteRepository.TIPO_INTERES_CLIENTE,
+                    StringComparison.OrdinalIgnoreCase))
+                .OrderByDescending(m => m.Fecha)
+                .ThenByDescending(m => m.Id)
+                .Select(m =>
+                {
+                    var (anioRef, mesRef) = ResolverPeriodoInteres(m);
+                    return new ClienteInteresMovDto
+                    {
+                        Id = m.Id,
+                        Fecha = m.Fecha,
+                        Concepto = m.Concepto ?? "",
+                        Importe = m.Debe,
+                        AnioRef = anioRef,
+                        MesRef = mesRef,
+                        MesNombreRef = mesRef is >= 1 and <= 12 ? MesesNombres[mesRef.Value] : null
+                    };
+                })
+                .ToList();
+        }
+
+        private static void AsignarInteresesAFilas(
+            List<ClienteControlMensualDto> filas,
+            List<ClienteInteresMovDto> intereses)
+        {
+            foreach (var fila in filas)
+            {
+                var delMes = intereses
+                    .Where(i => i.AnioRef == fila.Anio && i.MesRef == fila.Mes)
+                    .OrderByDescending(i => i.Fecha)
+                    .ThenByDescending(i => i.Id)
+                    .ToList();
+
+                fila.Intereses = delMes;
+                fila.CantidadIntereses = delMes.Count;
+                fila.TotalIntereses = delMes.Sum(i => i.Importe);
+            }
+        }
+
+        /// <summary>
+        /// Prefiere tag · ref:YYYY-MM en el concepto; si no, busca "MesNombre Año".
+        /// </summary>
+        private static (int? Anio, int? Mes) ResolverPeriodoInteres(ClientesCuentaCorrienteMovimiento mov)
+        {
+            var concepto = mov.Concepto ?? "";
+            var tag = System.Text.RegularExpressions.Regex.Match(
+                concepto,
+                @"ref:(\d{4})-(\d{2})",
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+            if (tag.Success &&
+                int.TryParse(tag.Groups[1].Value, out var anioTag) &&
+                int.TryParse(tag.Groups[2].Value, out var mesTag) &&
+                mesTag is >= 1 and <= 12)
+            {
+                return (anioTag, mesTag);
+            }
+
+            for (var mes = 1; mes <= 12; mes++)
+            {
+                var nombre = MesesNombres[mes];
+                var rx = System.Text.RegularExpressions.Regex.Match(
+                    concepto,
+                    $@"\b{System.Text.RegularExpressions.Regex.Escape(nombre)}\s+(\d{{4}})\b",
+                    System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+                if (rx.Success && int.TryParse(rx.Groups[1].Value, out var anioNom))
+                    return (anioNom, mes);
+            }
+
+            // Sin referencia clara: cae en el mes de la fecha del movimiento.
+            return (mov.Fecha.Year, mov.Fecha.Month);
+        }
+
+        /// <summary>
+        /// Importe de línea: SubtotalFinal, o fallback a precio × cantidad si quedó en 0.
+        /// </summary>
+        private static decimal ImporteLineaControl(ClientesEntregasProducto l)
+        {
+            if (l.SubtotalFinal != 0)
+                return l.SubtotalFinal;
+
+            var precio = l.PrecioVentaFinal != 0 ? l.PrecioVentaFinal : l.PrecioVenta;
+            return precio * l.Cantidad;
+        }
 
         private ClienteControlMensualDto ConstruirFilaControlMensual(
             int anio,
             int mes,
             List<ClientesEntrega> entregas,
             Dictionary<(int Anio, int Mes), ClientesControlMensual> overrides,
-            List<LibroDiarioMovimiento> movimientosLibro)
+            List<ClientesCuentaCorrienteMovimiento> movimientosCc)
         {
             var entregasMes = entregas
                 .Where(e => e.Fecha.Year == anio && e.Fecha.Month == mes)
@@ -310,42 +570,85 @@ namespace SistemaOroAmbiental.DAL.Repository
 
             var lineas = entregasMes.SelectMany(e => e.ClientesEntregasProductos).ToList();
 
-            var entregadas = lineas
-                .Where(l => l.TipoMovimiento == TIPO_ENTREGA)
-                .Sum(l => l.Cantidad);
-            var retiradas = lineas
-                .Where(l => l.TipoMovimiento == TIPO_RETIRO)
-                .Sum(l => l.Cantidad);
-            var subtotalEntregas = lineas
-                .Where(l => l.TipoMovimiento == TIPO_ENTREGA)
-                .Sum(l => l.SubtotalFinal);
-            var subtotalRetiros = lineas
-                .Where(l => l.TipoMovimiento == TIPO_RETIRO)
-                .Sum(l => l.SubtotalFinal);
+            var lineasEntrega = lineas.Where(l => l.TipoMovimiento == TIPO_ENTREGA).ToList();
+            var lineasRetiro = lineas.Where(l => l.TipoMovimiento == TIPO_RETIRO).ToList();
+
+            var entregadas = lineasEntrega.Sum(l => l.Cantidad);
+            var retiradas = lineasRetiro.Sum(l => l.Cantidad);
+            var subtotalEntregas = lineasEntrega.Sum(ImporteLineaControl);
+            var subtotalRetiros = lineasRetiro.Sum(ImporteLineaControl);
 
             overrides.TryGetValue((anio, mes), out var ov);
 
-            var movsMes = movimientosLibro
-                .Where(m => m.Fecha.Year == anio && m.Fecha.Month == mes)
+            // Abonos de la planilla = solo lo cargado en Control mensual (editable en el modal).
+            var abonoEfectivo = ov?.AbonoEfectivo ?? 0;
+            var abonoTransferencia = ov?.AbonoTransferencia ?? 0;
+
+            // Fórmula planilla (bruta, sin netear):
+            // Debe  = cargos del mes = subtotal de líneas ENTREGA
+            // Haber = retiros + abonos (planilla o cobros CC, el mayor para no duplicar)
+            // Intereses se asignan aparte y el Saldo acumulado los incluye.
+            var inicioMes = new DateTime(anio, mes, 1);
+            var finMes = inicioMes.AddMonths(1);
+            var movsMes = movimientosCc
+                .Where(m => m.Fecha >= inicioMes && m.Fecha < finMes)
+                .ToList();
+            var movsMesSinInteres = movsMes
+                .Where(m => !string.Equals(
+                    m.TipoMovimiento,
+                    ClientesCuentaCorrienteRepository.TIPO_INTERES_CLIENTE,
+                    StringComparison.OrdinalIgnoreCase))
                 .ToList();
 
-            var libroDebe = movsMes.Sum(m => m.Debe);
-            var libroAbonoEfectivo = movsMes
-                .Where(m => m.Haber > 0 && !EsAbonoTransferenciaLibroDiario(m))
+            var cobrosCc = movsMesSinInteres
+                .Where(m => m.TipoMovimiento == ClientesCuentaCorrienteRepository.TIPO_COBRO_CLIENTE)
                 .Sum(m => m.Haber);
-            var libroAbonoTransferencia = movsMes
-                .Where(m => m.Haber > 0 && EsAbonoTransferenciaLibroDiario(m))
+            var abonosPlanilla = abonoEfectivo + abonoTransferencia;
+            var ajustesDebe = movsMesSinInteres
+                .Where(m => m.TipoMovimiento == ClientesCuentaCorrienteRepository.TIPO_AJUSTE_CLIENTE)
+                .Sum(m => m.Debe);
+            var ajustesHaber = movsMesSinInteres
+                .Where(m => m.TipoMovimiento == ClientesCuentaCorrienteRepository.TIPO_AJUSTE_CLIENTE)
                 .Sum(m => m.Haber);
 
-            var abonoEfectivo = (ov?.AbonoEfectivo ?? 0) + libroAbonoEfectivo;
-            var abonoTransferencia = (ov?.AbonoTransferencia ?? 0) + libroAbonoTransferencia;
-            var debe = subtotalEntregas + libroDebe;
-            var haber = subtotalRetiros + abonoEfectivo + abonoTransferencia;
-            var saldo = debe - haber;
+            var debe = subtotalEntregas + ajustesDebe;
+            var haber = subtotalRetiros + Math.Max(abonosPlanilla, cobrosCc) + ajustesHaber;
 
             DateTime? fechaVisita = ov?.FechaVisita;
             if (!fechaVisita.HasValue && entregasMes.Count > 0)
                 fechaVisita = entregasMes.Max(e => e.Fecha).Date;
+
+            var productos = lineas
+                .Where(l => l.TipoMovimiento == TIPO_ENTREGA || l.TipoMovimiento == TIPO_RETIRO)
+                .GroupBy(l => new
+                {
+                    l.IdProducto,
+                    Nombre = l.IdProductoNavigation?.Nombre ?? $"Producto {l.IdProducto}"
+                })
+                .Select(g =>
+                {
+                    var ent = g.Where(x => x.TipoMovimiento == TIPO_ENTREGA).ToList();
+                    var ret = g.Where(x => x.TipoMovimiento == TIPO_RETIRO).ToList();
+                    var cantEnt = ent.Sum(x => x.Cantidad);
+                    var cantRet = ret.Sum(x => x.Cantidad);
+                    var subEnt = ent.Sum(ImporteLineaControl);
+                    var subRet = ret.Sum(ImporteLineaControl);
+                    return new ClienteControlProductoMesDto
+                    {
+                        IdProducto = g.Key.IdProducto,
+                        Producto = g.Key.Nombre,
+                        Abreviatura = g.Select(x => x.IdProductoNavigation?.Abreviatura)
+                            .FirstOrDefault(a => !string.IsNullOrWhiteSpace(a)),
+                        Entregadas = cantEnt,
+                        Retiradas = cantRet,
+                        PrecioUnitarioEntrega = cantEnt > 0 ? subEnt / cantEnt : 0,
+                        PrecioUnitarioRetiro = cantRet > 0 ? subRet / cantRet : 0,
+                        SubtotalEntregas = subEnt,
+                        SubtotalRetiros = subRet
+                    };
+                })
+                .OrderBy(p => p.Producto)
+                .ToList();
 
             return new ClienteControlMensualDto
             {
@@ -364,24 +667,37 @@ namespace SistemaOroAmbiental.DAL.Repository
                 FechaTransferencia = ov?.FechaTransferencia,
                 Debe = debe,
                 Haber = haber,
-                Saldo = saldo,
+                Saldo = debe - haber, // se reemplaza luego por saldo acumulado
                 CajasAFavor = ov?.CajasAFavor ?? 0,
                 SinEntrega = ov?.SinEntrega ?? false,
                 Observaciones = ov?.Observaciones,
-                TieneOverride = ov != null
+                TieneOverride = ov != null,
+                Productos = productos
             };
         }
 
-        public async Task<List<ClienteStockDto>> ObtenerStockCliente(int idCliente)
+        public async Task<List<ClienteStockDto>> ObtenerStockCliente(int idCliente, IReadOnlyList<int>? idsEstablecimiento = null)
         {
-            var lineas = await _db.ClientesEntregasProductos
+            var query = _db.ClientesEntregasProductos
                 .AsNoTracking()
                 .Include(p => p.IdProductoNavigation)
                 .Include(p => p.IdEntregaNavigation)
+                    .ThenInclude(e => e.IdContratoNavigation)
                 .Where(p =>
                     p.IdEntregaNavigation.IdCliente == idCliente &&
-                    (p.TipoMovimiento == TIPO_ENTREGA || p.TipoMovimiento == TIPO_RETIRO))
-                .ToListAsync();
+                    (p.TipoMovimiento == TIPO_ENTREGA || p.TipoMovimiento == TIPO_RETIRO));
+
+            if (idsEstablecimiento is { Count: > 0 })
+            {
+                var ids = idsEstablecimiento.Where(x => x > 0).Distinct().ToList();
+                query = query.Where(p =>
+                    ids.Contains(p.IdEntregaNavigation.IdEstablecimiento)
+                    || (p.IdEntregaNavigation.IdEstablecimiento <= 0
+                        && p.IdEntregaNavigation.IdContratoNavigation != null
+                        && ids.Contains(p.IdEntregaNavigation.IdContratoNavigation.IdEstablecimiento)));
+            }
+
+            var lineas = await query.ToListAsync();
 
             return lineas
                 .GroupBy(p => new { p.IdProducto, Nombre = p.IdProductoNavigation.Nombre })
@@ -403,34 +719,84 @@ namespace SistemaOroAmbiental.DAL.Repository
                 .ToList();
         }
 
+        public async Task<List<ClienteProductoSugeridoDto>> ObtenerProductosSugeridos(int idCliente, IReadOnlyList<int>? idsEstablecimiento = null)
+        {
+            var query = _db.ClientesEstablecimientosProductos
+                .AsNoTracking()
+                .Include(x => x.IdProductoNavigation)
+                .Include(x => x.IdListaPrecioNavigation)
+                .Include(x => x.IdEstablecimientoNavigation)
+                .Where(x => x.IdEstablecimientoNavigation.IdCliente == idCliente);
+
+            if (idsEstablecimiento is { Count: > 0 })
+            {
+                var ids = idsEstablecimiento.Where(x => x > 0).Distinct().ToList();
+                query = query.Where(x => ids.Contains(x.IdEstablecimiento));
+            }
+
+            var rows = await query
+                .OrderBy(x => x.IdProductoNavigation!.Nombre)
+                .ThenBy(x => x.Id)
+                .ToListAsync();
+
+            return rows.Select(x => new ClienteProductoSugeridoDto
+            {
+                IdProducto = x.IdProducto,
+                Producto = x.IdProductoNavigation?.Nombre ?? $"Producto {x.IdProducto}",
+                Abreviatura = x.IdProductoNavigation?.Abreviatura,
+                IdEstablecimiento = x.IdEstablecimiento,
+                Establecimiento = x.IdEstablecimientoNavigation?.Nombre,
+                Cantidad = x.Cantidad,
+                IdListaPrecio = x.IdListaPrecio,
+                ListaPrecio = x.IdListaPrecioNavigation?.Nombre,
+                PrecioVenta = x.PrecioVenta
+            }).ToList();
+        }
+
         public async Task<bool> GuardarControlMensual(ClientesControlMensual model, bool esNuevo, int idUsuario)
         {
             try
             {
-                ClientesControlMensual entity;
+                ClientesControlMensual? entity = null;
 
-                if (esNuevo)
+                if (esNuevo || model.Id <= 0)
                 {
+                    var idEst = model.IdEstablecimiento is > 0 ? model.IdEstablecimiento : null;
                     entity = await _db.ClientesControlMensuales
                         .FirstOrDefaultAsync(x =>
                             x.IdCliente == model.IdCliente &&
                             x.Anio == model.Anio &&
-                            x.Mes == model.Mes);
+                            x.Mes == model.Mes &&
+                            x.IdEstablecimiento == idEst);
 
                     if (entity == null)
                     {
+                        model.Id = 0;
+                        model.IdEstablecimiento = idEst;
                         model.IdUsuarioRegistra = idUsuario;
                         model.FechaUsuarioRegistra = DateTime.Now;
+                        model.AbonoEfectivo = model.AbonoEfectivo < 0 ? 0 : model.AbonoEfectivo;
+                        model.AbonoTransferencia = model.AbonoTransferencia < 0 ? 0 : model.AbonoTransferencia;
                         _db.ClientesControlMensuales.Add(model);
                         await _db.SaveChangesAsync();
                         return true;
                     }
-
-                    esNuevo = false;
                 }
                 else
                 {
                     entity = await _db.ClientesControlMensuales.FirstOrDefaultAsync(x => x.Id == model.Id);
+
+                    // Id desfasado: buscar por cliente/año/mes/establecimiento
+                    if (entity == null)
+                    {
+                        var idEst = model.IdEstablecimiento is > 0 ? model.IdEstablecimiento : null;
+                        entity = await _db.ClientesControlMensuales
+                            .FirstOrDefaultAsync(x =>
+                                x.IdCliente == model.IdCliente &&
+                                x.Anio == model.Anio &&
+                                x.Mes == model.Mes &&
+                                x.IdEstablecimiento == idEst);
+                    }
                 }
 
                 if (entity == null)
@@ -440,8 +806,8 @@ namespace SistemaOroAmbiental.DAL.Repository
                 entity.SinEntrega = model.SinEntrega;
                 entity.CajasAFavor = model.CajasAFavor;
                 entity.Observaciones = model.Observaciones;
-                entity.AbonoEfectivo = model.AbonoEfectivo;
-                entity.AbonoTransferencia = model.AbonoTransferencia;
+                entity.AbonoEfectivo = model.AbonoEfectivo < 0 ? 0 : model.AbonoEfectivo;
+                entity.AbonoTransferencia = model.AbonoTransferencia < 0 ? 0 : model.AbonoTransferencia;
                 entity.FechaTransferencia = model.FechaTransferencia;
                 entity.IdUsuarioModifica = idUsuario;
                 entity.FechaUsuarioModifica = DateTime.Now;
@@ -455,15 +821,27 @@ namespace SistemaOroAmbiental.DAL.Repository
             }
         }
 
-        private async Task<decimal> CalcularStockUnidadesCliente(int idCliente)
+        private async Task<decimal> CalcularStockUnidadesCliente(int idCliente, IReadOnlyList<int>? idsEstablecimiento = null)
         {
-            var lineas = await _db.ClientesEntregasProductos
+            var query = _db.ClientesEntregasProductos
                 .AsNoTracking()
                 .Include(p => p.IdEntregaNavigation)
+                    .ThenInclude(e => e.IdContratoNavigation)
                 .Where(p =>
                     p.IdEntregaNavigation.IdCliente == idCliente &&
-                    (p.TipoMovimiento == TIPO_ENTREGA || p.TipoMovimiento == TIPO_RETIRO))
-                .ToListAsync();
+                    (p.TipoMovimiento == TIPO_ENTREGA || p.TipoMovimiento == TIPO_RETIRO));
+
+            if (idsEstablecimiento is { Count: > 0 })
+            {
+                var ids = idsEstablecimiento.Where(x => x > 0).Distinct().ToList();
+                query = query.Where(p =>
+                    ids.Contains(p.IdEntregaNavigation.IdEstablecimiento)
+                    || (p.IdEntregaNavigation.IdEstablecimiento <= 0
+                        && p.IdEntregaNavigation.IdContratoNavigation != null
+                        && ids.Contains(p.IdEntregaNavigation.IdContratoNavigation.IdEstablecimiento)));
+            }
+
+            var lineas = await query.ToListAsync();
 
             var entregadas = lineas.Where(l => l.TipoMovimiento == TIPO_ENTREGA).Sum(l => l.Cantidad);
             var retiradas = lineas.Where(l => l.TipoMovimiento == TIPO_RETIRO).Sum(l => l.Cantidad);
@@ -520,6 +898,7 @@ namespace SistemaOroAmbiental.DAL.Repository
                     Zona = zona,
                     Posicion = r.Posicion,
                     Activo = r.Activo,
+                    Observacion = r.Observacion,
                     RecorridoTexto = recorridoTexto
                 };
             }).ToList();

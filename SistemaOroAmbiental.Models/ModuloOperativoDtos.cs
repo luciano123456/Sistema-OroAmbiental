@@ -63,6 +63,7 @@ public class ClientesRecorridoDto
     public bool Activo { get; set; }
     public string? Observacion { get; set; }
     public string RecorridoTexto { get; set; } = "";
+    public List<HojaRutaParadaProductoDto> Productos { get; set; } = new();
 }
 
 public class RecorridoSugeridoDto
@@ -75,6 +76,39 @@ public class RecorridoSugeridoDto
     public string? Localidad { get; set; }
     public string Horario { get; set; } = "";
     public bool YaEnRecorrido { get; set; }
+}
+
+public class ClienteControlProductoMesDto
+{
+    public int IdProducto { get; set; }
+    public string Producto { get; set; } = "";
+    public string? Abreviatura { get; set; }
+    public decimal Entregadas { get; set; }
+    public decimal Retiradas { get; set; }
+    public decimal PrecioUnitarioEntrega { get; set; }
+    public decimal PrecioUnitarioRetiro { get; set; }
+    public decimal SubtotalEntregas { get; set; }
+    public decimal SubtotalRetiros { get; set; }
+}
+
+public class ClienteControlProductoColumnaDto
+{
+    public int IdProducto { get; set; }
+    public string Nombre { get; set; } = "";
+    public string? Abreviatura { get; set; }
+}
+
+public class ClienteProductoSugeridoDto
+{
+    public int IdProducto { get; set; }
+    public string Producto { get; set; } = "";
+    public string? Abreviatura { get; set; }
+    public int IdEstablecimiento { get; set; }
+    public string? Establecimiento { get; set; }
+    public decimal Cantidad { get; set; }
+    public int? IdListaPrecio { get; set; }
+    public string? ListaPrecio { get; set; }
+    public decimal PrecioVenta { get; set; }
 }
 
 public class ClienteControlMensualDto
@@ -99,6 +133,21 @@ public class ClienteControlMensualDto
     public bool SinEntrega { get; set; }
     public string? Observaciones { get; set; }
     public bool TieneOverride { get; set; }
+    public int CantidadIntereses { get; set; }
+    public decimal TotalIntereses { get; set; }
+    public List<ClienteInteresMovDto> Intereses { get; set; } = new();
+    public List<ClienteControlProductoMesDto> Productos { get; set; } = new();
+}
+
+public class ClienteInteresMovDto
+{
+    public int Id { get; set; }
+    public DateTime Fecha { get; set; }
+    public string Concepto { get; set; } = "";
+    public decimal Importe { get; set; }
+    public int? AnioRef { get; set; }
+    public int? MesRef { get; set; }
+    public string? MesNombreRef { get; set; }
 }
 
 public class ClienteControlAnualDto
@@ -118,6 +167,7 @@ public class ClienteControlAnualDto
 public class ClienteControlFiltradoDto
 {
     public int IdCliente { get; set; }
+    public int? IdEstablecimiento { get; set; }
     public string Cliente { get; set; } = "";
     public int? NumeroCliente { get; set; }
     public decimal StockActual { get; set; }
@@ -127,6 +177,8 @@ public class ClienteControlFiltradoDto
     public bool DatosParciales { get; set; }
     public List<ClienteControlMensualDto> Filas { get; set; } = new();
     public List<ClientesRecorridoDto> Recorridos { get; set; } = new();
+    public List<ClienteInteresMovDto> Intereses { get; set; } = new();
+    public List<ClienteControlProductoColumnaDto> ProductosColumnas { get; set; } = new();
 }
 
 public class ClienteStockDto
@@ -228,6 +280,13 @@ public class HojaRutaDto
     public decimal PrecioDescartadorChico { get; set; }
     public List<HojaRutaParadaDto> Paradas { get; set; } = new();
     public List<HojaRutaSeccionDto> Secciones { get; set; } = new();
+    public List<HojaRutaListaPrecioDto> ListasPrecios { get; set; } = new();
+}
+
+public class HojaRutaListaPrecioDto
+{
+    public int Id { get; set; }
+    public string Nombre { get; set; } = "";
 }
 
 public class HojaRutaSeccionDto
@@ -244,6 +303,7 @@ public class HojaRutaParadaDto
 {
     public int Posicion { get; set; }
     public int IdCliente { get; set; }
+    public int? IdEstablecimiento { get; set; }
     public string Cliente { get; set; } = "";
     public string? Establecimiento { get; set; }
     public string Domicilio { get; set; } = "";
@@ -253,6 +313,27 @@ public class HojaRutaParadaDto
     public decimal AbonoEfectivo { get; set; }
     public decimal AbonoTransferencia { get; set; }
     public string? Observacion { get; set; }
+    /// <summary>Texto de saldo para imprimir (debe / a favor).</summary>
+    public string? SaldoResumen { get; set; }
+    public decimal SaldoActual { get; set; }
+    /// <summary>debe | favor | cero</summary>
+    public string SaldoTone { get; set; } = "cero";
     public string AlertaTipo { get; set; } = "normal";
     public bool Activo { get; set; } = true;
+    public string? ProductosResumen { get; set; }
+    public List<HojaRutaParadaProductoDto> Productos { get; set; } = new();
+}
+
+public class HojaRutaParadaProductoDto
+{
+    public int Id { get; set; }
+    public int IdProducto { get; set; }
+    public string Producto { get; set; } = "";
+    public string? Abreviatura { get; set; }
+    public decimal Cantidad { get; set; }
+    public int? IdListaPrecio { get; set; }
+    public string? ListaPrecio { get; set; }
+    public decimal PrecioVenta { get; set; }
+    public decimal PrecioEfectivo { get; set; }
+    public decimal PrecioTransferencia { get; set; }
 }

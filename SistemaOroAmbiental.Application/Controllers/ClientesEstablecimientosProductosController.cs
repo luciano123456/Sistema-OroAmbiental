@@ -27,7 +27,11 @@ namespace SistemaOroAmbiental.Application.Controllers
                 IdEstablecimiento = x.IdEstablecimiento,
                 IdProducto = x.IdProducto,
                 Cantidad = x.Cantidad,
-                Producto = x.IdProductoNavigation?.Nombre ?? ""
+                IdListaPrecio = x.IdListaPrecio,
+                PrecioVenta = x.PrecioVenta,
+                Producto = x.IdProductoNavigation?.Nombre ?? "",
+                Abreviatura = x.IdProductoNavigation?.Abreviatura,
+                ListaPrecio = x.IdListaPrecioNavigation?.Nombre
             }).ToList();
 
             return Ok(lista);
@@ -38,15 +42,7 @@ namespace SistemaOroAmbiental.Application.Controllers
         {
             int idUsuario = int.Parse(User.FindFirst("Id")!.Value);
 
-            var item = new ClientesEstablecimientosProducto
-            {
-                IdEstablecimiento = model.IdEstablecimiento,
-                IdProducto = model.IdProducto,
-                Cantidad = model.Cantidad,
-                IdUsuarioRegistra = idUsuario,
-                FechaUsuarioRegistra = DateTime.Now
-            };
-
+            var item = MapEntidad(model, idUsuario, esNuevo: true);
             var result = await _service.Insertar(item);
 
             return Ok(new
@@ -64,16 +60,7 @@ namespace SistemaOroAmbiental.Application.Controllers
         {
             int idUsuario = int.Parse(User.FindFirst("Id")!.Value);
 
-            var item = new ClientesEstablecimientosProducto
-            {
-                Id = model.Id,
-                IdEstablecimiento = model.IdEstablecimiento,
-                IdProducto = model.IdProducto,
-                Cantidad = model.Cantidad,
-                IdUsuarioModifica = idUsuario,
-                FechaUsuarioModifica = DateTime.Now
-            };
-
+            var item = MapEntidad(model, idUsuario, esNuevo: false);
             var result = await _service.Actualizar(item);
 
             return Ok(new
@@ -96,6 +83,32 @@ namespace SistemaOroAmbiental.Application.Controllers
                 mensaje = result.Mensaje,
                 tipo = result.Tipo
             });
+        }
+
+        private static ClientesEstablecimientosProducto MapEntidad(VMClienteEstablecimientoProducto model, int idUsuario, bool esNuevo)
+        {
+            var item = new ClientesEstablecimientosProducto
+            {
+                Id = model.Id,
+                IdEstablecimiento = model.IdEstablecimiento,
+                IdProducto = model.IdProducto,
+                Cantidad = model.Cantidad,
+                IdListaPrecio = model.IdListaPrecio > 0 ? model.IdListaPrecio : null,
+                PrecioVenta = model.PrecioVenta
+            };
+
+            if (esNuevo)
+            {
+                item.IdUsuarioRegistra = idUsuario;
+                item.FechaUsuarioRegistra = DateTime.Now;
+            }
+            else
+            {
+                item.IdUsuarioModifica = idUsuario;
+                item.FechaUsuarioModifica = DateTime.Now;
+            }
+
+            return item;
         }
     }
 }

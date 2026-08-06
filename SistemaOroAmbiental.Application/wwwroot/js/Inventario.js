@@ -966,13 +966,15 @@ async function guardarEntrada() {
     const cantidad = parseQty($("#eCantidad").val());
     const concepto = ($("#eConcepto").val() || "").trim();
 
-    await postInventario(API.registrarEntrada, {
-        IdSucursal: ACC.idSucursalLista,
-        IdProducto: ACC.ProductoSel.IdProducto,
-        Fecha: $("#eFecha").val(),
-        Concepto: concepto,
-        Cantidad: cantidad
-    }, "#modalEntrada", "#errorCamposEntrada");
+    return withBusy(document.querySelector("#modalEntrada .modal-footer .btn"), async () => {
+        await postInventario(API.registrarEntrada, {
+            IdSucursal: ACC.idSucursalLista,
+            IdProducto: ACC.ProductoSel.IdProducto,
+            Fecha: $("#eFecha").val(),
+            Concepto: concepto,
+            Cantidad: cantidad
+        }, "#modalEntrada", "#errorCamposEntrada");
+    });
 }
 
 async function guardarSalida() {
@@ -982,13 +984,15 @@ async function guardarSalida() {
     const cantidad = parseQty($("#sCantidad").val());
     const concepto = ($("#sConcepto").val() || "").trim();
 
-    await postInventario(API.registrarSalida, {
-        IdSucursal: ACC.idSucursalLista,
-        IdProducto: ACC.ProductoSel.IdProducto,
-        Fecha: $("#sFecha").val(),
-        Concepto: concepto,
-        Cantidad: cantidad
-    }, "#modalSalida", "#errorCamposSalida");
+    return withBusy(document.querySelector("#modalSalida .modal-footer .btn"), async () => {
+        await postInventario(API.registrarSalida, {
+            IdSucursal: ACC.idSucursalLista,
+            IdProducto: ACC.ProductoSel.IdProducto,
+            Fecha: $("#sFecha").val(),
+            Concepto: concepto,
+            Cantidad: cantidad
+        }, "#modalSalida", "#errorCamposSalida");
+    });
 }
 
 async function guardarAjusteInv() {
@@ -999,14 +1003,16 @@ async function guardarAjusteInv() {
     const salida = parseQty($("#ajSalida").val());
     const concepto = ($("#ajConcepto").val() || "").trim();
 
-    await postInventario(API.registrarAjuste, {
-        IdSucursal: ACC.idSucursalLista,
-        IdProducto: ACC.ProductoSel.IdProducto,
-        Fecha: $("#ajFecha").val(),
-        Concepto: concepto,
-        Entrada: entrada,
-        Salida: salida
-    }, "#modalAjusteInv", "#errorCamposAjusteInv");
+    return withBusy(document.querySelector("#modalAjusteInv .modal-footer .btn"), async () => {
+        await postInventario(API.registrarAjuste, {
+            IdSucursal: ACC.idSucursalLista,
+            IdProducto: ACC.ProductoSel.IdProducto,
+            Fecha: $("#ajFecha").val(),
+            Concepto: concepto,
+            Entrada: entrada,
+            Salida: salida
+        }, "#modalAjusteInv", "#errorCamposAjusteInv");
+    });
 }
 
 async function guardarTransferenciaInv() {
@@ -1018,14 +1024,16 @@ async function guardarTransferenciaInv() {
     const cantidad = parseQty($("#tCantidad").val());
     const nota = ($("#tNota").val() || "").trim();
 
-    await postInventario(API.registrarTransferencia, {
-        Fecha: $("#tFecha").val(),
-        IdSucursalOrigen: origen,
-        IdSucursalDestino: destino,
-        IdProducto: idProducto,
-        Cantidad: cantidad,
-        NotaInterna: nota || "Transferencia entre sucursales"
-    }, "#modalTransferenciaInv", "#errorCamposTransferenciaInv", true);
+    return withBusy(document.querySelector("#modalTransferenciaInv .modal-footer .btn"), async () => {
+        await postInventario(API.registrarTransferencia, {
+            Fecha: $("#tFecha").val(),
+            IdSucursalOrigen: origen,
+            IdSucursalDestino: destino,
+            IdProducto: idProducto,
+            Cantidad: cantidad,
+            NotaInterna: nota || "Transferencia entre sucursales"
+        }, "#modalTransferenciaInv", "#errorCamposTransferenciaInv", true);
+    });
 }
 
 async function postInventario(url, modelo, modalSel, errorSel, recargarLista) {

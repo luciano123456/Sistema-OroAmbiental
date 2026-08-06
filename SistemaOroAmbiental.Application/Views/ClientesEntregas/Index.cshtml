@@ -1,6 +1,7 @@
 @{
     Layout = "_LayoutModulo";
     ViewData["Title"] = "Entregas";
+    var idCliente = (int)(ViewBag.IdCliente ?? 0);
 }
 
 @section Estilos {
@@ -21,6 +22,9 @@
             <span class="cc-badge"><i class="fa fa-truck"></i></span>
             <div>
                 <h2 class="m-0 fw-800">Entregas</h2>
+                <small class="text-muted" id="lblFiltroClienteEntregas" @(idCliente > 0 ? "" : "hidden")>
+                    Filtrado por cliente seleccionado
+                </small>
             </div>
             <div class="ms-auto d-flex gap-2 flex-wrap">
                 <button id="btnNuevaEntrega" class="btn btn-success vi-btn" type="button">
@@ -158,6 +162,9 @@
 </div>
 
 @section Scripts {
+    <script>
+        window.CE_INIT = { idCliente: @idCliente };
+    </script>
     <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
@@ -168,5 +175,5 @@
     <script src="https://cdn.datatables.net/fixedheader/3.2.2/js/dataTables.fixedHeader.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script src="~/js/Utils/moment.js?v=5.2"></script>
-    <script src="~/js/ClientesEntregas.js?v=5.3"></script>
+    <script src="~/js/ClientesEntregas.js?v=5.5"></script>
 }

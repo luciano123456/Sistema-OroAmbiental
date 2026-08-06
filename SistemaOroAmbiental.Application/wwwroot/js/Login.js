@@ -107,7 +107,7 @@ $(document).ready(function () {
                     ?? (window.SessionManager?.decodeJwtExpMs?.(data.token) ?? null);
 
                 if (window.SessionManager?.setSession) {
-                    window.SessionManager.setSession(data.token, data.user, expiresMs);
+                    window.SessionManager.setSession(data.token, data.user, expiresMs, data.jti);
                 } else {
                     localStorage.setItem("JwtToken", data.token);
                     localStorage.setItem("userSession", JSON.stringify(data.user));

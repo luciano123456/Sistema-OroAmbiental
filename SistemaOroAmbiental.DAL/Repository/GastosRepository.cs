@@ -26,10 +26,10 @@ namespace SistemaOroAmbiental.DAL.Repository
                 model.IdMovCaja = null;
 
                 _db.Gastos.Add(model);
-                await _db.SaveChangesAsync();
+                await _db.SaveChangesAsync(); // necesita Id del gasto
 
-                await CrearMovimientoCajaAsync(model, idUsuario, ahora);
-                await _db.SaveChangesAsync();
+                await CrearMovimientoCajaAsync(model, idUsuario, ahora, guardar: false);
+                await _db.SaveChangesAsync(); // mov caja + IdMovCaja en un solo round-trip
 
                 await trx.CommitAsync();
                 return true;
@@ -50,7 +50,7 @@ namespace SistemaOroAmbiental.DAL.Repository
                 if (entity == null)
                     return false;
 
-                await RevertirMovimientoCajaAsync(entity);
+                await RevertirMovimientoCajaAsync(entity, guardar: false);
 
                 entity.Fecha = model.Fecha;
                 entity.IdCategoria = model.IdCategoria;
@@ -67,10 +67,8 @@ namespace SistemaOroAmbiental.DAL.Repository
                 entity.FechaUsuarioModifica = DateTime.Now;
                 entity.IdMovCaja = null;
 
-                await _db.SaveChangesAsync();
-
                 var ahora = DateTime.Now;
-                await CrearMovimientoCajaAsync(entity, idUsuario, ahora);
+                await CrearMovimientoCajaAsync(entity, idUsuario, ahora, guardar: false);
                 await _db.SaveChangesAsync();
 
                 await trx.CommitAsync();
@@ -92,7 +90,7 @@ namespace SistemaOroAmbiental.DAL.Repository
                 if (entity == null)
                     return false;
 
-                await RevertirMovimientoCajaAsync(entity);
+                await RevertirMovimientoCajaAsync(entity, guardar: false);
                 _db.Gastos.Remove(entity);
                 await _db.SaveChangesAsync();
 
@@ -184,7 +182,7 @@ namespace SistemaOroAmbiental.DAL.Repository
             {
                 try
                 {
-                    await CrearMovimientoCajaAsync(gasto, idUsuario, ahora);
+                    await CrearMovimientoCajaAsync(gasto, idUsuario, ahora, guardar: false);
                     await _db.SaveChangesAsync();
                     sincronizados++;
                 }
@@ -197,7 +195,7 @@ namespace SistemaOroAmbiental.DAL.Repository
             return sincronizados;
         }
 
-        private async Task<CajasSaldo> ObtenerOCrearCajasSaldo(int idCuenta)
+        private async Task<CajasSaldo> ObtenerOCrearCajasSaldo(int idCuenta, bool guardar = true)
         {
             var saldo = await _db.CajasSaldos.FirstOrDefaultAsync(x => x.IdCuenta == idCuenta);
             if (saldo != null)
@@ -210,11 +208,12 @@ namespace SistemaOroAmbiental.DAL.Repository
             };
 
             _db.CajasSaldos.Add(saldo);
-            await _db.SaveChangesAsync();
+            if (guardar)
+                await _db.SaveChangesAsync();
             return saldo;
         }
 
-        private async Task RevertirMovimientoCajaAsync(Gasto gasto)
+        private async Task RevertirMovimientoCajaAsync(Gasto gasto, bool guardar = true)
         {
             if (!gasto.IdMovCaja.HasValue)
                 return;
@@ -234,15 +233,19 @@ namespace SistemaOroAmbiental.DAL.Repository
 
             _db.CajasMovimientos.Remove(mov);
             gasto.IdMovCaja = null;
-            await _db.SaveChangesAsync();
+            if (guardar)
+                await _db.SaveChangesAsync();
         }
 
-        private async Task CrearMovimientoCajaAsync(Gasto gasto, int idUsuario, DateTime ahora)
+        private async Task CrearMovimientoCajaAsync(Gasto gasto, int idUsuario, DateTime ahora, bool guardar = true)
         {
             if (gasto.ImporteTotal <= 0)
                 return;
 
-            var cajaSaldo = await ObtenerOCrearCajasSaldo(gasto.IdCuenta);
+            var cajaSaldo = await ObtenerOCrearCajasSaldo(gasto.IdCuenta, guardar: false);
+            if (cajaSaldo.Id == 0)
+                await _db.SaveChangesAsync();
+
             var conceptoCaja = $"Gasto - {gasto.Concepto}";
             if (conceptoCaja.Length > 200)
                 conceptoCaja = conceptoCaja[..200];
@@ -265,6 +268,8 @@ namespace SistemaOroAmbiental.DAL.Repository
             await _db.SaveChangesAsync();
 
             gasto.IdMovCaja = cajaMov.Id;
+            if (guardar)
+                await _db.SaveChangesAsync();
         }
     }
 }

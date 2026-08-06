@@ -10,11 +10,16 @@
     const KEY_SESION_EXPIRADA = "sesionExpirada";
     const KEY_LOGOUT_VOLUNTARIO = "logoutVoluntario";
     const KEY_WARNING_DISMISSED = "sessionWarningDismissed";
+    const KEY_JTI = "sessionJti";
     /** Segundos restantes para mostrar cartel / contador (5:00 o menos). */
     const WARNING_SECONDS = 5 * 60;
     const API_RENOVAR = "/Login/RenovarSesion";
+    const API_HEARTBEAT = "/Login/Heartbeat";
+    const API_DESCONEXION = "/Login/RegistrarDesconexion";
+    const HEARTBEAT_MS = 150 * 1000; // 2.5 min (online = 5 min de tolerancia)
 
     let countdownTimer = null;
+    let heartbeatTimer = null;
     let expiredModalShown = false;
     let warningModalVisible = false;
     let warningDismissed = false;
@@ -83,10 +88,67 @@
     }
 
     function clearSession() {
+        stopHeartbeat();
         localStorage.removeItem(STORAGE_TOKEN);
         localStorage.removeItem(STORAGE_USER);
         localStorage.removeItem(STORAGE_EXPIRES);
+        sessionStorage.removeItem(KEY_JTI);
         window.token = null;
+    }
+
+    function decodeJwtJti(token) {
+        try {
+            const part = String(token || "").split(".")[1];
+            if (!part) return null;
+            const json = atob(part.replace(/-/g, "+").replace(/_/g, "/"));
+            const payload = JSON.parse(json);
+            return payload.jti || payload.Jti || null;
+        } catch {
+            return null;
+        }
+    }
+
+    function stopHeartbeat() {
+        if (heartbeatTimer) {
+            clearInterval(heartbeatTimer);
+            heartbeatTimer = null;
+        }
+    }
+
+    function startHeartbeat() {
+        stopHeartbeat();
+        if (isLoginPage() || !isSessionValid()) return;
+
+        const tick = () => {
+            if (document.visibilityState === "hidden") return;
+            const token = localStorage.getItem(STORAGE_TOKEN);
+            if (!token || !isSessionValid()) {
+                stopHeartbeat();
+                return;
+            }
+            fetch(API_HEARTBEAT, {
+                method: "POST",
+                headers: { Authorization: "Bearer " + token }
+            }).catch(() => { /* ignore */ });
+        };
+
+        tick();
+        heartbeatTimer = setInterval(tick, HEARTBEAT_MS);
+    }
+
+    async function registrarDesconexion(motivo) {
+        const token = localStorage.getItem(STORAGE_TOKEN);
+        if (!token) return;
+        const jti = sessionStorage.getItem(KEY_JTI) || decodeJwtJti(token) || "";
+        try {
+            await fetch(`${API_DESCONEXION}?motivo=${motivo}&jti=${encodeURIComponent(jti)}`, {
+                method: "POST",
+                headers: { Authorization: "Bearer " + token },
+                keepalive: true
+            });
+        } catch {
+            /* ignore */
+        }
     }
 
     function markSessionExpired() {
@@ -112,24 +174,35 @@
 
     function redirectToLogin(expired) {
         stopCountdown();
-        clearSession();
+        stopHeartbeat();
 
-        if (isLoginPage()) return;
+        const go = () => {
+            if (isLoginPage()) return;
+            if (expired) markSessionExpired();
+            window.location.replace("/Login/Index");
+        };
 
-        if (expired) {
-            markSessionExpired();
+        const token = localStorage.getItem(STORAGE_TOKEN);
+        if (expired && token && !voluntaryLogout) {
+            registrarDesconexion(3).finally(() => {
+                clearSession();
+                go();
+            });
+            return;
         }
 
-        window.location.replace("/Login/Index");
+        clearSession();
+        go();
     }
 
     /** Cierre de sesion manual (navbar): sin mensaje de expiracion. */
-    function beginVoluntaryLogout() {
+    async function beginVoluntaryLogout() {
         voluntaryLogout = true;
         stopCountdown();
         clearExpiredFlag();
         sessionStorage.setItem(KEY_LOGOUT_VOLUNTARIO, "1");
         sessionStorage.removeItem(KEY_WARNING_DISMISSED);
+        await registrarDesconexion(2);
         clearSession();
     }
 
@@ -310,7 +383,7 @@
                 ? parseInt(data.expiresAtUnixMs, 10)
                 : (data.expiresAt ? Date.parse(data.expiresAt) : null);
 
-            setSession(data.token, user, expMs);
+            setSession(data.token, user, expMs, data.jti);
             setWarningDismissed(false);
             updateCountdownUi();
 
@@ -462,7 +535,7 @@
         };
     }
 
-    function setSession(token, user, expiresAtMs) {
+    function setSession(token, user, expiresAtMs, jti) {
         if (!token) return;
 
         voluntaryLogout = false;
@@ -476,10 +549,14 @@
         if (user) localStorage.setItem(STORAGE_USER, JSON.stringify(user));
         if (exp) localStorage.setItem(STORAGE_EXPIRES, String(exp));
 
+        const resolvedJti = jti || decodeJwtJti(token);
+        if (resolvedJti) sessionStorage.setItem(KEY_JTI, resolvedJti);
+
         window.token = token;
         expiredModalShown = false;
         setWarningDismissed(false);
         warningModalVisible = false;
+        startHeartbeat();
     }
 
     function guardPage() {
@@ -518,6 +595,7 @@
         installFetchInterceptor();
         syncSessionCartelVisibility();
         hideWarningModal();
+        startHeartbeat();
         startCountdown();
     }
 

@@ -96,17 +96,30 @@ namespace SistemaOroAmbiental.DAL.Repository
         {
             try
             {
+                var listaPrecios = (precios ?? Enumerable.Empty<ProductosPrecio>()).ToList();
+
                 var existentes = await _db.ProductosPrecios
                     .Where(x => x.IdProducto == idProducto)
                     .ToListAsync();
 
-                var mapaExistentes = existentes.ToDictionary(x => x.IdListaPrecio);
-                var ahora = DateTime.Now;
+                // Si hay filas duplicadas por lista, conservar una sola.
+                var mapaExistentes = existentes
+                    .GroupBy(x => x.IdListaPrecio)
+                    .ToDictionary(g => g.Key, g => g.First());
+                foreach (var dup in existentes.Where(x => mapaExistentes[x.IdListaPrecio].Id != x.Id))
+                    _db.ProductosPrecios.Remove(dup);
 
-                foreach (var item in precios)
+                var ahora = DateTime.Now;
+                var preciosActualizados = new List<(int IdListaPrecio, decimal PrecioVenta)>();
+
+                foreach (var item in listaPrecios)
                 {
+                    if (item.IdListaPrecio <= 0)
+                        continue;
+
                     if (item.PrecioVenta <= 0)
                     {
+                        // Solo limpia el precio de catálogo. Nunca elimina productos de establecimientos.
                         if (mapaExistentes.TryGetValue(item.IdListaPrecio, out var borrar))
                         {
                             _db.ProductosPrecios.Remove(borrar);
@@ -117,10 +130,13 @@ namespace SistemaOroAmbiental.DAL.Repository
 
                     if (mapaExistentes.TryGetValue(item.IdListaPrecio, out var actual))
                     {
+                        var precioCambio = actual.PrecioVenta != item.PrecioVenta;
                         actual.PrecioVenta = item.PrecioVenta;
                         actual.PorcRentabilidad = item.PorcRentabilidad;
                         actual.IdUsuarioModifica = idUsuario;
                         actual.FechaUsuarioModifica = ahora;
+                        if (precioCambio)
+                            preciosActualizados.Add((item.IdListaPrecio, item.PrecioVenta));
                     }
                     else
                     {
@@ -133,6 +149,38 @@ namespace SistemaOroAmbiental.DAL.Repository
                             IdUsuarioRegistra = idUsuario,
                             FechaUsuarioRegistra = ahora
                         });
+                        preciosActualizados.Add((item.IdListaPrecio, item.PrecioVenta));
+                    }
+                }
+
+                // Propagar precio de lista a todos los establecimientos que usen ese producto + lista.
+                // No crea ni elimina asignaciones: solo actualiza PrecioVenta.
+                if (preciosActualizados.Count > 0)
+                {
+                    var idsListas = preciosActualizados.Select(x => x.IdListaPrecio).Distinct().ToList();
+                    var mapaNuevos = preciosActualizados
+                        .GroupBy(x => x.IdListaPrecio)
+                        .ToDictionary(g => g.Key, g => g.Last().PrecioVenta);
+
+                    var asignaciones = await _db.ClientesEstablecimientosProductos
+                        .Where(x =>
+                            x.IdProducto == idProducto
+                            && x.IdListaPrecio != null
+                            && idsListas.Contains(x.IdListaPrecio.Value))
+                        .ToListAsync();
+
+                    foreach (var cep in asignaciones)
+                    {
+                        if (cep.IdListaPrecio is not int idLista)
+                            continue;
+                        if (!mapaNuevos.TryGetValue(idLista, out var nuevoPrecio))
+                            continue;
+                        if (cep.PrecioVenta == nuevoPrecio)
+                            continue;
+
+                        cep.PrecioVenta = nuevoPrecio;
+                        cep.IdUsuarioModifica = idUsuario;
+                        cep.FechaUsuarioModifica = ahora;
                     }
                 }
 

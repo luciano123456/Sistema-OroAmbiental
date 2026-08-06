@@ -127,9 +127,88 @@ select.is-valid + .select2 .select2-selection {
     display: flex;
     align-items: center;
     gap: 12px;
-    margin-bottom: 1rem;
+    margin-bottom: 0.85rem;
     padding-bottom: 0.85rem;
     border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+}
+
+.rp-precios-add {
+    width: 100%;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 0.85rem;
+    margin: 0 0 1rem;
+    padding: 0.85rem 1rem;
+    border-radius: 12px;
+    border: 1px dashed rgba(96, 165, 250, 0.45);
+    background:
+        linear-gradient(135deg, rgba(37, 99, 235, 0.12) 0%, rgba(15, 23, 42, 0.2) 55%, rgba(14, 165, 233, 0.08) 100%);
+    color: #e2e8f0;
+    text-align: left;
+    cursor: pointer;
+    transition: border-color 0.2s ease, background 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
+}
+
+.rp-precios-add:hover {
+    border-color: rgba(96, 165, 250, 0.85);
+    background:
+        linear-gradient(135deg, rgba(37, 99, 235, 0.2) 0%, rgba(15, 23, 42, 0.28) 55%, rgba(14, 165, 233, 0.14) 100%);
+    box-shadow: 0 8px 22px rgba(37, 99, 235, 0.18);
+    transform: translateY(-1px);
+}
+
+.rp-precios-add:active {
+    transform: translateY(0);
+}
+
+.rp-precios-add-icon {
+    width: 2.4rem;
+    height: 2.4rem;
+    border-radius: 11px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(59, 130, 246, 0.22);
+    color: #93c5fd;
+    font-size: 1rem;
+    border: 1px solid rgba(147, 197, 253, 0.25);
+}
+
+.rp-precios-add-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    min-width: 0;
+}
+
+.rp-precios-add-text strong {
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: #f8fafc;
+}
+
+.rp-precios-add-text small {
+    font-size: 0.78rem;
+    color: #94a3b8;
+    line-height: 1.25;
+}
+
+.rp-precios-add-action {
+    flex-shrink: 0;
+    padding: 0.35rem 0.75rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: #dbeafe;
+    background: rgba(37, 99, 235, 0.35);
+    border: 1px solid rgba(147, 197, 253, 0.3);
+}
+
+.rp-precios-add:hover .rp-precios-add-action {
+    background: rgba(37, 99, 235, 0.55);
 }
 
 .rp-precios-header-icon {

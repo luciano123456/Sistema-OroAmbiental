@@ -13,6 +13,10 @@ public partial class ClientesEstablecimientosProducto
 
     public decimal Cantidad { get; set; }
 
+    public int? IdListaPrecio { get; set; }
+
+    public decimal PrecioVenta { get; set; }
+
     public int IdUsuarioRegistra { get; set; }
 
     public DateTime FechaUsuarioRegistra { get; set; }
@@ -24,6 +28,8 @@ public partial class ClientesEstablecimientosProducto
     public virtual ClientesEstablecimiento IdEstablecimientoNavigation { get; set; } = null!;
 
     public virtual Producto IdProductoNavigation { get; set; } = null!;
+
+    public virtual ListasPrecio? IdListaPrecioNavigation { get; set; }
 
     public virtual User? IdUsuarioModificaNavigation { get; set; }
 

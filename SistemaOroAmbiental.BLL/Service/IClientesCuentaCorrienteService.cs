@@ -42,6 +42,13 @@ namespace SistemaOroAmbiental.BLL.Service
             decimal haber,
             int idUsuario);
 
+        Task<ServiceResult> RegistrarInteres(
+            int idCliente,
+            DateTime fecha,
+            string concepto,
+            decimal importe,
+            int idUsuario);
+
         Task<ServiceResult> Eliminar(int id);
     }
 }

@@ -7,165 +7,163 @@
      data-bs-keyboard="false">
 
     <div class="modal-dialog modal-xl modal-dialog-scrollable">
-
         <div class="modal-content">
-
             <div class="modal-header colorEncabezado">
-
-                <h5 class="modal-title fw-bold" id="modalEdicionLabel">
-                    Nuevo Producto
-                </h5>
-
-                <button type="button"
-                        class="btn-close"
-                        data-bs-dismiss="modal"></button>
-
+                <h5 class="modal-title fw-bold" id="modalEdicionLabel">Nuevo Producto</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
 
             <div class="modal-body">
-
-                <div id="errorCampos"
-                     class="rp-error-panel d-none mb-2">
-
-                    <div class="rp-error-icon">
-                        <i class="fa fa-exclamation-triangle"></i>
-                    </div>
-
+                <div id="errorCampos" class="rp-error-panel d-none mb-2">
+                    <div class="rp-error-icon"><i class="fa fa-exclamation-triangle"></i></div>
                     <div class="rp-error-content">
-                        <div class="rp-error-title">
-                            No se pudo guardar
-                        </div>
+                        <div class="rp-error-title">No se pudo guardar</div>
                         <div class="rp-error-message"></div>
                     </div>
-
-                    <button type="button"
-                            class="rp-error-close"
-                            onclick="cerrarErrorCampos()">
+                    <button type="button" class="rp-error-close" onclick="cerrarErrorCampos()">
                         <i class="fa fa-times"></i>
                     </button>
                 </div>
 
-                <form class="row g-3">
-
-                    <input type="text" id="txtId" hidden />
-
-                    <div class="col-md-6">
-                        <label class="form-label">Nombre</label>
-                        <input id="txtNombre" class="form-control" required />
-                        <div class="invalid-feedback">Campo obligatorio</div>
-                    </div>
-
-                    <div class="col-md-3">
-                        <label class="form-label">Categoria</label>
-                        <div class="rp-select-plus">
-                            <select id="cmbCategoria" class="form-control"></select>
-                            <button type="button"
-                                    id="btnAtajoCategoria"
-                                    class="rp-btn-plus"
-                                    title="Agregar categoria"
-                                    data-config-nombre="Productos Categorias"
-                                    data-config-controller="ProductosCategorias">
-                                <i class="fa fa-plus"></i>
+                <div class="rp-tabs-shell">
+                    <ul class="nav rp-tabs-modern">
+                        <li class="nav-item">
+                            <button class="nav-link active" id="tabBtnDatosProd" data-bs-toggle="tab" data-bs-target="#tabDatosProd" type="button">
+                                <i class="fa fa-cube"></i><span>Datos</span>
                             </button>
-                        </div>
-                        <div class="invalid-feedback">Campo obligatorio</div>
-                    </div>
-
-                    <div class="col-md-3">
-                        <label class="form-label">Unidad de medida</label>
-                        <div class="rp-select-plus">
-                            <select id="cmbMedida" class="form-control"></select>
-                            <button type="button"
-                                    id="btnAtajoMedida"
-                                    class="rp-btn-plus"
-                                    title="Agregar unidad de medida"
-                                    data-config-nombre="Unidades de Medida"
-                                    data-config-controller="UnidadesMedida">
-                                <i class="fa fa-plus"></i>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link" id="tabBtnListasProd" data-bs-toggle="tab" data-bs-target="#tabListasProd" type="button">
+                                <i class="fa fa-tags"></i><span>Lista de precios</span>
                             </button>
-                        </div>
-                        <div class="invalid-feedback">Campo obligatorio</div>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="tab-content mt-3">
+                    <div class="tab-pane fade show active" id="tabDatosProd">
+                        <form class="row g-3">
+                            <input type="text" id="txtId" hidden />
+
+                            <div class="col-md-6">
+                                <label class="form-label">Nombre</label>
+                                <input id="txtNombre" class="form-control" required />
+                                <div class="invalid-feedback">Campo obligatorio</div>
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label">Abreviatura</label>
+                                <input id="txtAbreviatura" class="form-control" maxlength="20" placeholder="Ej. C/C" />
+                                <div class="form-text text-muted">Se muestra en la hoja de ruta.</div>
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label">Categoria</label>
+                                <div class="rp-select-plus">
+                                    <select id="cmbCategoria" class="form-control"></select>
+                                    <button type="button" id="btnAtajoCategoria" class="rp-btn-plus" title="Agregar categoria"
+                                            data-config-nombre="Productos Categorias" data-config-controller="ProductosCategorias">
+                                        <i class="fa fa-plus"></i>
+                                    </button>
+                                </div>
+                                <div class="invalid-feedback">Campo obligatorio</div>
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label">Unidad de medida</label>
+                                <div class="rp-select-plus">
+                                    <select id="cmbMedida" class="form-control"></select>
+                                    <button type="button" id="btnAtajoMedida" class="rp-btn-plus" title="Agregar medida"
+                                            data-config-nombre="Unidades de Medida" data-config-controller="UnidadesMedida">
+                                        <i class="fa fa-plus"></i>
+                                    </button>
+                                </div>
+                                <div class="invalid-feedback">Campo obligatorio</div>
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label d-flex align-items-center justify-content-between gap-2">
+                                    <span>Costo unitario</span>
+                                    <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none" id="btnHistorialCosto"
+                                            title="Ver historial de costo" onclick="abrirHistorialCostoProducto()">
+                                        <i class="fa fa-history"></i> Historial
+                                    </button>
+                                </label>
+                                <input id="txtCostoUnitario" type="text" inputmode="decimal" autocomplete="off" class="form-control Inputmiles" required />
+                                <div class="invalid-feedback">Campo obligatorio</div>
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label">Stock minimo</label>
+                                <input id="txtStockMinimo" type="text" min="0" class="form-control Inputmiles" inputmode="numeric" autocomplete="off" value="0" />
+                                <div class="invalid-feedback">Valor invalido</div>
+                            </div>
+
+                            <div class="col-md-3">
+                                <div class="rp-activo-box">
+                                    <div class="rp-activo-box-head">
+                                        <span class="rp-activo-box-title">Estado del registro</span>
+                                        <span class="rp-activo-box-sub">Productos inactivos no se listan por defecto.</span>
+                                    </div>
+                                    <label class="rp-switch mb-0 rp-switch-block">
+                                        <input type="checkbox" id="chkActivoProducto" class="rp-switch-input" checked>
+                                        <span class="rp-switch-slider"></span>
+                                        <span class="rp-activo-estado-text" id="lblActivoProducto">Activo</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </form>
                     </div>
 
-                    <div class="col-md-4">
-                        <label class="form-label prod-costo-label">
-                            <span>Costo unitario</span>
+                    <div class="tab-pane fade" id="tabListasProd">
+                        <div class="rp-precios-section">
+                            <div class="rp-precios-header">
+                                <div class="rp-precios-header-icon"><i class="fa fa-tags"></i></div>
+                                <div>
+                                    <h6 class="rp-precios-title mb-0">Lista de precios</h6>
+                                    <small class="rp-precios-sub">Precio de venta y rentabilidad por cada lista (Efectivo, Transferencia, etc.)</small>
+                                </div>
+                            </div>
+
                             <button type="button"
-                                    id="btnHistorialCosto"
-                                    class="btn btn-sm prod-btn-historial-costo"
-                                    title="Ver historial de costo unitario"
-                                    disabled>
-                                <i class="fa fa-eye"></i>
-                                <span class="prod-btn-historial-text">Historial</span>
+                                    id="btnAtajoListaPrecioProd"
+                                    class="rp-precios-add rp-config-atajo"
+                                    data-config-nombre="Listas de Precio"
+                                    data-config-controller="ListasPrecios">
+                                <span class="rp-precios-add-icon"><i class="fa fa-tags"></i></span>
+                                <span class="rp-precios-add-text">
+                                    <strong>Nueva lista de precios</strong>
+                                    <small>Creá Efectivo, Transferencia u otra sin salir del producto</small>
+                                </span>
+                                <span class="rp-precios-add-action">Agregar</span>
                             </button>
-                        </label>
-                        <input id="txtCostoUnitario" type="text" inputmode="decimal" autocomplete="off" class="form-control Inputmiles" required />
-                        <div class="invalid-feedback">Campo obligatorio</div>
-                    </div>
 
-                    <div class="col-md-4">
-                        <label class="form-label">Stock minimo</label>
-                        <input id="txtStockMinimo" type="text" min="0" class="form-control Inputmiles" inputmode="numeric" autocomplete="off" value="0" />
-                        <div class="invalid-feedback">Valor invalido</div>
-                    </div>
-
-                    <div class="col-md-4">
-                        <div class="rp-activo-box">
-                            <div class="rp-activo-box-head">
-                                <span class="rp-activo-box-title">Estado del registro</span>
-                                <span class="rp-activo-box-sub">Productos inactivos no se listan por defecto.</span>
+                            <div id="lblPreciosSinListas" class="rp-precios-empty d-none">
+                                <i class="fa fa-info-circle"></i>
+                                <span>Todavía no hay listas. Usá <strong>Nueva lista de precios</strong> para crear la primera.</span>
                             </div>
-                            <label class="rp-switch mb-0 rp-switch-block">
-                                <input type="checkbox" id="chkActivoProducto" class="rp-switch-input" checked>
-                                <span class="rp-switch-slider"></span>
-                                <span class="rp-activo-estado-text" id="lblActivoProducto">Activo</span>
-                            </label>
+
+                            <div id="gridPreciosLista" class="rp-precios-grid"></div>
                         </div>
                     </div>
-
-                    <div class="col-12 rp-precios-section mt-3">
-                        <div class="rp-precios-header">
-                            <div class="rp-precios-header-icon">
-                                <i class="fa fa-tags"></i>
-                            </div>
-                            <div>
-                                <h6 class="rp-precios-title mb-0">Precios por lista</h6>
-                                <small class="rp-precios-sub">Defini el precio de venta y rentabilidad para cada lista</small>
-                            </div>
-                        </div>
-
-                        <div id="lblPreciosSinListas" class="rp-precios-empty d-none">
-                            <i class="fa fa-info-circle"></i>
-                            <span>No hay listas de precio. Crea una en <strong>Configuraciones → Listas de Precio</strong>.</span>
-                        </div>
-
-                        <div id="gridPreciosLista" class="rp-precios-grid"></div>
-                    </div>
-
-                </form>
+                </div>
 
                 <div class="rp-auditoria d-none mt-3" id="infoAuditoria">
                     <div id="infoRegistro"></div>
                     <div id="infoModificacion"></div>
                 </div>
-
             </div>
 
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    <i class="fa fa-arrow-left"></i>
-                    Volver
+                    <i class="fa fa-arrow-left"></i> Volver
                 </button>
                 <button type="button" id="btnGuardar" class="btn btn-primary" onclick="guardarProducto()">
-                    <i class="fa fa-check"></i>
-                    Registrar
+                    <i class="fa fa-check"></i> Registrar
                 </button>
             </div>
-
         </div>
-
     </div>
-
 </div>
 
 @* Historial de costo unitario *@
