@@ -131,6 +131,11 @@ public class ClienteControlMensualDto
     public DateTime? FechaTransferencia { get; set; }
     public decimal Debe { get; set; }
     public decimal Haber { get; set; }
+    /// <summary>Cargo del mes = Debe + intereses asignados al mes.</summary>
+    public decimal TotalMes { get; set; }
+    /// <summary>Restante del mes = TotalMes − Haber (no incluye meses anteriores).</summary>
+    public decimal RestanteMes { get; set; }
+    /// <summary>Saldo acumulado al cierre del mes (incluye historial previo).</summary>
     public decimal Saldo { get; set; }
     public int CajasAFavor { get; set; }
     public bool SinEntrega { get; set; }

@@ -3134,6 +3134,26 @@ body.layout-modulo .container-fluid {
     font-variant-numeric: tabular-nums;
 }
 
+.cg-mes-ws-kpi--total {
+    border-color: rgba(248, 113, 113, 0.35);
+    background: linear-gradient(180deg, rgba(239, 68, 68, 0.14), rgba(0, 0, 0, 0.22));
+}
+
+.cg-mes-ws-kpi--pagado {
+    border-color: rgba(52, 211, 153, 0.35);
+    background: linear-gradient(180deg, rgba(16, 185, 129, 0.14), rgba(0, 0, 0, 0.22));
+}
+
+.cg-mes-ws-kpi--restante {
+    border-color: rgba(251, 191, 36, 0.4);
+    background: linear-gradient(180deg, rgba(245, 158, 11, 0.16), rgba(0, 0, 0, 0.22));
+}
+
+.cg-mes-ws-kpi--acum {
+    border-color: rgba(96, 165, 250, 0.4);
+    background: linear-gradient(180deg, rgba(59, 130, 246, 0.16), rgba(0, 0, 0, 0.22));
+}
+
 /* Productos + visita compacta en ancho de una solapa */
 .cg-mes-ws-compact {
     display: flex;

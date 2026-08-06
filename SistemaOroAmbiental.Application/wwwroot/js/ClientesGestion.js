@@ -2,7 +2,7 @@
    CLIENTES GESTION - Hub unificado por cliente
    (cliente + establecimientos: lineas completas + importe tras cuenta)
 ========================================================= */
-window.__OA_CG_BUILD = "inline-guard-v22-20260806";
+window.__OA_CG_BUILD = "inline-guard-v23-20260806";
 
 const CG = {
     id: 0,
@@ -2917,7 +2917,7 @@ function renderControlMensualCg(data) {
             <th class="${mostrarAnio ? "cg-cm-sticky-left-3" : "cg-cm-sticky-left-2"}" rowspan="2">Visita</th>
             <th class="cg-cm-th-grp-ent" colspan="${colspanEnt}">Productos entregados</th>
             <th class="cg-cm-th-grp-ret" colspan="${colspanRet}">Productos retirados</th>
-            <th class="cg-cm-th-grp-money" colspan="8">Pagos y saldo</th>
+            <th class="cg-cm-th-grp-money" colspan="9">Pagos y saldo</th>
         </tr>
         <tr class="cg-cm-head-cols">
             ${nProd
@@ -2926,18 +2926,19 @@ function renderControlMensualCg(data) {
             ${nProd
                 ? columnas.map(c => `<th class="cg-cm-th-prod-ret" title="${escapeCg(c.Nombre)}">${escapeCg((c.Abreviatura || c.Nombre || "").trim() || ("#" + c.IdProducto))}</th>`).join("")
                 : `<th class="cg-cm-th-prod-ret">—</th>`}
-            <th class="cg-cm-cell-money">Debe</th>
+            <th class="cg-cm-cell-money" title="Cargo del mes (retiros)">Total</th>
             <th class="cg-cm-cell-money">Efectivo</th>
             <th class="cg-cm-cell-money">Transf.</th>
             <th>F. transf.</th>
             <th class="cg-cm-cell-money">Intereses</th>
+            <th class="cg-cm-cell-money" title="Total + intereses − pagos del mes">Rest. mes</th>
             <th>S/E</th>
             <th>Obs.</th>
-            <th class="cg-cm-cell-money cg-cm-th-saldo">Saldo</th>
+            <th class="cg-cm-cell-money cg-cm-th-saldo" title="Saldo acumulado al cierre del mes">Saldo acum.</th>
         </tr>`);
 
     if (!filas.length) {
-        const cols = (mostrarAnio ? 1 : 0) + 2 + colspanEnt + colspanRet + 8;
+        const cols = (mostrarAnio ? 1 : 0) + 2 + colspanEnt + colspanRet + 9;
         tbody.html(`<tr class="cg-cm-empty"><td colspan="${cols}" class="text-center py-4">
             No hay datos para los filtros elegidos.</td></tr>`);
         renderControlMensualCardsCg([], mostrarAnio);
@@ -2967,6 +2968,11 @@ function renderControlMensualCg(data) {
             mapaProd[id].Entregadas += Number(p.Entregadas) || 0;
             mapaProd[id].Retiradas += Number(p.Retiradas) || 0;
         });
+        const totalMesFila = Number(m.TotalMes != null ? m.TotalMes : ((Number(m.Debe) || 0) + (Number(m.TotalIntereses) || 0))) || 0;
+        const restanteMesFila = Number(m.RestanteMes != null ? m.RestanteMes : (totalMesFila - (Number(m.Haber) || 0))) || 0;
+        const restanteClass = typeof clsSaldoDeudaMoney === "function"
+            ? clsSaldoDeudaMoney(restanteMesFila)
+            : "";
 
         const celdasEnt = nProd
             ? columnas.map(c => {
@@ -2991,14 +2997,15 @@ function renderControlMensualCg(data) {
             <td class="${mostrarAnio ? "cg-cm-sticky-left-3" : "cg-cm-sticky-left-2"} cg-cm-date">${formatearFechaCortaCg(m.FechaVisita)}</td>
             ${celdasEnt}
             ${celdasRet}
-            <td class="cg-cm-cell-money cg-cm-debe">${fmtMoneyCg(m.Debe)}</td>
+            <td class="cg-cm-cell-money cg-cm-debe" title="Total del mes (retiros + intereses)">${fmtMoneyCg(totalMesFila)}</td>
             <td class="cg-cm-cell-money ${(Number(m.AbonoEfectivo) || 0) > 0 ? "cg-cm-haber" : ""}">${fmtMoneyCg(m.AbonoEfectivo)}</td>
             <td class="cg-cm-cell-money ${(Number(m.AbonoTransferencia) || 0) > 0 ? "cg-cm-haber" : ""}">${fmtMoneyCg(m.AbonoTransferencia)}</td>
             <td class="cg-cm-date">${formatearFechaCortaCg(m.FechaTransferencia)}</td>
             <td class="cg-cm-cell-money cg-cm-int">${celdaInteresesMesCg(m, anio)}</td>
+            <td class="cg-cm-cell-money ${restanteClass}" title="Restante de este mes">${fmtMoneyCg(restanteMesFila)}</td>
             <td class="cg-cm-flag">${m.SinEntrega ? '<i class="fa fa-times text-danger"></i>' : ""}</td>
             <td class="cg-cm-obs" title="${escapeCg(m.Observaciones || "")}">${escapeCg(truncarCg(m.Observaciones, 24))}</td>
-            <td class="cg-cm-cell-money cg-cm-saldo-final ${saldoClass}">${fmtMoneyCg(m.Saldo)}</td>
+            <td class="cg-cm-cell-money cg-cm-saldo-final ${saldoClass}" title="Saldo acumulado">${fmtMoneyCg(m.Saldo)}</td>
         </tr>`;
     }).join(""));
 
@@ -3024,14 +3031,30 @@ async function abrirWorkspaceMesCg(anio, mes, keepScroll) {
     $(`#cgControlMensualBody tr[data-anio="${anio}"][data-mes="${mes}"]`).addClass("is-selected");
 
     $h("cgHubMesDetailTitulo").text(`${m.MesNombre} ${anio}`);
+    const totalMes = Number(m.TotalMes != null ? m.TotalMes : ((Number(m.Debe) || 0) + (Number(m.TotalIntereses) || 0))) || 0;
+    const restanteMes = Number(m.RestanteMes != null ? m.RestanteMes : (totalMes - (Number(m.Haber) || 0))) || 0;
+    const saldoAcum = Number(m.Saldo) || 0;
+    const clsRest = typeof clsSaldoDeudaMoney === "function" ? clsSaldoDeudaMoney(restanteMes) : "";
+    const clsAcum = typeof clsSaldoDeudaMoney === "function" ? clsSaldoDeudaMoney(saldoAcum) : "";
     $h("cgMesWsKpis").html(`
         <div class="cg-mes-ws-kpi"><span>Entregadas</span><strong>${fmtQtyCg(m.Entregadas)}</strong></div>
         <div class="cg-mes-ws-kpi"><span>Retiradas</span><strong>${fmtQtyCg(m.Retiradas)}</strong></div>
         <div class="cg-mes-ws-kpi"><span>Stock mes</span><strong>${fmtQtyCg(m.StockCliente)}</strong></div>
-        <div class="cg-mes-ws-kpi"><span>Debe</span><strong class="cg-val-debe">${fmtMoneyCg(m.Debe)}</strong></div>
-        <div class="cg-mes-ws-kpi"><span>Intereses</span><strong class="cg-val-debe">${fmtMoneyCg(m.TotalIntereses)}</strong></div>
-        <div class="cg-mes-ws-kpi"><span>Haber</span><strong class="cg-val-haber">${fmtMoneyCg(m.Haber)}</strong></div>
-        <div class="cg-mes-ws-kpi"><span>Saldo</span><strong class="${typeof clsSaldoDeudaMoney === "function" ? clsSaldoDeudaMoney(m.Saldo) : ""}">${fmtMoneyCg(m.Saldo)}</strong></div>
+        <div class="cg-mes-ws-kpi cg-mes-ws-kpi--total" title="Retiros del mes + intereses">
+            <span>Total mes</span><strong class="cg-val-debe">${fmtMoneyCg(totalMes)}</strong>
+        </div>
+        <div class="cg-mes-ws-kpi" title="Intereses asignados a este mes">
+            <span>Intereses</span><strong class="cg-val-debe">${fmtMoneyCg(m.TotalIntereses)}</strong>
+        </div>
+        <div class="cg-mes-ws-kpi cg-mes-ws-kpi--pagado" title="Cobros / abonos del mes">
+            <span>Pagado</span><strong class="cg-val-haber">${fmtMoneyCg(m.Haber)}</strong>
+        </div>
+        <div class="cg-mes-ws-kpi cg-mes-ws-kpi--restante" title="Total mes − pagado (solo este mes)">
+            <span>Restante mes</span><strong class="${clsRest}">${fmtMoneyCg(restanteMes)}</strong>
+        </div>
+        <div class="cg-mes-ws-kpi cg-mes-ws-kpi--acum" title="Deuda o saldo a favor acumulado al cierre de este mes">
+            <span>Saldo acum.</span><strong class="${clsAcum}">${fmtMoneyCg(saldoAcum)}</strong>
+        </div>
     `);
 
     const prods = Array.isArray(m.Productos) ? m.Productos : [];
@@ -4678,7 +4701,12 @@ function renderControlMensualCardsCg(filas, mostrarAnio) {
 
     $grid.html(filas.map(m => {
         const anio = m.Anio || CG.controlAnio;
+        const totalMes = Number(m.TotalMes != null ? m.TotalMes : ((Number(m.Debe) || 0) + (Number(m.TotalIntereses) || 0))) || 0;
+        const restanteMes = Number(m.RestanteMes != null ? m.RestanteMes : (totalMes - (Number(m.Haber) || 0))) || 0;
         const saldo = Number(m.Saldo) || 0;
+        const restanteCls = typeof clsSaldoDeudaMoney === "function"
+            ? clsSaldoDeudaMoney(restanteMes)
+            : "";
         const saldoCls = typeof clsSaldoDeudaMoney === "function"
             ? clsSaldoDeudaMoney(saldo)
             : (saldo > 0 ? "cg-val-saldo-neg" : (saldo < 0 ? "cg-val-saldo-pos" : "cg-val-saldo-cero"));
@@ -4699,11 +4727,12 @@ function renderControlMensualCardsCg(filas, mostrarAnio) {
                 <div class="cg-data-card-body">
                     <div class="cg-card-field"><span>Entreg.</span><strong class="rp-money-in">${fmtQtyCg(m.Entregadas)}</strong></div>
                     <div class="cg-card-field"><span>Retir.</span><strong class="rp-money-out">${fmtQtyCg(m.Retiradas)}</strong></div>
-                    <div class="cg-card-field"><span>Debe</span><strong class="cg-val-debe">${fmtMoneyCg(m.Debe)}</strong></div>
+                    <div class="cg-card-field"><span>Total mes</span><strong class="cg-val-debe">${fmtMoneyCg(totalMes)}</strong></div>
                     <div class="cg-card-field"><span>Efectivo</span><strong class="${(Number(m.AbonoEfectivo) || 0) > 0 ? "cg-val-haber" : ""}">${fmtMoneyCg(m.AbonoEfectivo)}</strong></div>
                     <div class="cg-card-field"><span>Transf.</span><strong class="${(Number(m.AbonoTransferencia) || 0) > 0 ? "cg-val-haber" : ""}">${fmtMoneyCg(m.AbonoTransferencia)}</strong></div>
                     <div class="cg-card-field"><span>Intereses</span><strong class="${atrasado && !(Number(m.CantidadIntereses) || 0) ? "rp-money-out" : ""}">${(Number(m.CantidadIntereses) || 0) > 0 ? `${m.CantidadIntereses}× ${fmtMoneyCg(m.TotalIntereses)}` : "—"}</strong></div>
-                    <div class="cg-card-field cg-card-field--full"><span>Saldo (final)</span><strong class="${saldoCls}">${fmtMoneyCg(m.Saldo)}</strong></div>
+                    <div class="cg-card-field"><span>Restante mes</span><strong class="${restanteCls}">${fmtMoneyCg(restanteMes)}</strong></div>
+                    <div class="cg-card-field"><span>Saldo acum.</span><strong class="${saldoCls}">${fmtMoneyCg(saldo)}</strong></div>
                     ${m.Observaciones ? `<div class="cg-card-field cg-card-field--full"><span>Obs.</span><strong>${escapeCg(truncarCg(m.Observaciones, 60))}</strong></div>` : ""}
                 </div>
             </article>`;
