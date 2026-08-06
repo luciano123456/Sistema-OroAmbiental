@@ -363,14 +363,14 @@ body.layout-modulo .container-fluid {
 
 .cm-cobros-kpis {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     gap: 10px;
     margin-bottom: 1rem;
 }
 
 @media (max-width: 768px) {
     .cm-cobros-kpis {
-        grid-template-columns: 1fr;
+        grid-template-columns: 1fr 1fr;
     }
 }
 

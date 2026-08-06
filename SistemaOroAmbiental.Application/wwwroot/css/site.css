@@ -746,13 +746,13 @@ thead tr.filters th {
         cursor: pointer !important;
     }
 
-/* Muy importante en Datatables con fixedHeader/scroll */
+/* Por encima de .modal (10000055+) cuando el dropdown va al body */
 .select2-container--open {
-    z-index: 999999 !important;
+    z-index: 10001000 !important;
 }
 
 .select2-dropdown {
-    z-index: 999999 !important;
+    z-index: 10001000 !important;
 }
 
 

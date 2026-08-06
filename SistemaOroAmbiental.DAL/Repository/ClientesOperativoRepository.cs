@@ -256,12 +256,12 @@ namespace SistemaOroAmbiental.DAL.Repository
 
             // Cuenta corriente e intereses:
             // - Vista cliente: planilla con CC completa.
-            // - Vista por establecimiento: solo operativo (entregas/abonos del est).
-            //   Si no, un establecimiento nuevo hereda el saldo de toda la CC del cliente.
+            // - Vista por establecimiento: cobros vinculados a entregas de ese/esos est.
+            //   (No se trae toda la CC: un est nuevo no debe heredar deuda de otro.)
             List<ClientesCuentaCorrienteMovimiento> movimientosCc = new();
-            if (!filtrarEst)
+            try
             {
-                try
+                if (!filtrarEst)
                 {
                     var cc = await _db.ClientesCuentaCorrientes
                         .AsNoTracking()
@@ -275,10 +275,29 @@ namespace SistemaOroAmbiental.DAL.Repository
                             .ToListAsync();
                     }
                 }
-                catch
+                else if (entregas.Count > 0)
                 {
-                    datosParciales = true;
+                    var idsEntregaEst = entregas.Select(e => e.Id).Distinct().ToList();
+                    var idsCobro = await _db.ClientesCobros
+                        .AsNoTracking()
+                        .Where(c => c.IdEntrega != null && idsEntregaEst.Contains(c.IdEntrega.Value))
+                        .Select(c => c.Id)
+                        .ToListAsync();
+
+                    if (idsCobro.Count > 0)
+                    {
+                        movimientosCc = await _db.ClientesCuentaCorrienteMovimientos
+                            .AsNoTracking()
+                            .Where(m =>
+                                m.TipoMovimiento == ClientesCuentaCorrienteRepository.TIPO_COBRO_CLIENTE &&
+                                idsCobro.Contains(m.IdMovimiento))
+                            .ToListAsync();
+                    }
                 }
+            }
+            catch
+            {
+                datosParciales = true;
             }
 
             var recorridos = new List<ClientesRecorridoDto>();
@@ -331,18 +350,25 @@ namespace SistemaOroAmbiental.DAL.Repository
                 var inicio = new DateTime(primero.Anio, primero.Mes, 1);
                 var periodosSet = periodos.Select(p => (p.Anio, p.Mes)).ToHashSet();
 
-                saldoAcumulado = movimientosCc
-                    .Where(m => m.Fecha < inicio)
-                    .Sum(m => m.Debe - m.Haber);
+                // En vista por establecimiento el saldo arranca en 0 (solo meses del filtro).
+                // Los cobros previos no deben restar sin los cargos de esos meses.
+                saldoAcumulado = filtrarEst
+                    ? 0
+                    : movimientosCc
+                        .Where(m => m.Fecha < inicio)
+                        .Sum(m => m.Debe - m.Haber);
 
-                var interesesReasignados = intereses
-                    .Where(i =>
-                        i.AnioRef.HasValue &&
-                        i.MesRef.HasValue &&
-                        periodosSet.Contains((i.AnioRef.Value, i.MesRef.Value)) &&
-                        i.Fecha < inicio)
-                    .Sum(i => i.Importe);
-                saldoAcumulado -= interesesReasignados;
+                if (!filtrarEst)
+                {
+                    var interesesReasignados = intereses
+                        .Where(i =>
+                            i.AnioRef.HasValue &&
+                            i.MesRef.HasValue &&
+                            periodosSet.Contains((i.AnioRef.Value, i.MesRef.Value)) &&
+                            i.Fecha < inicio)
+                        .Sum(i => i.Importe);
+                    saldoAcumulado -= interesesReasignados;
+                }
             }
 
             var filasCronologicas = filas.OrderBy(f => f.Anio).ThenBy(f => f.Mes).ToList();
@@ -584,9 +610,9 @@ namespace SistemaOroAmbiental.DAL.Repository
             var abonoEfectivo = ov?.AbonoEfectivo ?? 0;
             var abonoTransferencia = ov?.AbonoTransferencia ?? 0;
 
-            // Fórmula planilla (bruta, sin netear):
-            // Debe  = cargos del mes = subtotal de líneas ENTREGA
-            // Haber = retiros + abonos (planilla o cobros CC, el mayor para no duplicar)
+            // Fórmula planilla:
+            // Debe  = lo que el cliente debe pagar = RETIROS (+ ajustes Debe)
+            // Haber = cobros/abonos del mes (+ ajustes Haber). Las entregas no se cobran.
             // Intereses se asignan aparte y el Saldo acumulado los incluye.
             var inicioMes = new DateTime(anio, mes, 1);
             var finMes = inicioMes.AddMonths(1);
@@ -611,8 +637,16 @@ namespace SistemaOroAmbiental.DAL.Repository
                 .Where(m => m.TipoMovimiento == ClientesCuentaCorrienteRepository.TIPO_AJUSTE_CLIENTE)
                 .Sum(m => m.Haber);
 
-            var debe = subtotalEntregas + ajustesDebe;
-            var haber = subtotalRetiros + Math.Max(abonosPlanilla, cobrosCc) + ajustesHaber;
+            var debe = subtotalRetiros + ajustesDebe;
+            var haber = Math.Max(abonosPlanilla, cobrosCc) + ajustesHaber;
+
+            // Si no hay abonos en la planilla del est pero sí cobros de la entrega, mostrarlos en columnas.
+            var abonoEfMostrar = abonoEfectivo;
+            var abonoTrMostrar = abonoTransferencia;
+            if (abonosPlanilla <= 0 && cobrosCc > 0)
+            {
+                abonoTrMostrar = cobrosCc;
+            }
 
             DateTime? fechaVisita = ov?.FechaVisita;
             if (!fechaVisita.HasValue && entregasMes.Count > 0)
@@ -662,8 +696,8 @@ namespace SistemaOroAmbiental.DAL.Repository
                 StockCliente = entregadas - retiradas,
                 SubtotalEntregas = subtotalEntregas,
                 SubtotalRetiros = subtotalRetiros,
-                AbonoEfectivo = abonoEfectivo,
-                AbonoTransferencia = abonoTransferencia,
+                AbonoEfectivo = abonoEfMostrar,
+                AbonoTransferencia = abonoTrMostrar,
                 FechaTransferencia = ov?.FechaTransferencia,
                 Debe = debe,
                 Haber = haber,

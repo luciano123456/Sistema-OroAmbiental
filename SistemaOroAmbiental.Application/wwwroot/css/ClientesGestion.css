@@ -3488,7 +3488,7 @@ body.layout-modulo .container-fluid {
 
 @media (max-width: 900px) {
     .cg-ws-cobros-kpis {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
     .cg-ws-cobro-row {

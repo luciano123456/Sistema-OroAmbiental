@@ -851,7 +851,7 @@ function wireEventosCg() {
             IdListaPrecio: s.IdListaPrecio || 0,
             TipoMovimiento: 1,
             Cantidad: s.Cantidad || 1,
-            PrecioVenta: s.PrecioVenta || 0
+            PrecioVenta: 0
         });
     });
     $h("cgWsLineasBody").on("click", ".btn-ws-quitar", function () {
@@ -877,23 +877,7 @@ function wireEventosCg() {
         linea.Cantidad = leerNumeroWsCg($row.find(".ws-cant").val());
         linea.PrecioVenta = leerNumeroWsCg($row.find(".ws-precio").val());
 
-        if (campo === "prod" || campo === "lista") {
-            if (campo === "prod" && linea.IdProducto > 0 && !linea.IdListaPrecio) {
-                const precios = await obtenerPreciosProductoWsCg(linea.IdProducto);
-                const conPrecio = (precios || []).filter(p => Number(p.PrecioVenta) > 0);
-                if (conPrecio.length === 1) {
-                    linea.IdListaPrecio = Number(conPrecio[0].IdListaPrecio);
-                    $row.find(".ws-lista").val(String(linea.IdListaPrecio));
-                }
-            }
-            if (linea.IdProducto > 0 && linea.IdListaPrecio > 0) {
-                const precio = await obtenerPrecioListaWsCg(linea.IdProducto, linea.IdListaPrecio);
-                if (precio != null) {
-                    linea.PrecioVenta = precio;
-                    $row.find(".ws-precio").val(fmtQtyCg(precio));
-                }
-            }
-        }
+        await sincronizarPrecioLineaWsCg($row, linea, campo);
 
         $row.find(".ws-sub").text(fmtMoneyCg(linea.Cantidad * linea.PrecioVenta));
         actualizarResumenCobrosWsCg();
@@ -972,7 +956,13 @@ function initSelect2Cg() {
 function ensureSelect2Cg($el, opts) {
     if (!$el?.length) return;
     if ($el.data("select2")) $el.select2("destroy");
-    $el.select2(Object.assign({ width: "100%", allowClear: true }, opts || {}));
+    const merged = Object.assign({ width: "100%", allowClear: true }, opts || {});
+    // Select2 appendeado al body queda detrás de .modal (z-index ~10M); anclar al modal.
+    if (!merged.dropdownParent) {
+        const $modal = $el.closest(".modal");
+        if ($modal.length) merged.dropdownParent = $modal;
+    }
+    $el.select2(merged);
 }
 
 async function fetchJsonCg(url, options = {}) {
@@ -2277,7 +2267,7 @@ function bindEstHubEventsCg() {
             IdListaPrecio: s.IdListaPrecio || 0,
             TipoMovimiento: 1,
             Cantidad: s.Cantidad || 1,
-            PrecioVenta: s.PrecioVenta || 0
+            PrecioVenta: 0
         });
     });
     $(root).on("change input", "#cgEstWsLineasBody select, #cgEstWsLineasBody input", async function () {
@@ -2297,23 +2287,7 @@ function bindEstHubEventsCg() {
         linea.Cantidad = leerNumeroWsCg($row.find(".ws-cant").val());
         linea.PrecioVenta = leerNumeroWsCg($row.find(".ws-precio").val());
 
-        if (campo === "prod" || campo === "lista") {
-            if (campo === "prod" && linea.IdProducto > 0 && !linea.IdListaPrecio) {
-                const precios = await obtenerPreciosProductoWsCg(linea.IdProducto);
-                const conPrecio = (precios || []).filter(p => Number(p.PrecioVenta) > 0);
-                if (conPrecio.length === 1) {
-                    linea.IdListaPrecio = Number(conPrecio[0].IdListaPrecio);
-                    $row.find(".ws-lista").val(String(linea.IdListaPrecio));
-                }
-            }
-            if (linea.IdProducto > 0 && linea.IdListaPrecio > 0) {
-                const precio = await obtenerPrecioListaWsCg(linea.IdProducto, linea.IdListaPrecio);
-                if (precio != null) {
-                    linea.PrecioVenta = precio;
-                    $row.find(".ws-precio").val(fmtQtyCg(precio));
-                }
-            }
-        }
+        await sincronizarPrecioLineaWsCg($row, linea, campo);
 
         $row.find(".ws-sub").text(fmtMoneyCg(linea.Cantidad * linea.PrecioVenta));
         actualizarResumenCobrosWsCg();
@@ -3010,8 +2984,8 @@ function renderControlMensualCg(data) {
             ${celdasEnt}
             ${celdasRet}
             <td class="cg-cm-cell-money cg-cm-debe">${fmtMoneyCg(m.Debe)}</td>
-            <td class="cg-cm-cell-money">${fmtMoneyCg(m.AbonoEfectivo)}</td>
-            <td class="cg-cm-cell-money">${fmtMoneyCg(m.AbonoTransferencia)}</td>
+            <td class="cg-cm-cell-money ${(Number(m.AbonoEfectivo) || 0) > 0 ? "cg-cm-haber" : ""}">${fmtMoneyCg(m.AbonoEfectivo)}</td>
+            <td class="cg-cm-cell-money ${(Number(m.AbonoTransferencia) || 0) > 0 ? "cg-cm-haber" : ""}">${fmtMoneyCg(m.AbonoTransferencia)}</td>
             <td class="cg-cm-date">${formatearFechaCortaCg(m.FechaTransferencia)}</td>
             <td class="cg-cm-cell-money cg-cm-int">${celdaInteresesMesCg(m, anio)}</td>
             <td class="cg-cm-flag">${m.SinEntrega ? '<i class="fa fa-times text-danger"></i>' : ""}</td>
@@ -3203,6 +3177,51 @@ async function obtenerPrecioListaWsCg(idProducto, idLista) {
     return Number(match.PrecioVenta);
 }
 
+/** Entrega (1): precio 0 por defecto. Retiro (2): trae precio de lista. */
+async function sincronizarPrecioLineaWsCg($row, linea, campo) {
+    const tipo = Number(linea.TipoMovimiento) || 1;
+
+    if (campo === "tipo") {
+        if (tipo === 1) {
+            linea.PrecioVenta = 0;
+            $row.find(".ws-precio").val(fmtQtyCg(0));
+            return;
+        }
+        if (linea.IdProducto > 0 && linea.IdListaPrecio > 0) {
+            const precio = await obtenerPrecioListaWsCg(linea.IdProducto, linea.IdListaPrecio);
+            if (precio != null) {
+                linea.PrecioVenta = precio;
+                $row.find(".ws-precio").val(fmtQtyCg(precio));
+            }
+        }
+        return;
+    }
+
+    if (campo !== "prod" && campo !== "lista") return;
+
+    if (campo === "prod" && linea.IdProducto > 0 && !linea.IdListaPrecio) {
+        const precios = await obtenerPreciosProductoWsCg(linea.IdProducto);
+        const conPrecio = (precios || []).filter(p => Number(p.PrecioVenta) > 0);
+        if (conPrecio.length === 1) {
+            linea.IdListaPrecio = Number(conPrecio[0].IdListaPrecio);
+            $row.find(".ws-lista").val(String(linea.IdListaPrecio));
+        }
+    }
+
+    if (tipo === 1) {
+        // Entrega: no traer precio de lista; dejar vacío / 0 (manual).
+        return;
+    }
+
+    if (linea.IdProducto > 0 && linea.IdListaPrecio > 0) {
+        const precio = await obtenerPrecioListaWsCg(linea.IdProducto, linea.IdListaPrecio);
+        if (precio != null) {
+            linea.PrecioVenta = precio;
+            $row.find(".ws-precio").val(fmtQtyCg(precio));
+        }
+    }
+}
+
 async function cargarSugeridosWsCg(idEstablecimiento) {
     try {
         CG.wsSugeridos = await fetchJsonCg(API_CG.productosSugeridos(CG.id, idEstablecimiento), { headers: authCg() }) || [];
@@ -3347,7 +3366,7 @@ function renderLineasWsCg() {
                 </label>
                 <label class="cg-ws-field cg-ws-field--num">
                     <span>Precio</span>
-                    <input type="text" class="form-control Inputmiles ws-precio" value="${l.PrecioVenta ? fmtQtyCg(l.PrecioVenta) : ""}" inputmode="decimal" />
+                    <input type="text" class="form-control Inputmiles ws-precio" value="${fmtQtyCg(Number(l.PrecioVenta) || 0)}" inputmode="decimal" />
                 </label>
             </div>
             <div class="cg-ws-linea-foot">
@@ -3486,28 +3505,31 @@ function cobrosWsParaGuardarCg() {
     return (hubPropCg("wsCobros") || []).filter(c => Number(c.Importe) > 0 && Number(c.IdCuenta) > 0);
 }
 
-function totalEntregadoWsCg(lineas) {
+function totalPorTipoWsCg(lineas, tipo) {
+    const t = Number(tipo);
     return (lineas || [])
-        .filter(l => Number(l.TipoMovimiento || 1) === 1)
+        .filter(l => Number(l.TipoMovimiento || 1) === t)
         .reduce((s, l) => s + (Number(l.Cantidad) || 0) * (Number(l.PrecioVenta) || 0), 0);
 }
 
-function totalRetiradoWsCg(lineas) {
-    return (lineas || [])
-        .filter(l => Number(l.TipoMovimiento || 1) === 2)
-        .reduce((s, l) => s + (Number(l.Cantidad) || 0) * (Number(l.PrecioVenta) || 0), 0);
+/** Lo cobrable es el retiro (lo que el cliente paga). */
+function totalCobrableWsCg(lineas) {
+    return totalPorTipoWsCg(lineas, 2);
 }
 
 function actualizarResumenCobrosWsCg() {
     const lineas = (hubPropCg("wsLineas") || []).filter(l => l.IdProducto > 0 && l.Cantidad > 0);
     const cobros = cobrosWsParaGuardarCg();
-    const totalEnt = totalEntregadoWsCg(lineas);
-    const totalRet = totalRetiradoWsCg(lineas);
+    const totalEnt = totalPorTipoWsCg(lineas, 1);
+    const totalRet = totalPorTipoWsCg(lineas, 2);
     const totalPag = cobros.reduce((s, c) => s + Number(c.Importe || 0), 0);
+    const saldo = totalRet - totalPag;
     $h("cgWsCobroTotEntrega").text(fmtMoneyCg(totalEnt));
     $h("cgWsCobroTotRetiro").text(fmtMoneyCg(totalRet));
     $h("cgWsCobroTotPagado").text(fmtMoneyCg(totalPag));
-    $h("cgWsCobroSaldo").text(fmtMoneyCg(Math.max(0, totalEnt + totalRet - totalPag)));
+    $h("cgWsCobroSaldo").text(fmtMoneyCg(saldo))
+        .toggleClass("text-danger", saldo > 0.009)
+        .toggleClass("text-success", saldo < -0.009);
 }
 
 function renderCobrosWsCg() {
@@ -3671,10 +3693,10 @@ async function guardarVisitaUnificadaCg() {
             return;
         }
 
-        const totalEnt = totalEntregadoWsCg(lineas);
+        const totalCobrar = totalCobrableWsCg(lineas);
         const sumaCobros = cobros.reduce((s, c) => s + Number(c.Importe || 0), 0);
-        if (sumaCobros > totalEnt + 0.01) {
-            errorModal("La suma de los cobros no puede superar el total de lo entregado.");
+        if (sumaCobros > totalCobrar + 0.01) {
+            errorModal("La suma de los cobros no puede superar el total de lo retirado.");
             return;
         }
 
@@ -4653,8 +4675,8 @@ function renderControlMensualCardsCg(filas, mostrarAnio) {
                     <div class="cg-card-field"><span>Entreg.</span><strong class="rp-money-in">${fmtQtyCg(m.Entregadas)}</strong></div>
                     <div class="cg-card-field"><span>Retir.</span><strong class="rp-money-out">${fmtQtyCg(m.Retiradas)}</strong></div>
                     <div class="cg-card-field"><span>Debe</span><strong class="cg-val-debe">${fmtMoneyCg(m.Debe)}</strong></div>
-                    <div class="cg-card-field"><span>Efectivo</span><strong>${fmtMoneyCg(m.AbonoEfectivo)}</strong></div>
-                    <div class="cg-card-field"><span>Transf.</span><strong>${fmtMoneyCg(m.AbonoTransferencia)}</strong></div>
+                    <div class="cg-card-field"><span>Efectivo</span><strong class="${(Number(m.AbonoEfectivo) || 0) > 0 ? "cg-val-haber" : ""}">${fmtMoneyCg(m.AbonoEfectivo)}</strong></div>
+                    <div class="cg-card-field"><span>Transf.</span><strong class="${(Number(m.AbonoTransferencia) || 0) > 0 ? "cg-val-haber" : ""}">${fmtMoneyCg(m.AbonoTransferencia)}</strong></div>
                     <div class="cg-card-field"><span>Intereses</span><strong class="${atrasado && !(Number(m.CantidadIntereses) || 0) ? "rp-money-out" : ""}">${(Number(m.CantidadIntereses) || 0) > 0 ? `${m.CantidadIntereses}× ${fmtMoneyCg(m.TotalIntereses)}` : "—"}</strong></div>
                     <div class="cg-card-field cg-card-field--full"><span>Saldo (final)</span><strong class="${saldoCls}">${fmtMoneyCg(m.Saldo)}</strong></div>
                     ${m.Observaciones ? `<div class="cg-card-field cg-card-field--full"><span>Obs.</span><strong>${escapeCg(truncarCg(m.Observaciones, 60))}</strong></div>` : ""}

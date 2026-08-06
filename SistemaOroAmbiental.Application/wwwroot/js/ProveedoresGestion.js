@@ -209,7 +209,12 @@ function initSelect2Pg() {
 function ensureSelect2Pg($el, opts) {
     if (!$el?.length) return;
     if ($el.data("select2")) $el.select2("destroy");
-    $el.select2(Object.assign({ width: "100%", allowClear: true }, opts || {}));
+    const merged = Object.assign({ width: "100%", allowClear: true }, opts || {});
+    if (!merged.dropdownParent) {
+        const $modal = $el.closest(".modal");
+        if ($modal.length) merged.dropdownParent = $modal;
+    }
+    $el.select2(merged);
 }
 
 function initFechasCcPg() {

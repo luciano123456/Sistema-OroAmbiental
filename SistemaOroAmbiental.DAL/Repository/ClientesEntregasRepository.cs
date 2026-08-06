@@ -208,16 +208,15 @@ namespace SistemaOroAmbiental.DAL.Repository
         private static bool EsRetiro(ClientesEntregasProducto linea)
             => (linea?.TipoMovimiento ?? TIPO_LINEA_ENTREGA) == TIPO_LINEA_RETIRO;
 
-        private static decimal SignoLinea(ClientesEntregasProducto linea)
-            => EsRetiro(linea) ? -1m : 1m;
-
         public static void RecalcularTotalesEntrega(ClientesEntrega entrega, IEnumerable<ClientesEntregasProducto> lineas)
         {
             var lista = lineas.ToList();
-            entrega.Subtotal = lista.Sum(x => SignoLinea(x) * x.SubtotalcDesc);
-            entrega.Descuentos = lista.Sum(x => SignoLinea(x) * x.DescTotal);
-            entrega.TotalIva = lista.Sum(x => SignoLinea(x) * x.TotalIva);
-            entrega.ImporteTotal = lista.Sum(x => SignoLinea(x) * x.SubtotalFinal);
+            // Importe del documento = lo cobrable (retiros). Las entregas suelen ir a $0.
+            var cobrables = lista.Where(EsRetiro).ToList();
+            entrega.Subtotal = cobrables.Sum(x => x.SubtotalcDesc);
+            entrega.Descuentos = cobrables.Sum(x => x.DescTotal);
+            entrega.TotalIva = cobrables.Sum(x => x.TotalIva);
+            entrega.ImporteTotal = cobrables.Sum(x => x.SubtotalFinal);
         }
 
         private async Task<(int idCliente, int idSucursal)> ResolverClienteYSucursal(ClientesEntrega entrega)
@@ -366,18 +365,16 @@ namespace SistemaOroAmbiental.DAL.Repository
             int idUsuario,
             DateTime ahora)
         {
-            // Debe = lo entregado (cargo). Haber = lo retirado (crédito).
-            // El saldo (Debe - Haber) coincide con ImporteTotal neto.
+            // Debe = lo retirado (cargo: el cliente paga el tratamiento/servicio).
+            // Haber en este movimiento = 0; los cobros se registran aparte como Haber.
             var lista = (lineas ?? Enumerable.Empty<ClientesEntregasProducto>()).ToList();
-            var debe = lista.Where(l => !EsRetiro(l)).Sum(l => l.SubtotalFinal);
-            var haber = lista.Where(EsRetiro).Sum(l => l.SubtotalFinal);
+            var debe = lista.Where(EsRetiro).Sum(l => l.SubtotalFinal);
+            var haber = 0m;
 
-            if (debe == 0 && haber == 0 && entrega.ImporteTotal != 0)
+            if (debe == 0 && entrega.ImporteTotal != 0)
             {
                 if (entrega.ImporteTotal >= 0)
                     debe = entrega.ImporteTotal;
-                else
-                    haber = Math.Abs(entrega.ImporteTotal);
             }
 
             var movCc = new ClientesCuentaCorrienteMovimiento

@@ -1,0 +1,396 @@
+@{
+    Layout = "_LayoutModulo";
+    ViewData["Title"] = "Análisis de datos";
+}
+
+@section Estilos {
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
+    <link rel="stylesheet" href="~/css/AnalisisDatos.css" asp-append-version="true" />
+}
+
+<div class="ax-page" id="analisisPage">
+    <div class="ax-toolbar">
+        <div class="ax-toolbar-left">
+            <div class="ax-title-block">
+                <i class="fa fa-line-chart"></i>
+                <div>
+                    <h1>Análisis de datos</h1>
+                    <span id="axPeriodoLabel">Período actual</span>
+                </div>
+            </div>
+        </div>
+        <div class="ax-toolbar-right">
+            <div class="ax-periodos" id="axPeriodos">
+                <button type="button" class="ax-chip" data-periodo="hoy">Hoy</button>
+                <button type="button" class="ax-chip" data-periodo="semana">Esta semana</button>
+                <button type="button" class="ax-chip" data-periodo="mes">Este mes</button>
+                <button type="button" class="ax-chip active" data-periodo="3m">Últimos 3 meses</button>
+                <button type="button" class="ax-chip" data-periodo="6m">Últimos 6 meses</button>
+                <button type="button" class="ax-chip" data-periodo="anio">Último año</button>
+                <button type="button" class="ax-chip" data-periodo="ytd">Este año</button>
+                <button type="button" class="ax-chip" data-periodo="custom">Personalizado</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="ax-filters">
+        <div class="ax-filter-dates" id="axCustomDates">
+            <label>Desde</label>
+            <input type="date" id="fltDesde" />
+            <label>Hasta</label>
+            <input type="date" id="fltHasta" />
+        </div>
+        <select id="fltSucursal" class="ax-select">
+            <option value="">Todas las sucursales</option>
+        </select>
+        <select id="fltDiasSinMov" class="ax-select" title="Para el tab Inventario: cuántos días sin movimiento se consideran parados">
+            <option value="30">Stock parado: 30 días</option>
+            <option value="60">Stock parado: 60 días</option>
+            <option value="90" selected>Stock parado: 90 días</option>
+            <option value="180">Stock parado: 180 días</option>
+        </select>
+        <button type="button" id="btnAplicar" class="ax-btn-primary">
+            <i class="fa fa-refresh"></i> Actualizar
+        </button>
+    </div>
+
+    <div class="ax-client-panel" id="axClientPanel">
+        <div class="ax-client-panel-head">
+            <div class="ax-client-panel-title">
+                <i class="fa fa-user"></i>
+                <div>
+                    <strong>Cliente</strong>
+                </div>
+            </div>
+            <button type="button" class="ax-btn-ghost" id="btnLimpiarCliente" title="Volver a ver todos">
+                <i class="fa fa-times"></i> Limpiar filtro
+            </button>
+        </div>
+        <div class="ax-client-panel-body">
+            <div class="ax-client-search">
+                <label for="fltClienteBuscar">Cliente</label>
+                <div class="ax-client-search-wrap">
+                    <input type="text" id="fltClienteBuscar" placeholder="Buscar por nombre o nº…" autocomplete="off" />
+                    <input type="hidden" id="fltIdCliente" value="" />
+                    <div class="ax-client-sug d-none" id="fltClienteSug"></div>
+                </div>
+                <div class="ax-client-selected d-none" id="fltClienteSelected">
+                    <span class="ax-client-chip" id="fltClienteChip"></span>
+                </div>
+            </div>
+            <div class="ax-estab-block d-none" id="axEstabBlock">
+                <div class="ax-estab-toolbar">
+                    <span>Establecimientos</span>
+                    <div class="ax-estab-actions">
+                        <button type="button" class="ax-link-btn" id="btnEstabTodos">Marcar todos</button>
+                        <button type="button" class="ax-link-btn" id="btnEstabNinguno">Desmarcar</button>
+                    </div>
+                </div>
+                <div class="ax-estab-list" id="axEstabList"></div>
+                <div class="ax-estab-foot">
+                    <span id="axEstabResumen">Ninguno seleccionado</span>
+                    <button type="button" class="ax-btn-primary ax-btn-sm" id="btnAplicarCliente">
+                        <i class="fa fa-filter"></i> Aplicar al reporte
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="ax-client-banner d-none" id="axClientBanner">
+            <i class="fa fa-filter"></i>
+            <span id="axClientBannerText"></span>
+        </div>
+    </div>
+
+    <div class="ax-kpi-row">
+        <div class="ax-kpi">
+            <span class="ax-kpi-ico blue"><i class="fa fa-truck"></i></span>
+            <div>
+                <small>Entregado ($)</small>
+                <strong id="kpiEntregado">$0</strong>
+            </div>
+        </div>
+        <div class="ax-kpi">
+            <span class="ax-kpi-ico green"><i class="fa fa-money"></i></span>
+            <div>
+                <small>Cobrado ($)</small>
+                <strong id="kpiCobrado">$0</strong>
+            </div>
+        </div>
+        <div class="ax-kpi">
+            <span class="ax-kpi-ico teal"><i class="fa fa-line-chart"></i></span>
+            <div>
+                <small>Margen de entregas</small>
+                <strong id="kpiGanancia">$0</strong>
+            </div>
+        </div>
+        <div class="ax-kpi warn">
+            <span class="ax-kpi-ico amber"><i class="fa fa-exclamation-triangle"></i></span>
+            <div>
+                <small>Deuda en cuenta corriente</small>
+                <strong id="kpiDeuda">$0</strong>
+            </div>
+        </div>
+    </div>
+
+    <div class="ax-tabs" id="analisisTabs">
+        <button type="button" class="ax-tab active" data-tab="tabClientes"><i class="fa fa-users"></i> Clientes</button>
+        <button type="button" class="ax-tab" data-tab="tabOperaciones"><i class="fa fa-exchange"></i> Operaciones</button>
+        <button type="button" class="ax-tab" data-tab="tabFinanzas"><i class="fa fa-balance-scale"></i> Finanzas</button>
+        <button type="button" class="ax-tab" data-tab="tabInventario"><i class="fa fa-cubes"></i> Inventario</button>
+        <button type="button" class="ax-tab" data-tab="tabRecorridos"><i class="fa fa-map-o"></i> Recorridos</button>
+    </div>
+
+    <div class="ax-panels">
+        <!-- CLIENTES -->
+        <section class="ax-panel active" id="tabClientes">
+            <div class="ax-kpi-row ax-kpi-row-sm ax-kpi-row-6">
+                <div class="ax-kpi"><small>Clientes</small><strong id="cliTotal">0</strong></div>
+                <div class="ax-kpi"><small>Activos</small><strong id="cliActivos">0</strong></div>
+                <div class="ax-kpi"><small>Suspendidos</small><strong id="cliSuspendidos">0</strong></div>
+                <div class="ax-kpi"><small>De baja</small><strong id="cliBaja">0</strong></div>
+                <div class="ax-kpi warn"><small>Licencia por vencer</small><strong id="cliLicVencer">0</strong></div>
+                <div class="ax-kpi"><small>Establecimientos</small><strong id="cliEstab">0</strong></div>
+            </div>
+            <div class="ax-kpi-row ax-kpi-row-sm">
+                <div class="ax-kpi warn"><small>Con deuda</small><strong id="cliConDeuda">0</strong></div>
+                <div class="ax-kpi"><small>Con saldo a favor</small><strong id="cliAFavor">0</strong></div>
+                <div class="ax-kpi warn"><small>Sin entrega en el período</small><strong id="cliSinEntrega">0</strong></div>
+                <div class="ax-kpi"><small>Deuda total CC</small><strong id="cliSaldoCc">$0</strong></div>
+            </div>
+            <div class="ax-grid">
+                <div class="ax-card">
+                    <div class="ax-card-head"><h3>Clientes por estado</h3></div>
+                    <div class="ax-chart ax-chart-sm"><canvas id="chartCliEstados"></canvas></div>
+                </div>
+                <div class="ax-card">
+                    <div class="ax-card-head"><h3>Tipo de generador</h3></div>
+                    <div class="ax-chart ax-chart-sm"><canvas id="chartCliGenerador"></canvas></div>
+                </div>
+                <div class="ax-card">
+                    <div class="ax-card-head"><h3>Top deudores</h3><span class="ax-badge warn">Deuda</span></div>
+                    <div class="ax-rank" id="rankCliDeudores"></div>
+                </div>
+                <div class="ax-card">
+                    <div class="ax-card-head"><h3>Saldo a favor</h3><span class="ax-badge ok">A favor</span></div>
+                    <div class="ax-rank" id="rankCliAFavor"></div>
+                </div>
+                <div class="ax-card">
+                    <div class="ax-card-head"><h3>Licencias por vencer</h3><span class="ax-badge soft">Alerta</span></div>
+                    <div class="ax-rank" id="rankCliLicencias"></div>
+                </div>
+                <div class="ax-card">
+                    <div class="ax-card-head"><h3>Bajas mes a mes</h3></div>
+                    <div class="ax-chart ax-chart-sm"><canvas id="chartCliBajas"></canvas></div>
+                </div>
+                <div class="ax-card">
+                    <div class="ax-card-head"><h3>Sin entrega en el período</h3><span class="ax-badge warn">Sin entrega</span></div>
+                    <div class="ax-rank" id="rankCliSinEntrega"></div>
+                </div>
+                <div class="ax-card">
+                    <div class="ax-card-head"><h3>Top entregas</h3><span class="ax-badge ok">Top</span></div>
+                    <div class="ax-rank" id="rankCliTopEnt"></div>
+                </div>
+                <div class="ax-card ax-span-2" id="cardCliEstab">
+                    <div class="ax-card-head"><h3>Por establecimiento</h3><span class="ax-badge soft">Detalle</span></div>
+                    <div class="ax-rank" id="rankCliEstab"></div>
+                </div>
+                <div class="ax-card">
+                    <div class="ax-card-head"><h3>Por partido</h3></div>
+                    <div class="ax-rank" id="rankCliPartido"></div>
+                </div>
+                <div class="ax-card">
+                    <div class="ax-card-head"><h3>Por localidad</h3></div>
+                    <div class="ax-rank" id="rankCliLocalidad"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- OPERACIONES -->
+        <section class="ax-panel" id="tabOperaciones">
+            <div class="ax-kpi-row ax-kpi-row-sm ax-kpi-row-6">
+                <div class="ax-kpi"><small>Entregas cargadas</small><strong id="opsEntregas">0</strong></div>
+                <div class="ax-kpi"><small>U. entregadas</small><strong id="opsUEnt">0</strong></div>
+                <div class="ax-kpi"><small>U. retiros (tratamiento)</small><strong id="opsURet">0</strong></div>
+                <div class="ax-kpi"><small>U. recuperadas</small><strong id="opsRec">0</strong></div>
+                <div class="ax-kpi"><small>% cajas recuperadas</small><strong id="opsRatio">0%</strong></div>
+                <div class="ax-kpi"><small>Promedio por entrega</small><strong id="opsTicket">$0</strong></div>
+            </div>
+            <div class="ax-kpi-row ax-kpi-row-sm">
+                <div class="ax-kpi"><small>$ entregado</small><strong id="opsImpEnt">$0</strong></div>
+                <div class="ax-kpi"><small>$ retiros</small><strong id="opsImpRet">$0</strong></div>
+                <div class="ax-kpi"><small>Costo de lo entregado</small><strong id="opsCosto">$0</strong></div>
+                <div class="ax-kpi"><small>Margen de entregas</small><strong id="opsGanancia">$0</strong></div>
+            </div>
+            <div class="ax-grid">
+                <div class="ax-card ax-span-2">
+                    <div class="ax-card-head"><h3>Mes a mes: entregado $ / retiros $ / margen</h3></div>
+                    <div class="ax-chart"><canvas id="chartOpsSerie"></canvas></div>
+                </div>
+                <div class="ax-card">
+                    <div class="ax-card-head"><h3>Unidades por tipo</h3></div>
+                    <div class="ax-chart ax-chart-sm"><canvas id="chartOpsMix"></canvas></div>
+                </div>
+                <div class="ax-card">
+                    <div class="ax-card-head"><h3>Por camión ($)</h3></div>
+                    <div class="ax-chart ax-chart-sm"><canvas id="chartOpsCamion"></canvas></div>
+                </div>
+                <div class="ax-card ax-span-2">
+                    <div class="ax-card-head"><h3>Por establecimiento</h3></div>
+                    <div class="ax-rank" id="rankOpsEstab"></div>
+                </div>
+                <div class="ax-card">
+                    <div class="ax-card-head"><h3>Productos que más se entregan</h3><span class="ax-badge ok">Entrega</span></div>
+                    <div class="ax-rank" id="rankOpsProdEnt"></div>
+                </div>
+                <div class="ax-card">
+                    <div class="ax-card-head"><h3>Top retiros</h3><span class="ax-badge soft">Retiro</span></div>
+                    <div class="ax-rank" id="rankOpsProdRet"></div>
+                </div>
+                <div class="ax-card">
+                    <div class="ax-card-head"><h3>Recuperados</h3><span class="ax-badge ok">Recuperado</span></div>
+                    <div class="ax-rank" id="rankOpsProdRec"></div>
+                </div>
+                <div class="ax-card">
+                    <div class="ax-card-head"><h3>Margen por producto</h3><span class="ax-badge ok">Margen</span></div>
+                    <div class="ax-rank" id="rankOpsMargen"></div>
+                </div>
+                <div class="ax-card">
+                    <div class="ax-card-head"><h3>Top clientes ($)</h3></div>
+                    <div class="ax-rank" id="rankOpsClientes"></div>
+                </div>
+                <div class="ax-card">
+                    <div class="ax-card-head"><h3>Top clientes (retiros)</h3><span class="ax-badge soft">Retiro</span></div>
+                    <div class="ax-rank" id="rankOpsCliRet"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- FINANZAS -->
+        <section class="ax-panel" id="tabFinanzas">
+            <div class="ax-kpi-row ax-kpi-row-sm ax-kpi-row-6">
+                <div class="ax-kpi"><small>Cobrado</small><strong id="finCobrado">$0</strong></div>
+                <div class="ax-kpi"><small>Gastos</small><strong id="finGastos">$0</strong></div>
+                <div class="ax-kpi"><small>Resultado (cobrado − gastos)</small><strong id="finResultado">$0</strong></div>
+                <div class="ax-kpi"><small>Facturado en entregas</small><strong id="finFacturado">$0</strong></div>
+                <div class="ax-kpi"><small>Cant. cobros</small><strong id="finCantCobros">0</strong></div>
+                <div class="ax-kpi"><small>Promedio por cobro</small><strong id="finPromCobro">$0</strong></div>
+            </div>
+            <div class="ax-kpi-row ax-kpi-row-sm">
+                <div class="ax-kpi"><small>Caja efectivo</small><strong id="finEfectivo">$0</strong></div>
+                <div class="ax-kpi"><small>Bancos</small><strong id="finBanco">$0</strong></div>
+                <div class="ax-kpi warn"><small>Deuda clientes</small><strong id="finDeuda">$0</strong></div>
+                <div class="ax-kpi"><small>Deuda a proveedores</small><strong id="finProv">$0</strong></div>
+            </div>
+            <div class="ax-grid">
+                <div class="ax-card ax-span-2">
+                    <div class="ax-card-head"><h3>Cobrado vs gastos mes a mes</h3></div>
+                    <div class="ax-chart"><canvas id="chartFinSerie"></canvas></div>
+                </div>
+                <div class="ax-card">
+                    <div class="ax-card-head"><h3>Cómo cobraste</h3></div>
+                    <div class="ax-chart ax-chart-sm"><canvas id="chartFinForma"></canvas></div>
+                </div>
+                <div class="ax-card">
+                    <div class="ax-card-head"><h3>En qué se gastó</h3></div>
+                    <div class="ax-chart ax-chart-sm"><canvas id="chartFinGastos"></canvas></div>
+                </div>
+                <div class="ax-card ax-span-2">
+                    <div class="ax-card-head"><h3>Resultado por mes</h3></div>
+                    <div class="ax-month-cards" id="cardsFinMes"></div>
+                </div>
+                <div class="ax-card">
+                    <div class="ax-card-head"><h3>Ranking de gastos</h3></div>
+                    <div class="ax-rank" id="rankFinGastos"></div>
+                </div>
+                <div class="ax-card">
+                    <div class="ax-card-head"><h3>Top cobros</h3><span class="ax-badge ok">Cobros</span></div>
+                    <div class="ax-rank" id="rankFinCobradores"></div>
+                </div>
+                <div class="ax-card ax-span-2">
+                    <div class="ax-card-head"><h3>Top deudores</h3><span class="ax-badge warn">CC</span></div>
+                    <div class="ax-rank" id="rankFinDeudores"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- INVENTARIO -->
+        <section class="ax-panel" id="tabInventario">
+            <div class="ax-kpi-row ax-kpi-row-sm ax-kpi-row-6">
+                <div class="ax-kpi"><small>Productos</small><strong id="invProd">0</strong></div>
+                <div class="ax-kpi warn"><small>Bajo el mínimo</small><strong id="invBajo">0</strong></div>
+                <div class="ax-kpi"><small>U. para entregar</small><strong id="invVendU">0</strong></div>
+                <div class="ax-kpi"><small>U. en recuperado</small><strong id="invRecU">0</strong></div>
+                <div class="ax-kpi"><small>Valor stock entregar</small><strong id="invVendVal">$0</strong></div>
+                <div class="ax-kpi"><small>Recuperadas en el período</small><strong id="invRecPeriodo">0</strong></div>
+            </div>
+            <div class="ax-grid">
+                <div class="ax-card">
+                    <div class="ax-card-head"><h3>Stock entregar / recuperado</h3></div>
+                    <div class="ax-chart ax-chart-sm"><canvas id="chartInvMix"></canvas></div>
+                </div>
+                <div class="ax-card">
+                    <div class="ax-card-head"><h3>Recuperados del período</h3><span class="ax-badge ok">Período</span></div>
+                    <div class="ax-rank" id="rankInvRec"></div>
+                </div>
+                <div class="ax-card">
+                    <div class="ax-card-head"><h3>Stock para entregar</h3></div>
+                    <div class="ax-rank" id="rankInvTopVend"></div>
+                </div>
+                <div class="ax-card">
+                    <div class="ax-card-head"><h3>Stock recuperado</h3></div>
+                    <div class="ax-rank" id="rankInvTopRec"></div>
+                </div>
+                <div class="ax-card">
+                    <div class="ax-card-head"><h3>Bajo el stock mínimo</h3><span class="ax-badge warn">Alerta</span></div>
+                    <div class="ax-rank" id="rankInvBajo"></div>
+                </div>
+                <div class="ax-card">
+                    <div class="ax-card-head"><h3>Sin movimiento</h3><span class="ax-badge warn">Parado</span></div>
+                    <div class="ax-rank" id="rankInvParado"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- RECORRIDOS -->
+        <section class="ax-panel" id="tabRecorridos">
+            <div class="ax-kpi-row ax-kpi-row-sm ax-kpi-row-6">
+                <div class="ax-kpi"><small>Paradas activas</small><strong id="recParadas">0</strong></div>
+                <div class="ax-kpi"><small>Camiones con ruta</small><strong id="recCamiones">0</strong></div>
+                <div class="ax-kpi"><small>Clientes en ruta</small><strong id="recEnRuta">0</strong></div>
+                <div class="ax-kpi"><small>Clientes activos</small><strong id="recActivos">0</strong></div>
+                <div class="ax-kpi"><small>% cobertura</small><strong id="recCobertura">0%</strong></div>
+                <div class="ax-kpi warn"><small>Activos sin recorrido</small><strong id="recFuera">0</strong></div>
+            </div>
+            <div class="ax-grid">
+                <div class="ax-card">
+                    <div class="ax-card-head"><h3>Paradas por camión</h3></div>
+                    <div class="ax-chart ax-chart-sm"><canvas id="chartRecCamion"></canvas></div>
+                </div>
+                <div class="ax-card">
+                    <div class="ax-card-head"><h3>Por día de recolección</h3></div>
+                    <div class="ax-chart ax-chart-sm"><canvas id="chartRecDia"></canvas></div>
+                </div>
+                <div class="ax-card">
+                    <div class="ax-card-head"><h3>Por semana</h3></div>
+                    <div class="ax-chart ax-chart-sm"><canvas id="chartRecSemana"></canvas></div>
+                </div>
+                <div class="ax-card">
+                    <div class="ax-card-head"><h3>Carga por camión</h3><span class="ax-badge soft">Ranking</span></div>
+                    <div class="ax-rank" id="rankRecCarga"></div>
+                </div>
+                <div class="ax-card ax-span-2">
+                    <div class="ax-card-head"><h3>Activos sin recorrido</h3><span class="ax-badge warn">Sin ruta</span></div>
+                    <div class="ax-rank" id="rankRecFuera"></div>
+                </div>
+            </div>
+        </section>
+    </div>
+</div>
+
+<partial name="~/Views/Utils/Modals.cshtml" />
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="~/js/site.js"></script>
+    <script src="~/js/AnalisisDatos.js" asp-append-version="true"></script>
+}
