@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using SistemaOroAmbiental.BLL.Common;
 using SistemaOroAmbiental.DAL.Repository;
 using SistemaOroAmbiental.Models;
+using System.Globalization;
 
 namespace SistemaOroAmbiental.BLL.Service
 {
@@ -134,6 +135,37 @@ namespace SistemaOroAmbiental.BLL.Service
                 id);
         }
 
+        private static string FormatoDecimal(decimal valor)
+            => valor.ToString("0.####", CultureInfo.InvariantCulture);
+
+        /// <summary>
+        /// Huella de línea entrega/retiro: solo se rechaza si todos los campos editables coinciden.
+        /// </summary>
+        private static string ClaveLineaOperacion(ClientesEntregasProducto l, int tipo)
+        {
+            var idLista = l.IdListaPrecio is > 0 ? l.IdListaPrecio.Value : 0;
+            return string.Join("|",
+                l.IdProducto,
+                tipo,
+                idLista,
+                FormatoDecimal(l.Cantidad),
+                FormatoDecimal(l.PrecioVenta),
+                FormatoDecimal(l.PorcDescuento),
+                FormatoDecimal(l.PorcIva));
+        }
+
+        private static string ClaveLineaRecuperada(ClientesEntregasProductosRecuperado l)
+        {
+            var idLista = l.IdListaPrecio is > 0 ? l.IdListaPrecio.Value : 0;
+            return string.Join("|",
+                l.IdProducto,
+                idLista,
+                FormatoDecimal(l.Cantidad),
+                FormatoDecimal(l.PrecioVenta),
+                FormatoDecimal(l.PorcDescuento),
+                FormatoDecimal(l.PorcIva));
+        }
+
         private static bool Validar(
             ClientesEntrega entrega,
             List<ClientesEntregasProducto>? lineas,
@@ -187,14 +219,11 @@ namespace SistemaOroAmbiental.BLL.Service
                     return false;
                 }
 
-                // Misma combinación exacta: producto + tipo (entrega/retiro) + lista/tipo de pago.
-                // Se permite el mismo producto y tipo si la lista / tipo de pago es distinta
-                // (ej. retiro Efectivo y retiro Transferencia).
-                var idLista = l.IdListaPrecio is > 0 ? l.IdListaPrecio.Value : 0;
-                var keyProducto = $"{l.IdProducto}_{tipo}_{idLista}";
+                // Solo se rechaza si la línea es idéntica en todos los campos (producto, tipo, lista, cantidad, precio, descuento, IVA).
+                var keyProducto = ClaveLineaOperacion(l, tipo);
                 if (!productosOperacion.Add(keyProducto))
                 {
-                    error = "No puede repetir el mismo producto con el mismo tipo y la misma lista / tipo de pago.";
+                    error = "Hay líneas de productos completamente iguales. Cambiá al menos un dato (precio, cantidad, lista, etc.).";
                     return false;
                 }
 
@@ -219,7 +248,7 @@ namespace SistemaOroAmbiental.BLL.Service
                 }
             }
 
-            var productosRecuperados = new HashSet<int>();
+            var productosRecuperados = new HashSet<string>();
 
             foreach (var l in lineasRecuperadas)
             {
@@ -229,9 +258,10 @@ namespace SistemaOroAmbiental.BLL.Service
                     return false;
                 }
 
-                if (!productosRecuperados.Add(l.IdProducto))
+                var keyRecuperado = ClaveLineaRecuperada(l);
+                if (!productosRecuperados.Add(keyRecuperado))
                 {
-                    error = "No puede repetir el mismo producto en productos recuperados.";
+                    error = "Hay líneas recuperadas completamente iguales. Cambiá al menos un dato.";
                     return false;
                 }
 

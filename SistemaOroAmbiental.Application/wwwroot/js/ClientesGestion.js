@@ -3502,9 +3502,11 @@ async function guardarVisitaUnificadaCg() {
         for (const l of lineas) {
             const tipo = Number(l.TipoMovimiento || 1);
             const idLista = Number(l.IdListaPrecio) > 0 ? Number(l.IdListaPrecio) : 0;
-            const clave = `${l.IdProducto}_${tipo}_${idLista}`;
+            const cant = Number(l.Cantidad) || 0;
+            const precio = Number(l.PrecioVenta) || 0;
+            const clave = `${l.IdProducto}|${tipo}|${idLista}|${cant}|${precio}|0|0`;
             if (claves.has(clave)) {
-                errorModal("No puede repetir el mismo producto con el mismo tipo y la misma lista / tipo de pago.");
+                errorModal("Hay líneas de productos completamente iguales. Cambiá al menos un dato (precio, cantidad, lista, etc.).");
                 return;
             }
             claves.add(clave);
