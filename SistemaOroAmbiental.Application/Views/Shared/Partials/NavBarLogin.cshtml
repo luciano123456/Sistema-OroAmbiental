@@ -1,5 +1,5 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
-<link href="~/css/NavBarLogin.css?v=5.4" rel="stylesheet" />
+<link href="~/css/NavBarLogin.css?v=5.5" rel="stylesheet" />
 
 <div class="rp-navbar-shell">
 <nav class="navbar navbar-expand-lg rp-navbar sticky-top">
@@ -316,19 +316,21 @@
                         </div>
                     </button>
 
-                    <button class="rp-config-card" onclick="abrirConfiguracion('Tipos de Pago', 'TiposPago')">
-                        <div class="rp-config-icon blue"><i class="fa fa-credit-card"></i></div>
+                    <button class="rp-config-card" data-buscar="tipos de pago efectivo transferencia medio pago"
+                            onclick="abrirConfiguracion('Tipos de Pago', 'TiposPago')">
+                        <div class="rp-config-icon green"><i class="fa fa-credit-card"></i></div>
                         <div>
                             <div class="rp-config-title">Tipos de Pago</div>
                             <div class="rp-config-sub">Efectivo, Transferencia, etc.</div>
                         </div>
                     </button>
 
-                    <button class="rp-config-card" onclick="abrirConfiguracion('Listas de Precio', 'ListasPrecios', 'Tipos de Pago', 'TiposPago', 'Tipo de pago')">
+                    <button class="rp-config-card" data-buscar="listas de precio tipo de pago"
+                            onclick="abrirConfiguracion('Listas de Precio', 'ListasPrecios', 'Tipos de Pago', 'TiposPago', 'Tipo de pago')">
                         <div class="rp-config-icon blue"><i class="fa fa-list-alt"></i></div>
                         <div>
                             <div class="rp-config-title">Listas de Precio</div>
-                            <div class="rp-config-sub">Listas asociadas a un tipo de pago</div>
+                            <div class="rp-config-sub">Cada lista va con un tipo de pago</div>
                         </div>
                     </button>
 
@@ -678,4 +680,4 @@
 
 
 
-<script src="~/js/NavBarLogin.js?v=5.7" asp-append-version="true"></script>
+<script src="~/js/NavBarLogin.js?v=5.8" asp-append-version="true"></script>
