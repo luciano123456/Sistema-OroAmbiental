@@ -378,9 +378,13 @@ namespace SistemaOroAmbiental.DAL.Repository
             decimal totalHaber = 0;
             foreach (var fila in filasCronologicas)
             {
-                totalDebe += fila.Debe + fila.TotalIntereses;
+                // Total / restante del mes (después de asignar intereses).
+                // Saldo = acumulado histórico; no confundir con restante del mes.
+                fila.TotalMes = fila.Debe + fila.TotalIntereses;
+                fila.RestanteMes = fila.TotalMes - fila.Haber;
+                totalDebe += fila.TotalMes;
                 totalHaber += fila.Haber;
-                saldoAcumulado += fila.Debe + fila.TotalIntereses - fila.Haber;
+                saldoAcumulado += fila.RestanteMes;
                 fila.Saldo = saldoAcumulado;
             }
 
@@ -701,6 +705,8 @@ namespace SistemaOroAmbiental.DAL.Repository
                 FechaTransferencia = ov?.FechaTransferencia,
                 Debe = debe,
                 Haber = haber,
+                TotalMes = debe, // + intereses luego en AsignarInteresesAFilas / loop
+                RestanteMes = debe - haber,
                 Saldo = debe - haber, // se reemplaza luego por saldo acumulado
                 CajasAFavor = ov?.CajasAFavor ?? 0,
                 SinEntrega = ov?.SinEntrega ?? false,
