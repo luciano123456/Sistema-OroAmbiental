@@ -2,7 +2,7 @@
    CLIENTES GESTION - Hub unificado por cliente
    (cliente + establecimientos: lineas completas + importe tras cuenta)
 ========================================================= */
-window.__OA_CG_BUILD = "entrega-lineas-completas-20260806";
+window.__OA_CG_BUILD = "entrega-lineas-completas-20260806b";
 
 const CG = {
     id: 0,
@@ -288,6 +288,7 @@ const authCg = () => ({
 
 $(document).ready(async () => {
     CG.id = Number(window.CG_INIT?.id || $("#cgId").val() || 0);
+    instalarBloqueoImporteSinCuentaCg();
 
     initModalesCg();
     wireEventosCg();
@@ -837,6 +838,8 @@ function wireEventosCg() {
     $("#cgCobroCuenta").on("change", function () {
         syncImporteHabilitadoModalCobroCg();
     });
+    instalarBloqueoImporteSinCuentaCg();
+    syncImporteHabilitadoModalCobroCg();
     $h("cgWsEstablecimiento").on("change", async function () {
         await cargarSugeridosWsCg(Number($(this).val()) || null);
     });
@@ -3345,12 +3348,15 @@ function syncImporteHabilitadoCobroWsCg($row) {
     const habilitar = idCuenta > 0;
     $imp.prop("disabled", !habilitar);
     $imp.prop("readonly", !habilitar);
+    $imp.attr("tabindex", habilitar ? "0" : "-1");
+    $imp.toggleClass("ws-cobro-importe--locked", !habilitar);
     if (!habilitar) {
         $imp.val("");
         const key = Number($row.data("key"));
         const cobro = (hubPropCg("wsCobros") || []).find(c => Number(c._key) === key);
         if (cobro) cobro.Importe = 0;
     }
+    $imp.attr("placeholder", habilitar ? "" : "Elegí cuenta");
     $imp.attr("title", habilitar ? "" : "Seleccioná la cuenta para cargar el importe");
 }
 
@@ -3359,8 +3365,59 @@ function syncImporteHabilitadoModalCobroCg() {
     const $imp = $("#cgCobroImporte");
     const habilitar = idCuenta > 0;
     $imp.prop("disabled", !habilitar).prop("readonly", !habilitar);
+    $imp.attr("tabindex", habilitar ? "0" : "-1");
     if (!habilitar) $imp.val("");
+    $imp.attr("placeholder", habilitar ? "" : "Elegí cuenta");
     $imp.attr("title", habilitar ? "" : "Seleccioná la cuenta para cargar el importe");
+}
+
+/** Red de seguridad: si no hay cuenta, no deja tipear/pegar/enfocar el importe. */
+function instalarBloqueoImporteSinCuentaCg() {
+    if (window.__oaBloqueoImporteSinCuenta) return;
+    window.__oaBloqueoImporteSinCuenta = true;
+
+    const selector = ".ws-cobro-importe, #cgCobroImporte";
+    const cuentaDe = (el) => {
+        if (!el) return 0;
+        if (el.id === "cgCobroImporte") return parseInt($("#cgCobroCuenta").val(), 10) || 0;
+        const $row = $(el).closest(".cg-ws-cobro-row");
+        return Number($row.find(".ws-cobro-cuenta").val()) || 0;
+    };
+
+    document.addEventListener("focusin", (e) => {
+        const el = e.target?.closest?.(selector);
+        if (!el) return;
+        if (cuentaDe(el) > 0) return;
+        el.blur();
+        el.value = "";
+        e.stopImmediatePropagation();
+    }, true);
+
+    document.addEventListener("keydown", (e) => {
+        const el = e.target?.closest?.(selector);
+        if (!el) return;
+        if (cuentaDe(el) > 0) return;
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        el.value = "";
+    }, true);
+
+    document.addEventListener("paste", (e) => {
+        const el = e.target?.closest?.(selector);
+        if (!el) return;
+        if (cuentaDe(el) > 0) return;
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        el.value = "";
+    }, true);
+
+    document.addEventListener("input", (e) => {
+        const el = e.target?.closest?.(selector);
+        if (!el) return;
+        if (cuentaDe(el) > 0) return;
+        el.value = "";
+        e.stopImmediatePropagation();
+    }, true);
 }
 
 function cobrosWsParaGuardarCg() {
@@ -3422,7 +3479,8 @@ function renderCobrosWsCg() {
                 <span>Importe</span>
                 <input type="text" class="form-control Inputmiles ws-cobro-importe" inputmode="decimal"
                        value="${tieneCuenta && c.Importe ? fmtQtyCg(c.Importe) : ""}"
-                       ${tieneCuenta ? "" : "disabled"}
+                       ${tieneCuenta ? "" : "disabled readonly tabindex=\"-1\""}
+                       placeholder="${tieneCuenta ? "" : "Elegí cuenta"}"
                        title="${tieneCuenta ? "" : "Seleccioná la cuenta para cargar el importe"}" />
             </label>
             <button type="button" class="btn btn-outline-danger btn-sm btn-ws-quitar-cobro" data-key="${c._key}" title="Quitar">

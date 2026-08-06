@@ -219,6 +219,37 @@ window.__OA_ENTREGA_BUILD = "entrega-lineas-completas-20260806";
         });
 
         $("#btnAgregarCobroEntrega").on("click", () => agregarCobroLinea());
+
+        // Red de seguridad: sin cuenta no se puede tipear importe
+        if (!window.__oaBloqueoImporteEntrega) {
+            window.__oaBloqueoImporteEntrega = true;
+            const sel = "#tbodyCobrosEntrega .cobro-importe";
+            const cuentaOk = (el) => {
+                const tr = el?.closest?.("tr");
+                if (!tr) return false;
+                return (parseInt(tr.querySelector(".cobro-cuenta")?.value || "0", 10) || 0) > 0;
+            };
+            document.addEventListener("focusin", (e) => {
+                const el = e.target?.closest?.(sel);
+                if (!el || cuentaOk(el)) return;
+                el.blur();
+                el.value = "";
+                e.stopImmediatePropagation();
+            }, true);
+            document.addEventListener("keydown", (e) => {
+                const el = e.target?.closest?.(sel);
+                if (!el || cuentaOk(el)) return;
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                el.value = "";
+            }, true);
+            document.addEventListener("input", (e) => {
+                const el = e.target?.closest?.(sel);
+                if (!el || cuentaOk(el)) return;
+                el.value = "";
+                e.stopImmediatePropagation();
+            }, true);
+        }
     }
 
     window.cerrarErrorEntrega = function () {

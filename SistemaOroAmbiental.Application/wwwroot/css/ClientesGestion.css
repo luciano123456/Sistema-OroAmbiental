@@ -3350,6 +3350,15 @@ body.layout-modulo .container-fluid {
     font-variant-numeric: tabular-nums;
 }
 
+.cg-ws-cobro-row .ws-cobro-importe:disabled,
+.cg-ws-cobro-row .ws-cobro-importe.ws-cobro-importe--locked,
+#cgCobroImporte:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    background: rgba(15, 23, 42, 0.65) !important;
+    pointer-events: none;
+}
+
 .cg-ws-cobros-list,
 .cg-ws-cobros-mes-list {
     display: flex;
