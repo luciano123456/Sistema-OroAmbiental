@@ -1760,12 +1760,40 @@ function syncEstablecimientoSelStateCg() {
         return;
     }
     $bar.removeClass("d-none");
-    const nombres = ids.map(id => {
-        const e = (CG.establecimientosLista || []).find(x => x.Id === id);
-        return e?.Nombre || `#${id}`;
-    });
-    $("#cgEstSelLabel").text(n === 1 ? nombres[0] : `${n} seleccionados · ${nombres.join(" · ")}`);
+    if (n === 1) {
+        const e = (CG.establecimientosLista || []).find(x => x.Id === ids[0]) || {};
+        $("#cgEstSelLabel").html(htmlResumenEstablecimientoSelCg(e, ids[0]));
+    } else {
+        const nombres = ids.map(id => {
+            const e = (CG.establecimientosLista || []).find(x => x.Id === id);
+            return e?.Nombre || `#${id}`;
+        });
+        $("#cgEstSelLabel").html(`
+            <span class="cg-est-selbar-name">${n} seleccionados</span>
+            <span class="cg-est-selbar-meta">${escapeCg(nombres.join(" · "))}</span>`);
+    }
     $("#cgEstSelMode").text(n === 1 ? "Edición completa" : "Planilla combinada");
+}
+
+function partesDomicilioEstablecimientoCg(e) {
+    if (!e) return [];
+    const calleNro = [e.Calle || e.Domicilio, e.Numero].filter(Boolean).join(" ").trim();
+    const partes = [];
+    if (calleNro) partes.push(calleNro);
+    else if (e.Domicilio) partes.push(String(e.Domicilio).trim());
+    if (e.Localidad) partes.push(String(e.Localidad).trim());
+    if (e.Partido) partes.push(String(e.Partido).trim());
+    if (e.Provincia) partes.push(String(e.Provincia).trim());
+    return [...new Set(partes.filter(Boolean))];
+}
+
+function htmlResumenEstablecimientoSelCg(e, idFallback) {
+    const nombre = escapeCg(e?.Nombre || (idFallback ? `#${idFallback}` : "Establecimiento"));
+    const partes = partesDomicilioEstablecimientoCg(e);
+    const meta = partes.length
+        ? `<span class="cg-est-selbar-meta">${partes.map(escapeCg).join(" · ")}</span>`
+        : `<span class="cg-est-selbar-meta is-muted">Sin domicilio cargado</span>`;
+    return `<span class="cg-est-selbar-name">${nombre}</span>${meta}`;
 }
 
 function resaltarListaEstablecimientoCg(id) {
