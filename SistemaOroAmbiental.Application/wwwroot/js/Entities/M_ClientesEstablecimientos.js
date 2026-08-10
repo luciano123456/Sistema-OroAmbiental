@@ -1085,7 +1085,7 @@
                 this._syncIvaCardUI();
 
                 this._id("modalEstablecimientoLabel").textContent = "Nuevo Establecimiento";
-                this._id("btnGuardarEst").innerHTML = `<i class="fa fa-check"></i> Registrar`;
+                this._id("btnGuardarEst").innerHTML = `<i class="fa fa-check"></i> Registrar establecimiento`;
 
                 this._mostrarUi();
 
@@ -1217,7 +1217,7 @@
             this._id("modalEstablecimientoLabel").textContent = soloLectura
                 ? "Ver Establecimiento"
                 : "Editar Establecimiento";
-            this._id("btnGuardarEst").innerHTML = `<i class="fa fa-check"></i> Guardar`;
+            this._id("btnGuardarEst").innerHTML = `<i class="fa fa-check"></i> Guardar establecimiento`;
 
             this.actualizarBadgeEstablecimiento();
             if (modelo?.Id > 0) {
@@ -1475,7 +1475,7 @@
                     }
                     this._setFieldValue("txtIdEst", data.id);
                     this._modeloActual = { ...(this._modeloActual || modelo), Id: data.id };
-                    this._id("btnGuardarEst").innerHTML = `<i class="fa fa-check"></i> Guardar`;
+                    this._id("btnGuardarEst").innerHTML = `<i class="fa fa-check"></i> Guardar establecimiento`;
                     this._id("modalEstablecimientoLabel").textContent = "Editar Establecimiento";
                     this.actualizarBadgeEstablecimiento();
                     await Promise.all([

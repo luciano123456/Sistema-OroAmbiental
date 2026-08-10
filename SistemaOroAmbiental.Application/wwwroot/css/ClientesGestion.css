@@ -3448,6 +3448,20 @@ body.layout-modulo .container-fluid {
     letter-spacing: 0.02em;
 }
 
+.cg-ws-entrega-actions {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.cg-ws-entrega-actions .cg-btn {
+    min-width: 8.5rem;
+}
+
 .cg-ws-hint {
     display: flex;
     align-items: flex-start;

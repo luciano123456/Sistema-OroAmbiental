@@ -11,7 +11,7 @@
     <link href="~/css/Productora.css?v=6.2" rel="stylesheet" />
     <link href="~/css/disenopantallas.css?v=6.2" rel="stylesheet" />
     <link href="~/css/M_Generico.css?v=6.3" rel="stylesheet" />
-    <link href="~/css/ClientesGestion.css?v=20.2" rel="stylesheet" />
+    <link href="~/css/ClientesGestion.css?v=20.3" rel="stylesheet" />
     <link href="~/css/ClientesEstablecimientos.css?v=5.6" rel="stylesheet" />
     <link href="~/css/ContratosModal.css?v=5.4" rel="stylesheet" />
 }
@@ -611,9 +611,6 @@
                                     <button type="button" class="cg-btn cg-btn--ghost cg-btn--sm d-none" id="btnVerInteresesMesHub" title="Ver intereses de este mes">
                                         <i class="fa fa-eye"></i> Intereses
                                     </button>
-                                    <button type="button" class="cg-btn cg-btn--success cg-btn--sm" id="btnGuardarControlMensualCg">
-                                        <i class="fa fa-check"></i> Guardar
-                                    </button>
                                     <button type="button" class="cg-btn cg-btn--ghost cg-btn--sm" id="btnCerrarMesDetail">
                                         <i class="fa fa-times"></i> Cerrar
                                     </button>
@@ -692,6 +689,11 @@
                                                 <strong>L&iacute;neas repetidas</strong>
                                                 <span>No pod&eacute;s cargar dos l&iacute;neas 100% iguales (producto, tipo, lista, cantidad y precio). Si cambia alg&uacute;n dato, s&iacute; se permite.</span>
                                             </div>
+                                        </div>
+                                        <div class="cg-ws-entrega-actions">
+                                            <button type="button" class="cg-btn cg-btn--success cg-btn--sm" id="btnGuardarControlMensualCg">
+                                                <i class="fa fa-check"></i> Guardar
+                                            </button>
                                         </div>
                                     </section>
 
@@ -807,7 +809,7 @@
                                     <i class="fa fa-times"></i> Cancelar
                                 </button>
                                 <button type="button" id="btnGuardarEst" class="cg-btn cg-btn--primary cg-btn--sm" onclick="guardarEstablecimiento()">
-                                    <i class="fa fa-check"></i> Guardar
+                                    <i class="fa fa-check"></i> Guardar establecimiento
                                 </button>
                             </div>
                         </section>
@@ -1145,7 +1147,7 @@
     </script>
     <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-    <script src="~/js/Entities/M_ClientesEstablecimientos.js?v=7.1" asp-append-version="true"></script>
+    <script src="~/js/Entities/M_ClientesEstablecimientos.js?v=7.2" asp-append-version="true"></script>
     <script src="~/js/ContratosDocumentos.js?v=5.4"></script>
     <script src="~/js/Entities/M_Contratos.js?v=5.4"></script>
     <script src="~/js/ClientesGestion.js?v=24.2" asp-append-version="true"></script>
