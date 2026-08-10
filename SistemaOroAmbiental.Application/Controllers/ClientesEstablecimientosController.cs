@@ -68,7 +68,9 @@ namespace SistemaOroAmbiental.Application.Controllers
                 IdProvincia = e.IdProvincia,
                 IdPartido = e.IdPartido,
                 IdLocalidad = e.IdLocalidad,
-                Localidad = e.Localidad,
+                Localidad = !string.IsNullOrWhiteSpace(e.Localidad)
+                    ? e.Localidad
+                    : (e.IdLocalidadNavigation?.Nombre ?? ""),
                 CodPostal = e.CodPostal,
                 ImpuestoIva = e.ImpuestoIva,
                 IdDiaRecoleccion = e.IdDiaRecoleccion,
