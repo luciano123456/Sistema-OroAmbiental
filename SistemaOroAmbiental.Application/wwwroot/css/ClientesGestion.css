@@ -1379,6 +1379,18 @@ body.layout-modulo .container-fluid {
     background: linear-gradient(135deg, rgba(29, 78, 216, 0.95), rgba(37, 99, 235, 0.8));
 }
 
+/* Meses activos: color distinto al de años para que se note al toque */
+.cg-cm-chip--mes.is-active {
+    background: linear-gradient(135deg, rgba(13, 148, 136, 0.95), rgba(20, 184, 166, 0.78));
+    border-color: rgba(94, 234, 212, 0.65);
+    color: #ecfeff;
+    box-shadow: 0 3px 14px rgba(13, 148, 136, 0.38);
+}
+
+.cg-cm-chip--mes.is-active:hover {
+    background: linear-gradient(135deg, rgba(15, 118, 110, 0.98), rgba(13, 148, 136, 0.88));
+}
+
 .cg-cm-presets {
     display: flex;
     flex-wrap: wrap;

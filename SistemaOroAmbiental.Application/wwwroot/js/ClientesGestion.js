@@ -743,17 +743,26 @@ function wireEventosCg() {
     $("#btnConfirmarCobroCg").on("click", busyHandler(confirmarCobroCg));
     $("#btnRefreshCcCg").on("click", () => cargarTabCuentaCorriente(true));
     $h("btnRefreshControlMensual").on("click", () => cargarHubDatosCg(true));
-    $h("cgHubOperativo").on("click", ".cg-cm-chip", function () {
-        toggleFiltroControlCg($(this).data("tipo"), parseInt($(this).data("val"), 10));
+    $(document).on("click", "#cgHubOperativo .cg-cm-chip, #cgEstHubMount .cg-cm-chip", function (e) {
+        e.preventDefault();
+        syncHubActivoFromElCg(this);
+        const tipo = String($(this).attr("data-tipo") || "").toLowerCase();
+        const val = parseInt($(this).attr("data-val"), 10);
+        toggleFiltroControlCg(tipo, val);
     });
-    $(".cg-preset-meses").on("click", function () {
-        aplicarPresetMesesCg($(this).data("meses"));
-        cargarTabControlMensual(true);
+    $(document).on("click", "#cgHubOperativo .cg-preset-meses, #cgEstHubMount .cg-preset-meses", function (e) {
+        e.preventDefault();
+        syncHubActivoFromElCg(this);
+        aplicarPresetMesesCg($(this).attr("data-meses"));
+        cargarTabControlMensual(true, isHubEstCg() ? idsEstablecimientoSeleccionadosCg() : null);
     });
-    $("#btnControlAniosRecientes").on("click", () => {
+    $(document).on("click", "#btnControlAniosRecientes, #btnEstControlAniosRecientes", function (e) {
+        e.preventDefault();
+        syncHubActivoFromElCg(this);
         aplicarPresetAniosRecientesCg();
-        cargarTabControlMensual(true);
+        cargarTabControlMensual(true, isHubEstCg() ? idsEstablecimientoSeleccionadosCg() : null);
     });
+    // Legacy bindings replaced by delegated handlers above (hub-aware).
     $h("btnGuardarControlMensualCg").on("click", busyHandler(guardarVisitaUnificadaCg));
     $h("cgControlMensualBody").on("click", "tr[data-mes]", function (e) {
         if ($(e.target).closest(".cg-cm-int-eye, .cg-cm-obs-eye").length) return;
@@ -2201,20 +2210,7 @@ function bindEstHubEventsCg() {
     const root = "#cgEstHubMount";
 
     $(root).on("click", "#btnEstRefreshControlMensual", () => cargarHubEstablecimientoCg(true));
-    $(root).on("click", ".cg-cm-chip", function () {
-        CG.hubActivo = "est";
-        toggleFiltroControlCg($(this).data("tipo"), parseInt($(this).data("val"), 10));
-    });
-    $(root).on("click", ".cg-preset-meses", function () {
-        CG.hubActivo = "est";
-        aplicarPresetMesesCg($(this).data("meses"));
-        cargarTabControlMensual(true, idsEstablecimientoSeleccionadosCg());
-    });
-    $(root).on("click", "#btnEstControlAniosRecientes", () => {
-        CG.hubActivo = "est";
-        aplicarPresetAniosRecientesCg();
-        cargarTabControlMensual(true, idsEstablecimientoSeleccionadosCg());
-    });
+    // Chips / presets / años recientes: handlers globales con syncHubActivoFromElCg
     $(root).on("click", "#btnEstRegistrarVisitaMesHub", () => {
         CG.hubActivo = "est";
         const now = new Date();
@@ -2752,14 +2748,14 @@ function initFiltrosControlCg() {
     $aniosChips.empty();
     for (let y = actual; y >= actual - 8; y--) {
         $aniosChips.append(
-            `<button type="button" class="cg-cm-chip cg-cm-chip--anio" data-tipo="anio" data-val="${y}">${y}</button>`
+            `<button type="button" class="cg-cm-chip cg-cm-chip--anio" data-tipo="anio" data-val="${y}" aria-pressed="false">${y}</button>`
         );
     }
 
     $mesesChips.empty();
     for (let m = 1; m <= 12; m++) {
         $mesesChips.append(
-            `<button type="button" class="cg-cm-chip cg-cm-chip--mes" data-tipo="mes" data-val="${m}" title="${MES_NOMBRES_CG[m]}">${MESES_CORTOS_CG[m - 1]}</button>`
+            `<button type="button" class="cg-cm-chip cg-cm-chip--mes" data-tipo="mes" data-val="${m}" title="${MES_NOMBRES_CG[m]}" aria-pressed="false">${MESES_CORTOS_CG[m - 1]}</button>`
         );
     }
 
@@ -2768,19 +2764,30 @@ function initFiltrosControlCg() {
 
 function renderEstadoFiltrosControlCg(refreshData = true) {
     const { anios, meses } = hubFiltrosCg();
+    const aniosNorm = (anios || []).map(Number).filter(n => Number.isFinite(n));
+    const mesesNorm = (meses || []).map(Number).filter(n => n >= 1 && n <= 12);
 
-    $h("cgControlAniosChips").find(".cg-cm-chip").each(function () {
-        const v = parseInt($(this).data("val"), 10);
-        $(this).toggleClass("is-active", anios.includes(v));
+    // Mantener arrays numéricos (evita includes() fallido por strings)
+    hubFiltrosCg().anios = aniosNorm;
+    hubFiltrosCg().meses = mesesNorm;
+
+    const $chipsRoot = isHubEstCg() ? $("#cgEstHubMount") : $("#cgHubOperativo");
+    $chipsRoot.find("#" + mapHubDomIdCg("cgControlAniosChips") + " .cg-cm-chip").each(function () {
+        const v = parseInt($(this).attr("data-val"), 10);
+        $(this).toggleClass("is-active", aniosNorm.includes(v));
+        $(this).attr("aria-pressed", aniosNorm.includes(v) ? "true" : "false");
     });
 
-    $h("cgControlMesesChips").find(".cg-cm-chip").each(function () {
-        const v = parseInt($(this).data("val"), 10);
-        $(this).toggleClass("is-active", meses.includes(v));
+    $chipsRoot.find("#" + mapHubDomIdCg("cgControlMesesChips") + " .cg-cm-chip").each(function () {
+        const v = parseInt($(this).attr("data-val"), 10);
+        const on = mesesNorm.includes(v);
+        $(this).toggleClass("is-active", on);
+        $(this).attr("aria-pressed", on ? "true" : "false");
     });
 
     syncPresetButtonsCg();
     actualizarResumenFiltrosCg();
+    sincronizarWorkspaceConFiltroMesesCg(mesesNorm);
 
     if (refreshData) {
         const idsEst = isHubEstCg() ? idsEstablecimientoSeleccionadosCg() : null;
@@ -2788,19 +2795,36 @@ function renderEstadoFiltrosControlCg(refreshData = true) {
     }
 }
 
+function sincronizarWorkspaceConFiltroMesesCg(mesesNorm) {
+    const sel = hubPropCg("hubMesSel");
+    if (!sel) return;
+    // Si hay filtro de meses y el mes abierto ya no está, cerrar el detalle
+    if (mesesNorm.length > 0 && !mesesNorm.includes(Number(sel.mes))) {
+        $h("cgHubMesDetail").prop("hidden", true);
+        setHubPropCg("hubMesSel", null);
+        $h("cgControlMensualBody").find("tr").removeClass("is-selected");
+        $h("cgCards_controlMensual").find("article").removeClass("is-selected");
+    }
+}
+
 function toggleFiltroControlCg(tipo, val) {
-    if (!val || Number.isNaN(val)) return;
+    const n = Number(val);
+    if (!Number.isFinite(n) || Number.isNaN(n)) return;
 
     if (tipo === "anio") {
-        const idx = hubFiltrosCg().anios.indexOf(val);
-        if (idx >= 0) hubFiltrosCg().anios.splice(idx, 1);
-        else hubFiltrosCg().anios.push(val);
+        const arr = hubFiltrosCg().anios;
+        const idx = arr.indexOf(n);
+        if (idx >= 0) arr.splice(idx, 1);
+        else arr.push(n);
         hubFiltrosCg().anios.sort((a, b) => b - a);
     } else if (tipo === "mes") {
-        const idx = hubFiltrosCg().meses.indexOf(val);
-        if (idx >= 0) hubFiltrosCg().meses.splice(idx, 1);
-        else hubFiltrosCg().meses.push(val);
+        const arr = hubFiltrosCg().meses;
+        const idx = arr.indexOf(n);
+        if (idx >= 0) arr.splice(idx, 1);
+        else arr.push(n);
         hubFiltrosCg().meses.sort((a, b) => a - b);
+    } else {
+        return;
     }
 
     renderEstadoFiltrosControlCg(true);
