@@ -18,8 +18,18 @@ function initControlMensualPg() {
     });
     $("#btnControlAniosRecientesPg").on("click", aplicarPresetAniosRecientesPg);
     $("#btnGuardarControlMensualPg").on("click", busyHandler(guardarControlMensualPg));
-    $("#pgControlMensualBody").on("click", "tr[data-mes]", function () {
+    $("#pgControlMensualBody").on("click", "tr[data-mes]", function (e) {
+        if ($(e.target).closest(".cg-cm-obs-eye").length) return;
         abrirModalControlMensualPg(Number($(this).data("anio")), Number($(this).data("mes")));
+    });
+    $("#pgCards_controlMensual").on("click", "article[data-mes]", function (e) {
+        if ($(e.target).closest(".cg-cm-obs-eye").length) return;
+        abrirModalControlMensualPg(Number($(this).data("anio")), Number($(this).data("mes")));
+    });
+    $(document).on("click", ".cg-cm-obs-eye-pg", function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        abrirModalObsControlPg(this);
     });
 
     window.abrirModalControlMensual = abrirModalControlMensualPg;
@@ -135,28 +145,27 @@ function renderControlMensualPg(data) {
     $("#tblControlMensualPg").toggleClass("cg-cm-show-anio", !!mostrarAnio);
 
     if (!filas.length) {
-        tbody.html(`<tr class="cg-cm-empty"><td colspan="10" class="text-center py-4"><i class="fa fa-calendar"></i> Sin datos para los filtros elegidos.</td></tr>`);
+        tbody.html(`<tr class="cg-cm-empty"><td colspan="9" class="text-center py-4"><i class="fa fa-calendar"></i> Sin datos para los filtros elegidos.</td></tr>`);
         renderControlMensualCardsPg([], mostrarAnio);
         return;
     }
 
     tbody.html(filas.map(m => {
         const anio = m.Anio || m.anio;
+        const mes = m.Mes || m.mes;
         const saldo = Number(m.Saldo ?? m.saldo) || 0;
         const saldoClass = saldo > 0 ? "cg-cm-saldo-neg" : (saldo < 0 ? "cg-cm-saldo-pos" : "cg-cm-saldo-cero");
-        const sinCompra = m.SinCompra === true || m.sinCompra === true;
         return `
-            <tr class="${sinCompra ? "cg-cm-sin-entrega" : ""}" data-anio="${anio}" data-mes="${m.Mes || m.mes}" role="button">
+            <tr data-anio="${anio}" data-mes="${mes}" role="button">
                 <td class="cg-col-anio cg-cm-mes">${anio}</td>
-                <td class="cg-cm-mes">${escapeHtmlPg(m.MesNombre || m.mesNombre || PG_CM_MESES_LARGO[m.Mes || m.mes] || "")}</td>
+                <td class="cg-cm-mes">${escapeHtmlPg(m.MesNombre || m.mesNombre || PG_CM_MESES_LARGO[mes] || "")}</td>
                 <td class="cg-cm-num">${m.CantCompras ?? m.cantCompras ?? 0}</td>
                 <td class="cg-cm-num cg-cm-grp-start">${fmtMoneyPg(m.TotalCompras ?? m.totalCompras)}</td>
                 <td class="cg-cm-num">${fmtMoneyPg(m.TotalPagos ?? m.totalPagos)}</td>
                 <td class="cg-cm-num cg-cm-debe cg-cm-grp-start">${fmtMoneyPg(m.Debe ?? m.debe)}</td>
                 <td class="cg-cm-num cg-cm-haber">${fmtMoneyPg(m.Haber ?? m.haber)}</td>
                 <td class="cg-cm-num ${saldoClass} cg-cm-th-saldo">${fmtMoneyPg(saldo)}</td>
-                <td class="cg-cm-flag">${sinCompra ? '<i class="fa fa-times"></i>' : ""}</td>
-                <td class="cg-cm-obs" title="${escapeHtmlPg(m.Observaciones || m.observaciones || "")}">${escapeHtmlPg(truncarPg(m.Observaciones || m.observaciones, 28))}</td>
+                <td class="cg-cm-obs-col">${celdaObsOjoPg(m, anio)}</td>
             </tr>`;
     }).join(""));
 
@@ -176,16 +185,14 @@ function renderControlMensualCardsPg(filas, mostrarAnio) {
         const anio = m.Anio || m.anio;
         const saldo = Number(m.Saldo ?? m.saldo) || 0;
         const saldoCls = saldo > 0 ? "cg-val-debe" : (saldo < 0 ? "cg-val-haber" : "");
-        const sinCompra = m.SinCompra === true || m.sinCompra === true;
         return `
-            <article class="cg-data-card cg-data-card--cm rp-card-selectable pg-cm-card ${sinCompra ? "is-warn" : ""}"
+            <article class="cg-data-card cg-data-card--cm rp-card-selectable pg-cm-card"
                      data-anio="${anio}" data-mes="${m.Mes || m.mes}" tabindex="0" role="button">
                 <div class="cg-data-card-head">
                     <div class="cg-data-card-head-text">
                         <div class="cg-data-card-title">${escapeHtmlPg(m.MesNombre || m.mesNombre || "")}${mostrarAnio ? ` ${anio}` : ""}</div>
                         <div class="cg-data-card-sub">${m.CantCompras ?? m.cantCompras ?? 0} compra(s)</div>
                     </div>
-                    ${sinCompra ? `<span class="cg-data-card-badge cg-data-card-badge--warn">Sin compra</span>` : ""}
                 </div>
                 <div class="cg-data-card-body">
                     <div class="cg-card-field"><span>Compras</span><strong>${fmtMoneyPg(m.TotalCompras ?? m.totalCompras)}</strong></div>
@@ -193,11 +200,54 @@ function renderControlMensualCardsPg(filas, mostrarAnio) {
                     <div class="cg-card-field"><span>Debe</span><strong class="cg-val-debe">${fmtMoneyPg(m.Debe ?? m.debe)}</strong></div>
                     <div class="cg-card-field"><span>Haber</span><strong class="cg-val-haber">${fmtMoneyPg(m.Haber ?? m.haber)}</strong></div>
                     <div class="cg-card-field cg-card-field--full"><span>Saldo</span><strong class="${saldoCls}">${fmtMoneyPg(saldo)}</strong></div>
+                    ${(m.Observaciones || m.observaciones) ? `<div class="cg-card-field cg-card-field--full cg-card-field--obs"><span>Obs.</span>${celdaObsOjoPg(m, anio)}</div>` : ""}
                 </div>
             </article>`;
     }).join(""));
 
     if (window.RpGridView?.restoreCardSelection) RpGridView.restoreCardSelection($grid);
+}
+
+function celdaObsOjoPg(m, anio) {
+    const obs = String(m?.Observaciones || m?.observaciones || "").trim();
+    if (!obs) {
+        return `<span class="cg-cm-obs-empty" title="Sin observaciones">—</span>`;
+    }
+    const mes = Number(m.Mes || m.mes) || "";
+    const mesNombre = escapeHtmlPg(m.MesNombre || m.mesNombre || PG_CM_MESES_LARGO[mes] || "");
+    const anioVal = Number(anio || m.Anio || m.anio) || "";
+    return `<button type="button"
+        class="cg-cm-obs-eye cg-cm-obs-eye-pg"
+        data-anio="${anioVal}"
+        data-mes="${mes}"
+        data-mes-nombre="${mesNombre}"
+        title="Ver observación"
+        aria-label="Ver observación">
+        <span class="cg-cm-obs-eye-stack" aria-hidden="true">
+            <i class="fa fa-eye cg-cm-obs-eye-open"></i>
+            <i class="fa fa-eye-slash cg-cm-obs-eye-closed"></i>
+        </span>
+    </button>`;
+}
+
+function abrirModalObsControlPg(el) {
+    const $btn = $(el);
+    const anio = Number($btn.attr("data-anio")) || 0;
+    const mes = Number($btn.attr("data-mes")) || 0;
+    const filas = PG.controlFiltrado?.Filas || PG.controlFiltrado?.filas || [];
+    const fila = filas.find(x => Number(x.Anio || x.anio) === anio && Number(x.Mes || x.mes) === mes);
+    const obs = String(fila?.Observaciones || fila?.observaciones || "").trim();
+    if (!obs) return;
+
+    const mesNombre = $btn.attr("data-mes-nombre") || fila?.MesNombre || fila?.mesNombre || "";
+    const sub = [mesNombre, anio || ""].filter(Boolean).join(" ") || (mes ? `Mes ${mes}` : "Observación del mes");
+
+    $("#pgObsModalSub").text(sub);
+    $("#pgObsModalBody").text(obs);
+
+    const modalEl = document.getElementById("modalObsControlPg");
+    if (!modalEl || typeof bootstrap === "undefined") return;
+    bootstrap.Modal.getOrCreateInstance(modalEl).show();
 }
 
 function syncSinCompraUiPg() {

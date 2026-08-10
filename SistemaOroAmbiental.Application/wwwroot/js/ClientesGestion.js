@@ -1,6 +1,8 @@
 /* =========================================================
    CLIENTES GESTION - Hub unificado por cliente
+   (cliente + establecimientos: lineas completas + importe tras cuenta)
 ========================================================= */
+window.__OA_CG_BUILD = "inline-guard-v23-20260806";
 
 const CG = {
     id: 0,
@@ -286,6 +288,7 @@ const authCg = () => ({
 
 $(document).ready(async () => {
     CG.id = Number(window.CG_INIT?.id || $("#cgId").val() || 0);
+    instalarBloqueoImporteSinCuentaCg();
 
     initModalesCg();
     wireEventosCg();
@@ -827,10 +830,22 @@ function wireEventosCg() {
         setHubPropCg("wsCobros", (hubPropCg("wsCobros") || []).filter(c => Number(c._key) !== key));
         renderCobrosWsCg();
     });
-    $h("cgWsCobrosBody").on("change input", "select, input", function () {
+    // Cliente + Establecimientos (clon cgEst*): importe solo tras cuenta
+    $(document).on("change", "#cgWsCobrosBody .ws-cobro-cuenta, #cgEstWsCobrosBody .ws-cobro-cuenta", function () {
+        const $row = $(this).closest(".cg-ws-cobro-row");
+        syncImporteHabilitadoCobroWsCg($row);
         sincronizarCobrosWsDesdeDomCg();
         actualizarResumenCobrosWsCg();
     });
+    $h("cgWsCobrosBody").on("change input", "input:not(.ws-cobro-cuenta), select:not(.ws-cobro-cuenta)", function () {
+        sincronizarCobrosWsDesdeDomCg();
+        actualizarResumenCobrosWsCg();
+    });
+    $("#cgCobroCuenta").on("change", function () {
+        syncImporteHabilitadoModalCobroCg();
+    });
+    instalarBloqueoImporteSinCuentaCg();
+    syncImporteHabilitadoModalCobroCg();
     $h("cgWsEstablecimiento").on("change", async function () {
         await cargarSugeridosWsCg(Number($(this).val()) || null);
     });
@@ -842,7 +857,7 @@ function wireEventosCg() {
             IdListaPrecio: s.IdListaPrecio || 0,
             TipoMovimiento: 1,
             Cantidad: s.Cantidad || 1,
-            PrecioVenta: s.PrecioVenta || 0
+            PrecioVenta: 0
         });
     });
     $h("cgWsLineasBody").on("click", ".btn-ws-quitar", function () {
@@ -868,26 +883,11 @@ function wireEventosCg() {
         linea.Cantidad = leerNumeroWsCg($row.find(".ws-cant").val());
         linea.PrecioVenta = leerNumeroWsCg($row.find(".ws-precio").val());
 
-        if (campo === "prod" || campo === "lista") {
-            if (campo === "prod" && linea.IdProducto > 0 && !linea.IdListaPrecio) {
-                const precios = await obtenerPreciosProductoWsCg(linea.IdProducto);
-                const conPrecio = (precios || []).filter(p => Number(p.PrecioVenta) > 0);
-                if (conPrecio.length === 1) {
-                    linea.IdListaPrecio = Number(conPrecio[0].IdListaPrecio);
-                    $row.find(".ws-lista").val(String(linea.IdListaPrecio));
-                }
-            }
-            if (linea.IdProducto > 0 && linea.IdListaPrecio > 0) {
-                const precio = await obtenerPrecioListaWsCg(linea.IdProducto, linea.IdListaPrecio);
-                if (precio != null) {
-                    linea.PrecioVenta = precio;
-                    $row.find(".ws-precio").val(fmtQtyCg(precio));
-                }
-            }
-        }
+        await sincronizarPrecioLineaWsCg($row, linea, campo);
 
         $row.find(".ws-sub").text(fmtMoneyCg(linea.Cantidad * linea.PrecioVenta));
         actualizarResumenCobrosWsCg();
+        actualizarAlertaDuplicadosLineasWsCg();
     });
     $h("cgCmSinEntrega").on("change", syncSinEntregaUiCg);
     $("#cgInteresPct").on("input change", recalcularImporteInteresCg);
@@ -962,7 +962,13 @@ function initSelect2Cg() {
 function ensureSelect2Cg($el, opts) {
     if (!$el?.length) return;
     if ($el.data("select2")) $el.select2("destroy");
-    $el.select2(Object.assign({ width: "100%", allowClear: true }, opts || {}));
+    const merged = Object.assign({ width: "100%", allowClear: true }, opts || {});
+    // Select2 appendeado al body queda detrás de .modal (z-index ~10M); anclar al modal.
+    if (!merged.dropdownParent) {
+        const $modal = $el.closest(".modal");
+        if ($modal.length) merged.dropdownParent = $modal;
+    }
+    $el.select2(merged);
 }
 
 async function fetchJsonCg(url, options = {}) {
@@ -2241,7 +2247,7 @@ function bindEstHubEventsCg() {
         setHubPropCg("wsCobros", (hubPropCg("wsCobros") || []).filter(c => Number(c._key) !== key));
         renderCobrosWsCg();
     });
-    $(root).on("change input", "#cgEstWsCobrosBody select, #cgEstWsCobrosBody input", function () {
+    $(root).on("change input", "#cgEstWsCobrosBody input:not(.ws-cobro-cuenta), #cgEstWsCobrosBody select:not(.ws-cobro-cuenta)", function () {
         CG.hubActivo = "est";
         sincronizarCobrosWsDesdeDomCg();
         actualizarResumenCobrosWsCg();
@@ -2267,7 +2273,7 @@ function bindEstHubEventsCg() {
             IdListaPrecio: s.IdListaPrecio || 0,
             TipoMovimiento: 1,
             Cantidad: s.Cantidad || 1,
-            PrecioVenta: s.PrecioVenta || 0
+            PrecioVenta: 0
         });
     });
     $(root).on("change input", "#cgEstWsLineasBody select, #cgEstWsLineasBody input", async function () {
@@ -2287,26 +2293,11 @@ function bindEstHubEventsCg() {
         linea.Cantidad = leerNumeroWsCg($row.find(".ws-cant").val());
         linea.PrecioVenta = leerNumeroWsCg($row.find(".ws-precio").val());
 
-        if (campo === "prod" || campo === "lista") {
-            if (campo === "prod" && linea.IdProducto > 0 && !linea.IdListaPrecio) {
-                const precios = await obtenerPreciosProductoWsCg(linea.IdProducto);
-                const conPrecio = (precios || []).filter(p => Number(p.PrecioVenta) > 0);
-                if (conPrecio.length === 1) {
-                    linea.IdListaPrecio = Number(conPrecio[0].IdListaPrecio);
-                    $row.find(".ws-lista").val(String(linea.IdListaPrecio));
-                }
-            }
-            if (linea.IdProducto > 0 && linea.IdListaPrecio > 0) {
-                const precio = await obtenerPrecioListaWsCg(linea.IdProducto, linea.IdListaPrecio);
-                if (precio != null) {
-                    linea.PrecioVenta = precio;
-                    $row.find(".ws-precio").val(fmtQtyCg(precio));
-                }
-            }
-        }
+        await sincronizarPrecioLineaWsCg($row, linea, campo);
 
         $row.find(".ws-sub").text(fmtMoneyCg(linea.Cantidad * linea.PrecioVenta));
         actualizarResumenCobrosWsCg();
+        actualizarAlertaDuplicadosLineasWsCg();
     });
     $(root).on("click", "#btnEstGuardarControlMensualCg", busyHandler(() => {
         CG.hubActivo = "est";
@@ -2932,7 +2923,7 @@ function renderControlMensualCg(data) {
             <th class="${mostrarAnio ? "cg-cm-sticky-left-3" : "cg-cm-sticky-left-2"}" rowspan="2">Visita</th>
             <th class="cg-cm-th-grp-ent" colspan="${colspanEnt}">Productos entregados</th>
             <th class="cg-cm-th-grp-ret" colspan="${colspanRet}">Productos retirados</th>
-            <th class="cg-cm-th-grp-money" colspan="6">Pagos y saldo</th>
+            <th class="cg-cm-th-grp-money" colspan="7">Pagos y saldo</th>
             <th class="cg-cm-obs-col cg-cm-th-obs" rowspan="2" title="Observaciones del mes">Obs.</th>
         </tr>
         <tr class="cg-cm-head-cols">
@@ -2942,16 +2933,17 @@ function renderControlMensualCg(data) {
             ${nProd
                 ? columnas.map(c => `<th class="cg-cm-th-prod-ret" title="${escapeCg(c.Nombre)}">${escapeCg((c.Abreviatura || c.Nombre || "").trim() || ("#" + c.IdProducto))}</th>`).join("")
                 : `<th class="cg-cm-th-prod-ret">—</th>`}
-            <th class="cg-cm-cell-money">Debe</th>
+            <th class="cg-cm-cell-money" title="Cargo del mes (retiros)">Total</th>
             <th class="cg-cm-cell-money">Efectivo</th>
             <th class="cg-cm-cell-money">Transf.</th>
             <th>F. transf.</th>
             <th class="cg-cm-cell-money">Intereses</th>
-            <th class="cg-cm-cell-money cg-cm-th-saldo" title="Saldo acumulado al cierre del mes">Saldo</th>
+            <th class="cg-cm-cell-money" title="Total + intereses − pagos del mes">Rest. mes</th>
+            <th class="cg-cm-cell-money cg-cm-th-saldo" title="Saldo acumulado al cierre del mes">Saldo acum.</th>
         </tr>`);
 
     if (!filas.length) {
-        const cols = (mostrarAnio ? 1 : 0) + 2 + colspanEnt + colspanRet + 7;
+        const cols = (mostrarAnio ? 1 : 0) + 2 + colspanEnt + colspanRet + 8;
         tbody.html(`<tr class="cg-cm-empty"><td colspan="${cols}" class="text-center py-4">
             No hay datos para los filtros elegidos.</td></tr>`);
         renderControlMensualCardsCg([], mostrarAnio);
@@ -2971,8 +2963,21 @@ function renderControlMensualCg(data) {
         const badgeAtraso = atrasado
             ? `<span class="cg-cm-badge-atraso" title="Pago atrasado más de 1 mes">Atrasado</span>`
             : "";
+        // Productos del mes puede traer varias filas del mismo producto (distinta lista/precio):
+        // en la planilla anual se suman cantidades por IdProducto.
         const mapaProd = {};
-        (m.Productos || []).forEach(p => { mapaProd[p.IdProducto] = p; });
+        (m.Productos || []).forEach(p => {
+            const id = Number(p.IdProducto) || 0;
+            if (id <= 0) return;
+            if (!mapaProd[id]) mapaProd[id] = { Entregadas: 0, Retiradas: 0 };
+            mapaProd[id].Entregadas += Number(p.Entregadas) || 0;
+            mapaProd[id].Retiradas += Number(p.Retiradas) || 0;
+        });
+        const totalMesFila = Number(m.TotalMes != null ? m.TotalMes : ((Number(m.Debe) || 0) + (Number(m.TotalIntereses) || 0))) || 0;
+        const restanteMesFila = Number(m.RestanteMes != null ? m.RestanteMes : (totalMesFila - (Number(m.Haber) || 0))) || 0;
+        const restanteClass = typeof clsSaldoDeudaMoney === "function"
+            ? clsSaldoDeudaMoney(restanteMesFila)
+            : "";
 
         const celdasEnt = nProd
             ? columnas.map(c => {
@@ -2997,11 +3002,12 @@ function renderControlMensualCg(data) {
             <td class="${mostrarAnio ? "cg-cm-sticky-left-3" : "cg-cm-sticky-left-2"} cg-cm-date">${formatearFechaCortaCg(m.FechaVisita)}</td>
             ${celdasEnt}
             ${celdasRet}
-            <td class="cg-cm-cell-money cg-cm-debe">${fmtMoneyCg(m.Debe)}</td>
-            <td class="cg-cm-cell-money">${fmtMoneyCg(m.AbonoEfectivo)}</td>
-            <td class="cg-cm-cell-money">${fmtMoneyCg(m.AbonoTransferencia)}</td>
+            <td class="cg-cm-cell-money cg-cm-debe" title="Total del mes (retiros + intereses)">${fmtMoneyCg(totalMesFila)}</td>
+            <td class="cg-cm-cell-money ${(Number(m.AbonoEfectivo) || 0) > 0 ? "cg-cm-haber" : ""}">${fmtMoneyCg(m.AbonoEfectivo)}</td>
+            <td class="cg-cm-cell-money ${(Number(m.AbonoTransferencia) || 0) > 0 ? "cg-cm-haber" : ""}">${fmtMoneyCg(m.AbonoTransferencia)}</td>
             <td class="cg-cm-date">${formatearFechaCortaCg(m.FechaTransferencia)}</td>
             <td class="cg-cm-cell-money cg-cm-int">${celdaInteresesMesCg(m, anio)}</td>
+            <td class="cg-cm-cell-money ${restanteClass}" title="Restante de este mes">${fmtMoneyCg(restanteMesFila)}</td>
             <td class="cg-cm-cell-money cg-cm-saldo-final ${saldoClass}" title="Saldo acumulado">${fmtMoneyCg(m.Saldo)}</td>
             <td class="cg-cm-obs-col">${celdaObsOjoCg(m, anio)}</td>
         </tr>`;
@@ -3029,14 +3035,30 @@ async function abrirWorkspaceMesCg(anio, mes, keepScroll) {
     $(`#cgControlMensualBody tr[data-anio="${anio}"][data-mes="${mes}"]`).addClass("is-selected");
 
     $h("cgHubMesDetailTitulo").text(`${m.MesNombre} ${anio}`);
+    const totalMes = Number(m.TotalMes != null ? m.TotalMes : ((Number(m.Debe) || 0) + (Number(m.TotalIntereses) || 0))) || 0;
+    const restanteMes = Number(m.RestanteMes != null ? m.RestanteMes : (totalMes - (Number(m.Haber) || 0))) || 0;
+    const saldoAcum = Number(m.Saldo) || 0;
+    const clsRest = typeof clsSaldoDeudaMoney === "function" ? clsSaldoDeudaMoney(restanteMes) : "";
+    const clsAcum = typeof clsSaldoDeudaMoney === "function" ? clsSaldoDeudaMoney(saldoAcum) : "";
     $h("cgMesWsKpis").html(`
         <div class="cg-mes-ws-kpi"><span>Entregadas</span><strong>${fmtQtyCg(m.Entregadas)}</strong></div>
         <div class="cg-mes-ws-kpi"><span>Retiradas</span><strong>${fmtQtyCg(m.Retiradas)}</strong></div>
         <div class="cg-mes-ws-kpi"><span>Stock mes</span><strong>${fmtQtyCg(m.StockCliente)}</strong></div>
-        <div class="cg-mes-ws-kpi"><span>Debe</span><strong class="cg-val-debe">${fmtMoneyCg(m.Debe)}</strong></div>
-        <div class="cg-mes-ws-kpi"><span>Intereses</span><strong class="cg-val-debe">${fmtMoneyCg(m.TotalIntereses)}</strong></div>
-        <div class="cg-mes-ws-kpi"><span>Haber</span><strong class="cg-val-haber">${fmtMoneyCg(m.Haber)}</strong></div>
-        <div class="cg-mes-ws-kpi"><span>Saldo</span><strong class="${typeof clsSaldoDeudaMoney === "function" ? clsSaldoDeudaMoney(m.Saldo) : ""}">${fmtMoneyCg(m.Saldo)}</strong></div>
+        <div class="cg-mes-ws-kpi cg-mes-ws-kpi--total" title="Retiros del mes + intereses">
+            <span>Total mes</span><strong class="cg-val-debe">${fmtMoneyCg(totalMes)}</strong>
+        </div>
+        <div class="cg-mes-ws-kpi" title="Intereses asignados a este mes">
+            <span>Intereses</span><strong class="cg-val-debe">${fmtMoneyCg(m.TotalIntereses)}</strong>
+        </div>
+        <div class="cg-mes-ws-kpi cg-mes-ws-kpi--pagado" title="Cobros / abonos del mes">
+            <span>Pagado</span><strong class="cg-val-haber">${fmtMoneyCg(m.Haber)}</strong>
+        </div>
+        <div class="cg-mes-ws-kpi cg-mes-ws-kpi--restante" title="Total mes − pagado (solo este mes)">
+            <span>Restante mes</span><strong class="${clsRest}">${fmtMoneyCg(restanteMes)}</strong>
+        </div>
+        <div class="cg-mes-ws-kpi cg-mes-ws-kpi--acum" title="Deuda o saldo a favor acumulado al cierre de este mes">
+            <span>Saldo acum.</span><strong class="${clsAcum}">${fmtMoneyCg(saldoAcum)}</strong>
+        </div>
     `);
 
     const prods = Array.isArray(m.Productos) ? m.Productos : [];
@@ -3044,31 +3066,48 @@ async function abrirWorkspaceMesCg(anio, mes, keepScroll) {
     if (!prods.length) {
         wrap.html(`<div class="cg-hub-stock-empty">Sin productos en entregas de este mes. Cargalos abajo en el compositor.</div>`);
     } else {
-        wrap.html(`<div class="cg-hub-prod-table-wrap"><table class="cg-hub-prod-table">
+        wrap.html(`<div class="cg-hub-prod-table-wrap"><table class="cg-hub-prod-table cg-hub-prod-table--mes">
             <thead>
-                <tr>
-                    <th>Producto</th>
-                    <th class="text-end">Entregadas</th>
-                    <th class="text-end">P. unit.</th>
-                    <th class="text-end">Subtotal</th>
-                    <th class="text-end">Retiradas</th>
-                    <th class="text-end">P. unit.</th>
-                    <th class="text-end">Subtotal</th>
+                <tr class="cg-hub-prod-grp">
+                    <th rowspan="2" class="cg-prod-th-prod">Producto</th>
+                    <th rowspan="2" class="cg-prod-th-lista">Lista / tipo pago</th>
+                    <th colspan="3" class="cg-prod-th-grp cg-prod-th-grp--ent"><i class="fa fa-arrow-up"></i> Entregadas</th>
+                    <th colspan="3" class="cg-prod-th-grp cg-prod-th-grp--ret"><i class="fa fa-arrow-down"></i> Retiradas</th>
+                </tr>
+                <tr class="cg-hub-prod-cols">
+                    <th class="text-end cg-prod-th-ent">Cant.</th>
+                    <th class="text-end cg-prod-th-ent">P. unit.</th>
+                    <th class="text-end cg-prod-th-ent">Subtotal</th>
+                    <th class="text-end cg-prod-th-ret">Cant.</th>
+                    <th class="text-end cg-prod-th-ret">P. unit.</th>
+                    <th class="text-end cg-prod-th-ret">Subtotal</th>
                 </tr>
             </thead>
             <tbody>
-                ${prods.map(p => `<tr>
-                    <td>
+                ${prods.map(p => {
+                    const lista = p.ListaPrecio || p.listaPrecio || "";
+                    const ent = Number(p.Entregadas) || 0;
+                    const ret = Number(p.Retiradas) || 0;
+                    const subEnt = Number(p.SubtotalEntregas) || 0;
+                    const subRet = Number(p.SubtotalRetiros) || 0;
+                    return `<tr>
+                    <td class="cg-prod-td-prod">
                         <div class="cg-hub-prod-name">${escapeCg(p.Producto)}</div>
                         ${p.Abreviatura ? `<div class="cg-hub-prod-abrev">${escapeCg(p.Abreviatura)}</div>` : ""}
                     </td>
-                    <td class="text-end">${fmtQtyCg(p.Entregadas)}</td>
-                    <td class="text-end">${fmtMoneyCg(p.PrecioUnitarioEntrega)}</td>
-                    <td class="text-end fw-semibold">${fmtMoneyCg(p.SubtotalEntregas)}</td>
-                    <td class="text-end">${fmtQtyCg(p.Retiradas)}</td>
-                    <td class="text-end">${fmtMoneyCg(p.PrecioUnitarioRetiro)}</td>
-                    <td class="text-end fw-semibold">${fmtMoneyCg(p.SubtotalRetiros)}</td>
-                </tr>`).join("")}
+                    <td class="cg-prod-td-lista">
+                        ${lista
+                            ? `<span class="cg-hub-prod-lista">${escapeCg(lista)}</span>`
+                            : `<span class="cg-hub-prod-lista cg-hub-prod-lista--empty">—</span>`}
+                    </td>
+                    <td class="text-end cg-prod-td-ent ${ent ? "is-filled" : "is-zero"}">${fmtQtyCg(p.Entregadas)}</td>
+                    <td class="text-end cg-prod-td-ent ${ent ? "is-filled" : "is-zero"}">${fmtMoneyCg(p.PrecioUnitarioEntrega)}</td>
+                    <td class="text-end cg-prod-td-ent cg-prod-td-sub ${subEnt ? "is-filled" : "is-zero"}">${fmtMoneyCg(p.SubtotalEntregas)}</td>
+                    <td class="text-end cg-prod-td-ret ${ret ? "is-filled" : "is-zero"}">${fmtQtyCg(p.Retiradas)}</td>
+                    <td class="text-end cg-prod-td-ret ${ret ? "is-filled" : "is-zero"}">${fmtMoneyCg(p.PrecioUnitarioRetiro)}</td>
+                    <td class="text-end cg-prod-td-ret cg-prod-td-sub ${subRet ? "is-filled" : "is-zero"}">${fmtMoneyCg(p.SubtotalRetiros)}</td>
+                </tr>`;
+                }).join("")}
             </tbody>
         </table></div>`);
     }
@@ -3190,6 +3229,51 @@ async function obtenerPrecioListaWsCg(idProducto, idLista) {
     return Number(match.PrecioVenta);
 }
 
+/** Entrega (1): precio 0 por defecto. Retiro (2): trae precio de lista. */
+async function sincronizarPrecioLineaWsCg($row, linea, campo) {
+    const tipo = Number(linea.TipoMovimiento) || 1;
+
+    if (campo === "tipo") {
+        if (tipo === 1) {
+            linea.PrecioVenta = 0;
+            $row.find(".ws-precio").val(fmtQtyCg(0));
+            return;
+        }
+        if (linea.IdProducto > 0 && linea.IdListaPrecio > 0) {
+            const precio = await obtenerPrecioListaWsCg(linea.IdProducto, linea.IdListaPrecio);
+            if (precio != null) {
+                linea.PrecioVenta = precio;
+                $row.find(".ws-precio").val(fmtQtyCg(precio));
+            }
+        }
+        return;
+    }
+
+    if (campo !== "prod" && campo !== "lista") return;
+
+    if (campo === "prod" && linea.IdProducto > 0 && !linea.IdListaPrecio) {
+        const precios = await obtenerPreciosProductoWsCg(linea.IdProducto);
+        const conPrecio = (precios || []).filter(p => Number(p.PrecioVenta) > 0);
+        if (conPrecio.length === 1) {
+            linea.IdListaPrecio = Number(conPrecio[0].IdListaPrecio);
+            $row.find(".ws-lista").val(String(linea.IdListaPrecio));
+        }
+    }
+
+    if (tipo === 1) {
+        // Entrega: no traer precio de lista; dejar vacío / 0 (manual).
+        return;
+    }
+
+    if (linea.IdProducto > 0 && linea.IdListaPrecio > 0) {
+        const precio = await obtenerPrecioListaWsCg(linea.IdProducto, linea.IdListaPrecio);
+        if (precio != null) {
+            linea.PrecioVenta = precio;
+            $row.find(".ws-precio").val(fmtQtyCg(precio));
+        }
+    }
+}
+
 async function cargarSugeridosWsCg(idEstablecimiento) {
     try {
         CG.wsSugeridos = await fetchJsonCg(API_CG.productosSugeridos(CG.id, idEstablecimiento), { headers: authCg() }) || [];
@@ -3225,6 +3309,63 @@ function agregarLineaWsCg(pref) {
     actualizarResumenCobrosWsCg();
 }
 
+function normNumClaveWsCg(n) {
+    const v = Number(n);
+    if (!Number.isFinite(v)) return "0";
+    return (Math.round(v * 10000) / 10000).toString();
+}
+
+/** Huella completa: solo bloquea si TODO coincide. */
+function claveLineaWsCompletaCg(l) {
+    const tipo = Number(l.TipoMovimiento || 1);
+    const idLista = Number(l.IdListaPrecio) > 0 ? Number(l.IdListaPrecio) : 0;
+    return [
+        Number(l.IdProducto) || 0,
+        tipo,
+        idLista,
+        normNumClaveWsCg(l.Cantidad),
+        normNumClaveWsCg(l.PrecioVenta),
+        normNumClaveWsCg(l.PorcDescuento || 0),
+        normNumClaveWsCg(l.PorcIva || 0)
+    ].join("|");
+}
+
+function indicesLineasDuplicadasWsCg(lineas) {
+    const map = new Map();
+    const dups = new Set();
+    (lineas || []).forEach((l, i) => {
+        if (!(Number(l.IdProducto) > 0)) return;
+        const k = claveLineaWsCompletaCg(l);
+        if (map.has(k)) {
+            dups.add(map.get(k));
+            dups.add(i);
+        } else {
+            map.set(k, i);
+        }
+    });
+    return dups;
+}
+
+function hayLineasDuplicadasWsCg(lineas) {
+    return indicesLineasDuplicadasWsCg(lineas).size > 0;
+}
+
+function actualizarAlertaDuplicadosLineasWsCg() {
+    const lineas = hubPropCg("wsLineas") || [];
+    const dups = indicesLineasDuplicadasWsCg(lineas);
+    const hayDup = dups.size > 0;
+
+    $h("cgWsLineasBody").find(".cg-ws-linea").each(function () {
+        const idx = Number($(this).data("idx"));
+        $(this).toggleClass("cg-ws-linea--dup", dups.has(idx));
+    });
+
+    const $alert = $h("cgWsLineasDupAlert");
+    if ($alert.length) $alert.toggleClass("d-none", !hayDup);
+
+    return !hayDup;
+}
+
 function renderLineasWsCg() {
     const optsProd = (CG.wsProductosCatalogo || []).map(p => {
         const id = p.Id || p.id;
@@ -3240,6 +3381,7 @@ function renderLineasWsCg() {
 
     if (!hubPropCg("wsLineas").length) {
         $h("cgWsLineasBody").html(`<div class="cg-ws-lineas-empty">Sin líneas. Agregá un producto o usá un sugerido arriba.</div>`);
+        actualizarAlertaDuplicadosLineasWsCg();
         return;
     }
 
@@ -3276,7 +3418,7 @@ function renderLineasWsCg() {
                 </label>
                 <label class="cg-ws-field cg-ws-field--num">
                     <span>Precio</span>
-                    <input type="text" class="form-control Inputmiles ws-precio" value="${l.PrecioVenta ? fmtQtyCg(l.PrecioVenta) : ""}" inputmode="decimal" />
+                    <input type="text" class="form-control Inputmiles ws-precio" value="${fmtQtyCg(Number(l.PrecioVenta) || 0)}" inputmode="decimal" />
                 </label>
             </div>
             <div class="cg-ws-linea-foot">
@@ -3296,6 +3438,7 @@ function renderLineasWsCg() {
         if (l.IdListaPrecio) $row.find(".ws-lista").val(String(l.IdListaPrecio));
         $row.find(".ws-tipo").val(String(l.TipoMovimiento || 1));
     });
+    actualizarAlertaDuplicadosLineasWsCg();
 }
 
 function agregarCobroWsCg(preset) {
@@ -3329,25 +3472,116 @@ function sincronizarCobrosWsDesdeDomCg() {
     });
 }
 
+/** El importe solo se edita después de elegir la cuenta de caja. */
+function syncImporteHabilitadoCobroWsCg($row) {
+    if (!$row?.length) return;
+    const idCuenta = Number($row.find(".ws-cobro-cuenta").val()) || 0;
+    const $imp = $row.find(".ws-cobro-importe");
+    const habilitar = idCuenta > 0;
+    $imp.prop("disabled", !habilitar);
+    $imp.prop("readonly", !habilitar);
+    $imp.attr("tabindex", habilitar ? "0" : "-1");
+    $imp.toggleClass("ws-cobro-importe--locked", !habilitar);
+    if (!habilitar) {
+        $imp.val("");
+        const key = Number($row.data("key"));
+        const cobro = (hubPropCg("wsCobros") || []).find(c => Number(c._key) === key);
+        if (cobro) cobro.Importe = 0;
+    }
+    $imp.attr("placeholder", habilitar ? "" : "Elegí cuenta");
+    $imp.attr("title", habilitar ? "" : "Seleccioná la cuenta para cargar el importe");
+}
+
+function syncImporteHabilitadoModalCobroCg() {
+    const idCuenta = parseInt($("#cgCobroCuenta").val(), 10) || 0;
+    const $imp = $("#cgCobroImporte");
+    const habilitar = idCuenta > 0;
+    $imp.prop("disabled", !habilitar).prop("readonly", !habilitar);
+    $imp.attr("tabindex", habilitar ? "0" : "-1");
+    if (!habilitar) $imp.val("");
+    $imp.attr("placeholder", habilitar ? "" : "Elegí cuenta");
+    $imp.attr("title", habilitar ? "" : "Seleccioná la cuenta para cargar el importe");
+}
+
+/** Red de seguridad: si no hay cuenta, no deja tipear/pegar/enfocar el importe. */
+function instalarBloqueoImporteSinCuentaCg() {
+    if (window.__oaBloqueoImporteSinCuenta) return;
+    window.__oaBloqueoImporteSinCuenta = true;
+
+    const selector = ".ws-cobro-importe, #cgCobroImporte";
+    const cuentaDe = (el) => {
+        if (!el) return 0;
+        if (el.id === "cgCobroImporte") return parseInt($("#cgCobroCuenta").val(), 10) || 0;
+        const $row = $(el).closest(".cg-ws-cobro-row");
+        return Number($row.find(".ws-cobro-cuenta").val()) || 0;
+    };
+
+    document.addEventListener("focusin", (e) => {
+        const el = e.target?.closest?.(selector);
+        if (!el) return;
+        if (cuentaDe(el) > 0) return;
+        el.blur();
+        el.value = "";
+        e.stopImmediatePropagation();
+    }, true);
+
+    document.addEventListener("keydown", (e) => {
+        const el = e.target?.closest?.(selector);
+        if (!el) return;
+        if (cuentaDe(el) > 0) return;
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        el.value = "";
+    }, true);
+
+    document.addEventListener("paste", (e) => {
+        const el = e.target?.closest?.(selector);
+        if (!el) return;
+        if (cuentaDe(el) > 0) return;
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        el.value = "";
+    }, true);
+
+    document.addEventListener("input", (e) => {
+        const el = e.target?.closest?.(selector);
+        if (!el) return;
+        if (cuentaDe(el) > 0) return;
+        el.value = "";
+        e.stopImmediatePropagation();
+    }, true);
+}
+
 function cobrosWsParaGuardarCg() {
     sincronizarCobrosWsDesdeDomCg();
     return (hubPropCg("wsCobros") || []).filter(c => Number(c.Importe) > 0 && Number(c.IdCuenta) > 0);
 }
 
-function totalEntregadoWsCg(lineas) {
+function totalPorTipoWsCg(lineas, tipo) {
+    const t = Number(tipo);
     return (lineas || [])
-        .filter(l => Number(l.TipoMovimiento || 1) === 1)
+        .filter(l => Number(l.TipoMovimiento || 1) === t)
         .reduce((s, l) => s + (Number(l.Cantidad) || 0) * (Number(l.PrecioVenta) || 0), 0);
+}
+
+/** Lo cobrable es el retiro (lo que el cliente paga). */
+function totalCobrableWsCg(lineas) {
+    return totalPorTipoWsCg(lineas, 2);
 }
 
 function actualizarResumenCobrosWsCg() {
     const lineas = (hubPropCg("wsLineas") || []).filter(l => l.IdProducto > 0 && l.Cantidad > 0);
     const cobros = cobrosWsParaGuardarCg();
-    const totalEnt = totalEntregadoWsCg(lineas);
+    const totalEnt = totalPorTipoWsCg(lineas, 1);
+    const totalRet = totalPorTipoWsCg(lineas, 2);
     const totalPag = cobros.reduce((s, c) => s + Number(c.Importe || 0), 0);
+    const saldo = totalRet - totalPag;
     $h("cgWsCobroTotEntrega").text(fmtMoneyCg(totalEnt));
+    $h("cgWsCobroTotRetiro").text(fmtMoneyCg(totalRet));
     $h("cgWsCobroTotPagado").text(fmtMoneyCg(totalPag));
-    $h("cgWsCobroSaldo").text(fmtMoneyCg(Math.max(0, totalEnt - totalPag)));
+    $h("cgWsCobroSaldo").text(fmtMoneyCg(saldo))
+        .toggleClass("text-danger", saldo > 0.009)
+        .toggleClass("text-success", saldo < -0.009);
 }
 
 function renderCobrosWsCg() {
@@ -3365,7 +3599,9 @@ function renderCobrosWsCg() {
         `<option value="${c.Id}">${escapeCg(c.Nombre || ("Cuenta #" + c.Id))}</option>`
     ).join("");
 
-    $body.html(cobros.map(c => `
+    $body.html(cobros.map(c => {
+        const tieneCuenta = Number(c.IdCuenta) > 0;
+        return `
         <div class="cg-ws-cobro-row" data-key="${c._key}">
             <label>
                 <span>Fecha</span>
@@ -3385,20 +3621,26 @@ function renderCobrosWsCg() {
             <label>
                 <span>Importe</span>
                 <input type="text" class="form-control Inputmiles ws-cobro-importe" inputmode="decimal"
-                       value="${c.Importe ? fmtQtyCg(c.Importe) : ""}" />
+                       value="${tieneCuenta && c.Importe ? fmtQtyCg(c.Importe) : ""}"
+                       ${tieneCuenta ? "" : "disabled readonly tabindex=\"-1\""}
+                       placeholder="${tieneCuenta ? "" : "Elegí cuenta"}"
+                       title="${tieneCuenta ? "" : "Seleccioná la cuenta para cargar el importe"}" />
             </label>
             <button type="button" class="btn btn-outline-danger btn-sm btn-ws-quitar-cobro" data-key="${c._key}" title="Quitar">
                 <i class="fa fa-trash"></i>
             </button>
-        </div>
-    `).join(""));
+        </div>`;
+    }).join(""));
 
     cobros.forEach(c => {
         const $row = $body.find(`.cg-ws-cobro-row[data-key="${c._key}"]`);
         if (c.IdCuenta) $row.find(".ws-cobro-cuenta").val(String(c.IdCuenta));
+        syncImporteHabilitadoCobroWsCg($row);
         if (typeof prepararInputMiles === "function") {
             $row.find(".ws-cobro-importe").each(function () { prepararInputMiles(this); });
         }
+        // Reafirmar por si prepararInputMiles toca el input
+        syncImporteHabilitadoCobroWsCg($row);
     });
     actualizarResumenCobrosWsCg();
 }
@@ -3476,6 +3718,15 @@ async function guardarVisitaUnificadaCg() {
         return;
     }
 
+    if (!actualizarAlertaDuplicadosLineasWsCg() || hayLineasDuplicadasWsCg(lineas)) {
+        errorModal("No podés repetir una línea 100% igual (producto, tipo, lista, cantidad y precio). Si cambia algún dato, sí se permite.");
+        const $a = $h("cgWsLineasDupAlert");
+        if ($a.length && $a.offset()) {
+            $("html, body").animate({ scrollTop: $a.offset().top - 100 }, 200);
+        }
+        return;
+    }
+
     if (cobros.length && (hubPropCg("wsCobros") || []).some(c => Number(c.Importe) > 0 && !(Number(c.IdCuenta) > 0))) {
         errorModal("Cada cobro con importe debe tener una cuenta de caja.");
         return;
@@ -3494,10 +3745,10 @@ async function guardarVisitaUnificadaCg() {
             return;
         }
 
-        const totalEnt = totalEntregadoWsCg(lineas);
+        const totalCobrar = totalCobrableWsCg(lineas);
         const sumaCobros = cobros.reduce((s, c) => s + Number(c.Importe || 0), 0);
-        if (sumaCobros > totalEnt + 0.01) {
-            errorModal("La suma de los cobros no puede superar el total de lo entregado.");
+        if (sumaCobros > totalCobrar + 0.01) {
+            errorModal("La suma de los cobros no puede superar el total de lo retirado.");
             return;
         }
 
@@ -4253,6 +4504,7 @@ function abrirModalCobroCg() {
     $("#cgCobroFecha").val(new Date().toISOString().slice(0, 10));
     $("#cgCobroImporte, #cgCobroConcepto").val("");
     $("#cgCobroCuenta").val("").trigger("change");
+    syncImporteHabilitadoModalCobroCg();
     CG.modalCobro?.show();
 }
 
@@ -4494,7 +4746,12 @@ function renderControlMensualCardsCg(filas, mostrarAnio) {
 
     $grid.html(filas.map(m => {
         const anio = m.Anio || CG.controlAnio;
+        const totalMes = Number(m.TotalMes != null ? m.TotalMes : ((Number(m.Debe) || 0) + (Number(m.TotalIntereses) || 0))) || 0;
+        const restanteMes = Number(m.RestanteMes != null ? m.RestanteMes : (totalMes - (Number(m.Haber) || 0))) || 0;
         const saldo = Number(m.Saldo) || 0;
+        const restanteCls = typeof clsSaldoDeudaMoney === "function"
+            ? clsSaldoDeudaMoney(restanteMes)
+            : "";
         const saldoCls = typeof clsSaldoDeudaMoney === "function"
             ? clsSaldoDeudaMoney(saldo)
             : (saldo > 0 ? "cg-val-saldo-neg" : (saldo < 0 ? "cg-val-saldo-pos" : "cg-val-saldo-cero"));
@@ -4515,11 +4772,12 @@ function renderControlMensualCardsCg(filas, mostrarAnio) {
                 <div class="cg-data-card-body">
                     <div class="cg-card-field"><span>Entreg.</span><strong class="rp-money-in">${fmtQtyCg(m.Entregadas)}</strong></div>
                     <div class="cg-card-field"><span>Retir.</span><strong class="rp-money-out">${fmtQtyCg(m.Retiradas)}</strong></div>
-                    <div class="cg-card-field"><span>Debe</span><strong class="cg-val-debe">${fmtMoneyCg(m.Debe)}</strong></div>
-                    <div class="cg-card-field"><span>Efectivo</span><strong>${fmtMoneyCg(m.AbonoEfectivo)}</strong></div>
-                    <div class="cg-card-field"><span>Transf.</span><strong>${fmtMoneyCg(m.AbonoTransferencia)}</strong></div>
+                    <div class="cg-card-field"><span>Total mes</span><strong class="cg-val-debe">${fmtMoneyCg(totalMes)}</strong></div>
+                    <div class="cg-card-field"><span>Efectivo</span><strong class="${(Number(m.AbonoEfectivo) || 0) > 0 ? "cg-val-haber" : ""}">${fmtMoneyCg(m.AbonoEfectivo)}</strong></div>
+                    <div class="cg-card-field"><span>Transf.</span><strong class="${(Number(m.AbonoTransferencia) || 0) > 0 ? "cg-val-haber" : ""}">${fmtMoneyCg(m.AbonoTransferencia)}</strong></div>
                     <div class="cg-card-field"><span>Intereses</span><strong class="${atrasado && !(Number(m.CantidadIntereses) || 0) ? "rp-money-out" : ""}">${(Number(m.CantidadIntereses) || 0) > 0 ? `${m.CantidadIntereses}× ${fmtMoneyCg(m.TotalIntereses)}` : "—"}</strong></div>
-                    <div class="cg-card-field cg-card-field--full"><span>Saldo</span><strong class="${saldoCls}">${fmtMoneyCg(m.Saldo)}</strong></div>
+                    <div class="cg-card-field"><span>Restante mes</span><strong class="${restanteCls}">${fmtMoneyCg(restanteMes)}</strong></div>
+                    <div class="cg-card-field"><span>Saldo acum.</span><strong class="${saldoCls}">${fmtMoneyCg(saldo)}</strong></div>
                     ${m.Observaciones ? `<div class="cg-card-field cg-card-field--full cg-card-field--obs"><span>Obs.</span>${celdaObsOjoCg(m, anio)}</div>` : ""}
                 </div>
             </article>`;
