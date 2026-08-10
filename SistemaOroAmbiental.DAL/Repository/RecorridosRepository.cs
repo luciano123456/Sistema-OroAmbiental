@@ -358,6 +358,7 @@ namespace SistemaOroAmbiental.DAL.Repository
 
             var items = await _db.ClientesRecorridos.AsNoTracking()
                 .Include(r => r.IdClienteNavigation)
+                    .ThenInclude(c => c!.IdEstadoNavigation)
                 .Include(r => r.IdEstablecimientoNavigation)
                     .ThenInclude(e => e!.ClientesEstablecimientosContactos)
                 .Include(r => r.IdEstablecimientoNavigation)
@@ -373,6 +374,11 @@ namespace SistemaOroAmbiental.DAL.Repository
                     r.IdDia == idDia)
                 .OrderBy(r => r.Posicion)
                 .ToListAsync();
+
+            // Clientes en licencia no salen en la hoja (siguen en el recorrido para cuando vuelvan).
+            items = items
+                .Where(r => r.IdClienteNavigation == null || !EstaEnLicencia(r.IdClienteNavigation, fecha.Date))
+                .ToList();
 
             var idsClientes = items.Select(i => i.IdCliente).Distinct().ToList();
             var controles = idsClientes.Count == 0
@@ -731,6 +737,29 @@ namespace SistemaOroAmbiental.DAL.Repository
             => !string.IsNullOrWhiteSpace(codigo)
                && (codigo.Contains("transf", StringComparison.OrdinalIgnoreCase)
                    || codigo.Contains("banco", StringComparison.OrdinalIgnoreCase));
+
+        /// <summary>
+        /// Misma regla que ClientesOperativoRepository: fechas ganan; si no hay fechas, estado "Licencia".
+        /// </summary>
+        private static bool EstaEnLicencia(Cliente cliente, DateTime fecha)
+        {
+            var estado = cliente.IdEstadoNavigation?.Nombre ?? "";
+            var porEstado = estado.Contains("Licencia", StringComparison.OrdinalIgnoreCase);
+
+            var desde = cliente.FechaLicenciaDesde?.Date;
+            var hasta = cliente.FechaLicenciaHasta?.Date;
+
+            if (desde.HasValue && hasta.HasValue)
+                return fecha >= desde.Value && fecha <= hasta.Value;
+
+            if (desde.HasValue && !hasta.HasValue)
+                return fecha >= desde.Value;
+
+            if (!desde.HasValue && hasta.HasValue)
+                return fecha <= hasta.Value;
+
+            return porEstado;
+        }
 
         private static decimal ResolverPrecioLista(
             int idProducto,

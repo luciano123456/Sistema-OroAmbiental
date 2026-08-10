@@ -21,7 +21,7 @@ function columnDefsClientesGrid() {
     return [
         { targets: 0, className: "rp-col-acciones", width: "118px", orderable: false },
         { targets: 1, className: "rp-col-id", width: "88px" },
-        { targets: 2, className: "rp-col-nombre", width: "260px" },
+        { targets: 2, className: "rp-col-nombre", width: "280px" },
         { targets: 3, className: "rp-col-cuit", width: "145px" },
         { targets: 4, className: "rp-col-sucursal", width: "165px" },
         { targets: 5, className: "rp-col-provincia", width: "155px" },
@@ -31,6 +31,65 @@ function columnDefsClientesGrid() {
         { targets: 9, className: "rp-col-email", width: "280px" },
         { targets: 10, className: "rp-col-activo", width: "108px" }
     ];
+}
+
+function parseFechaCliente(val) {
+    if (!val) return null;
+    const d = val instanceof Date ? val : new Date(val);
+    if (Number.isNaN(d.getTime())) return null;
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
+/** Misma regla que backend EstaEnLicencia: fechas ganan; si no hay, estado "Licencia". */
+function clienteEnLicencia(data, fechaRef) {
+    if (!data) return false;
+    const hoy = fechaRef
+        ? (fechaRef instanceof Date ? fechaRef : parseFechaCliente(fechaRef))
+        : new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
+    const desde = parseFechaCliente(data.FechaLicenciaDesde);
+    const hasta = parseFechaCliente(data.FechaLicenciaHasta);
+    const porEstado = String(data.Estado || "").toLowerCase().includes("licencia");
+
+    if (desde && hasta) return hoy >= desde && hoy <= hasta;
+    if (desde && !hasta) return hoy >= desde;
+    if (!desde && hasta) return hoy <= hasta;
+    return porEstado;
+}
+
+function escapeHtmlClientes(text) {
+    return String(text ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+}
+
+function renderNombreClienteConLicencia(data, type) {
+    const nombre = data?.Nombre ?? "";
+    if (type === "sort" || type === "filter" || type === "export" || type === "excel" || type === "csv" || type === "pdf" || type === "print") {
+        return nombre;
+    }
+    const safe = escapeHtmlClientes(nombre);
+    if (!clienteEnLicencia(data)) return safe;
+
+    const desde = parseFechaCliente(data.FechaLicenciaDesde);
+    const hasta = parseFechaCliente(data.FechaLicenciaHasta);
+    const fmt = d => d ? d.toLocaleDateString("es-AR") : null;
+    const partes = [];
+    if (desde) partes.push(`desde ${fmt(desde)}`);
+    if (hasta) partes.push(`hasta ${fmt(hasta)}`);
+    const title = partes.length
+        ? `En licencia ${partes.join(" ")}`
+        : "Cliente en licencia";
+
+    return `<span class="cl-nombre-con-licencia">
+        <span class="cl-nombre-texto">${safe}</span>
+        <span class="cl-badge-licencia" title="${escapeHtmlClientes(title)}">
+            <i class="fa fa-umbrella" aria-hidden="true"></i>
+            <span>Licencia</span>
+        </span>
+    </span>`;
 }
 
 const URL_GESTION_CLIENTE = id => id > 0 ? `/Clientes/Gestion?id=${id}` : "/Clientes/Gestion";
@@ -254,7 +313,13 @@ async function configurarDataTable(data) {
                     eliminar: "eliminarCliente"
                 }, "Clientes"),
                 columnaGridId(),
-                { data: 'Nombre', className: 'rp-col-nombre' },
+                {
+                    data: 'Nombre',
+                    className: 'rp-col-nombre',
+                    render: function (_data, type, row) {
+                        return renderNombreClienteConLicencia(row, type);
+                    }
+                },
                 { data: 'Cuit', className: 'rp-col-cuit' },
                 { data: 'Sucursal', className: 'rp-col-sucursal' },
                 { data: 'Provincia', className: 'rp-col-provincia' },
@@ -267,6 +332,9 @@ async function configurarDataTable(data) {
             createdRow: function (row, data) {
                 if (typeof createdRowEstiloActivoGrilla === "function") {
                     createdRowEstiloActivoGrilla(row, data);
+                }
+                if (clienteEnLicencia(data)) {
+                    $(row).addClass("dt-row-licencia");
                 }
             },
             dom: 'Bfrtip',

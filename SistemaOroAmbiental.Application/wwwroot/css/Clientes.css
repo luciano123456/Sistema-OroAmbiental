@@ -298,6 +298,66 @@
     background: rgba(231, 76, 60, 0.08) !important;
 }
 
+/* Clientes en licencia */
+.cl-page #grd_Clientes tbody tr.dt-row-licencia td {
+    background: rgba(52, 152, 219, 0.07) !important;
+}
+
+.cl-page #grd_Clientes tbody tr.dt-row-licencia.dt-row-inactivo td {
+    background: rgba(52, 152, 219, 0.05) !important;
+}
+
+.cl-nombre-con-licencia {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    flex-wrap: wrap;
+    max-width: 100%;
+}
+
+.cl-nombre-texto {
+    min-width: 0;
+}
+
+.cl-badge-licencia {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.28rem;
+    flex-shrink: 0;
+    padding: 0.18rem 0.55rem;
+    border-radius: 999px;
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    line-height: 1.2;
+    color: #d6ecff;
+    background: linear-gradient(135deg, rgba(52, 152, 219, 0.35), rgba(41, 128, 185, 0.28));
+    border: 1px solid rgba(52, 152, 219, 0.55);
+    box-shadow: 0 0 0 1px rgba(52, 152, 219, 0.12), 0 4px 12px rgba(41, 128, 185, 0.18);
+    animation: cl-licencia-pulse 2.4s ease-in-out infinite;
+}
+
+.cl-badge-licencia .fa {
+    font-size: 0.72rem;
+    color: #7ec8f5;
+}
+
+@keyframes cl-licencia-pulse {
+    0%, 100% {
+        box-shadow: 0 0 0 1px rgba(52, 152, 219, 0.12), 0 4px 12px rgba(41, 128, 185, 0.18);
+    }
+    50% {
+        box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.22), 0 6px 16px rgba(41, 128, 185, 0.28);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .cl-badge-licencia {
+        animation: none;
+    }
+}
+
 @media (max-width: 768px) {
     .cl-kpis-dashboard {
         grid-template-columns: repeat(2, 1fr);
