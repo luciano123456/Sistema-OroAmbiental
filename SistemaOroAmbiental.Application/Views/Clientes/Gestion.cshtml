@@ -11,7 +11,7 @@
     <link href="~/css/Productora.css?v=6.2" rel="stylesheet" />
     <link href="~/css/disenopantallas.css?v=6.2" rel="stylesheet" />
     <link href="~/css/M_Generico.css?v=6.2" rel="stylesheet" />
-    <link href="~/css/ClientesGestion.css?v=15.7" rel="stylesheet" />
+    <link href="~/css/ClientesGestion.css?v=16.0" rel="stylesheet" />
     <link href="~/css/ClientesEstablecimientos.css?v=5.6" rel="stylesheet" />
     <link href="~/css/ContratosModal.css?v=5.4" rel="stylesheet" />
 }
@@ -652,7 +652,7 @@
                                         <label class="form-label cg-ws-label" for="cgCmCajasAFavor">Cajas a favor</label>
                                         <input type="number" id="cgCmCajasAFavor" class="form-control" min="0" step="1" />
                                     </div>
-                                    <div class="cg-ws-meta-field cg-ws-meta-field--switch">
+                                    <div class="cg-ws-meta-field cg-ws-meta-field--switch d-none" hidden>
                                         <div class="cg-cm-sin-entrega-box" id="cgCmSinEntregaBox">
                                             <label class="cg-cm-sin-entrega-toggle mb-0" for="cgCmSinEntrega">
                                                 <input type="checkbox" id="cgCmSinEntrega" class="rp-switch-input">
@@ -1109,6 +1109,26 @@
     </div>
 </div>
 
+<div class="modal fade rp-modal" id="modalObsControlCg" tabindex="-1" aria-labelledby="cgObsModalTitulo" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rp-modal-content">
+            <div class="modal-header rp-modal-header">
+                <div>
+                    <div class="rp-modal-title" id="cgObsModalTitulo"><i class="fa fa-eye"></i> Observaci&oacute;n</div>
+                    <div class="rp-modal-sub" id="cgObsModalSub">Mes seleccionado</div>
+                </div>
+                <button type="button" class="btn-close rp-btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <div class="cg-obs-modal-body" id="cgObsModalBody"></div>
+            </div>
+            <div class="modal-footer rp-modal-footer">
+                <button type="button" class="rp-btn rp-btn-soft" data-bs-dismiss="modal"><i class="fa fa-times"></i> Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <partial name="~/Views/Entities/M_Contratos.cshtml" />
 
 @section Scripts {
@@ -1120,5 +1140,5 @@
     <script src="~/js/Entities/M_ClientesEstablecimientos.js?v=7.0"></script>
     <script src="~/js/ContratosDocumentos.js?v=5.3"></script>
     <script src="~/js/Entities/M_Contratos.js?v=5.4"></script>
-    <script src="~/js/ClientesGestion.js?v=18.5"></script>
+    <script src="~/js/ClientesGestion.js?v=19.0"></script>
 }

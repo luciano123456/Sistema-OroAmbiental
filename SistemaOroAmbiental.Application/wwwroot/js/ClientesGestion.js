@@ -753,13 +753,13 @@ function wireEventosCg() {
     });
     $h("btnGuardarControlMensualCg").on("click", busyHandler(guardarVisitaUnificadaCg));
     $h("cgControlMensualBody").on("click", "tr[data-mes]", function (e) {
-        if ($(e.target).closest(".cg-cm-int-eye").length) return;
+        if ($(e.target).closest(".cg-cm-int-eye, .cg-cm-obs-eye").length) return;
         const anio = Number($(this).data("anio"));
         const mes = Number($(this).data("mes"));
         abrirWorkspaceMesCg(anio, mes);
     });
     $h("cgCards_controlMensual").on("click", "article[data-mes]", function (e) {
-        if ($(e.target).closest(".cg-cm-int-eye").length) return;
+        if ($(e.target).closest(".cg-cm-int-eye, .cg-cm-obs-eye").length) return;
         const anio = Number($(this).data("anio"));
         const mes = Number($(this).data("mes"));
         abrirWorkspaceMesCg(anio, mes);
@@ -804,6 +804,12 @@ function wireEventosCg() {
         const mes = Number($(this).data("mes"));
         if (!anio || !mes) return;
         abrirModalInteresesHistCg(anio, mes);
+    });
+    $(document).on("click", ".cg-cm-obs-eye", function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        syncHubActivoFromElCg(this);
+        abrirModalObsControlCg(this);
     });
     $h("cgCmSinEntrega").on("change", syncSinEntregaUiCg);
     $h("cgCmFechaVisita").on("change", function () {
@@ -2181,12 +2187,12 @@ function bindEstHubEventsCg() {
         abrirWorkspaceMesCg(now.getFullYear(), now.getMonth() + 1);
     });
     $(root).on("click", "#cgEstControlMensualBody tr[data-mes]", function (e) {
-        if ($(e.target).closest(".cg-cm-int-eye").length) return;
+        if ($(e.target).closest(".cg-cm-int-eye, .cg-cm-obs-eye").length) return;
         CG.hubActivo = "est";
         abrirWorkspaceMesCg(Number($(this).data("anio")), Number($(this).data("mes")));
     });
     $(root).on("click", "#cgEstCards_controlMensual article[data-mes]", function (e) {
-        if ($(e.target).closest(".cg-cm-int-eye").length) return;
+        if ($(e.target).closest(".cg-cm-int-eye, .cg-cm-obs-eye").length) return;
         CG.hubActivo = "est";
         abrirWorkspaceMesCg(Number($(this).data("anio")), Number($(this).data("mes")));
     });
@@ -2926,7 +2932,8 @@ function renderControlMensualCg(data) {
             <th class="${mostrarAnio ? "cg-cm-sticky-left-3" : "cg-cm-sticky-left-2"}" rowspan="2">Visita</th>
             <th class="cg-cm-th-grp-ent" colspan="${colspanEnt}">Productos entregados</th>
             <th class="cg-cm-th-grp-ret" colspan="${colspanRet}">Productos retirados</th>
-            <th class="cg-cm-th-grp-money" colspan="8">Pagos y saldo</th>
+            <th class="cg-cm-th-grp-money" colspan="6">Pagos y saldo</th>
+            <th class="cg-cm-obs-col cg-cm-th-obs" rowspan="2" title="Observaciones del mes">Obs.</th>
         </tr>
         <tr class="cg-cm-head-cols">
             ${nProd
@@ -2940,13 +2947,11 @@ function renderControlMensualCg(data) {
             <th class="cg-cm-cell-money">Transf.</th>
             <th>F. transf.</th>
             <th class="cg-cm-cell-money">Intereses</th>
-            <th>S/E</th>
-            <th>Obs.</th>
-            <th class="cg-cm-cell-money cg-cm-th-saldo">Saldo</th>
+            <th class="cg-cm-cell-money cg-cm-th-saldo" title="Saldo acumulado al cierre del mes">Saldo</th>
         </tr>`);
 
     if (!filas.length) {
-        const cols = (mostrarAnio ? 1 : 0) + 2 + colspanEnt + colspanRet + 8;
+        const cols = (mostrarAnio ? 1 : 0) + 2 + colspanEnt + colspanRet + 7;
         tbody.html(`<tr class="cg-cm-empty"><td colspan="${cols}" class="text-center py-4">
             No hay datos para los filtros elegidos.</td></tr>`);
         renderControlMensualCardsCg([], mostrarAnio);
@@ -2954,7 +2959,7 @@ function renderControlMensualCg(data) {
     }
 
     tbody.html(filas.map(m => {
-        const rowClass = m.SinEntrega ? "cg-cm-sin-entrega" : "";
+        const rowClass = "";
         const anio = m.Anio || CG.controlAnio;
         const saldo = Number(m.Saldo) || 0;
         const saldoClass = typeof clsSaldoDeudaMoney === "function"
@@ -2973,8 +2978,8 @@ function renderControlMensualCg(data) {
             ? columnas.map(c => {
                 const p = mapaProd[c.IdProducto];
                 const q = Number(p?.Entregadas) || 0;
-                const cls = q === 0 ? (m.SinEntrega ? "is-zero" : "is-empty") : "";
-                return `<td class="cg-cm-cell-qty ${cls}" title="${escapeCg(c.Nombre)}">${q === 0 ? (m.SinEntrega ? "0" : "—") : fmtQtyCg(q)}</td>`;
+                const cls = q === 0 ? "is-empty" : "";
+                return `<td class="cg-cm-cell-qty ${cls}" title="${escapeCg(c.Nombre)}">${q === 0 ? "—" : fmtQtyCg(q)}</td>`;
             }).join("")
             : `<td class="cg-cm-cell-qty is-empty">—</td>`;
 
@@ -2997,9 +3002,8 @@ function renderControlMensualCg(data) {
             <td class="cg-cm-cell-money">${fmtMoneyCg(m.AbonoTransferencia)}</td>
             <td class="cg-cm-date">${formatearFechaCortaCg(m.FechaTransferencia)}</td>
             <td class="cg-cm-cell-money cg-cm-int">${celdaInteresesMesCg(m, anio)}</td>
-            <td class="cg-cm-flag">${m.SinEntrega ? '<i class="fa fa-times text-danger"></i>' : ""}</td>
-            <td class="cg-cm-obs" title="${escapeCg(m.Observaciones || "")}">${escapeCg(truncarCg(m.Observaciones, 24))}</td>
-            <td class="cg-cm-cell-money cg-cm-saldo-final ${saldoClass}">${fmtMoneyCg(m.Saldo)}</td>
+            <td class="cg-cm-cell-money cg-cm-saldo-final ${saldoClass}" title="Saldo acumulado">${fmtMoneyCg(m.Saldo)}</td>
+            <td class="cg-cm-obs-col">${celdaObsOjoCg(m, anio)}</td>
         </tr>`;
     }).join(""));
 
@@ -3963,6 +3967,47 @@ function truncarCg(txt, max) {
     return txt.length > max ? txt.slice(0, max) + "…" : txt;
 }
 
+function celdaObsOjoCg(m, anio) {
+    const obs = (m?.Observaciones || "").trim();
+    if (!obs) {
+        return `<span class="cg-cm-obs-empty" title="Sin observaciones">—</span>`;
+    }
+    const mesNombre = escapeCg(m.MesNombre || "");
+    const anioVal = Number(anio || m.Anio || CG.controlAnio) || "";
+    return `<button type="button"
+        class="cg-cm-obs-eye"
+        data-anio="${anioVal}"
+        data-mes="${Number(m.Mes) || ""}"
+        data-mes-nombre="${mesNombre}"
+        title="Ver observación"
+        aria-label="Ver observación">
+        <span class="cg-cm-obs-eye-stack" aria-hidden="true">
+            <i class="fa fa-eye cg-cm-obs-eye-open"></i>
+            <i class="fa fa-eye-slash cg-cm-obs-eye-closed"></i>
+        </span>
+    </button>`;
+}
+
+function abrirModalObsControlCg(el) {
+    const $btn = $(el);
+    const anio = Number($btn.attr("data-anio")) || 0;
+    const mes = Number($btn.attr("data-mes")) || 0;
+    const filas = hubPropCg("controlFiltrado")?.Filas || [];
+    const fila = filas.find(x => Number(x.Mes) === mes && Number(x.Anio || CG.controlAnio) === anio);
+    const obs = String(fila?.Observaciones || "").trim();
+    if (!obs) return;
+
+    const mesNombre = $btn.attr("data-mes-nombre") || fila?.MesNombre || "";
+    const sub = [mesNombre, anio || ""].filter(Boolean).join(" ") || (mes ? `Mes ${mes}` : "Observación del mes");
+
+    $("#cgObsModalSub").text(sub);
+    $("#cgObsModalBody").text(obs);
+
+    const modalEl = document.getElementById("modalObsControlCg");
+    if (!modalEl || typeof bootstrap === "undefined") return;
+    bootstrap.Modal.getOrCreateInstance(modalEl).show();
+}
+
 function syncSinEntregaUiCg() {
     const activo = $h("cgCmSinEntrega").is(":checked");
     $h("lblCgCmSinEntrega").text(activo ? "Mes sin entrega" : "Con entrega este mes");
@@ -4456,9 +4501,9 @@ function renderControlMensualCardsCg(filas, mostrarAnio) {
         const atrasado = puedeCargarInteresMesCg(m, anio, m.Mes);
         const badge = atrasado
             ? `<span class="cg-data-card-badge cg-data-card-badge--atraso">Atrasado</span>`
-            : (m.SinEntrega ? `<span class="cg-data-card-badge cg-data-card-badge--warn">Sin entrega</span>` : "");
+            : "";
         return `
-            <article class="cg-data-card cg-data-card--cm rp-card-selectable ${m.SinEntrega ? "is-warn" : ""} ${atrasado ? "is-atraso" : ""}"
+            <article class="cg-data-card cg-data-card--cm rp-card-selectable ${atrasado ? "is-atraso" : ""}"
                      data-anio="${anio}" data-mes="${m.Mes}" tabindex="0" role="button">
                 <div class="cg-data-card-head">
                     <div class="cg-data-card-head-text">
@@ -4474,8 +4519,8 @@ function renderControlMensualCardsCg(filas, mostrarAnio) {
                     <div class="cg-card-field"><span>Efectivo</span><strong>${fmtMoneyCg(m.AbonoEfectivo)}</strong></div>
                     <div class="cg-card-field"><span>Transf.</span><strong>${fmtMoneyCg(m.AbonoTransferencia)}</strong></div>
                     <div class="cg-card-field"><span>Intereses</span><strong class="${atrasado && !(Number(m.CantidadIntereses) || 0) ? "rp-money-out" : ""}">${(Number(m.CantidadIntereses) || 0) > 0 ? `${m.CantidadIntereses}× ${fmtMoneyCg(m.TotalIntereses)}` : "—"}</strong></div>
-                    <div class="cg-card-field cg-card-field--full"><span>Saldo (final)</span><strong class="${saldoCls}">${fmtMoneyCg(m.Saldo)}</strong></div>
-                    ${m.Observaciones ? `<div class="cg-card-field cg-card-field--full"><span>Obs.</span><strong>${escapeCg(truncarCg(m.Observaciones, 60))}</strong></div>` : ""}
+                    <div class="cg-card-field cg-card-field--full"><span>Saldo</span><strong class="${saldoCls}">${fmtMoneyCg(m.Saldo)}</strong></div>
+                    ${m.Observaciones ? `<div class="cg-card-field cg-card-field--full cg-card-field--obs"><span>Obs.</span>${celdaObsOjoCg(m, anio)}</div>` : ""}
                 </div>
             </article>`;
     }).join(""));
