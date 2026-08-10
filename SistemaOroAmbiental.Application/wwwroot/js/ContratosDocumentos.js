@@ -180,6 +180,9 @@
         const email = safe(d.EmailCliente || d.emailCliente || d.EmailGenerador);
         const cuit = safe(d.CuitCliente || d.cuitCliente || d.CuitGenerador);
         const profesion = safe(d.ProfesionCliente || d.profesionCliente || d.Profesion || d.profesion);
+        const tipoGenerador = safe(
+            d.TipoGeneradorCliente || d.tipoGeneradorCliente || d.TipoGenerador || d.tipoGenerador
+        ) || profesion;
         const iva = safe(d.IvaCliente || d.ivaCliente || d.CondicionIvaCliente || d.condicionIvaCliente);
         const diasHorarios = safe(d.DiasHorariosCliente || d.diasHorariosCliente || d.DiaRecoleccion);
 
@@ -194,7 +197,10 @@
             LOCALIDADCLIENTE: localidad,
             TELEFONOCLIENTE: telefono,
             CUITCLIENTE: cuit,
-            PROFESIONCLIENTE: profesion,
+            TIPOGENERADORCLIENTE: tipoGenerador,
+            TIPOGENERADOR: tipoGenerador,
+            /* Alias histórico en plantillas viejas */
+            PROFESIONCLIENTE: tipoGenerador || profesion,
             IVACLIENTE: iva,
             DIASCLIENTE: diasHorarios,
             EMAILCLIENTE: email,
@@ -226,6 +232,8 @@
             CUIT: cuit,
             Profesion: profesion,
             ProfesionCliente: profesion,
+            TipoGenerador: tipoGenerador,
+            TipoGeneradorCliente: tipoGenerador,
             CondicionIva: iva,
             IvaCliente: iva,
             DiasHorariosCliente: diasHorarios,
