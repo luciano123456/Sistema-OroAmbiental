@@ -748,8 +748,9 @@ window.__OA_ENTREGA_BUILD = "precio-entrega-lista-20260811";
             const exact = rows.find(x => Number(x.IdListaPrecio ?? x.idListaPrecio) === idL);
             if (exact) return Number(exact.PrecioVenta ?? exact.precioVenta);
         }
-        if (rows.length === 1) return Number(rows[0].PrecioVenta ?? rows[0].precioVenta);
-        return null;
+        const sinLista = rows.find(x => !(Number(x.IdListaPrecio ?? x.idListaPrecio) > 0));
+        if (sinLista) return Number(sinLista.PrecioVenta ?? sinLista.precioVenta);
+        return Number(rows[0].PrecioVenta ?? rows[0].precioVenta);
     }
 
     async function obtenerPrecioListaEntrega(idProducto, idLista) {

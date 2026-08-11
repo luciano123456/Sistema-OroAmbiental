@@ -3454,8 +3454,10 @@ function precioDesdeSugeridosWsCg(idProducto, idLista) {
         const exact = rows.find(s => Number(s.IdListaPrecio) === idL);
         if (exact) return Number(exact.PrecioVenta);
     }
-    if (rows.length === 1) return Number(rows[0].PrecioVenta);
-    return null;
+    // Si la lista del establecimiento no coincide (o viene vacía), igual usar su precio.
+    const sinLista = rows.find(s => !(Number(s.IdListaPrecio) > 0));
+    if (sinLista) return Number(sinLista.PrecioVenta);
+    return Number(rows[0].PrecioVenta);
 }
 
 async function obtenerPrecioListaWsCg(idProducto, idLista) {
@@ -3541,12 +3543,19 @@ async function cargarSugeridosWsCg(idEstablecimiento) {
 }
 
 function agregarLineaWsCg(pref) {
+    const idProducto = pref?.IdProducto || 0;
+    const idLista = pref?.IdListaPrecio || 0;
+    let precio = Number(pref?.PrecioVenta) || 0;
+    if (!(precio > 0) && idProducto > 0) {
+        const desdeSug = precioDesdeSugeridosWsCg(idProducto, idLista);
+        if (desdeSug != null && Number(desdeSug) > 0) precio = Number(desdeSug);
+    }
     hubPropCg("wsLineas").push({
-        IdProducto: pref?.IdProducto || 0,
-        IdListaPrecio: pref?.IdListaPrecio || 0,
+        IdProducto: idProducto,
+        IdListaPrecio: idLista,
         TipoMovimiento: pref?.TipoMovimiento || 1,
         Cantidad: pref?.Cantidad || 1,
-        PrecioVenta: pref?.PrecioVenta || 0
+        PrecioVenta: precio
     });
     renderLineasWsCg();
     actualizarResumenCobrosWsCg();
