@@ -45,6 +45,7 @@
     border-radius: 50%;
 }
 
+/* Compat: el avatar del navbar mantiene tamaño circular */
 .rp-user-avatar.rp-avatar-circle {
     width: 34px;
     height: 34px;

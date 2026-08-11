@@ -1269,17 +1269,18 @@ body.layout-modulo:has(.rp-perfil-page) .layout-modulo-content > main {
 .rp-perfil-avatar {
     width: 72px;
     height: 72px;
-    border-radius: 18px;
+    border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.25rem;
-    font-weight: 800;
-    letter-spacing: 0.06em;
+    font-size: 1.55rem;
+    font-weight: 700;
+    letter-spacing: 0;
     color: #fff;
-    background: linear-gradient(145deg, #0ea5e9, #2563eb);
-    border: 2px solid rgba(255, 255, 255, 0.2);
+    background: #3b82f6;
+    border: 2px solid rgba(255, 255, 255, 0.22);
     box-shadow: 0 8px 20px rgba(37, 99, 235, 0.35);
+    overflow: hidden;
 }
 
 .rp-perfil-kicker {
@@ -1412,6 +1413,11 @@ body.layout-modulo:has(.rp-perfil-page) .layout-modulo-content > main {
 .rp-perfil-block-icon.teal {
     background: linear-gradient(135deg, #2dd4bf, #14b8a6);
     color: #042f2e;
+}
+
+.rp-perfil-block-icon.blue {
+    background: linear-gradient(135deg, #60a5fa, #3b82f6);
+    color: #eff6ff;
 }
 
 .rp-perfil-block-icon.amber {
@@ -1684,6 +1690,153 @@ body.layout-modulo:has(.rp-perfil-page) .layout-modulo-content > main {
     .rp-perfil-footer .rp-perfil-btn {
         width: 100%;
         min-width: 0;
+    }
+}
+
+/* ==============================
+   AVATAR EDITOR (configuración)
+============================== */
+
+.rp-avatar-editor {
+    display: grid;
+    grid-template-columns: minmax(160px, 220px) 1fr;
+    gap: 1.75rem 2rem;
+    align-items: start;
+}
+
+.rp-avatar-editor-preview {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.85rem;
+    text-align: center;
+}
+
+.rp-avatar-editor-preview .rp-avatar-circle--lg,
+#rpAvatarPreview {
+    width: 96px;
+    height: 96px;
+    font-size: 2rem;
+}
+
+.rp-avatar-editor-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    justify-content: center;
+}
+
+.rp-avatar-upload-btn {
+    cursor: pointer;
+    margin: 0;
+}
+
+.rp-avatar-editor-controls {
+    min-width: 0;
+}
+
+.rp-avatar-control-group + .rp-avatar-control-group {
+    margin-top: 1.25rem;
+}
+
+.rp-avatar-swatches {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.55rem;
+}
+
+.rp-avatar-swatch {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.18);
+    cursor: pointer;
+    padding: 0;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.rp-avatar-swatch:hover {
+    transform: scale(1.08);
+}
+
+.rp-avatar-swatch.is-active {
+    outline: 2px solid #fff;
+    outline-offset: 2px;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.45);
+}
+
+.rp-avatar-icons {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(52px, 1fr));
+    gap: 0.55rem;
+    max-width: 420px;
+}
+
+.rp-avatar-icon-btn {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    border: 2px solid rgba(148, 163, 184, 0.28);
+    background: rgba(15, 23, 42, 0.65);
+    color: #e2e8f0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.15rem;
+    cursor: pointer;
+    transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+
+.rp-avatar-icon-btn:hover {
+    transform: scale(1.06);
+    border-color: rgba(148, 163, 184, 0.55);
+}
+
+.rp-avatar-icon-btn.is-active {
+    border-color: rgba(255, 255, 255, 0.85);
+    color: #fff;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.4);
+}
+
+.rp-avatar-photo-note {
+    margin: 1rem 0 0;
+    padding: 0.75rem 0.9rem;
+    border-radius: 12px;
+    background: rgba(56, 189, 248, 0.1);
+    border: 1px solid rgba(56, 189, 248, 0.28);
+    color: #bae6fd;
+    font-size: 0.86rem;
+}
+
+.rp-avatar-photo-note i {
+    margin-right: 0.35rem;
+}
+
+.rp-avatar-editor.is-photo .rp-avatar-swatches,
+.rp-avatar-editor.is-photo .rp-avatar-icons {
+    opacity: 0.45;
+    pointer-events: none;
+}
+
+@media (max-width: 767.98px) {
+    .rp-avatar-editor {
+        grid-template-columns: 1fr;
+        justify-items: center;
+        text-align: center;
+    }
+
+    .rp-avatar-editor-controls {
+        width: 100%;
+    }
+
+    .rp-avatar-icons {
+        max-width: none;
+        justify-content: center;
+    }
+
+    .rp-avatar-swatches {
+        justify-content: center;
     }
 }
 

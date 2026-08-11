@@ -68,7 +68,6 @@ document.addEventListener("DOMContentLoaded", function () {
                 foto: userSession.AvatarFoto
             });
         }
-
     }
 
     initNavbarDropdowns();
