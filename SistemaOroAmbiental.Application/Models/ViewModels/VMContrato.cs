@@ -85,6 +85,8 @@ namespace SistemaOroAmbiental.Application.Models.ViewModels
         public string ProvinciaEstablecimiento { get; set; } = "";
         public string Profesion { get; set; } = "";
         public string ProfesionCliente { get; set; } = "";
+        public string TipoGenerador { get; set; } = "";
+        public string TipoGeneradorCliente { get; set; } = "";
         public string NombreCliente { get; set; } = "";
         public string IvaCliente { get; set; } = "";
         public string DiasHorariosCliente { get; set; } = "";

@@ -1,4 +1,5 @@
 using SistemaOroAmbiental.Application.Models.ViewModels;
+using SistemaOroAmbiental.BLL.Common;
 using SistemaOroAmbiental.Models;
 using System.Globalization;
 using System.Text;
@@ -15,11 +16,13 @@ namespace SistemaOroAmbiental.Application.Helpers
             var est = c.IdEstablecimientoNavigation;
             var nombreBase = $"{cli?.Nombre}_{est?.Nombre}".Trim('_');
 
-            var domicilioEst = est?.Domicilio?.Trim() ?? "";
-            var domicilioCli = cli?.Domicilio?.Trim() ?? "";
+            var domicilioEst = DomicilioHelper.Componer(est?.Calle, est?.Numero, est?.PisoDepartamento, est?.Domicilio);
+            var domicilioCli = DomicilioHelper.Componer(cli?.Calle, cli?.Numero, cli?.PisoDepartamento, cli?.Domicilio);
             var domicilioGen = !string.IsNullOrWhiteSpace(domicilioEst) ? domicilioEst : domicilioCli;
 
-            var localidadEst = est?.Localidad?.Trim() ?? "";
+            var localidadEst = !string.IsNullOrWhiteSpace(est?.Localidad)
+                ? est!.Localidad!.Trim()
+                : (est?.IdLocalidadNavigation?.Nombre?.Trim() ?? "");
             var provinciaEst = est?.IdProvinciaNavigation?.Nombre?.Trim() ?? "";
             var provinciaCli = cli?.IdProvinciaNavigation?.Nombre?.Trim() ?? "";
             var cpEst = est?.CodPostal?.Trim() ?? "";
@@ -33,6 +36,8 @@ namespace SistemaOroAmbiental.Application.Helpers
             var iva = est?.IdCondicionIvaNavigation?.Nombre?.Trim()
                 ?? cli?.IdCondicionIvaNavigation?.Nombre?.Trim() ?? "";
             var profesion = cli?.IdProfesionNavigation?.Nombre?.Trim() ?? "";
+            var tipoGenerador = FormatearTipoGenerador(
+                est?.IdTipoGeneradorNavigation ?? cli?.IdTipoGeneradorNavigation);
             var nombreCliente = cli?.Nombre?.Trim() ?? "";
             var telefono = cli?.Telefono?.Trim() ?? cli?.TelefonoAlt?.Trim() ?? "";
             var email = cli?.Email?.Trim() ?? "";
@@ -74,6 +79,8 @@ namespace SistemaOroAmbiental.Application.Helpers
                 ProvinciaEstablecimiento = provinciaEst,
                 Profesion = profesion,
                 ProfesionCliente = profesion,
+                TipoGenerador = tipoGenerador,
+                TipoGeneradorCliente = tipoGenerador,
                 Generador = nombreCliente,
                 DomicilioGenerador = domicilioGen,
                 DomicilioConsultorio = domicilioGen,
@@ -127,13 +134,17 @@ namespace SistemaOroAmbiental.Application.Helpers
                 mapa[clave.Trim()] = valor ?? "";
             }
 
-            // Plantilla Oro Ambiental 2026 — usar siempre {NOMBRE} en Word
+            // Plantilla Oro Ambiental 2026 — usar siempre {CAMPO} en Word
             Agregar("NOMBRECLIENTE", d.NombreCliente);
             Agregar("DOMICILIOCLIENTE", d.DomicilioCliente);
             Agregar("LOCALIDADCLIENTE", d.LocalidadCliente);
             Agregar("TELEFONOCLIENTE", d.TelefonoCliente);
             Agregar("CUITCLIENTE", d.CuitCliente);
-            Agregar("PROFESIONCLIENTE", d.ProfesionCliente);
+            Agregar("TIPOGENERADORCLIENTE", d.TipoGeneradorCliente);
+            Agregar("TIPOGENERADOR", d.TipoGeneradorCliente);
+            // Alias histórico: plantillas viejas usaban PROFESIONCLIENTE en "Tipo Generador"
+            Agregar("PROFESIONCLIENTE",
+                !string.IsNullOrWhiteSpace(d.TipoGeneradorCliente) ? d.TipoGeneradorCliente : d.ProfesionCliente);
             Agregar("IVACLIENTE", d.IvaCliente);
             Agregar("DIASCLIENTE", d.DiasHorariosCliente);
             Agregar("EMAILCLIENTE", d.EmailCliente);
@@ -175,6 +186,16 @@ namespace SistemaOroAmbiental.Application.Helpers
             Agregar("NombreArchivo", nombreArchivo);
 
             return mapa;
+        }
+
+        private static string FormatearTipoGenerador(ClientesTipoGenerador? tipo)
+        {
+            if (tipo == null) return "";
+            var codigo = tipo.Codigo?.Trim() ?? "";
+            var nombre = tipo.Nombre?.Trim() ?? "";
+            if (!string.IsNullOrWhiteSpace(codigo) && !string.IsNullOrWhiteSpace(nombre))
+                return $"{codigo} - {nombre}";
+            return !string.IsNullOrWhiteSpace(nombre) ? nombre : codigo;
         }
 
         private static (string Dia, string Mes, string Anio) PartesFecha(DateTime fecha)
