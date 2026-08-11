@@ -41,7 +41,7 @@ namespace SistemaOroAmbiental.BLL.Service
             if (!Validar(entrega, lineas, lineasRecuperadas, out var error))
                 return ServiceResult.Error(error, "validacion");
 
-            if (!ValidarCobros(lineas, cobros, out error))
+            if (!ValidarCobros(cobros, out error))
                 return ServiceResult.Error(error, "validacion");
 
             int id;
@@ -92,7 +92,7 @@ namespace SistemaOroAmbiental.BLL.Service
             if (!Validar(entrega, lineas, lineasRecuperadas, out var error))
                 return ServiceResult.Error(error, "validacion");
 
-            if (!ValidarCobros(lineas, cobros, out error))
+            if (!ValidarCobros(cobros, out error))
                 return ServiceResult.Error(error, "validacion");
 
             try
@@ -282,7 +282,6 @@ namespace SistemaOroAmbiental.BLL.Service
         }
 
         private static bool ValidarCobros(
-            List<ClientesEntregasProducto> lineas,
             List<EntregaCobroRegistrar> cobros,
             out string error)
         {
@@ -291,16 +290,7 @@ namespace SistemaOroAmbiental.BLL.Service
             if (cobros.Count == 0)
                 return true;
 
-            foreach (var l in lineas)
-                ClientesEntregasRepository.RecalcularLinea(l);
-
-            // Los cobros se imputan a lo retirado (lo que el cliente paga).
-            var totalCobrar = lineas
-                .Where(l => l.TipoMovimiento == ClientesEntregasRepository.TIPO_LINEA_RETIRO)
-                .Sum(l => l.SubtotalFinal);
-
-            decimal sumaCobros = 0;
-
+            // Se permite cobrar de más: el exceso queda como saldo a favor en cuenta corriente.
             foreach (var c in cobros)
             {
                 if (c.IdCuenta <= 0)
@@ -320,14 +310,6 @@ namespace SistemaOroAmbiental.BLL.Service
                     error = "Cada cobro debe tener un concepto.";
                     return false;
                 }
-
-                sumaCobros += c.Importe;
-            }
-
-            if (sumaCobros > totalCobrar + 0.01m)
-            {
-                error = "La suma de los cobros no puede superar el total de lo retirado.";
-                return false;
             }
 
             return true;

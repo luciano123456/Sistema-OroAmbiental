@@ -345,16 +345,7 @@ window.__OA_ENTREGA_BUILD = "dup-alert-live-20260806";
             return { ok: true, mensaje: "" };
         }
 
-        const totalCobrar = calcularTotalCobrableDesdeLineas();
-        const suma = paraGuardar.reduce((s, p) => s + Number(p.Importe || 0), 0);
-
-        if (suma > totalCobrar + 0.01) {
-            return {
-                ok: false,
-                mensaje: "La suma de los cobros no puede superar el total de lo retirado."
-            };
-        }
-
+        // Se permite cobrar de más: el exceso queda como saldo a favor en CC.
         for (const p of paraGuardar) {
             if (!p.Fecha || !p.IdSucursal || !p.IdCuenta || !(p.Concepto || "").trim() || p.Importe <= 0) {
                 return { ok: false, mensaje: "Revise los cobros: fecha, sucursal, cuenta, concepto e importe son obligatorios." };

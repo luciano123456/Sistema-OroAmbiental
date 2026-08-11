@@ -3797,13 +3797,7 @@ async function guardarVisitaUnificadaCg() {
             return;
         }
 
-        const totalCobrar = totalCobrableWsCg(lineas);
-        const sumaCobros = cobros.reduce((s, c) => s + Number(c.Importe || 0), 0);
-        if (sumaCobros > totalCobrar + 0.01) {
-            errorModal("La suma de los cobros no puede superar el total de lo retirado.");
-            return;
-        }
-
+        // Se permite cobrar de más: el exceso queda como saldo a favor en CC.
         const payload = {
             Id: 0,
             Fecha: fecha,
