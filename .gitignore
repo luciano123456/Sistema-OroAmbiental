@@ -1,3 +1,5 @@
 **/bin/
 **/obj/
 /.vs
+SistemaOroAmbiental.Application/wwwroot/Uploads/Avatares/*
+!SistemaOroAmbiental.Application/wwwroot/Uploads/Avatares/.gitkeep
