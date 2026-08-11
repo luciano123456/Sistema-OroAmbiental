@@ -18,13 +18,14 @@ const columnConfig = [
     { index: 5, filterType: 'text' },
     { index: 6, filterType: 'text' },
     { index: 7, filterType: 'text' },
-    { index: 8, filterType: 'select', fetchDataFunc: listaRolesFilter },
-    { index: 9, filterType: 'select', fetchDataFunc: listaEstadosFilter }
+    { index: 8, filterType: 'text' },
+    { index: 9, filterType: 'select', fetchDataFunc: listaRolesFilter },
+    { index: 10, filterType: 'select', fetchDataFunc: listaEstadosFilter }
 ];
 
 registrarFiltrosGrilla('grd_Usuarios', columnConfig, {
     includeActivo: false,
-    maxColumnIndex: 9
+    maxColumnIndex: 10
 });
 
 $(document).ready(() => {
@@ -32,7 +33,7 @@ $(document).ready(() => {
     // Solo presencia (payload mínimo), sin recargar DataTables
     setInterval(() => {
         if (document.visibilityState === "visible") refrescarPresenciaUsuarios();
-    }, 60000);
+    }, 15000);
     cargarTodasSucursalesParaAsignar();
 
     document.addEventListener("configuracionActualizada", async (e) => {
@@ -376,6 +377,18 @@ async function configurarDataTable(data) {
                         </span>`;
                     }
                 },
+                {
+                    data: 'UltimoModulo',
+                    render: function (data, type, row) {
+                        if (type === "sort" || type === "filter" || type === "type") {
+                            return row?.EnLinea ? (data || "") : "";
+                        }
+                        if (type === "export" || type === "print") {
+                            return row?.EnLinea ? (window.RpModulos ? RpModulos.label(data) : (data || "")) : "";
+                        }
+                        return renderDondeEstaCell(row);
+                    }
+                },
                 { data: 'Nombre' },
                 { data: 'Apellido' },
                 { data: 'Dni' },
@@ -420,9 +433,13 @@ async function configurarDataTable(data) {
             orderCellsTop: true,
             fixedHeader: true,
             drawCallback: function () {
+                const api = this.api();
                 if (typeof ajustarColumnasGrillaLista === "function") {
-                    ajustarColumnasGrillaLista(this.api(), "#grd_Usuarios");
+                    ajustarColumnasGrillaLista(api, "#grd_Usuarios");
                 }
+                api.rows({ page: "current" }).every(function () {
+                    pintarAvataresDondeEstaEnFila($(this.node()), this.data());
+                });
             },
             initComplete: async function () {
                 const api = this.api();
@@ -1435,6 +1452,36 @@ function fmtFechaConexionUsr(d) {
     });
 }
 
+function renderDondeEstaCell(row) {
+    if (!row?.EnLinea || !row?.UltimoModulo) {
+        return `<span class="usr-donde-empty">—</span>`;
+    }
+    const key = row.UltimoModulo;
+    const label = window.RpModulos ? RpModulos.label(key) : key;
+    const url = window.RpModulos ? RpModulos.url(key) : null;
+    const avatarHtml = `<span class="usr-donde-avatar rp-avatar-circle rp-avatar-circle--sm" data-avatar-id="${row.Id}"></span>`;
+    const irBtn = url
+        ? `<a class="usr-donde-ir" href="${url}" title="Ir a ${escapeHtml(label)}"><i class="fa fa-external-link"></i> Ir</a>`
+        : "";
+    return `<span class="usr-donde-cell" data-id="${row.Id}">
+        ${avatarHtml}
+        <span class="usr-donde-chip">${escapeHtml(label)}</span>
+        ${irBtn}
+    </span>`;
+}
+
+function pintarAvataresDondeEstaEnFila($tr, row) {
+    if (!window.RpAvatar || !row?.EnLinea || !row?.UltimoModulo) return;
+    const el = $tr.find(".usr-donde-avatar")[0];
+    if (!el) return;
+    RpAvatar.render(el, {
+        color: row.AvatarColor,
+        icono: row.AvatarIcono,
+        foto: row.AvatarFoto,
+        size: "sm"
+    });
+}
+
 async function refrescarPresenciaUsuarios() {
     if (!gridUsuarios) return;
     try {
@@ -1443,27 +1490,52 @@ async function refrescarPresenciaUsuarios() {
         });
         if (!response.ok) return;
         const data = await response.json();
-        const map = new Map((data || []).map(x => [Number(x.Id), !!x.EnLinea]));
+        const map = new Map((data || []).map(x => [Number(x.Id), x]));
 
         gridUsuarios.rows({ page: "current" }).every(function () {
             const row = this.data();
             if (!row) return true;
             const id = Number(row.Id);
-            const online = map.has(id) ? map.get(id) : !!row.EnLinea;
-            if (row.EnLinea === online) return true;
+            const remote = map.get(id);
+            if (!remote) return true;
+
+            const online = !!remote.EnLinea;
+            const modulo = online ? (remote.UltimoModulo || null) : null;
+            const sameOnline = row.EnLinea === online;
+            const sameModulo = (row.UltimoModulo || null) === modulo;
+            const sameAvatar =
+                (row.AvatarColor || null) === (remote.AvatarColor || null)
+                && (row.AvatarIcono || null) === (remote.AvatarIcono || null)
+                && (row.AvatarFoto || null) === (remote.AvatarFoto || null);
+
+            if (sameOnline && sameModulo && sameAvatar) return true;
+
             row.EnLinea = online;
+            row.UltimoModulo = modulo;
+            row.AvatarColor = remote.AvatarColor;
+            row.AvatarIcono = remote.AvatarIcono;
+            row.AvatarFoto = remote.AvatarFoto;
+            row.Nombre = remote.Nombre || row.Nombre;
+            row.Apellido = remote.Apellido || row.Apellido;
 
             const $tr = $(this.node());
             const $cell = $tr.find(".usr-user-cell");
-            if (!$cell.length) return true;
-            $cell.find(".usr-presence")
-                .toggleClass("is-online", online)
-                .toggleClass("is-offline", !online)
-                .attr("title", online ? "En línea" : "Desconectado");
-            $cell.find(".usr-presence-label")
-                .toggleClass("is-online", online)
-                .toggleClass("is-offline", !online)
-                .text(online ? "En línea" : "Offline");
+            if ($cell.length) {
+                $cell.find(".usr-presence")
+                    .toggleClass("is-online", online)
+                    .toggleClass("is-offline", !online)
+                    .attr("title", online ? "En línea" : "Desconectado");
+                $cell.find(".usr-presence-label")
+                    .toggleClass("is-online", online)
+                    .toggleClass("is-offline", !online)
+                    .text(online ? "En línea" : "Offline");
+            }
+
+            const $donde = $tr.find("td").eq(3);
+            if ($donde.length) {
+                $donde.html(renderDondeEstaCell(row));
+                pintarAvataresDondeEstaEnFila($tr, row);
+            }
             return true;
         });
     } catch {

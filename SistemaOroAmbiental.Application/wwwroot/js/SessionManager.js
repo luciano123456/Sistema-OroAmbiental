@@ -16,7 +16,8 @@
     const API_RENOVAR = "/Login/RenovarSesion";
     const API_HEARTBEAT = "/Login/Heartbeat";
     const API_DESCONEXION = "/Login/RegistrarDesconexion";
-    const HEARTBEAT_MS = 150 * 1000; // 2.5 min (online = 5 min de tolerancia)
+    const HEARTBEAT_MS = 60 * 1000; // 1 min (online = 5 min de tolerancia)
+    let lastHeartbeatModulo = null;
 
     let countdownTimer = null;
     let heartbeatTimer = null;
@@ -108,6 +109,51 @@
         }
     }
 
+    function resolveModuloActual() {
+        if (window.RpModulos && typeof window.RpModulos.current === "function") {
+            return window.RpModulos.current();
+        }
+        // Fallback si el layout no cargó RpModulos
+        const path = (window.location.pathname || "/").toLowerCase().replace(/\/+$/, "") || "/";
+        if (path.indexOf("/login") === 0) return null;
+        const map = [
+            [["/clientes", "/clientesentregas"], "Clientes"],
+            [["/productos", "/inventario", "/productosrecuperados"], "Productos"],
+            [["/camiones", "/recorridos"], "Transporte"],
+            [["/proveedores", "/compras", "/proveedorescuentacorriente"], "Proveedores"],
+            [["/finanzas", "/caja", "/gastos", "/cuentas", "/bancos", "/librodiario"], "Finanzas"],
+            [["/analisisdatos"], "AnalisisDatos"],
+            [["/usuarios"], "Usuarios"]
+        ];
+        for (let i = 0; i < map.length; i++) {
+            const prefixes = map[i][0];
+            const key = map[i][1];
+            for (let j = 0; j < prefixes.length; j++) {
+                const p = prefixes[j];
+                if (path === p || path.startsWith(p + "/")) return key;
+            }
+        }
+        return null;
+    }
+
+    function sendHeartbeat() {
+        if (isLoginPage() || !isSessionValid()) return;
+        if (document.visibilityState === "hidden") return;
+        const token = localStorage.getItem(STORAGE_TOKEN);
+        if (!token) return;
+
+        const modulo = resolveModuloActual();
+        lastHeartbeatModulo = modulo;
+        fetch(API_HEARTBEAT, {
+            method: "POST",
+            headers: {
+                Authorization: "Bearer " + token,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ modulo: modulo })
+        }).catch(() => { /* ignore */ });
+    }
+
     function stopHeartbeat() {
         if (heartbeatTimer) {
             clearInterval(heartbeatTimer);
@@ -119,21 +165,16 @@
         stopHeartbeat();
         if (isLoginPage() || !isSessionValid()) return;
 
-        const tick = () => {
-            if (document.visibilityState === "hidden") return;
-            const token = localStorage.getItem(STORAGE_TOKEN);
-            if (!token || !isSessionValid()) {
-                stopHeartbeat();
-                return;
-            }
-            fetch(API_HEARTBEAT, {
-                method: "POST",
-                headers: { Authorization: "Bearer " + token }
-            }).catch(() => { /* ignore */ });
-        };
+        sendHeartbeat();
+        heartbeatTimer = setInterval(sendHeartbeat, HEARTBEAT_MS);
 
-        tick();
-        heartbeatTimer = setInterval(tick, HEARTBEAT_MS);
+        if (!window.__rpHeartbeatVisibilityBound) {
+            window.__rpHeartbeatVisibilityBound = true;
+            document.addEventListener("visibilitychange", () => {
+                if (document.visibilityState === "visible") sendHeartbeat();
+            });
+            window.addEventListener("pageshow", () => sendHeartbeat());
+        }
     }
 
     async function registrarDesconexion(motivo) {
@@ -641,6 +682,8 @@
         renovarSesion,
         startCountdown,
         stopCountdown,
+        startHeartbeat,
+        sendHeartbeat,
         guardPage,
         formatRemaining,
         formatRemainingShort,

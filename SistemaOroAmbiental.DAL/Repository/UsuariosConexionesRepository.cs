@@ -20,20 +20,67 @@ namespace SistemaOroAmbiental.DAL.Repository
         }
 
         /// <summary>
-        /// Update directo (sin cargar entidad). Sin forzar, solo escribe si pasaron ~90s
-        /// desde la última actividad (evita writes en cada heartbeat).
+        /// Update directo (sin cargar entidad). Sin forzar, solo escribe actividad si pasaron ~90s.
+        /// UltimoModulo se actualiza siempre que venga informado o se pida limpiar.
         /// </summary>
-        public async Task ActualizarUltimaActividadAsync(int idUsuario, DateTime utcNow, bool forzar = false)
+        public async Task ActualizarUltimaActividadAsync(
+            int idUsuario,
+            DateTime utcNow,
+            bool forzar = false,
+            string? ultimoModulo = null,
+            bool limpiarModulo = false)
         {
-            if (forzar)
+            if (limpiarModulo)
             {
                 await _db.Usuarios
                     .Where(u => u.Id == idUsuario)
-                    .ExecuteUpdateAsync(s => s.SetProperty(u => u.FechaUltimaActividad, utcNow));
+                    .ExecuteUpdateAsync(s => s
+                        .SetProperty(u => u.FechaUltimaActividad, utcNow)
+                        .SetProperty(u => u.UltimoModulo, (string?)null));
+                return;
+            }
+
+            var moduloNorm = NormalizeModulo(ultimoModulo);
+
+            if (forzar)
+            {
+                if (moduloNorm != null)
+                {
+                    await _db.Usuarios
+                        .Where(u => u.Id == idUsuario)
+                        .ExecuteUpdateAsync(s => s
+                            .SetProperty(u => u.FechaUltimaActividad, utcNow)
+                            .SetProperty(u => u.UltimoModulo, moduloNorm));
+                }
+                else
+                {
+                    await _db.Usuarios
+                        .Where(u => u.Id == idUsuario)
+                        .ExecuteUpdateAsync(s => s.SetProperty(u => u.FechaUltimaActividad, utcNow));
+                }
                 return;
             }
 
             var limite = utcNow.AddSeconds(-90);
+
+            if (moduloNorm != null)
+            {
+                // Siempre actualiza módulo si cambió o estaba vacío.
+                // OJO: en SQL `NULL != 'X'` no es TRUE → hay que contemplar UltimoModulo == null.
+                await _db.Usuarios
+                    .Where(u => u.Id == idUsuario
+                        && (u.UltimoModulo == null || u.UltimoModulo != moduloNorm))
+                    .ExecuteUpdateAsync(s => s.SetProperty(u => u.UltimoModulo, moduloNorm));
+
+                await _db.Usuarios
+                    .Where(u => u.Id == idUsuario
+                        && (u.FechaUltimaActividad == null || u.FechaUltimaActividad < limite))
+                    .ExecuteUpdateAsync(s => s
+                        .SetProperty(u => u.FechaUltimaActividad, utcNow)
+                        .SetProperty(u => u.UltimoModulo, moduloNorm));
+                return;
+            }
+
             await _db.Usuarios
                 .Where(u => u.Id == idUsuario
                     && (u.FechaUltimaActividad == null || u.FechaUltimaActividad < limite))
@@ -52,14 +99,34 @@ namespace SistemaOroAmbiental.DAL.Repository
                 .ToListAsync();
         }
 
-        public async Task<IReadOnlyList<(int Id, DateTime? FechaUltimaActividad)>> ListarPresenciaAsync()
+        public async Task<IReadOnlyList<(int Id, DateTime? FechaUltimaActividad, string? UltimoModulo, string? Nombre, string? Apellido, string? AvatarColor, string? AvatarIcono, string? AvatarFoto)>> ListarPresenciaAsync()
         {
             var rows = await _db.Usuarios
                 .AsNoTracking()
-                .Select(u => new { u.Id, u.FechaUltimaActividad })
+                .Select(u => new
+                {
+                    u.Id,
+                    u.FechaUltimaActividad,
+                    u.UltimoModulo,
+                    u.Nombre,
+                    u.Apellido,
+                    u.AvatarColor,
+                    u.AvatarIcono,
+                    u.AvatarFoto
+                })
                 .ToListAsync();
 
-            return rows.Select(r => (r.Id, r.FechaUltimaActividad)).ToList();
+            return rows
+                .Select(r => (r.Id, r.FechaUltimaActividad, r.UltimoModulo, r.Nombre, r.Apellido, r.AvatarColor, r.AvatarIcono, r.AvatarFoto))
+                .ToList();
+        }
+
+        private static string? NormalizeModulo(string? modulo)
+        {
+            if (string.IsNullOrWhiteSpace(modulo)) return null;
+            var m = modulo.Trim();
+            if (m.Length > 40) m = m[..40];
+            return m;
         }
     }
 }
