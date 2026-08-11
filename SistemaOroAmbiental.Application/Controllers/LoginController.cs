@@ -111,6 +111,9 @@ namespace SistemaBronx.Application.Controllers
                             user.Direccion,
                             user.Dni,
                             user.Telefono,
+                            user.AvatarColor,
+                            user.AvatarIcono,
+                            user.AvatarFoto,
                             Sucursales = sucursalesDto,
                             IdSucursalDefault = idSucursalDefault
                         }

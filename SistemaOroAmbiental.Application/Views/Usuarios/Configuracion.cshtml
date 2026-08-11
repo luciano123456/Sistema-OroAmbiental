@@ -4,7 +4,8 @@
 }
 
 @section Estilos {
-    <link href="~/css/Usuarios.css?v=5.7" rel="stylesheet" />
+    <link href="~/css/RpAvatar.css?v=1.0" rel="stylesheet" />
+    <link href="~/css/Usuarios.css?v=5.8" rel="stylesheet" />
 }
 
 <div class="rp-perfil-page">
@@ -13,7 +14,9 @@
             <div class="rp-perfil-hero-inner">
                 <div class="rp-perfil-hero-top">
                     <div class="rp-perfil-avatar-wrap">
-                        <div class="rp-perfil-avatar" id="rpPerfilAvatar">--</div>
+                        <div class="rp-perfil-avatar rp-avatar-circle rp-avatar-circle--md" id="rpPerfilAvatar" aria-hidden="true">
+                            <i class="fa fa-user"></i>
+                        </div>
                     </div>
                     <div class="rp-perfil-hero-main">
                         <p class="rp-perfil-kicker">Configuracion de cuenta</p>
@@ -30,12 +33,54 @@
                     </div>
                 </div>
                 <p class="rp-perfil-hero-sub">
-                    Actualiza tu nombre, contacto y contrasena. Los cambios se aplican a tu usuario en todo el sistema.
+                    Actualiza tu nombre, contacto, avatar y contrasena. Los cambios se aplican a tu usuario en todo el sistema.
                 </p>
             </div>
         </header>
 
         <div id="msjerror" class="rp-perfil-alert d-none" role="alert"></div>
+
+        <section class="rp-perfil-block" id="rpAvatarSection">
+            <div class="rp-perfil-block-head">
+                <span class="rp-perfil-block-icon blue"><i class="fa fa-picture-o"></i></span>
+                <div>
+                    <h2>Tu avatar</h2>
+                    <p>Elegi color, icono o subi una foto. Siempre se muestra en circulo.</p>
+                </div>
+            </div>
+
+            <div class="rp-avatar-editor">
+                <div class="rp-avatar-editor-preview">
+                    <div class="rp-perfil-avatar rp-avatar-circle rp-avatar-circle--lg" id="rpAvatarPreview" aria-hidden="true">
+                        <i class="fa fa-user"></i>
+                    </div>
+                    <div class="rp-avatar-editor-actions">
+                        <label class="rp-perfil-btn rp-perfil-btn--ghost rp-avatar-upload-btn" for="rpAvatarFileInput">
+                            <i class="fa fa-camera"></i> Subir foto
+                        </label>
+                        <input type="file" id="rpAvatarFileInput" accept="image/jpeg,image/png,image/webp,image/gif" class="d-none" />
+                        <button type="button" class="rp-perfil-btn rp-perfil-btn--ghost rp-avatar-remove-btn d-none" id="rpAvatarRemoveBtn">
+                            <i class="fa fa-trash-o"></i> Quitar foto
+                        </button>
+                    </div>
+                    <small class="rp-perfil-hint">JPG, PNG, WEBP o GIF. Max. 2.5 MB.</small>
+                </div>
+
+                <div class="rp-avatar-editor-controls" id="rpAvatarIconControls">
+                    <div class="rp-avatar-control-group">
+                        <label class="rp-perfil-label">Color</label>
+                        <div class="rp-avatar-swatches" id="rpAvatarSwatches" role="listbox" aria-label="Color del avatar"></div>
+                    </div>
+                    <div class="rp-avatar-control-group">
+                        <label class="rp-perfil-label">Icono</label>
+                        <div class="rp-avatar-icons" id="rpAvatarIcons" role="listbox" aria-label="Icono del avatar"></div>
+                    </div>
+                    <p class="rp-avatar-photo-note d-none" id="rpAvatarPhotoNote">
+                        <i class="fa fa-info-circle"></i> Tenes una foto activa. Si la quitas, vuelve el icono por defecto.
+                    </p>
+                </div>
+            </div>
+        </section>
 
         <form id="formularioActualizar" class="rp-perfil-form" autocomplete="off">
             <input type="hidden" id="Id" name="Id" />
@@ -166,5 +211,6 @@
 </div>
 
 @section Scripts {
-    <script src="~/js/UsuariosConfiguracion.js?v=5.7"></script>
+    <script src="~/js/RpAvatar.js?v=1.0"></script>
+    <script src="~/js/UsuariosConfiguracion.js?v=5.8"></script>
 }

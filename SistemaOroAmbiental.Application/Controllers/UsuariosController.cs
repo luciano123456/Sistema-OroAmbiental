@@ -6,24 +6,37 @@ using SistemaOroAmbiental.Application.Models.ViewModels;
 using SistemaOroAmbiental.BLL.Service;
 using SistemaOroAmbiental.Models;
 using System.Diagnostics;
+using System.Text.RegularExpressions;
 
 namespace SistemaOroAmbiental.Application.Controllers
 {
     [Authorize]
     public class UsuariosController : Controller
     {
+        private static readonly HashSet<string> AvatarIconosPermitidos = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "user", "smile-o", "star", "heart", "leaf", "car", "plane", "bicycle",
+            "coffee", "music", "gamepad", "paw", "rocket", "home", "briefcase",
+            "graduation-cap", "diamond", "fire"
+        };
+
+        private static readonly Regex HexColorRegex = new(@"^#([0-9A-Fa-f]{6})$", RegexOptions.Compiled);
+
         private readonly IUsuariosService _Usuarioservice;
         private readonly IUsuariosSucursalesService _usuariosSucursales;
         private readonly IUsuariosConexionesService _conexiones;
+        private readonly IWebHostEnvironment _env;
 
         public UsuariosController(
             IUsuariosService Usuarioservice,
             IUsuariosSucursalesService usuariosSucursales,
-            IUsuariosConexionesService conexiones)
+            IUsuariosConexionesService conexiones,
+            IWebHostEnvironment env)
         {
             _Usuarioservice = Usuarioservice;
             _usuariosSucursales = usuariosSucursales;
             _conexiones = conexiones;
+            _env = env;
         }
 
         [AllowAnonymous]
@@ -58,8 +71,161 @@ namespace SistemaOroAmbiental.Application.Controllers
                 user.Dni,
                 user.Telefono,
                 user.Direccion,
-                user.Correo
+                user.Correo,
+                user.AvatarColor,
+                user.AvatarIcono,
+                user.AvatarFoto
             });
+        }
+
+        [HttpPut]
+        public async Task<IActionResult> ActualizarAvatar([FromBody] VMUserAvatar model)
+        {
+            if (!int.TryParse(User.FindFirst("Id")?.Value, out var userId))
+                return Unauthorized();
+
+            var userbase = await _Usuarioservice.Obtener(userId);
+            if (userbase == null)
+                return NotFound();
+
+            if (!string.IsNullOrWhiteSpace(model.AvatarColor))
+            {
+                var color = model.AvatarColor.Trim();
+                if (!HexColorRegex.IsMatch(color))
+                    return Ok(new { valor = "Validacion", mensaje = "Color invalido." });
+                userbase.AvatarColor = color.ToLowerInvariant();
+            }
+
+            if (!string.IsNullOrWhiteSpace(model.AvatarIcono))
+            {
+                var icono = model.AvatarIcono.Trim().ToLowerInvariant();
+                if (icono.StartsWith("fa-"))
+                    icono = icono[3..];
+                if (!AvatarIconosPermitidos.Contains(icono))
+                    return Ok(new { valor = "Validacion", mensaje = "Icono no permitido." });
+                userbase.AvatarIcono = icono;
+            }
+
+            var ok = await _Usuarioservice.Actualizar(userbase);
+            if (!ok)
+                return Ok(new { valor = "Error" });
+
+            return Ok(new
+            {
+                valor = "OK",
+                userbase.AvatarColor,
+                userbase.AvatarIcono,
+                userbase.AvatarFoto
+            });
+        }
+
+        [HttpPost]
+        [RequestSizeLimit(3_000_000)]
+        public async Task<IActionResult> SubirAvatarFoto(IFormFile file)
+        {
+            if (!int.TryParse(User.FindFirst("Id")?.Value, out var userId))
+                return Unauthorized();
+
+            if (file == null || file.Length == 0)
+                return Ok(new { valor = "Validacion", mensaje = "Selecciona una imagen." });
+
+            if (file.Length > 2_500_000)
+                return Ok(new { valor = "Validacion", mensaje = "La imagen no puede superar 2.5 MB." });
+
+            var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
+            var allowed = new[] { ".jpg", ".jpeg", ".png", ".webp", ".gif" };
+            if (!allowed.Contains(ext))
+                return Ok(new { valor = "Validacion", mensaje = "Formatos permitidos: JPG, PNG, WEBP o GIF." });
+
+            var contentType = (file.ContentType ?? "").ToLowerInvariant();
+            if (!contentType.StartsWith("image/"))
+                return Ok(new { valor = "Validacion", mensaje = "El archivo debe ser una imagen." });
+
+            var userbase = await _Usuarioservice.Obtener(userId);
+            if (userbase == null)
+                return NotFound();
+
+            try
+            {
+                var folder = Path.Combine(_env.WebRootPath, "Uploads", "Avatares");
+                Directory.CreateDirectory(folder);
+
+                EliminarArchivoAvatar(userbase.AvatarFoto);
+
+                var fileName = $"u_{userId}_{Guid.NewGuid():N}{ext}";
+                var physical = Path.Combine(folder, fileName);
+                await using (var fs = new FileStream(physical, FileMode.Create, FileAccess.Write, FileShare.None))
+                {
+                    await file.CopyToAsync(fs);
+                }
+
+                userbase.AvatarFoto = $"/Uploads/Avatares/{fileName}";
+                var ok = await _Usuarioservice.Actualizar(userbase);
+                if (!ok)
+                {
+                    try { System.IO.File.Delete(physical); } catch { /* ignore */ }
+                    return Ok(new { valor = "Error", mensaje = "No se pudo guardar la foto." });
+                }
+
+                return Ok(new
+                {
+                    valor = "OK",
+                    userbase.AvatarFoto,
+                    userbase.AvatarColor,
+                    userbase.AvatarIcono
+                });
+            }
+            catch
+            {
+                return Ok(new { valor = "Error", mensaje = "No se pudo subir la foto." });
+            }
+        }
+
+        [HttpDelete]
+        public async Task<IActionResult> EliminarAvatarFoto()
+        {
+            if (!int.TryParse(User.FindFirst("Id")?.Value, out var userId))
+                return Unauthorized();
+
+            var userbase = await _Usuarioservice.Obtener(userId);
+            if (userbase == null)
+                return NotFound();
+
+            EliminarArchivoAvatar(userbase.AvatarFoto);
+            userbase.AvatarFoto = null;
+
+            var ok = await _Usuarioservice.Actualizar(userbase);
+            if (!ok)
+                return Ok(new { valor = "Error", mensaje = "No se pudo quitar la foto." });
+
+            return Ok(new
+            {
+                valor = "OK",
+                AvatarFoto = (string?)null,
+                userbase.AvatarColor,
+                userbase.AvatarIcono
+            });
+        }
+
+        private void EliminarArchivoAvatar(string? avatarFoto)
+        {
+            if (string.IsNullOrWhiteSpace(avatarFoto))
+                return;
+
+            try
+            {
+                var relative = avatarFoto.TrimStart('/').Replace('/', Path.DirectorySeparatorChar);
+                if (!relative.StartsWith($"Uploads{Path.DirectorySeparatorChar}Avatares{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
+                    return;
+
+                var physical = Path.Combine(_env.WebRootPath, relative);
+                if (System.IO.File.Exists(physical))
+                    System.IO.File.Delete(physical);
+            }
+            catch
+            {
+                // No bloquea el flujo si no se puede borrar el archivo viejo.
+            }
         }
 
         [HttpPut]
