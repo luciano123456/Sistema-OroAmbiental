@@ -2,7 +2,7 @@
    CLIENTES GESTION - Hub unificado por cliente
    (cliente + establecimientos: lineas completas + importe tras cuenta)
 ========================================================= */
-window.__OA_CG_BUILD = "inline-guard-v23-20260806";
+window.__OA_CG_BUILD = "entrega-precio-saldo-v24-20260811";
 
 const CG = {
     id: 0,
@@ -868,7 +868,7 @@ function wireEventosCg() {
             IdListaPrecio: s.IdListaPrecio || 0,
             TipoMovimiento: 1,
             Cantidad: s.Cantidad || 1,
-            PrecioVenta: 0
+            PrecioVenta: Number(s.PrecioVenta) || 0
         });
     });
     $h("cgWsLineasBody").on("click", ".btn-ws-quitar", function () {
@@ -2310,7 +2310,7 @@ function bindEstHubEventsCg() {
             IdListaPrecio: s.IdListaPrecio || 0,
             TipoMovimiento: 1,
             Cantidad: s.Cantidad || 1,
-            PrecioVenta: 0
+            PrecioVenta: Number(s.PrecioVenta) || 0
         });
     });
     $(root).on("change input", "#cgEstWsLineasBody select, #cgEstWsLineasBody input", async function () {
@@ -2998,7 +2998,7 @@ function renderControlMensualCg(data) {
             ${nProd
                 ? columnas.map(c => `<th class="cg-cm-th-prod-ret" title="${escapeCg(c.Nombre)}">${escapeCg((c.Abreviatura || c.Nombre || "").trim() || ("#" + c.IdProducto))}</th>`).join("")
                 : `<th class="cg-cm-th-prod-ret">—</th>`}
-            <th class="cg-cm-cell-money" title="Cargo del mes (retiros)">Total</th>
+            <th class="cg-cm-cell-money" title="Cargo del mes (entregas + retiros)">Total</th>
             <th class="cg-cm-cell-money">Efectivo</th>
             <th class="cg-cm-cell-money">Transf.</th>
             <th>F. transf.</th>
@@ -3067,7 +3067,7 @@ function renderControlMensualCg(data) {
             <td class="${mostrarAnio ? "cg-cm-sticky-left-3" : "cg-cm-sticky-left-2"} cg-cm-date">${formatearFechaCortaCg(m.FechaVisita)}</td>
             ${celdasEnt}
             ${celdasRet}
-            <td class="cg-cm-cell-money cg-cm-debe" title="Total del mes (retiros + intereses)">${fmtMoneyCg(totalMesFila)}</td>
+            <td class="cg-cm-cell-money cg-cm-debe" title="Total del mes (entregas + retiros + intereses)">${fmtMoneyCg(totalMesFila)}</td>
             <td class="cg-cm-cell-money ${(Number(m.AbonoEfectivo) || 0) > 0 ? "cg-cm-haber" : ""}">${fmtMoneyCg(m.AbonoEfectivo)}</td>
             <td class="cg-cm-cell-money ${(Number(m.AbonoTransferencia) || 0) > 0 ? "cg-cm-haber" : ""}">${fmtMoneyCg(m.AbonoTransferencia)}</td>
             <td class="cg-cm-date">${formatearFechaCortaCg(m.FechaTransferencia)}</td>
@@ -3294,16 +3294,9 @@ async function obtenerPrecioListaWsCg(idProducto, idLista) {
     return Number(match.PrecioVenta);
 }
 
-/** Entrega (1): precio 0 por defecto. Retiro (2): trae precio de lista. */
+/** Entrega / Retiro: trae precio de lista al elegir producto + lista. */
 async function sincronizarPrecioLineaWsCg($row, linea, campo) {
-    const tipo = Number(linea.TipoMovimiento) || 1;
-
     if (campo === "tipo") {
-        if (tipo === 1) {
-            linea.PrecioVenta = 0;
-            $row.find(".ws-precio").val(fmtQtyCg(0));
-            return;
-        }
         if (linea.IdProducto > 0 && linea.IdListaPrecio > 0) {
             const precio = await obtenerPrecioListaWsCg(linea.IdProducto, linea.IdListaPrecio);
             if (precio != null) {
@@ -3323,11 +3316,6 @@ async function sincronizarPrecioLineaWsCg($row, linea, campo) {
             linea.IdListaPrecio = Number(conPrecio[0].IdListaPrecio);
             $row.find(".ws-lista").val(String(linea.IdListaPrecio));
         }
-    }
-
-    if (tipo === 1) {
-        // Entrega: no traer precio de lista; dejar vacío / 0 (manual).
-        return;
     }
 
     if (linea.IdProducto > 0 && linea.IdListaPrecio > 0) {
@@ -3629,9 +3617,9 @@ function totalPorTipoWsCg(lineas, tipo) {
         .reduce((s, l) => s + (Number(l.Cantidad) || 0) * (Number(l.PrecioVenta) || 0), 0);
 }
 
-/** Lo cobrable es el retiro (lo que el cliente paga). */
+/** Lo cobrable = entrega + retiro. */
 function totalCobrableWsCg(lineas) {
-    return totalPorTipoWsCg(lineas, 2);
+    return totalPorTipoWsCg(lineas, 1) + totalPorTipoWsCg(lineas, 2);
 }
 
 function actualizarResumenCobrosWsCg() {
@@ -3640,7 +3628,7 @@ function actualizarResumenCobrosWsCg() {
     const totalEnt = totalPorTipoWsCg(lineas, 1);
     const totalRet = totalPorTipoWsCg(lineas, 2);
     const totalPag = cobros.reduce((s, c) => s + Number(c.Importe || 0), 0);
-    const saldo = totalRet - totalPag;
+    const saldo = (totalEnt + totalRet) - totalPag;
     $h("cgWsCobroTotEntrega").text(fmtMoneyCg(totalEnt));
     $h("cgWsCobroTotRetiro").text(fmtMoneyCg(totalRet));
     $h("cgWsCobroTotPagado").text(fmtMoneyCg(totalPag));

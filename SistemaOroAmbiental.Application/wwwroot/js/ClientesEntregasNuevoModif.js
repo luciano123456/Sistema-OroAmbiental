@@ -721,10 +721,12 @@ window.__OA_ENTREGA_BUILD = "dup-alert-live-20260806";
         return Number(match.PrecioVenta);
     }
 
-    /** Entrega (1): precio 0 por defecto (manual). Retiro/Recuperado: trae precio de lista. */
+    /** Entrega / Retiro / Recuperado: trae precio de lista al elegir producto + lista. */
     function lineaTraePrecioDeLista(linea) {
         const t = Number(linea?.TipoMovimiento);
-        return t === TIPO_LINEA_RETIRO || t === TIPO_LINEA_RECUPERADO;
+        return t === TIPO_LINEA_ENTREGA
+            || t === TIPO_LINEA_RETIRO
+            || t === TIPO_LINEA_RECUPERADO;
     }
 
     async function aplicarPrecioDesdeListaEntrega($tr, linea, { forzar = true } = {}) {
@@ -738,11 +740,6 @@ window.__OA_ENTREGA_BUILD = "dup-alert-live-20260806";
     }
 
     async function sincronizarPrecioSegunTipoLinea($tr, linea) {
-        if (Number(linea.TipoMovimiento) === TIPO_LINEA_ENTREGA) {
-            linea.PrecioVenta = 0;
-            setValorInputMiles($tr.find(".linea-precio"), 0);
-            return;
-        }
         if (linea.IdProducto > 0 && linea.IdListaPrecio > 0) {
             await aplicarPrecioDesdeListaEntrega($tr, linea, { forzar: true });
         }
@@ -907,9 +904,10 @@ window.__OA_ENTREGA_BUILD = "dup-alert-live-20260806";
         return tot;
     }
 
-    /** Lo cobrable es el retiro (servicio/tratamiento que paga el cliente). */
+    /** Lo cobrable = entrega + retiro (productos vendidos y servicio/tratamiento). */
     function calcularTotalCobrableDesdeLineas() {
-        return totalPorTipoLineaEntrega(TIPO_LINEA_RETIRO);
+        return totalPorTipoLineaEntrega(TIPO_LINEA_ENTREGA)
+            + totalPorTipoLineaEntrega(TIPO_LINEA_RETIRO);
     }
 
     function calcularTotalEntregaDesdeLineas() {
@@ -1126,11 +1124,12 @@ window.__OA_ENTREGA_BUILD = "dup-alert-live-20260806";
 
     function actualizarResumenCobrosUI() {
         const totalEntrega = calcularTotalEntregaDesdeLineas();
-        const totalRetiro = calcularTotalCobrableDesdeLineas();
+        const totalRetiro = totalPorTipoLineaEntrega(TIPO_LINEA_RETIRO);
+        const totalCobrable = totalEntrega + totalRetiro;
         const activos = cobrosActivos();
         const totalPagado = activos.reduce((s, p) => s + Number(p.Importe || 0), 0);
 
-        const saldo = totalRetiro - totalPagado;
+        const saldo = totalCobrable - totalPagado;
         const saldoCls = typeof clsSaldoDeudaMoney === "function"
             ? clsSaldoDeudaMoney(saldo)
             : "";
@@ -1465,9 +1464,6 @@ window.__OA_ENTREGA_BUILD = "dup-alert-live-20260806";
 
                 if (linea.IdProducto > 0 && linea.IdListaPrecio > 0) {
                     await aplicarPrecioDesdeListaEntrega($row, linea, { forzar: true });
-                } else if (Number(linea.TipoMovimiento) === TIPO_LINEA_ENTREGA) {
-                    linea.PrecioVenta = 0;
-                    setValorInputMiles($row.find(".linea-precio"), 0);
                 }
 
                 syncLineaFromRow($row, linea);
@@ -1663,11 +1659,12 @@ window.__OA_ENTREGA_BUILD = "dup-alert-live-20260806";
     }
 
     function recalcularTotalesUI() {
-        // Totales del documento = lo cobrable (retiros). Entregas suelen ir a $0.
+        // Totales del documento = entrega + retiro (lo cobrable). Recuperados no suman.
         let sub = 0, desc = 0, iva = 0, tot = 0;
 
         CM.lineas.forEach(l => {
-            if (Number(l.TipoMovimiento || TIPO_LINEA_ENTREGA) !== TIPO_LINEA_RETIRO) return;
+            const t = Number(l.TipoMovimiento || TIPO_LINEA_ENTREGA);
+            if (t !== TIPO_LINEA_ENTREGA && t !== TIPO_LINEA_RETIRO) return;
             const c = calcularLinea(l);
             sub += c.subtotalCdesc;
             desc += c.descTotal;

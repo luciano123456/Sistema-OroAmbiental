@@ -617,8 +617,8 @@ namespace SistemaOroAmbiental.DAL.Repository
             var abonoTransferencia = ov?.AbonoTransferencia ?? 0;
 
             // Fórmula planilla:
-            // Debe  = lo que el cliente debe pagar = RETIROS (+ ajustes Debe)
-            // Haber = cobros/abonos del mes (+ ajustes Haber). Las entregas no se cobran.
+            // Debe  = lo que el cliente debe pagar = ENTREGAS + RETIROS (+ ajustes Debe)
+            // Haber = cobros/abonos del mes (+ ajustes Haber).
             // Intereses se asignan aparte y el Saldo acumulado los incluye.
             var inicioMes = new DateTime(anio, mes, 1);
             var finMes = inicioMes.AddMonths(1);
@@ -643,7 +643,7 @@ namespace SistemaOroAmbiental.DAL.Repository
                 .Where(m => m.TipoMovimiento == ClientesCuentaCorrienteRepository.TIPO_AJUSTE_CLIENTE)
                 .Sum(m => m.Haber);
 
-            var debe = subtotalRetiros + ajustesDebe;
+            var debe = subtotalEntregas + subtotalRetiros + ajustesDebe;
             var haber = Math.Max(abonosPlanilla, cobrosCc) + ajustesHaber;
 
             // Si no hay abonos en la planilla del est pero sí cobros de la entrega, mostrarlos en columnas.
