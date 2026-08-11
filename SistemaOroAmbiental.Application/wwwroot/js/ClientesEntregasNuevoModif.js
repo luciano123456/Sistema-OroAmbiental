@@ -2,7 +2,7 @@
    ENTREGAS NUEVO/MODIF  estilo VentasNuevoModif (Levels)
    Build: lineas-completas + importe-tras-cuenta
 ========================================================= */
-window.__OA_ENTREGA_BUILD = "dup-alert-live-20260806";
+window.__OA_ENTREGA_BUILD = "precio-entrega-lista-20260811";
 
 (function () {
     "use strict";
@@ -19,6 +19,7 @@ window.__OA_ENTREGA_BUILD = "dup-alert-live-20260806";
         productos: [],
         listasPrecios: [],
         preciosCache: {},
+        productosEstablecimiento: [],
         lineas: [],
         nextLineId: 1,
         cobrosLineas: [],
@@ -41,6 +42,7 @@ window.__OA_ENTREGA_BUILD = "dup-alert-live-20260806";
         productos: "/Productos/Lista",
         listasPrecios: "/ListasPrecios/Lista",
         preciosProducto: id => `/ProductosPrecios/ListaPorProducto?idProducto=${id}`,
+        productosEstablecimiento: id => `/ClientesEstablecimientosProductos/ListaPorEstablecimiento?idEstablecimiento=${id}`,
         estadosEntrega: "/EntregasEstados/Lista",
         camiones: "/Camiones/Lista?soloActivos=true",
         sucursales: "/Sucursales/Lista",
@@ -553,6 +555,13 @@ window.__OA_ENTREGA_BUILD = "dup-alert-live-20260806";
             CM.idSucursalCliente = c ? Number(c.IdSucursal || 0) : 0;
             await cargarEstablecimientosEntrega(id);
         });
+
+        $("#cEstablecimiento").off("change.entregaProdEst").on("change.entregaProdEst", async function () {
+            if (CM.cargandoEntrega) return;
+            const idEst = parseInt($(this).val(), 10) || 0;
+            CM.idEstablecimientoSel = idEst;
+            await cargarProductosEstablecimientoEntrega(idEst);
+        });
     }
 
     async function cargarEstablecimientosEntrega(idCliente, idEstablecimientoPreferido) {
@@ -596,6 +605,20 @@ window.__OA_ENTREGA_BUILD = "dup-alert-live-20260806";
 
         CM.idEstablecimientoSel = idSel;
         $sel.val(idSel > 0 ? String(idSel) : "").trigger("change.select2");
+        await cargarProductosEstablecimientoEntrega(idSel);
+    }
+
+    async function cargarProductosEstablecimientoEntrega(idEstablecimiento) {
+        const id = Number(idEstablecimiento || 0);
+        CM.productosEstablecimiento = [];
+        if (id <= 0) return;
+        try {
+            const r = await fetch(API.productosEstablecimiento(id), { headers: authHeaders() });
+            CM.productosEstablecimiento = r.ok ? (await r.json()) || [] : [];
+        } catch (e) {
+            console.warn(e);
+            CM.productosEstablecimiento = [];
+        }
     }
 
     async function cargarSucursalesEntrega() {
@@ -712,25 +735,49 @@ window.__OA_ENTREGA_BUILD = "dup-alert-live-20260806";
         return CM.preciosCache[id];
     }
 
+    function precioDesdeProductosEstablecimiento(idProducto, idLista) {
+        const idP = Number(idProducto || 0);
+        const idL = Number(idLista || 0);
+        if (idP <= 0) return null;
+        const rows = (CM.productosEstablecimiento || []).filter(x =>
+            Number(x.IdProducto ?? x.idProducto) === idP
+            && Number(x.PrecioVenta ?? x.precioVenta) > 0
+        );
+        if (!rows.length) return null;
+        if (idL > 0) {
+            const exact = rows.find(x => Number(x.IdListaPrecio ?? x.idListaPrecio) === idL);
+            if (exact) return Number(exact.PrecioVenta ?? exact.precioVenta);
+        }
+        if (rows.length === 1) return Number(rows[0].PrecioVenta ?? rows[0].precioVenta);
+        return null;
+    }
+
     async function obtenerPrecioListaEntrega(idProducto, idLista) {
         const idL = Number(idLista || 0);
         if (!idProducto || !idL) return null;
         const rows = await obtenerPreciosProductoEntrega(idProducto);
         const match = (rows || []).find(x => Number(x.IdListaPrecio) === idL);
-        if (!match || match.PrecioVenta == null) return null;
-        return Number(match.PrecioVenta);
+        // La matriz trae todas las listas con PrecioVenta=0 si no hay tarifa: no cuenta como precio.
+        if (match && Number(match.PrecioVenta) > 0) return Number(match.PrecioVenta);
+
+        const desdeEst = precioDesdeProductosEstablecimiento(idProducto, idL);
+        if (desdeEst != null && desdeEst > 0) return desdeEst;
+        return null;
     }
 
-    /** Entrega (1): precio 0 por defecto (manual). Retiro/Recuperado: trae precio de lista. */
+    /** Entrega / Retiro / Recuperado: trae precio de lista al elegir producto + lista. */
     function lineaTraePrecioDeLista(linea) {
         const t = Number(linea?.TipoMovimiento);
-        return t === TIPO_LINEA_RETIRO || t === TIPO_LINEA_RECUPERADO;
+        return t === TIPO_LINEA_ENTREGA
+            || t === TIPO_LINEA_RETIRO
+            || t === TIPO_LINEA_RECUPERADO;
     }
 
     async function aplicarPrecioDesdeListaEntrega($tr, linea, { forzar = true } = {}) {
         if (!lineaTraePrecioDeLista(linea)) return false;
         const precio = await obtenerPrecioListaEntrega(linea.IdProducto, linea.IdListaPrecio);
-        if (precio == null) return false;
+        // Nunca pisar con 0: si no hay tarifa, dejar el valor actual.
+        if (precio == null || !(Number(precio) > 0)) return false;
         if (!forzar && Number(linea.PrecioVenta) > 0) return false;
         linea.PrecioVenta = precio;
         setValorInputMiles($tr.find(".linea-precio"), precio);
@@ -738,11 +785,6 @@ window.__OA_ENTREGA_BUILD = "dup-alert-live-20260806";
     }
 
     async function sincronizarPrecioSegunTipoLinea($tr, linea) {
-        if (Number(linea.TipoMovimiento) === TIPO_LINEA_ENTREGA) {
-            linea.PrecioVenta = 0;
-            setValorInputMiles($tr.find(".linea-precio"), 0);
-            return;
-        }
         if (linea.IdProducto > 0 && linea.IdListaPrecio > 0) {
             await aplicarPrecioDesdeListaEntrega($tr, linea, { forzar: true });
         }
@@ -907,9 +949,10 @@ window.__OA_ENTREGA_BUILD = "dup-alert-live-20260806";
         return tot;
     }
 
-    /** Lo cobrable es el retiro (servicio/tratamiento que paga el cliente). */
+    /** Lo cobrable = entrega + retiro (productos vendidos y servicio/tratamiento). */
     function calcularTotalCobrableDesdeLineas() {
-        return totalPorTipoLineaEntrega(TIPO_LINEA_RETIRO);
+        return totalPorTipoLineaEntrega(TIPO_LINEA_ENTREGA)
+            + totalPorTipoLineaEntrega(TIPO_LINEA_RETIRO);
     }
 
     function calcularTotalEntregaDesdeLineas() {
@@ -1126,11 +1169,12 @@ window.__OA_ENTREGA_BUILD = "dup-alert-live-20260806";
 
     function actualizarResumenCobrosUI() {
         const totalEntrega = calcularTotalEntregaDesdeLineas();
-        const totalRetiro = calcularTotalCobrableDesdeLineas();
+        const totalRetiro = totalPorTipoLineaEntrega(TIPO_LINEA_RETIRO);
+        const totalCobrable = totalEntrega + totalRetiro;
         const activos = cobrosActivos();
         const totalPagado = activos.reduce((s, p) => s + Number(p.Importe || 0), 0);
 
-        const saldo = totalRetiro - totalPagado;
+        const saldo = totalCobrable - totalPagado;
         const saldoCls = typeof clsSaldoDeudaMoney === "function"
             ? clsSaldoDeudaMoney(saldo)
             : "";
@@ -1456,8 +1500,21 @@ window.__OA_ENTREGA_BUILD = "dup-alert-live-20260806";
                 if (linea.IdProducto > 0 && !linea.IdListaPrecio) {
                     const precios = await obtenerPreciosProductoEntrega(linea.IdProducto);
                     const conPrecio = (precios || []).filter(p => Number(p.PrecioVenta) > 0);
+                    let idListaAuto = 0;
                     if (conPrecio.length === 1) {
-                        linea.IdListaPrecio = Number(conPrecio[0].IdListaPrecio);
+                        idListaAuto = Number(conPrecio[0].IdListaPrecio);
+                    } else {
+                        const estConPrecio = (CM.productosEstablecimiento || []).filter(x =>
+                            Number(x.IdProducto ?? x.idProducto) === linea.IdProducto
+                            && Number(x.PrecioVenta ?? x.precioVenta) > 0
+                            && Number(x.IdListaPrecio ?? x.idListaPrecio) > 0
+                        );
+                        if (estConPrecio.length === 1) {
+                            idListaAuto = Number(estConPrecio[0].IdListaPrecio ?? estConPrecio[0].idListaPrecio);
+                        }
+                    }
+                    if (idListaAuto > 0) {
+                        linea.IdListaPrecio = idListaAuto;
                         $lista.val(String(linea.IdListaPrecio)).trigger("change");
                         return;
                     }
@@ -1465,9 +1522,6 @@ window.__OA_ENTREGA_BUILD = "dup-alert-live-20260806";
 
                 if (linea.IdProducto > 0 && linea.IdListaPrecio > 0) {
                     await aplicarPrecioDesdeListaEntrega($row, linea, { forzar: true });
-                } else if (Number(linea.TipoMovimiento) === TIPO_LINEA_ENTREGA) {
-                    linea.PrecioVenta = 0;
-                    setValorInputMiles($row.find(".linea-precio"), 0);
                 }
 
                 syncLineaFromRow($row, linea);
@@ -1579,8 +1633,21 @@ window.__OA_ENTREGA_BUILD = "dup-alert-live-20260806";
                 if (linea.IdProducto > 0 && !linea.IdListaPrecio) {
                     const precios = await obtenerPreciosProductoEntrega(linea.IdProducto);
                     const conPrecio = (precios || []).filter(p => Number(p.PrecioVenta) > 0);
+                    let idListaAuto = 0;
                     if (conPrecio.length === 1) {
-                        linea.IdListaPrecio = Number(conPrecio[0].IdListaPrecio);
+                        idListaAuto = Number(conPrecio[0].IdListaPrecio);
+                    } else {
+                        const estConPrecio = (CM.productosEstablecimiento || []).filter(x =>
+                            Number(x.IdProducto ?? x.idProducto) === linea.IdProducto
+                            && Number(x.PrecioVenta ?? x.precioVenta) > 0
+                            && Number(x.IdListaPrecio ?? x.idListaPrecio) > 0
+                        );
+                        if (estConPrecio.length === 1) {
+                            idListaAuto = Number(estConPrecio[0].IdListaPrecio ?? estConPrecio[0].idListaPrecio);
+                        }
+                    }
+                    if (idListaAuto > 0) {
+                        linea.IdListaPrecio = idListaAuto;
                         $lista.val(String(linea.IdListaPrecio)).trigger("change");
                         return;
                     }
@@ -1663,11 +1730,12 @@ window.__OA_ENTREGA_BUILD = "dup-alert-live-20260806";
     }
 
     function recalcularTotalesUI() {
-        // Totales del documento = lo cobrable (retiros). Entregas suelen ir a $0.
+        // Totales del documento = entrega + retiro (lo cobrable). Recuperados no suman.
         let sub = 0, desc = 0, iva = 0, tot = 0;
 
         CM.lineas.forEach(l => {
-            if (Number(l.TipoMovimiento || TIPO_LINEA_ENTREGA) !== TIPO_LINEA_RETIRO) return;
+            const t = Number(l.TipoMovimiento || TIPO_LINEA_ENTREGA);
+            if (t !== TIPO_LINEA_ENTREGA && t !== TIPO_LINEA_RETIRO) return;
             const c = calcularLinea(l);
             sub += c.subtotalCdesc;
             desc += c.descTotal;
