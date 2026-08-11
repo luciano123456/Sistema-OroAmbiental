@@ -227,6 +227,11 @@ const API_CG = {
         if (volverCliente && idCliente) url += `&volverCliente=true`;
         return url;
     },
+    /** Navega a entrega guardando el contexto de la ficha del cliente para el botón Volver. */
+    irEntregaDesdeCliente: (idEntrega, idCliente) => {
+        if (typeof guardarEstadoRetornoCg === "function") guardarEstadoRetornoCg();
+        window.location.assign(API_CG.entregaNuevoModif(idEntrega, idCliente, true));
+    },
     entregaIndex: (idCliente) => {
         let url = `/ClientesEntregas/Index`;
         if (idCliente) url += `?idCliente=${idCliente}`;
@@ -304,6 +309,7 @@ $(document).ready(async () => {
             await cargarRecoleccionPrincipalCg();
             habilitarTabsRelacionados(true);
             await cargarHubDatosCg(true);
+            await restaurarEstadoRetornoCg();
         } else {
             actualizarHeaderCg("Nuevo cliente", "Complete los datos y registre el cliente");
             habilitarTabsRelacionados(false);
@@ -315,6 +321,7 @@ $(document).ready(async () => {
 
 const CG_SECCIONES_KEY = "cg.secciones.v1";
 const CG_ORDEN_KEY = "cg.secciones.orden.v1";
+const CG_NAV_RETURN_PREFIX = "cg.navReturn.v1.";
 const CG_SECCIONES_DEFAULT = {
     identificacion: true,
     domicilio: true,
@@ -376,6 +383,155 @@ function guardarOrdenSeccionesCg(orden) {
         localStorage.setItem(CG_ORDEN_KEY, JSON.stringify(orden));
     } catch (e) {
         console.warn("No se pudo guardar orden de secciones:", e);
+    }
+}
+
+/** Estado de solapa / establecimiento / mes abierto al ir a una entrega (para Volver). */
+function capturarEstadoRetornoCg() {
+    if (!(CG.id > 0)) return null;
+
+    const mainTab = document.querySelector("#cgTabsNav button.nav-link.active[data-cg-tab]")
+        ?.getAttribute("data-cg-tab") || "datos";
+
+    let estTab = null;
+    if ($("#tabBtnStockEst").hasClass("active")) estTab = "stock";
+    else if ($("#tabBtnContactosEst").hasClass("active")) estTab = "contactos";
+    else if ($("#tabBtnProductosEst").hasClass("active")) estTab = "productos";
+    else if ($("#tabBtnDatosEst").hasClass("active")) estTab = "datos";
+
+    const mesClienteVisible = !$("#cgHubMesDetail").prop("hidden") && CG.hubMesSel
+        ? { anio: Number(CG.hubMesSel.anio), mes: Number(CG.hubMesSel.mes) }
+        : null;
+    const mesEst = CG.hubs?.est?.hubMesSel;
+    const mesEstVisible = mesEst && !$("#cgEstHubMesDetail").prop("hidden")
+        ? { anio: Number(mesEst.anio), mes: Number(mesEst.mes) }
+        : null;
+
+    return {
+        v: 1,
+        idCliente: CG.id,
+        mainTab,
+        estIds: idsEstablecimientoSeleccionadosCg(),
+        estTab: mainTab === "establecimientos" ? (estTab || "datos") : null,
+        hubActivo: CG.hubActivo === "est" ? "est" : "cliente",
+        mesCliente: mesClienteVisible,
+        mesEst: mesEstVisible,
+        controlFiltrosCliente: {
+            anios: [...(CG.controlFiltros?.anios || [])],
+            meses: [...(CG.controlFiltros?.meses || [])]
+        },
+        controlFiltrosEst: CG.hubs?.est?.controlFiltros
+            ? {
+                anios: [...(CG.hubs.est.controlFiltros.anios || [])],
+                meses: [...(CG.hubs.est.controlFiltros.meses || [])]
+            }
+            : null
+    };
+}
+
+function guardarEstadoRetornoCg() {
+    const st = capturarEstadoRetornoCg();
+    if (!st) return;
+    try {
+        sessionStorage.setItem(CG_NAV_RETURN_PREFIX + st.idCliente, JSON.stringify(st));
+    } catch (e) {
+        console.warn("No se pudo guardar estado de retorno:", e);
+    }
+}
+
+function consumirEstadoRetornoCg(idCliente) {
+    try {
+        const key = CG_NAV_RETURN_PREFIX + idCliente;
+        const raw = sessionStorage.getItem(key);
+        if (!raw) return null;
+        sessionStorage.removeItem(key);
+        const st = JSON.parse(raw);
+        if (!st || Number(st.idCliente) !== Number(idCliente)) return null;
+        return st;
+    } catch {
+        return null;
+    }
+}
+
+async function restaurarEstadoRetornoCg() {
+    const st = consumirEstadoRetornoCg(CG.id);
+    if (!st) return;
+
+    try {
+        if (st.controlFiltrosCliente) {
+            CG.controlFiltros = {
+                anios: [...(st.controlFiltrosCliente.anios || [])],
+                meses: [...(st.controlFiltrosCliente.meses || [])]
+            };
+        }
+
+        const mainTab = st.mainTab || "datos";
+
+        if (mainTab === "establecimientos") {
+            CG.establecimientoSelIds = (st.estIds || []).map(Number).filter(x => x > 0);
+            syncEstablecimientoSelStateCg();
+        }
+
+        if (mainTab !== "datos") {
+            const btn = document.querySelector(`#cgTabsNav button[data-cg-tab="${mainTab}"]`);
+            if (btn && !btn.disabled) {
+                bootstrap.Tab.getOrCreateInstance(btn).show();
+                await cargarTabCg(mainTab);
+            }
+        }
+
+        if (mainTab === "establecimientos") {
+            // Reaplicar por si el lazy-load limpió la selección
+            CG.establecimientoSelIds = (st.estIds || []).map(Number).filter(x => x > 0);
+            syncEstablecimientoSelStateCg();
+            await aplicarSeleccionEstablecimientosCg();
+
+            const estTabMap = {
+                stock: "tabBtnStockEst",
+                contactos: "tabBtnContactosEst",
+                productos: "tabBtnProductosEst",
+                datos: "tabBtnDatosEst"
+            };
+            const estBtnId = estTabMap[st.estTab] || "tabBtnDatosEst";
+            const estBtn = document.getElementById(estBtnId);
+            if (estBtn && !estBtn.disabled && !estBtn.classList.contains("d-none")) {
+                bootstrap.Tab.getOrCreateInstance(estBtn).show();
+            }
+
+            if (st.estTab === "stock" || st.mesEst) {
+                CG.hubActivo = "est";
+                await cargarHubEstablecimientoCg(true);
+                if (st.controlFiltrosEst) {
+                    hubEstStateCg().controlFiltros = {
+                        anios: [...(st.controlFiltrosEst.anios || [])],
+                        meses: [...(st.controlFiltrosEst.meses || [])]
+                    };
+                    await cargarTabControlMensual(true, idsEstablecimientoSeleccionadosCg());
+                }
+                if (st.mesEst?.anio && st.mesEst?.mes) {
+                    await withHubModeCg("est", async () => {
+                        await abrirWorkspaceMesCg(st.mesEst.anio, st.mesEst.mes, true);
+                    });
+                    document.getElementById("cgEstHubMesDetail")
+                        ?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+                }
+            }
+            return;
+        }
+
+        // Cliente / control de pagos en solapa Datos
+        CG.hubActivo = "cliente";
+        if (st.mesCliente?.anio && st.mesCliente?.mes) {
+            await cargarTabControlMensual(true);
+            await abrirWorkspaceMesCg(st.mesCliente.anio, st.mesCliente.mes, true);
+            document.getElementById("cgHubMesDetail")
+                ?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        } else if (mainTab === "datos") {
+            document.getElementById("cgHubOperativo")
+                ?.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+    } catch (e) {
+        console.warn("No se pudo restaurar el contexto al volver:", e);
     }
 }
 
@@ -924,14 +1080,15 @@ function wireEventosCg() {
             || $(this).closest(".cg-hub-entrega-row").attr("data-id")
             || $(this).closest(".cg-hub-entrega-row").data("id")
         ) || 0;
-        const href = idEntrega > 0
-            ? API_CG.entregaNuevoModif(idEntrega, CG.id, true)
-            : ($(this).attr("href") || "");
-        if (!href || href === "#" || idEntrega <= 0) {
+        if (idEntrega <= 0) {
             if (typeof errorModal === "function") errorModal("No se pudo identificar la entrega a abrir.");
             return;
         }
-        window.location.assign(href);
+        API_CG.irEntregaDesdeCliente(idEntrega, CG.id);
+    });
+    $(document).on("click", "a[href*='/ClientesEntregas/NuevoModif'][href*='volverCliente=true']", function () {
+        // Guarda solapa / mes abierto antes de salir (Nueva entrega, cards, etc.)
+        guardarEstadoRetornoCg();
     });
     $("#btnRefreshEntregasTab").on("click", () => cargarHubEntregasCg(true));
 
@@ -4711,7 +4868,7 @@ function initViewModeCg() {
     const schemaDblClick = {
         establecimientos: r => editarEstablecimientoCg(r.Id),
         contratos: r => editarContratoCg(r.Id),
-        entregas: r => { window.location.href = API_CG.entregaNuevoModif(r.Id, CG.id, true); }
+        entregas: r => { API_CG.irEntregaDesdeCliente(r.Id, CG.id); }
     };
 
     Object.keys(CG_CARD_SCHEMAS).forEach(key => {

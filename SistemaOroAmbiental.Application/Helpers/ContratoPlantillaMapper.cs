@@ -40,7 +40,14 @@ namespace SistemaOroAmbiental.Application.Helpers
                 est?.IdTipoGeneradorNavigation ?? cli?.IdTipoGeneradorNavigation);
             var nombreCliente = cli?.Nombre?.Trim() ?? "";
             var telefono = cli?.Telefono?.Trim() ?? cli?.TelefonoAlt?.Trim() ?? "";
-            var email = cli?.Email?.Trim() ?? "";
+            var emailContactoEst = est?.ClientesEstablecimientosContactos?
+                .Where(x => !string.IsNullOrWhiteSpace(x.Email))
+                .OrderBy(x => x.Id)
+                .Select(x => x.Email!.Trim())
+                .FirstOrDefault();
+            var email = !string.IsNullOrWhiteSpace(emailContactoEst)
+                ? emailContactoEst
+                : (cli?.Email?.Trim() ?? "");
             var cuit = !string.IsNullOrWhiteSpace(est?.Cuit) ? est.Cuit!.Trim() : (cli?.Cuit?.Trim() ?? "");
             var diasHorarios = ArmarDiasHorariosCliente(est);
 
