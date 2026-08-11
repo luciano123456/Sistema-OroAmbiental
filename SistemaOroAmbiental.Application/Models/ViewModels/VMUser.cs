@@ -1,4 +1,4 @@
-﻿using SistemaOroAmbiental.Models;
+using SistemaOroAmbiental.Models;
 
 namespace SistemaOroAmbiental.Application.Models.ViewModels
 {
@@ -33,6 +33,14 @@ namespace SistemaOroAmbiental.Application.Models.ViewModels
         public bool EnLinea { get; set; }
 
         public DateTime? FechaUltimaActividad { get; set; }
+
+        public string? UltimoModulo { get; set; }
+
+        public string? AvatarColor { get; set; }
+
+        public string? AvatarIcono { get; set; }
+
+        public string? AvatarFoto { get; set; }
     }
 
 }

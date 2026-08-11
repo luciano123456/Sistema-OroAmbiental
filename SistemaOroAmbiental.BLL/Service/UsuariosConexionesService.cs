@@ -7,14 +7,30 @@ namespace SistemaOroAmbiental.BLL.Service
     {
         Task RegistrarConexionAsync(int idUsuario, string? tokenJti, string? ip, string? userAgent);
         Task RegistrarDesconexionAsync(int idUsuario, byte tipo, string? tokenJti, string? ip, string? userAgent, string? detalle = null);
-        Task HeartbeatAsync(int idUsuario);
+        Task HeartbeatAsync(int idUsuario, string? ultimoModulo = null);
         Task<IReadOnlyList<UsuariosConexion>> HistorialAsync(int idUsuario, int take = 100);
-        Task<IReadOnlyList<(int Id, bool EnLinea)>> ListarPresenciaAsync(int minutosTolerancia = 5);
+        Task<IReadOnlyList<PresenciaUsuarioDto>> ListarPresenciaAsync(int minutosTolerancia = 5);
         bool EstaEnLinea(DateTime? fechaUltimaActividadUtc, int minutosTolerancia = 5);
     }
 
+    public record PresenciaUsuarioDto(
+        int Id,
+        bool EnLinea,
+        string? UltimoModulo,
+        string? Nombre,
+        string? Apellido,
+        string? AvatarColor,
+        string? AvatarIcono,
+        string? AvatarFoto);
+
     public class UsuariosConexionesService : IUsuariosConexionesService
     {
+        private static readonly HashSet<string> ModulosPermitidos = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "Clientes", "Productos", "Transporte", "Proveedores",
+            "Finanzas", "AnalisisDatos", "Usuarios"
+        };
+
         private readonly IUsuariosConexionesRepository _repo;
 
         public UsuariosConexionesService(IUsuariosConexionesRepository repo)
@@ -56,20 +72,36 @@ namespace SistemaOroAmbiental.BLL.Service
                     ?? (tipo == UsuariosConexion.TipoExpiro ? "Sesión expirada" : "Cierre de sesión")
             });
 
-            await _repo.ActualizarUltimaActividadAsync(idUsuario, now.AddMinutes(-30), forzar: true);
+            await _repo.ActualizarUltimaActividadAsync(
+                idUsuario,
+                now.AddMinutes(-30),
+                forzar: true,
+                limpiarModulo: true);
         }
 
-        public Task HeartbeatAsync(int idUsuario)
-            => _repo.ActualizarUltimaActividadAsync(idUsuario, DateTime.UtcNow, forzar: false);
+        public Task HeartbeatAsync(int idUsuario, string? ultimoModulo = null)
+            => _repo.ActualizarUltimaActividadAsync(
+                idUsuario,
+                DateTime.UtcNow,
+                forzar: false,
+                ultimoModulo: SanitizeModulo(ultimoModulo));
 
         public Task<IReadOnlyList<UsuariosConexion>> HistorialAsync(int idUsuario, int take = 100)
             => _repo.ListarPorUsuarioAsync(idUsuario, take);
 
-        public async Task<IReadOnlyList<(int Id, bool EnLinea)>> ListarPresenciaAsync(int minutosTolerancia = 5)
+        public async Task<IReadOnlyList<PresenciaUsuarioDto>> ListarPresenciaAsync(int minutosTolerancia = 5)
         {
             var rows = await _repo.ListarPresenciaAsync();
             return rows
-                .Select(r => (r.Id, EstaEnLinea(r.FechaUltimaActividad, minutosTolerancia)))
+                .Select(r => new PresenciaUsuarioDto(
+                    r.Id,
+                    EstaEnLinea(r.FechaUltimaActividad, minutosTolerancia),
+                    r.UltimoModulo,
+                    r.Nombre,
+                    r.Apellido,
+                    r.AvatarColor,
+                    r.AvatarIcono,
+                    r.AvatarFoto))
                 .ToList();
         }
 
@@ -77,6 +109,15 @@ namespace SistemaOroAmbiental.BLL.Service
         {
             if (!fechaUltimaActividadUtc.HasValue) return false;
             return fechaUltimaActividadUtc.Value >= DateTime.UtcNow.AddMinutes(-Math.Abs(minutosTolerancia));
+        }
+
+        public static string? SanitizeModulo(string? modulo)
+        {
+            if (string.IsNullOrWhiteSpace(modulo)) return null;
+            var m = modulo.Trim();
+            if (!ModulosPermitidos.Contains(m)) return null;
+            // Canonical casing from set
+            return ModulosPermitidos.First(x => x.Equals(m, StringComparison.OrdinalIgnoreCase));
         }
 
         private static string? Trunc(string? value, int max)

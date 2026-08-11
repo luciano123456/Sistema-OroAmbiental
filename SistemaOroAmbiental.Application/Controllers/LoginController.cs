@@ -111,6 +111,9 @@ namespace SistemaBronx.Application.Controllers
                             user.Direccion,
                             user.Dni,
                             user.Telefono,
+                            user.AvatarColor,
+                            user.AvatarIcono,
+                            user.AvatarFoto,
                             Sucursales = sucursalesDto,
                             IdSucursalDefault = idSucursalDefault
                         }
@@ -208,14 +211,14 @@ namespace SistemaBronx.Application.Controllers
         /// <summary>Mantiene al usuario en línea mientras la pestaña esté abierta.</summary>
         [Authorize]
         [HttpPost]
-        public async Task<IActionResult> Heartbeat()
+        public async Task<IActionResult> Heartbeat([FromBody] VMHeartbeat? model = null)
         {
             if (!int.TryParse(User.FindFirst("Id")?.Value, out var userId))
                 return Unauthorized();
 
             try
             {
-                await _conexiones.HeartbeatAsync(userId);
+                await _conexiones.HeartbeatAsync(userId, model?.Modulo);
                 return Ok(new { success = true });
             }
             catch

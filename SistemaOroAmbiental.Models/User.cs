@@ -36,6 +36,18 @@ public partial class User
     /// <summary>UTC. Se actualiza en login/heartbeat; se atrasa al desconectar.</summary>
     public DateTime? FechaUltimaActividad { get; set; }
 
+    /// <summary>Color de fondo del avatar (hex, ej. #3b82f6).</summary>
+    public string? AvatarColor { get; set; }
+
+    /// <summary>Clase Font Awesome del icono (sin prefijo fa-), ej. user.</summary>
+    public string? AvatarIcono { get; set; }
+
+    /// <summary>Ruta pública de la foto de perfil, ej. /Uploads/Avatares/u_1.jpg.</summary>
+    public string? AvatarFoto { get; set; }
+
+    /// <summary>Clave del módulo navbar actual (ej. Productos, Clientes).</summary>
+    public string? UltimoModulo { get; set; }
+
     public virtual ICollection<CajasMovimiento> CajasMovimientoIdUsuarioModificaNavigations { get; set; } = new List<CajasMovimiento>();
 
     public virtual ICollection<CajasMovimiento> CajasMovimientoIdUsuarioRegistraNavigations { get; set; } = new List<CajasMovimiento>();

@@ -6,3 +6,5 @@ Capa de scripts SQL del proyecto. Ejecutar en SQL Server en orden numérico.
 |--------|-------------|
 | `001_ModuloClientesGeoCamiones.sql` | Estados/motivos/calificación clientes, geo con códigos, camiones, FKs |
 | `002_MigrarScriptsAnteriores.sql` | Referencias a scripts legacy en `docs/sql/` |
+| `019_UsuariosAvatar.sql` | Avatar personalizable: color, icono y foto |
+| `020_UsuariosUltimoModulo.sql` | Presencia: módulo actual del usuario |
