@@ -717,6 +717,7 @@ function wireEventosCg() {
     });
     $(document).on("shown.bs.tab", "#tabBtnStockEst", () => {
         CG.hubActivo = "est";
+        syncEstEditorFootCg();
         if (idsEstablecimientoSeleccionadosCg().length > 0) {
             cargarHubEstablecimientoCg(true);
         } else {
@@ -729,6 +730,7 @@ function wireEventosCg() {
     });
     $(document).on("shown.bs.tab", "#tabBtnDatosEst, #tabBtnContactosEst, #tabBtnProductosEst", () => {
         CG.hubActivo = "cliente";
+        syncEstEditorFootCg();
     });
     $(document).on("shown.bs.tab", "#tabBtnEstablecimientos", () => {
         if (idsEstablecimientoSeleccionadosCg().length > 0) {
@@ -1849,8 +1851,8 @@ async function aplicarSeleccionEstablecimientosCg(opts = {}) {
     CG.establecimientoSelId = uno || 0;
 
     $("#cgEstMultiBanner").toggleClass("d-none", !multi);
-    $("#cgEstEditorFoot").toggleClass("d-none", multi || ids.length === 0);
     aplicarModoTabsEstCg(ids.length);
+    syncEstEditorFootCg();
 
     if (ids.length === 0) {
         $("#cgEstEditor").addClass("d-none");
@@ -1871,6 +1873,7 @@ async function aplicarSeleccionEstablecimientosCg(opts = {}) {
         if (tabStock && !tabStock.classList.contains("active")) {
             bootstrap.Tab.getOrCreateInstance(tabStock).show();
         }
+        syncEstEditorFootCg();
         await cargarHubEstablecimientoCg(true);
         return;
     }
@@ -1891,7 +1894,16 @@ async function aplicarSeleccionEstablecimientosCg(opts = {}) {
         if (tabStock?.classList.contains("active")) {
             await cargarHubEstablecimientoCg(true);
         }
+        syncEstEditorFootCg();
     });
+}
+
+/** Footer Guardar/Cancelar establecimiento: no aplica en Control de pagos (tiene su propio Guardar). */
+function syncEstEditorFootCg() {
+    const ids = idsEstablecimientoSeleccionadosCg();
+    const multi = ids.length > 1;
+    const enStock = $("#tabBtnStockEst").hasClass("active");
+    $("#cgEstEditorFoot").toggleClass("d-none", multi || ids.length === 0 || enStock);
 }
 
 function aplicarModoTabsEstCg(cantidad) {
@@ -1959,11 +1971,12 @@ async function abrirNuevoEstablecimientoCg() {
     setStockEstTabDisponibleCg(false);
     aplicarModoTabsEstCg(1);
     $("#cgEstMultiBanner").addClass("d-none");
-    $("#cgEstEditorFoot").removeClass("d-none");
     $("#cgEstEditorEmpty").addClass("d-none");
     $("#cgEstEditor").removeClass("d-none");
+    syncEstEditorFootCg();
     await withCgLoading("Preparando nuevo establecimiento…", async () => {
         await CG.establecimientoModal.abrirNuevo(CG.id);
+        syncEstEditorFootCg();
     });
 }
 
