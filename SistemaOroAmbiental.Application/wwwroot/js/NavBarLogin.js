@@ -61,13 +61,6 @@ document.addEventListener("DOMContentLoaded", function () {
         var userFullName = (userSession.Nombre + ' ' + userSession.Apellido).trim();
         $("#userName").text(userFullName || "Usuario");
 
-        if (window.RpAvatar) {
-            RpAvatar.applyToNavbar({
-                color: userSession.AvatarColor,
-                icono: userSession.AvatarIcono,
-                foto: userSession.AvatarFoto
-            });
-        }
     }
 
     initNavbarDropdowns();

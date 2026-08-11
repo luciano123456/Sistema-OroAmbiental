@@ -1850,15 +1850,6 @@ public partial class SistemaOroAmbientalContext : DbContext
             entity.Property(e => e.Apellido)
                 .HasMaxLength(100)
                 .IsUnicode(false);
-            entity.Property(e => e.AvatarColor)
-                .HasMaxLength(20)
-                .IsUnicode(false);
-            entity.Property(e => e.AvatarIcono)
-                .HasMaxLength(50)
-                .IsUnicode(false);
-            entity.Property(e => e.AvatarFoto)
-                .HasMaxLength(250)
-                .IsUnicode(false);
             entity.Property(e => e.CodigoRecuperacion)
                 .HasMaxLength(250)
                 .IsUnicode(false);
