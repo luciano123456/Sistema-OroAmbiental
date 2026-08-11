@@ -423,8 +423,11 @@ function renderModalProductosEntrega(detalle) {
     $("#cmProdModalSub").text(`${contrato} - ${estado} - ${fecha}`);
 
     const totalPagado = Number(detalle.TotalPagado ?? detalle.totalPagado ?? 0);
-    const saldoPend = Number(detalle.SaldoPendiente ?? detalle.saldoPendiente
-        ?? Math.max(0, Number(detalle.ImporteTotal ?? detalle.importeTotal ?? 0) - totalPagado));
+    const saldo = Number(detalle.Saldo ?? detalle.saldo
+        ?? (Number(detalle.ImporteTotal ?? detalle.importeTotal ?? 0) - totalPagado));
+    const esFavor = saldo < -0.009;
+    const lblSaldo = esFavor ? "Saldo" : "Saldo pendiente";
+    const saldoCls = typeof clsSaldoDeudaMoney === "function" ? clsSaldoDeudaMoney(saldo) : "";
 
     const resumenHtml = `
         <div class="cm-prod-resumen-item">
@@ -451,9 +454,9 @@ function renderModalProductosEntrega(detalle) {
             <div class="lbl">Pagado contrato</div>
             <div class="val cm-col-pagado">${totalPagado > 0 ? fmtMoneyEntregas(totalPagado) : ""}</div>
         </div>
-        <div class="cm-prod-resumen-item ${saldoPend > 0.01 ? "cm-prod-resumen-pend" : ""}">
-            <div class="lbl">Saldo pendiente</div>
-            <div class="val">${fmtMoneyEntregas(saldoPend)}</div>
+        <div class="cm-prod-resumen-item ${saldo > 0.01 ? "cm-prod-resumen-pend" : esFavor ? "cm-prod-resumen-favor" : ""}">
+            <div class="lbl">${lblSaldo}</div>
+            <div class="val ${saldoCls}">${fmtMoneyEntregas(saldo)}</div>
         </div>`;
     $("#cmProdResumen").html(resumenHtml);
 

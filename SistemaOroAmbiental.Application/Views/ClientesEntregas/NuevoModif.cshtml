@@ -12,7 +12,7 @@
     <link href="~/css/disenopantallas.css?v=8.1" rel="stylesheet" />
     <link href="~/css/M_Generico.css?v=5.5" rel="stylesheet" />
     <link href="~/css/VentasNuevoModif.css?v=5.2" rel="stylesheet" />
-    <link href="~/css/ClientesEntregas.css?v=5.7" rel="stylesheet" />
+    <link href="~/css/ClientesEntregas.css?v=5.8" rel="stylesheet" />
     <link href="~/css/ContratosModal.css?v=5.4" rel="stylesheet" />
 }
 
@@ -244,8 +244,8 @@
                                 <div class="lbl">Cobrado</div>
                                 <div class="val cm-cobros-kpi--ok" id="cobroTotPagado">$ 0,00</div>
                             </div>
-                            <div class="cm-cobros-kpi cm-cobros-kpi--pend">
-                                <div class="lbl">Saldo pendiente</div>
+                            <div class="cm-cobros-kpi" id="cobroSaldoPendKpi">
+                                <div class="lbl" id="cobroSaldoPendLbl">Saldo pendiente</div>
                                 <div class="val" id="cobroSaldoPend">$ 0,00</div>
                             </div>
                         </div>
@@ -319,7 +319,7 @@
                     <div class="val cm-resumen-pagado" id="totPagadoResumen">$ 0,00</div>
                 </div>
                 <div class="vn-stat">
-                    <div class="lbl">Saldo pendiente</div>
+                    <div class="lbl" id="totSaldoResumenLbl">Saldo pendiente</div>
                     <div class="val cm-resumen-saldo" id="totSaldoResumen">$ 0,00</div>
                 </div>
             </div>
@@ -347,7 +347,7 @@
     <script src="~/js/Entities/M_Productos.js?v=5.5"></script>
     <script src="~/js/ContratosDocumentos.js?v=5.4"></script>
     <script src="~/js/Entities/M_Contratos.js?v=5.4"></script>
-    <script src="~/js/ClientesEntregasNuevoModif.js?v=7.1" asp-append-version="true"></script>
+    <script src="~/js/ClientesEntregasNuevoModif.js?v=7.2" asp-append-version="true"></script>
     <script>
         /* Guardia inline entregas */
         (function () {

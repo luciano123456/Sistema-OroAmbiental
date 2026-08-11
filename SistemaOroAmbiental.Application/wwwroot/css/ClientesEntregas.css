@@ -182,7 +182,11 @@ body.layout-modulo .container-fluid {
 }
 
 .cm-prod-resumen-item.cm-prod-resumen-pend .val {
-    color: #ffb86c;
+    color: #f87171;
+}
+
+.cm-prod-resumen-item.cm-prod-resumen-favor .val {
+    color: #6ee7b7;
 }
 
 .cm-col-pagado {
@@ -204,7 +208,19 @@ body.layout-modulo .container-fluid {
 }
 
 .entregas-nuevo .cm-resumen-saldo {
-    color: #ffb86c;
+    color: #e8f2ff;
+}
+
+.entregas-nuevo .cm-resumen-saldo.rp-money-neg {
+    color: #f87171;
+}
+
+.entregas-nuevo .cm-resumen-saldo.rp-money-pos {
+    color: #6ee7b7;
+}
+
+.entregas-nuevo .cm-resumen-saldo.rp-money-zero {
+    color: #fbbf24;
 }
 
 .cm-prod-loading {
@@ -398,8 +414,17 @@ body.layout-modulo .container-fluid {
     color: #6ee7b7;
 }
 
-.cm-cobros-kpi--pend .val {
-    color: #ffd37a;
+.cm-cobros-kpi--pend .val,
+.cm-cobros-kpi .val.rp-money-neg {
+    color: #f87171;
+}
+
+.cm-cobros-kpi .val.rp-money-pos {
+    color: #6ee7b7;
+}
+
+.cm-cobros-kpi .val.rp-money-zero {
+    color: #fbbf24;
 }
 
 #sec-cobros .vn-gridtable.d-none {

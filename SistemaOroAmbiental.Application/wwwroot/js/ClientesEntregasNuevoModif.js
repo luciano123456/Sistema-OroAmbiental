@@ -1131,13 +1131,23 @@ window.__OA_ENTREGA_BUILD = "dup-alert-live-20260806";
         const totalPagado = activos.reduce((s, p) => s + Number(p.Importe || 0), 0);
 
         const saldo = totalRetiro - totalPagado;
+        const saldoCls = typeof clsSaldoDeudaMoney === "function"
+            ? clsSaldoDeudaMoney(saldo)
+            : "";
+        const esFavor = saldo < -0.009;
+        const lblSaldo = esFavor ? "Saldo" : "Saldo pendiente";
 
         $("#cobroTotEntrega").text(fmtMoney(totalEntrega));
         $("#cobroTotRetiro").text(fmtMoney(totalRetiro));
         $("#cobroTotPagado").text(fmtMoney(totalPagado));
-        $("#cobroSaldoPend").text(fmtMoney(saldo));
+        $("#cobroSaldoPendLbl").text(lblSaldo);
+        $("#cobroSaldoPend").text(fmtMoney(saldo)).attr("class", "val " + saldoCls);
+        $("#cobroSaldoPendKpi")
+            .toggleClass("cm-cobros-kpi--pend", !esFavor && saldo > 0.009)
+            .toggleClass("cm-cobros-kpi--ok", esFavor);
         $("#totPagadoResumen").text(fmtMoney(totalPagado));
-        $("#totSaldoResumen").text(fmtMoney(saldo));
+        $("#totSaldoResumenLbl").text(lblSaldo);
+        $("#totSaldoResumen").text(fmtMoney(saldo)).attr("class", "val cm-resumen-saldo " + saldoCls);
         const accionGuardar = CM.id > 0 ? "Guardar cambios" : "Registrar entrega";
         $("#lblCobrosHintText").text(
             activos.length
