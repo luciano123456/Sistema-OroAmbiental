@@ -2,7 +2,7 @@
    CLIENTES GESTION - Hub unificado por cliente
    (cliente + establecimientos: lineas completas + importe tras cuenta)
 ========================================================= */
-window.__OA_CG_BUILD = "entrega-precio-saldo-v24-20260811";
+window.__OA_CG_BUILD = "entrega-precio-saldo-v25-20260811";
 
 const CG = {
     id: 0,
@@ -3285,13 +3285,33 @@ async function obtenerPreciosProductoWsCg(idProducto) {
     return CG.wsPreciosCache[id];
 }
 
+function precioDesdeSugeridosWsCg(idProducto, idLista) {
+    const idP = Number(idProducto || 0);
+    const idL = Number(idLista || 0);
+    if (idP <= 0) return null;
+    const rows = (CG.wsSugeridos || []).filter(s =>
+        Number(s.IdProducto) === idP && Number(s.PrecioVenta) > 0
+    );
+    if (!rows.length) return null;
+    if (idL > 0) {
+        const exact = rows.find(s => Number(s.IdListaPrecio) === idL);
+        if (exact) return Number(exact.PrecioVenta);
+    }
+    if (rows.length === 1) return Number(rows[0].PrecioVenta);
+    return null;
+}
+
 async function obtenerPrecioListaWsCg(idProducto, idLista) {
     const idL = Number(idLista || 0);
     if (!idProducto || !idL) return null;
     const rows = await obtenerPreciosProductoWsCg(idProducto);
     const match = (rows || []).find(r => Number(r.IdListaPrecio) === idL);
-    if (!match || match.PrecioVenta == null) return null;
-    return Number(match.PrecioVenta);
+    // Matriz completa con 0 si no hay tarifa: no pisar el precio del establecimiento.
+    if (match && Number(match.PrecioVenta) > 0) return Number(match.PrecioVenta);
+
+    const desdeSug = precioDesdeSugeridosWsCg(idProducto, idL);
+    if (desdeSug != null && desdeSug > 0) return desdeSug;
+    return null;
 }
 
 /** Entrega / Retiro: trae precio de lista al elegir producto + lista. */
@@ -3299,7 +3319,7 @@ async function sincronizarPrecioLineaWsCg($row, linea, campo) {
     if (campo === "tipo") {
         if (linea.IdProducto > 0 && linea.IdListaPrecio > 0) {
             const precio = await obtenerPrecioListaWsCg(linea.IdProducto, linea.IdListaPrecio);
-            if (precio != null) {
+            if (precio != null && Number(precio) > 0) {
                 linea.PrecioVenta = precio;
                 $row.find(".ws-precio").val(fmtQtyCg(precio));
             }
@@ -3312,15 +3332,28 @@ async function sincronizarPrecioLineaWsCg($row, linea, campo) {
     if (campo === "prod" && linea.IdProducto > 0 && !linea.IdListaPrecio) {
         const precios = await obtenerPreciosProductoWsCg(linea.IdProducto);
         const conPrecio = (precios || []).filter(p => Number(p.PrecioVenta) > 0);
+        let idListaAuto = 0;
         if (conPrecio.length === 1) {
-            linea.IdListaPrecio = Number(conPrecio[0].IdListaPrecio);
+            idListaAuto = Number(conPrecio[0].IdListaPrecio);
+        } else {
+            const sugConPrecio = (CG.wsSugeridos || []).filter(s =>
+                Number(s.IdProducto) === linea.IdProducto
+                && Number(s.PrecioVenta) > 0
+                && Number(s.IdListaPrecio) > 0
+            );
+            if (sugConPrecio.length === 1) {
+                idListaAuto = Number(sugConPrecio[0].IdListaPrecio);
+            }
+        }
+        if (idListaAuto > 0) {
+            linea.IdListaPrecio = idListaAuto;
             $row.find(".ws-lista").val(String(linea.IdListaPrecio));
         }
     }
 
     if (linea.IdProducto > 0 && linea.IdListaPrecio > 0) {
         const precio = await obtenerPrecioListaWsCg(linea.IdProducto, linea.IdListaPrecio);
-        if (precio != null) {
+        if (precio != null && Number(precio) > 0) {
             linea.PrecioVenta = precio;
             $row.find(".ws-precio").val(fmtQtyCg(precio));
         }
