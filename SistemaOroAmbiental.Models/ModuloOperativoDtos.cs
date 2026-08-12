@@ -61,6 +61,12 @@ public class ClientesRecorridoDto
     public string Zona { get; set; } = "";
     public int Posicion { get; set; }
     public bool Activo { get; set; }
+    /// <summary>Cliente en periodo de licencia (fechas o estado).</summary>
+    public bool EnLicencia { get; set; }
+    public DateTime? FechaLicenciaDesde { get; set; }
+    public DateTime? FechaLicenciaHasta { get; set; }
+    /// <summary>Marcado en UI para no incluirlo en la hoja de ruta (solo sesión).</summary>
+    public bool NoExportarHoja { get; set; }
     public string? Observacion { get; set; }
     public string RecorridoTexto { get; set; } = "";
     public List<HojaRutaParadaProductoDto> Productos { get; set; } = new();
@@ -88,14 +94,10 @@ public class ClienteControlProductoMesDto
     public string? ListaPrecio { get; set; }
     public decimal Entregadas { get; set; }
     public decimal Retiradas { get; set; }
-    /// <summary>Cantidad de retiros marcados como producto no retirado.</summary>
-    public decimal NoRetiradas { get; set; }
     public decimal PrecioUnitarioEntrega { get; set; }
     public decimal PrecioUnitarioRetiro { get; set; }
-    public decimal PrecioUnitarioNoRetiro { get; set; }
     public decimal SubtotalEntregas { get; set; }
     public decimal SubtotalRetiros { get; set; }
-    public decimal SubtotalNoRetiros { get; set; }
 }
 
 public class ClienteControlProductoColumnaDto
@@ -127,12 +129,9 @@ public class ClienteControlMensualDto
     public DateTime? FechaVisita { get; set; }
     public decimal Entregadas { get; set; }
     public decimal Retiradas { get; set; }
-    /// <summary>Total de productos marcados como no retirados en el mes.</summary>
-    public decimal NoRetiradas { get; set; }
     public decimal StockCliente { get; set; }
     public decimal SubtotalEntregas { get; set; }
     public decimal SubtotalRetiros { get; set; }
-    public decimal SubtotalNoRetiros { get; set; }
     public decimal AbonoEfectivo { get; set; }
     public decimal AbonoTransferencia { get; set; }
     public DateTime? FechaTransferencia { get; set; }
@@ -202,7 +201,6 @@ public class ClienteStockDto
     public string Producto { get; set; } = "";
     public decimal Entregadas { get; set; }
     public decimal Retiradas { get; set; }
-    public decimal NoRetiradas { get; set; }
     public decimal EnPoderCliente { get; set; }
 }
 
@@ -343,6 +341,7 @@ public class HojaRutaParadaDto
     public string SaldoTone { get; set; } = "cero";
     public string AlertaTipo { get; set; } = "normal";
     public bool Activo { get; set; } = true;
+    public bool EnLicencia { get; set; }
     public string? ProductosResumen { get; set; }
     public List<HojaRutaParadaProductoDto> Productos { get; set; } = new();
 }

@@ -8,6 +8,8 @@ namespace SistemaOroAmbiental.Application.Models.ViewModels
         public string? Recorridos { get; set; }
         public DateTime? Fecha { get; set; }
         public bool PersistirProductos { get; set; }
+        /// <summary>Ids de ClientesRecorrido marcados como no exportar (licencia).</summary>
+        public List<int>? ExcluirIds { get; set; }
         public List<VMHojaRutaParadaOverride>? Paradas { get; set; }
     }
 

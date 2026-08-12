@@ -164,6 +164,24 @@ body.hr-page {
     opacity: 0.72;
 }
 
+.hr-stop-licencia {
+    border-color: #d97706;
+    box-shadow: inset 3px 0 0 #f59e0b;
+}
+
+.hr-badge-licencia {
+    display: inline-block;
+    margin-left: 0.4rem;
+    padding: 0.1rem 0.45rem;
+    border-radius: 4px;
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.03em;
+    background: #f59e0b;
+    color: #1f1300;
+    vertical-align: middle;
+}
+
 /* Cabecera azul oscuro: N° + cliente + abono alineado con grilla */
 .hr-stop-head {
     display: grid;

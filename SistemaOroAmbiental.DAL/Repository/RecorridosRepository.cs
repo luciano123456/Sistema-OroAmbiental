@@ -147,6 +147,7 @@ namespace SistemaOroAmbiental.DAL.Repository
                 .OrderBy(x => x.Posicion)
                 .ToListAsync();
 
+            await CompletarEnLicenciaClientesRecorrido(list, DateTime.Today);
             await CargarProductosEnClientesRecorrido(list);
             return list;
         }
@@ -274,7 +275,11 @@ namespace SistemaOroAmbiental.DAL.Repository
                 .FirstOrDefaultAsync(x => x.Id == id);
         }
 
-        public async Task<HojaRutaDto?> ObtenerHojaRuta(int idCamion, IReadOnlyList<(int IdSemana, int IdDia)> recorridos, DateTime fecha)
+        public async Task<HojaRutaDto?> ObtenerHojaRuta(
+            int idCamion,
+            IReadOnlyList<(int IdSemana, int IdDia)> recorridos,
+            DateTime fecha,
+            IReadOnlyCollection<int>? idsRecorridoExcluir = null)
         {
             if (recorridos == null || recorridos.Count == 0)
                 return null;
@@ -282,7 +287,7 @@ namespace SistemaOroAmbiental.DAL.Repository
             if (recorridos.Count == 1)
             {
                 var unico = recorridos[0];
-                return await ObtenerHojaRutaSingle(idCamion, unico.IdSemana, unico.IdDia, fecha);
+                return await ObtenerHojaRutaSingle(idCamion, unico.IdSemana, unico.IdDia, fecha, idsRecorridoExcluir);
             }
 
             var camion = await _db.Camiones.AsNoTracking().FirstOrDefaultAsync(c => c.Id == idCamion);
@@ -303,7 +308,7 @@ namespace SistemaOroAmbiental.DAL.Repository
 
             foreach (var (idSemana, idDia) in recorridosOrdenados)
             {
-                var hoja = await ObtenerHojaRutaSingle(idCamion, idSemana, idDia, fecha);
+                var hoja = await ObtenerHojaRutaSingle(idCamion, idSemana, idDia, fecha, idsRecorridoExcluir);
                 if (hoja == null)
                     continue;
 
@@ -339,7 +344,12 @@ namespace SistemaOroAmbiental.DAL.Repository
             };
         }
 
-        private async Task<HojaRutaDto?> ObtenerHojaRutaSingle(int idCamion, int idSemana, int idDia, DateTime fecha)
+        private async Task<HojaRutaDto?> ObtenerHojaRutaSingle(
+            int idCamion,
+            int idSemana,
+            int idDia,
+            DateTime fecha,
+            IReadOnlyCollection<int>? idsRecorridoExcluir = null)
         {
             var camion = await _db.Camiones.AsNoTracking().FirstOrDefaultAsync(c => c.Id == idCamion);
             var semana = await _db.Semanas.AsNoTracking().FirstOrDefaultAsync(s => s.Id == idSemana);
@@ -375,11 +385,12 @@ namespace SistemaOroAmbiental.DAL.Repository
                 .OrderBy(r => r.Posicion)
                 .ToListAsync();
 
-            // Clientes en licencia no salen en la hoja (siguen en el recorrido para cuando vuelvan).
-            items = items
-                .Where(r => r.IdClienteNavigation == null || !EstaEnLicencia(r.IdClienteNavigation, fecha.Date))
-                .ToList();
-
+            // Licencia: se exportan marcados; solo se omiten si el usuario los excluyó en el momento.
+            if (idsRecorridoExcluir is { Count: > 0 })
+            {
+                var excluir = new HashSet<int>(idsRecorridoExcluir);
+                items = items.Where(r => !excluir.Contains(r.Id)).ToList();
+            }
             var idsClientes = items.Select(i => i.IdCliente).Distinct().ToList();
             var controles = idsClientes.Count == 0
                 ? new Dictionary<int, ClientesControlMensual>()
@@ -598,6 +609,15 @@ namespace SistemaOroAmbiental.DAL.Repository
                 alertaTipo = "alerta";
             }
 
+            var enLicencia = cliente != null && EstaEnLicencia(cliente, fecha.Date);
+            if (enLicencia)
+            {
+                observacion = string.IsNullOrWhiteSpace(observacion)
+                    ? "⚠ DE LICENCIA"
+                    : "⚠ DE LICENCIA. " + observacion;
+                alertaTipo = "alerta";
+            }
+
             return new HojaRutaParadaDto
             {
                 Posicion = recorrido.Posicion,
@@ -617,6 +637,7 @@ namespace SistemaOroAmbiental.DAL.Repository
                 SaldoTone = string.IsNullOrWhiteSpace(saldoInfo.Tone) ? "cero" : saldoInfo.Tone,
                 AlertaTipo = alertaTipo,
                 Activo = recorrido.Activo,
+                EnLicencia = enLicencia,
                 Productos = productos,
                 ProductosResumen = FormatearProductosResumen(productos)
             };
@@ -1170,11 +1191,36 @@ namespace SistemaOroAmbiental.DAL.Repository
                        Zona = m != null ? m.Zona : "",
                        Posicion = r.Posicion,
                        Activo = r.Activo,
+                       FechaLicenciaDesde = cl.FechaLicenciaDesde,
+                       FechaLicenciaHasta = cl.FechaLicenciaHasta,
                        Observacion = r.Observacion,
-                       RecorridoTexto = s.Nombre + " " + d.Nombre
+                       RecorridoTexto = s.Nombre + " " + d.Nombre,
+                       EnLicencia = false
                    };
         }
 
+        private async Task CompletarEnLicenciaClientesRecorrido(List<ClientesRecorridoDto> list, DateTime fecha)
+        {
+            if (list == null || list.Count == 0) return;
+
+            var ids = list.Select(x => x.IdCliente).Distinct().ToList();
+            var clientes = await _db.Clientes.AsNoTracking()
+                .Include(c => c.IdEstadoNavigation)
+                .Where(c => ids.Contains(c.Id))
+                .ToDictionaryAsync(c => c.Id);
+
+            foreach (var item in list)
+            {
+                if (!clientes.TryGetValue(item.IdCliente, out var cli))
+                {
+                    item.EnLicencia = false;
+                    continue;
+                }
+                item.FechaLicenciaDesde = cli.FechaLicenciaDesde;
+                item.FechaLicenciaHasta = cli.FechaLicenciaHasta;
+                item.EnLicencia = EstaEnLicencia(cli, fecha.Date);
+            }
+        }
         private async Task CargarProductosEnClientesRecorrido(List<ClientesRecorridoDto> list)
         {
             if (list == null || list.Count == 0)

@@ -598,6 +598,10 @@
 
 .rec-cliente-status {
     flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.35rem;
 }
 
 .rec-cliente-actions {
@@ -681,6 +685,65 @@
     background: rgba(248, 113, 113, 0.12);
     color: #fca5a5;
     border: 1px solid rgba(248, 113, 113, 0.22);
+}
+
+.rec-badge-activo--licencia {
+    background: rgba(245, 158, 11, 0.18);
+    color: #fbbf24;
+    border: 1px solid rgba(251, 191, 36, 0.4);
+    box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.12);
+}
+
+.rec-cliente-item--licencia {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.14), rgba(120, 53, 15, 0.18));
+    border-color: rgba(251, 191, 36, 0.45);
+    box-shadow: inset 0 0 0 1px rgba(251, 191, 36, 0.12);
+}
+
+.rec-cliente-item--licencia:hover {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(120, 53, 15, 0.22));
+    border-color: rgba(251, 191, 36, 0.55);
+}
+
+.rec-cliente-item--noexport {
+    opacity: 0.78;
+    border-style: dashed;
+}
+
+.rec-licencia-warn {
+    color: #fbbf24;
+    margin-right: 0.35rem;
+    animation: rec-licencia-pulse 2s ease-in-out infinite;
+}
+
+@keyframes rec-licencia-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.55; }
+}
+
+.rec-cliente-btn--noexport {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.28rem 0.55rem;
+    border-radius: 999px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    background: rgba(30, 41, 59, 0.65);
+    color: #cbd5e1;
+    cursor: pointer;
+}
+
+.rec-cliente-btn--noexport:hover {
+    border-color: rgba(251, 191, 36, 0.45);
+    color: #fde68a;
+}
+
+.rec-cliente-btn--noexport.is-on {
+    border-color: rgba(248, 113, 113, 0.45);
+    background: rgba(127, 29, 29, 0.35);
+    color: #fecaca;
 }
 
 .rec-field-unidad {

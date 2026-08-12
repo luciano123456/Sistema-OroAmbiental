@@ -105,7 +105,13 @@ namespace SistemaOroAmbiental.Application.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> HojaRuta(int idCamion, int idSemana, int idDia, DateTime? fecha, string? recorridos)
+        public async Task<IActionResult> HojaRuta(
+            int idCamion,
+            int idSemana,
+            int idDia,
+            DateTime? fecha,
+            string? recorridos,
+            string? excluirIds)
         {
             if (idCamion <= 0)
                 return NotFound();
@@ -114,7 +120,8 @@ namespace SistemaOroAmbiental.Application.Controllers
             if (lista.Count == 0)
                 return NotFound();
 
-            var model = await _service.ObtenerHojaRuta(idCamion, lista, fecha?.Date ?? DateTime.Today);
+            var excluir = ParseIdsExcluirHoja(excluirIds);
+            var model = await _service.ObtenerHojaRuta(idCamion, lista, fecha?.Date ?? DateTime.Today, excluir);
             if (model == null)
                 return NotFound();
 
@@ -122,7 +129,13 @@ namespace SistemaOroAmbiental.Application.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> HojaRutaDatos(int idCamion, int idSemana, int idDia, DateTime? fecha, string? recorridos)
+        public async Task<IActionResult> HojaRutaDatos(
+            int idCamion,
+            int idSemana,
+            int idDia,
+            DateTime? fecha,
+            string? recorridos,
+            string? excluirIds)
         {
             if (idCamion <= 0)
                 return NotFound();
@@ -131,7 +144,8 @@ namespace SistemaOroAmbiental.Application.Controllers
             if (lista.Count == 0)
                 return NotFound();
 
-            var model = await _service.ObtenerHojaRuta(idCamion, lista, fecha?.Date ?? DateTime.Today);
+            var excluir = ParseIdsExcluirHoja(excluirIds);
+            var model = await _service.ObtenerHojaRuta(idCamion, lista, fecha?.Date ?? DateTime.Today, excluir);
             if (model == null)
                 return NotFound();
 
@@ -148,7 +162,11 @@ namespace SistemaOroAmbiental.Application.Controllers
             if (lista.Count == 0)
                 return NotFound();
 
-            var model = await _service.ObtenerHojaRuta(request.IdCamion, lista, request.Fecha?.Date ?? DateTime.Today);
+            var model = await _service.ObtenerHojaRuta(
+                request.IdCamion,
+                lista,
+                request.Fecha?.Date ?? DateTime.Today,
+                request.ExcluirIds);
             if (model == null)
                 return NotFound();
 
@@ -289,6 +307,21 @@ namespace SistemaOroAmbiental.Application.Controllers
                 return new List<(int IdSemana, int IdDia)> { (idSemana, idDia) };
 
             return new List<(int IdSemana, int IdDia)>();
+        }
+
+        private static List<int> ParseIdsExcluirHoja(string? excluirIds)
+        {
+            var lista = new List<int>();
+            if (string.IsNullOrWhiteSpace(excluirIds))
+                return lista;
+
+            foreach (var part in excluirIds.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            {
+                if (int.TryParse(part, out var id) && id > 0)
+                    lista.Add(id);
+            }
+
+            return lista.Distinct().ToList();
         }
 
         [HttpGet]

@@ -92,12 +92,16 @@ namespace SistemaOroAmbiental.BLL.Service
         public Task<ClientesRecorrido?> ObtenerClientesRecorrido(int id)
             => _repo.ObtenerClientesRecorrido(id);
 
-        public Task<HojaRutaDto?> ObtenerHojaRuta(int idCamion, IReadOnlyList<(int IdSemana, int IdDia)> recorridos, DateTime fecha)
+        public Task<HojaRutaDto?> ObtenerHojaRuta(
+            int idCamion,
+            IReadOnlyList<(int IdSemana, int IdDia)> recorridos,
+            DateTime fecha,
+            IReadOnlyCollection<int>? idsRecorridoExcluir = null)
         {
             if (idCamion <= 0 || recorridos == null || recorridos.Count == 0)
                 return Task.FromResult<HojaRutaDto?>(null);
 
-            return _repo.ObtenerHojaRuta(idCamion, recorridos, fecha.Date);
+            return _repo.ObtenerHojaRuta(idCamion, recorridos, fecha.Date, idsRecorridoExcluir);
         }
 
         public Task<List<RecorridoSugeridoDto>> ListarSugeridosPorRecoleccion(int idCamion, int idSemana, int idDia)

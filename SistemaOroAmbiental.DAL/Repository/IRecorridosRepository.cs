@@ -22,7 +22,11 @@ namespace SistemaOroAmbiental.DAL.Repository
 
         Task<ClientesRecorrido?> ObtenerClientesRecorrido(int id);
 
-        Task<HojaRutaDto?> ObtenerHojaRuta(int idCamion, IReadOnlyList<(int IdSemana, int IdDia)> recorridos, DateTime fecha);
+        Task<HojaRutaDto?> ObtenerHojaRuta(
+            int idCamion,
+            IReadOnlyList<(int IdSemana, int IdDia)> recorridos,
+            DateTime fecha,
+            IReadOnlyCollection<int>? idsRecorridoExcluir = null);
 
         Task<List<RecorridoSugeridoDto>> ListarSugeridosPorRecoleccion(int idCamion, int idSemana, int idDia);
 

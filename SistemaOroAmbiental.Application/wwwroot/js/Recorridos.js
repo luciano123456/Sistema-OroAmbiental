@@ -794,12 +794,66 @@ async function cargarClientesRecorrido() {
         const data = await fetchJson(
             `/Recorridos/ClientesPorRecorrido?idCamion=${idCamion}&idSemana=${idSemana}&idDia=${idDia}`
         );
+        const excluidos = leerExcluidosLicenciaRec(idCamion, idSemana, idDia);
+        (data || []).forEach(item => {
+            item.NoExportarHoja = excluidos.has(Number(item.Id));
+        });
         renderClientesRecorrido(data);
         await cargarSugeridosRecorrido();
     } catch (e) {
         console.error(e);
         errorModal("No se pudieron cargar los clientes del recorrido.");
     }
+}
+
+function claveExcluidosLicenciaRec(idCamion, idSemana, idDia) {
+    return `rec-no-export-${idCamion}-${idSemana}-${idDia}`;
+}
+
+function leerExcluidosLicenciaRec(idCamion, idSemana, idDia) {
+    try {
+        const raw = sessionStorage.getItem(claveExcluidosLicenciaRec(idCamion, idSemana, idDia));
+        const arr = raw ? JSON.parse(raw) : [];
+        return new Set((Array.isArray(arr) ? arr : []).map(Number).filter(n => n > 0));
+    } catch {
+        return new Set();
+    }
+}
+
+function guardarExcluidosLicenciaRec(idCamion, idSemana, idDia, setIds) {
+    try {
+        sessionStorage.setItem(
+            claveExcluidosLicenciaRec(idCamion, idSemana, idDia),
+            JSON.stringify([...setIds])
+        );
+    } catch (e) {
+        console.warn(e);
+    }
+}
+
+function idsNoExportarLicenciaActuales() {
+    return (clientesRecorridoActual || [])
+        .filter(x => x.EnLicencia && x.NoExportarHoja)
+        .map(x => Number(x.Id))
+        .filter(id => id > 0);
+}
+
+function toggleNoExportarLicenciaRec(idRecorridoCliente) {
+    const id = Number(idRecorridoCliente) || 0;
+    const item = (clientesRecorridoActual || []).find(x => Number(x.Id) === id);
+    if (!item || !item.EnLicencia) return;
+
+    item.NoExportarHoja = !item.NoExportarHoja;
+
+    const activo = getRecorridoActivo();
+    if (activo) {
+        const set = leerExcluidosLicenciaRec(activo.idCamion, activo.idSemana, activo.idDia);
+        if (item.NoExportarHoja) set.add(id);
+        else set.delete(id);
+        guardarExcluidosLicenciaRec(activo.idCamion, activo.idSemana, activo.idDia, set);
+    }
+
+    renderClientesRecorrido(clientesRecorridoActual);
 }
 
 function getSiguientePosicionRecorrido() {
@@ -838,9 +892,18 @@ function renderClientesRecorrido(data) {
     }
 
     const html = data.map(item => {
-        const badge = item.Activo
-            ? '<span class="rec-badge-activo rec-badge-activo--si"><i class="fa fa-check-circle"></i> Activo</span>'
-            : '<span class="rec-badge-activo rec-badge-activo--no"><i class="fa fa-pause-circle"></i> Inactivo</span>';
+        const enLicencia = !!item.EnLicencia;
+        const noExportar = !!item.NoExportarHoja;
+        let badge;
+        if (enLicencia) {
+            badge = `<span class="rec-badge-activo rec-badge-activo--licencia" title="Cliente de licencia">
+                <i class="fa fa-exclamation-triangle"></i> De licencia
+            </span>`;
+        } else if (item.Activo) {
+            badge = '<span class="rec-badge-activo rec-badge-activo--si"><i class="fa fa-check-circle"></i> Activo</span>';
+        } else {
+            badge = '<span class="rec-badge-activo rec-badge-activo--no"><i class="fa fa-pause-circle"></i> Inactivo</span>';
+        }
 
         const domicilioTxt = (item.Domicilio || "").trim();
         const localidadTxt = (item.Localidad || "").trim();
@@ -862,14 +925,35 @@ function renderClientesRecorrido(data) {
             ? `<div class="rec-cliente-est-line"><i class="fa fa-building-o"></i>${escapeHtml(item.Establecimiento)}</div>`
             : "";
 
+        const btnNoExport = enLicencia
+            ? `<button type="button"
+                    class="rec-cliente-btn rec-cliente-btn--noexport${noExportar ? " is-on" : ""}"
+                    onclick="toggleNoExportarLicenciaRec(${item.Id})"
+                    title="${noExportar ? "Marcado: no se exporta a la hoja. Clic para volver a exportar." : "No exportar a la hoja de ruta"}">
+                    <i class="fa ${noExportar ? "fa-ban" : "fa-print"}"></i>
+                    <span>${noExportar ? "No exportar" : "Exportar"}</span>
+               </button>`
+            : "";
+
+        const clasesItem = [
+            "rec-cliente-item",
+            item.Activo ? "" : "rec-cliente-item--inactive",
+            enLicencia ? "rec-cliente-item--licencia" : "",
+            noExportar ? "rec-cliente-item--noexport" : ""
+        ].filter(Boolean).join(" ");
+
         return `
-            <article class="rec-cliente-item${item.Activo ? "" : " rec-cliente-item--inactive"}" data-id="${item.Id}"
-                     data-cliente="${item.IdCliente}" data-establecimiento="${item.IdEstablecimiento || 0}">
+            <article class="${clasesItem}" data-id="${item.Id}"
+                     data-cliente="${item.IdCliente}" data-establecimiento="${item.IdEstablecimiento || 0}"
+                     data-licencia="${enLicencia ? "1" : "0"}">
                 <div class="rec-cliente-pos" title="Posicion en la ruta">
                     <span>${item.Posicion}</span>
                 </div>
                 <div class="rec-cliente-main">
-                    <div class="rec-cliente-name">${escapeHtml(item.Cliente)}</div>
+                    <div class="rec-cliente-name">
+                        ${enLicencia ? `<i class="fa fa-exclamation-triangle rec-licencia-warn" title="De licencia"></i>` : ""}
+                        ${escapeHtml(item.Cliente)}
+                    </div>
                     <div class="rec-cliente-ubicacion">
                         <div class="rec-cliente-domicilio">
                             <i class="fa fa-map-marker" aria-hidden="true"></i>
@@ -882,7 +966,7 @@ function renderClientesRecorrido(data) {
                     </div>
                     ${establecimiento}
                 </div>
-                <div class="rec-cliente-status">${badge}</div>
+                <div class="rec-cliente-status">${badge}${btnNoExport}</div>
                 <div class="rec-cliente-actions">
                     <button type="button" class="rec-cliente-btn rec-cliente-btn--edit" onclick="editarClienteRecorrido(${item.Id})" title="Editar">
                         <i class="fa fa-pencil"></i>
@@ -1250,6 +1334,9 @@ async function abrirHojaRutaRecorrido() {
         params.set("idSemana", String(unico.idSemana));
         params.set("idDia", String(unico.idDia));
     }
+
+    const excluir = idsNoExportarLicenciaActuales();
+    if (excluir.length) params.set("excluirIds", excluir.join(","));
 
     const url = `/Recorridos/HojaRuta?${params.toString()}`;
 
