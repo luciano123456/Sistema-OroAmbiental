@@ -15,6 +15,12 @@ public partial class ClientesEntregasProducto
 
     public int TipoMovimiento { get; set; }
 
+    /// <summary>
+    /// Solo para TipoMovimiento = Retiro. True = se intentó retirar pero el producto no se retiró.
+    /// No baja el stock en poder del cliente; se suma en "Productos no retirados" del control mensual.
+    /// </summary>
+    public bool NoRetirado { get; set; }
+
     public decimal Cantidad { get; set; }
 
     public decimal PrecioVenta { get; set; }

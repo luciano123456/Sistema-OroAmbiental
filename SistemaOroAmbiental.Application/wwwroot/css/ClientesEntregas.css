@@ -887,6 +887,41 @@ table.fixedHeader-locked thead tr.filters {
     min-width: 0;
 }
 
+.entregas-nuevo .en-noret {
+    display: block;
+    margin: 0.2rem 0 0;
+}
+
+.entregas-nuevo .en-noret > label {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin: 0;
+    cursor: pointer;
+    user-select: none;
+    color: #f87171;
+    font-size: 0.72rem;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.entregas-nuevo .en-noret input[type="checkbox"] {
+    width: 0.95rem;
+    height: 0.95rem;
+    margin: 0;
+    accent-color: #ef4444;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.entregas-nuevo .en-noret span {
+    color: #f87171;
+    text-transform: none;
+    letter-spacing: 0;
+    font-size: inherit;
+    font-weight: inherit;
+}
+
 .entregas-nuevo .en-field > span {
     font-size: 0.7rem;
     font-weight: 800;

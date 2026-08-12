@@ -603,12 +603,15 @@ namespace SistemaOroAmbiental.DAL.Repository
             var lineas = entregasMes.SelectMany(e => e.ClientesEntregasProductos).ToList();
 
             var lineasEntrega = lineas.Where(l => l.TipoMovimiento == TIPO_ENTREGA).ToList();
-            var lineasRetiro = lineas.Where(l => l.TipoMovimiento == TIPO_RETIRO).ToList();
+            var lineasRetiro = lineas.Where(l => l.TipoMovimiento == TIPO_RETIRO && !l.NoRetirado).ToList();
+            var lineasNoRetiro = lineas.Where(l => l.TipoMovimiento == TIPO_RETIRO && l.NoRetirado).ToList();
 
             var entregadas = lineasEntrega.Sum(l => l.Cantidad);
             var retiradas = lineasRetiro.Sum(l => l.Cantidad);
+            var noRetiradas = lineasNoRetiro.Sum(l => l.Cantidad);
             var subtotalEntregas = lineasEntrega.Sum(ImporteLineaControl);
             var subtotalRetiros = lineasRetiro.Sum(ImporteLineaControl);
+            var subtotalNoRetiros = lineasNoRetiro.Sum(ImporteLineaControl);
 
             overrides.TryGetValue((anio, mes), out var ov);
 
@@ -643,7 +646,7 @@ namespace SistemaOroAmbiental.DAL.Repository
                 .Where(m => m.TipoMovimiento == ClientesCuentaCorrienteRepository.TIPO_AJUSTE_CLIENTE)
                 .Sum(m => m.Haber);
 
-            var debe = subtotalEntregas + subtotalRetiros + ajustesDebe;
+            var debe = subtotalEntregas + subtotalRetiros + subtotalNoRetiros + ajustesDebe;
             var haber = Math.Max(abonosPlanilla, cobrosCc) + ajustesHaber;
 
             // Si no hay abonos en la planilla del est pero sí cobros de la entrega, mostrarlos en columnas.
@@ -674,11 +677,14 @@ namespace SistemaOroAmbiental.DAL.Repository
                 .Select(g =>
                 {
                     var ent = g.Where(x => x.TipoMovimiento == TIPO_ENTREGA).ToList();
-                    var ret = g.Where(x => x.TipoMovimiento == TIPO_RETIRO).ToList();
+                    var ret = g.Where(x => x.TipoMovimiento == TIPO_RETIRO && !x.NoRetirado).ToList();
+                    var noRet = g.Where(x => x.TipoMovimiento == TIPO_RETIRO && x.NoRetirado).ToList();
                     var cantEnt = ent.Sum(x => x.Cantidad);
                     var cantRet = ret.Sum(x => x.Cantidad);
+                    var cantNoRet = noRet.Sum(x => x.Cantidad);
                     var subEnt = ent.Sum(ImporteLineaControl);
                     var subRet = ret.Sum(ImporteLineaControl);
+                    var subNoRet = noRet.Sum(ImporteLineaControl);
                     var listaNombre = g.Select(x => x.IdListaPrecioNavigation?.Nombre)
                         .FirstOrDefault(n => !string.IsNullOrWhiteSpace(n));
                     return new ClienteControlProductoMesDto
@@ -691,15 +697,19 @@ namespace SistemaOroAmbiental.DAL.Repository
                         ListaPrecio = listaNombre,
                         Entregadas = cantEnt,
                         Retiradas = cantRet,
+                        NoRetiradas = cantNoRet,
                         PrecioUnitarioEntrega = cantEnt > 0 ? subEnt / cantEnt : 0,
                         PrecioUnitarioRetiro = cantRet > 0 ? subRet / cantRet : 0,
+                        PrecioUnitarioNoRetiro = cantNoRet > 0 ? subNoRet / cantNoRet : 0,
                         SubtotalEntregas = subEnt,
-                        SubtotalRetiros = subRet
+                        SubtotalRetiros = subRet,
+                        SubtotalNoRetiros = subNoRet
                     };
                 })
                 .OrderBy(p => p.Producto)
                 .ThenBy(p => p.ListaPrecio ?? "")
                 .ThenBy(p => p.PrecioUnitarioRetiro)
+                .ThenBy(p => p.PrecioUnitarioNoRetiro)
                 .ThenBy(p => p.PrecioUnitarioEntrega)
                 .ToList();
 
@@ -712,9 +722,11 @@ namespace SistemaOroAmbiental.DAL.Repository
                 FechaVisita = fechaVisita,
                 Entregadas = entregadas,
                 Retiradas = retiradas,
+                NoRetiradas = noRetiradas,
                 StockCliente = entregadas - retiradas,
                 SubtotalEntregas = subtotalEntregas,
                 SubtotalRetiros = subtotalRetiros,
+                SubtotalNoRetiros = subtotalNoRetiros,
                 AbonoEfectivo = abonoEfMostrar,
                 AbonoTransferencia = abonoTrMostrar,
                 FechaTransferencia = ov?.FechaTransferencia,
@@ -759,17 +771,19 @@ namespace SistemaOroAmbiental.DAL.Repository
                 .Select(g =>
                 {
                     var entregadas = g.Where(x => x.TipoMovimiento == TIPO_ENTREGA).Sum(x => x.Cantidad);
-                    var retiradas = g.Where(x => x.TipoMovimiento == TIPO_RETIRO).Sum(x => x.Cantidad);
+                    var retiradas = g.Where(x => x.TipoMovimiento == TIPO_RETIRO && !x.NoRetirado).Sum(x => x.Cantidad);
+                    var noRetiradas = g.Where(x => x.TipoMovimiento == TIPO_RETIRO && x.NoRetirado).Sum(x => x.Cantidad);
                     return new ClienteStockDto
                     {
                         IdProducto = g.Key.IdProducto,
                         Producto = g.Key.Nombre,
                         Entregadas = entregadas,
                         Retiradas = retiradas,
+                        NoRetiradas = noRetiradas,
                         EnPoderCliente = entregadas - retiradas
                     };
                 })
-                .Where(x => x.Entregadas > 0 || x.Retiradas > 0)
+                .Where(x => x.Entregadas > 0 || x.Retiradas > 0 || x.NoRetiradas > 0)
                 .OrderBy(x => x.Producto)
                 .ToList();
         }
@@ -899,7 +913,7 @@ namespace SistemaOroAmbiental.DAL.Repository
             var lineas = await query.ToListAsync();
 
             var entregadas = lineas.Where(l => l.TipoMovimiento == TIPO_ENTREGA).Sum(l => l.Cantidad);
-            var retiradas = lineas.Where(l => l.TipoMovimiento == TIPO_RETIRO).Sum(l => l.Cantidad);
+            var retiradas = lineas.Where(l => l.TipoMovimiento == TIPO_RETIRO && !l.NoRetirado).Sum(l => l.Cantidad);
             return entregadas - retiradas;
         }
 

@@ -1049,6 +1049,8 @@ function wireEventosCg() {
         linea.TipoMovimiento = Number($row.find(".ws-tipo").val()) || 1;
         linea.Cantidad = leerNumeroWsCg($row.find(".ws-cant").val());
         linea.PrecioVenta = leerNumeroWsCg($row.find(".ws-precio").val());
+        linea.NoRetirado = Number(linea.TipoMovimiento) === 2 && $row.find(".ws-noret").is(":checked");
+        sincronizarCheckNoRetiradoWsCg($row, linea);
 
         await sincronizarPrecioLineaWsCg($row, linea, campo);
 
@@ -2486,6 +2488,8 @@ function bindEstHubEventsCg() {
         linea.TipoMovimiento = Number($row.find(".ws-tipo").val()) || 1;
         linea.Cantidad = leerNumeroWsCg($row.find(".ws-cant").val());
         linea.PrecioVenta = leerNumeroWsCg($row.find(".ws-precio").val());
+        linea.NoRetirado = Number(linea.TipoMovimiento) === 2 && $row.find(".ws-noret").is(":checked");
+        sincronizarCheckNoRetiradoWsCg($row, linea);
 
         await sincronizarPrecioLineaWsCg($row, linea, campo);
 
@@ -3137,14 +3141,16 @@ function renderControlMensualCg(data) {
     const nProd = columnas.length;
     const colspanEnt = Math.max(nProd, 1);
     const colspanRet = Math.max(nProd, 1);
+    const colspanNoRet = Math.max(nProd, 1);
 
     thead.html(`
         <tr class="cg-cm-head-grp">
             ${mostrarAnio ? `<th class="cg-cm-sticky-left cg-cm-col-anio" rowspan="2">Año</th>` : ""}
             <th class="${mostrarAnio ? "cg-cm-sticky-left-2" : "cg-cm-sticky-left"}" rowspan="2">Mes</th>
             <th class="${mostrarAnio ? "cg-cm-sticky-left-3" : "cg-cm-sticky-left-2"}" rowspan="2">Visita</th>
-            <th class="cg-cm-th-grp-ent" colspan="${colspanEnt}">Productos entregados</th>
+                            <th class="cg-cm-th-grp-ent" colspan="${colspanEnt}">Productos entregados</th>
             <th class="cg-cm-th-grp-ret" colspan="${colspanRet}">Productos retirados</th>
+            <th class="cg-cm-th-grp-noret" colspan="${colspanNoRet}">Productos no retirados</th>
             <th class="cg-cm-th-grp-money" colspan="7">Pagos y saldo</th>
             <th class="cg-cm-obs-col cg-cm-th-obs" rowspan="2" title="Observaciones del mes">Obs.</th>
         </tr>
@@ -3155,6 +3161,9 @@ function renderControlMensualCg(data) {
             ${nProd
                 ? columnas.map(c => `<th class="cg-cm-th-prod-ret" title="${escapeCg(c.Nombre)}">${escapeCg((c.Abreviatura || c.Nombre || "").trim() || ("#" + c.IdProducto))}</th>`).join("")
                 : `<th class="cg-cm-th-prod-ret">—</th>`}
+            ${nProd
+                ? columnas.map(c => `<th class="cg-cm-th-prod-noret" title="${escapeCg(c.Nombre)}">${escapeCg((c.Abreviatura || c.Nombre || "").trim() || ("#" + c.IdProducto))}</th>`).join("")
+                : `<th class="cg-cm-th-prod-noret">—</th>`}
             <th class="cg-cm-cell-money" title="Cargo del mes (entregas + retiros)">Total</th>
             <th class="cg-cm-cell-money">Efectivo</th>
             <th class="cg-cm-cell-money">Transf.</th>
@@ -3165,7 +3174,7 @@ function renderControlMensualCg(data) {
         </tr>`);
 
     if (!filas.length) {
-        const cols = (mostrarAnio ? 1 : 0) + 2 + colspanEnt + colspanRet + 8;
+        const cols = (mostrarAnio ? 1 : 0) + 2 + colspanEnt + colspanRet + colspanNoRet + 8;
         tbody.html(`<tr class="cg-cm-empty"><td colspan="${cols}" class="text-center py-4">
             No hay datos para los filtros elegidos.</td></tr>`);
         renderControlMensualCardsCg([], mostrarAnio);
@@ -3191,9 +3200,10 @@ function renderControlMensualCg(data) {
         (m.Productos || []).forEach(p => {
             const id = Number(p.IdProducto) || 0;
             if (id <= 0) return;
-            if (!mapaProd[id]) mapaProd[id] = { Entregadas: 0, Retiradas: 0 };
+            if (!mapaProd[id]) mapaProd[id] = { Entregadas: 0, Retiradas: 0, NoRetiradas: 0 };
             mapaProd[id].Entregadas += Number(p.Entregadas) || 0;
             mapaProd[id].Retiradas += Number(p.Retiradas) || 0;
+            mapaProd[id].NoRetiradas += Number(p.NoRetiradas) || 0;
         });
         const totalMesFila = Number(m.TotalMes != null ? m.TotalMes : ((Number(m.Debe) || 0) + (Number(m.TotalIntereses) || 0))) || 0;
         const restanteMesFila = Number(m.RestanteMes != null ? m.RestanteMes : (totalMesFila - (Number(m.Haber) || 0))) || 0;
@@ -3218,12 +3228,21 @@ function renderControlMensualCg(data) {
             }).join("")
             : `<td class="cg-cm-cell-qty is-empty">—</td>`;
 
+        const celdasNoRet = nProd
+            ? columnas.map(c => {
+                const p = mapaProd[c.IdProducto];
+                const q = Number(p?.NoRetiradas) || 0;
+                return `<td class="cg-cm-cell-qty cg-cm-cell-noret ${q === 0 ? "is-empty" : ""}" title="${escapeCg(c.Nombre)}">${q === 0 ? "—" : fmtQtyCg(q)}</td>`;
+            }).join("")
+            : `<td class="cg-cm-cell-qty cg-cm-cell-noret is-empty">—</td>`;
+
         return `<tr class="${rowClass}${sel}${vencido}" data-anio="${anio}" data-mes="${m.Mes}">
             ${mostrarAnio ? `<td class="cg-cm-sticky-left cg-cm-col-anio cg-cm-mes">${anio}</td>` : ""}
             <td class="${mostrarAnio ? "cg-cm-sticky-left-2" : "cg-cm-sticky-left"} cg-cm-mes">${escapeCg(m.MesNombre)}${badgeAtraso}</td>
             <td class="${mostrarAnio ? "cg-cm-sticky-left-3" : "cg-cm-sticky-left-2"} cg-cm-date">${formatearFechaCortaCg(m.FechaVisita)}</td>
             ${celdasEnt}
             ${celdasRet}
+            ${celdasNoRet}
             <td class="cg-cm-cell-money cg-cm-debe" title="Total del mes (entregas + retiros + intereses)">${fmtMoneyCg(totalMesFila)}</td>
             <td class="cg-cm-cell-money ${(Number(m.AbonoEfectivo) || 0) > 0 ? "cg-cm-haber" : ""}">${fmtMoneyCg(m.AbonoEfectivo)}</td>
             <td class="cg-cm-cell-money ${(Number(m.AbonoTransferencia) || 0) > 0 ? "cg-cm-haber" : ""}">${fmtMoneyCg(m.AbonoTransferencia)}</td>
@@ -3265,6 +3284,7 @@ async function abrirWorkspaceMesCg(anio, mes, keepScroll) {
     $h("cgMesWsKpis").html(`
         <div class="cg-mes-ws-kpi"><span>Entregadas</span><strong>${fmtQtyCg(m.Entregadas)}</strong></div>
         <div class="cg-mes-ws-kpi"><span>Retiradas</span><strong>${fmtQtyCg(m.Retiradas)}</strong></div>
+        <div class="cg-mes-ws-kpi cg-mes-ws-kpi--noret"><span>No retiradas</span><strong>${fmtQtyCg(m.NoRetiradas)}</strong></div>
         <div class="cg-mes-ws-kpi"><span>Stock mes</span><strong>${fmtQtyCg(m.StockCliente)}</strong></div>
         <div class="cg-mes-ws-kpi cg-mes-ws-kpi--total" title="Retiros del mes + intereses">
             <span>Total mes</span><strong class="cg-val-debe">${fmtMoneyCg(totalMes)}</strong>
@@ -3295,6 +3315,7 @@ async function abrirWorkspaceMesCg(anio, mes, keepScroll) {
                     <th rowspan="2" class="cg-prod-th-lista">Lista / tipo pago</th>
                     <th colspan="3" class="cg-prod-th-grp cg-prod-th-grp--ent"><i class="fa fa-arrow-up"></i> Entregadas</th>
                     <th colspan="3" class="cg-prod-th-grp cg-prod-th-grp--ret"><i class="fa fa-arrow-down"></i> Retiradas</th>
+                    <th colspan="3" class="cg-prod-th-grp cg-prod-th-grp--noret"><i class="fa fa-ban"></i> No retiradas</th>
                 </tr>
                 <tr class="cg-hub-prod-cols">
                     <th class="text-end cg-prod-th-ent">Cant.</th>
@@ -3303,6 +3324,9 @@ async function abrirWorkspaceMesCg(anio, mes, keepScroll) {
                     <th class="text-end cg-prod-th-ret">Cant.</th>
                     <th class="text-end cg-prod-th-ret">P. unit.</th>
                     <th class="text-end cg-prod-th-ret">Subtotal</th>
+                    <th class="text-end cg-prod-th-noret">Cant.</th>
+                    <th class="text-end cg-prod-th-noret">P. unit.</th>
+                    <th class="text-end cg-prod-th-noret">Subtotal</th>
                 </tr>
             </thead>
             <tbody>
@@ -3310,8 +3334,10 @@ async function abrirWorkspaceMesCg(anio, mes, keepScroll) {
                     const lista = p.ListaPrecio || p.listaPrecio || "";
                     const ent = Number(p.Entregadas) || 0;
                     const ret = Number(p.Retiradas) || 0;
+                    const noRet = Number(p.NoRetiradas) || 0;
                     const subEnt = Number(p.SubtotalEntregas) || 0;
                     const subRet = Number(p.SubtotalRetiros) || 0;
+                    const subNoRet = Number(p.SubtotalNoRetiros) || 0;
                     return `<tr>
                     <td class="cg-prod-td-prod">
                         <div class="cg-hub-prod-name">${escapeCg(p.Producto)}</div>
@@ -3328,6 +3354,9 @@ async function abrirWorkspaceMesCg(anio, mes, keepScroll) {
                     <td class="text-end cg-prod-td-ret ${ret ? "is-filled" : "is-zero"}">${fmtQtyCg(p.Retiradas)}</td>
                     <td class="text-end cg-prod-td-ret ${ret ? "is-filled" : "is-zero"}">${fmtMoneyCg(p.PrecioUnitarioRetiro)}</td>
                     <td class="text-end cg-prod-td-ret cg-prod-td-sub ${subRet ? "is-filled" : "is-zero"}">${fmtMoneyCg(p.SubtotalRetiros)}</td>
+                    <td class="text-end cg-prod-td-noret ${noRet ? "is-filled" : "is-zero"}">${fmtQtyCg(p.NoRetiradas)}</td>
+                    <td class="text-end cg-prod-td-noret ${noRet ? "is-filled" : "is-zero"}">${fmtMoneyCg(p.PrecioUnitarioNoRetiro)}</td>
+                    <td class="text-end cg-prod-td-noret cg-prod-td-sub ${subNoRet ? "is-filled" : "is-zero"}">${fmtMoneyCg(p.SubtotalNoRetiros)}</td>
                 </tr>`;
                 }).join("")}
             </tbody>
@@ -3554,6 +3583,7 @@ function agregarLineaWsCg(pref) {
         IdProducto: idProducto,
         IdListaPrecio: idLista,
         TipoMovimiento: pref?.TipoMovimiento || 1,
+        NoRetirado: !!pref?.NoRetirado && Number(pref?.TipoMovimiento || 1) === 2,
         Cantidad: pref?.Cantidad || 1,
         PrecioVenta: precio
     });
@@ -3571,9 +3601,11 @@ function normNumClaveWsCg(n) {
 function claveLineaWsCompletaCg(l) {
     const tipo = Number(l.TipoMovimiento || 1);
     const idLista = Number(l.IdListaPrecio) > 0 ? Number(l.IdListaPrecio) : 0;
+    const noRet = tipo === 2 && !!l.NoRetirado ? "1" : "0";
     return [
         Number(l.IdProducto) || 0,
         tipo,
+        noRet,
         idLista,
         normNumClaveWsCg(l.Cantidad),
         normNumClaveWsCg(l.PrecioVenta),
@@ -3637,7 +3669,10 @@ function renderLineasWsCg() {
         return;
     }
 
-    $h("cgWsLineasBody").html(hubPropCg("wsLineas").map((l, i) => `
+    $h("cgWsLineasBody").html(hubPropCg("wsLineas").map((l, i) => {
+        const esRetiro = Number(l.TipoMovimiento || 1) === 2;
+        const noRetChecked = esRetiro && !!l.NoRetirado ? "checked" : "";
+        return `
         <div class="cg-ws-linea" data-idx="${i}">
             <div class="cg-ws-linea-top">
                 <span class="cg-ws-linea-num">#${i + 1}</span>
@@ -3668,9 +3703,15 @@ function renderLineasWsCg() {
                     <span>Cantidad</span>
                     <input type="text" class="form-control Inputmiles ws-cant" value="${fmtQtyCg(l.Cantidad)}" inputmode="decimal" />
                 </label>
-                <label class="cg-ws-field cg-ws-field--num">
+                <label class="cg-ws-field cg-ws-field--num cg-ws-field--precio">
                     <span>Precio</span>
                     <input type="text" class="form-control Inputmiles ws-precio" value="${fmtQtyCg(Number(l.PrecioVenta) || 0)}" inputmode="decimal" />
+                    <div class="cg-ws-noret ${esRetiro ? "" : "d-none"}" title="Marcar si el producto no se retiró">
+                        <label>
+                            <input type="checkbox" class="ws-noret" ${noRetChecked} />
+                            <span>Producto no retirado</span>
+                        </label>
+                    </div>
                 </label>
             </div>
             <div class="cg-ws-linea-foot">
@@ -3682,15 +3723,30 @@ function renderLineasWsCg() {
                     <i class="fa fa-trash"></i>
                 </button>
             </div>
-        </div>`).join(""));
+        </div>`;
+    }).join(""));
 
     hubPropCg("wsLineas").forEach((l, i) => {
         const $row = $h("cgWsLineasBody").find(`.cg-ws-linea[data-idx="${i}"]`);
         if (l.IdProducto) $row.find(".ws-prod").val(String(l.IdProducto));
         if (l.IdListaPrecio) $row.find(".ws-lista").val(String(l.IdListaPrecio));
         $row.find(".ws-tipo").val(String(l.TipoMovimiento || 1));
+        sincronizarCheckNoRetiradoWsCg($row, l);
     });
     actualizarAlertaDuplicadosLineasWsCg();
+}
+
+function sincronizarCheckNoRetiradoWsCg($row, linea) {
+    if (!$row?.length) return;
+    const esRetiro = Number(linea?.TipoMovimiento || $row.find(".ws-tipo").val() || 1) === 2;
+    const $wrap = $row.find(".cg-ws-noret");
+    $wrap.toggleClass("d-none", !esRetiro);
+    if (!esRetiro) {
+        $row.find(".ws-noret").prop("checked", false);
+        if (linea) linea.NoRetirado = false;
+    } else if (linea) {
+        $row.find(".ws-noret").prop("checked", !!linea.NoRetirado);
+    }
 }
 
 function agregarCobroWsCg(preset) {
@@ -3959,6 +4015,7 @@ async function guardarVisitaUnificadaCg() {
         linea.TipoMovimiento = Number($(this).find(".ws-tipo").val()) || 1;
         linea.Cantidad = leerNumeroWsCg($(this).find(".ws-cant").val());
         linea.PrecioVenta = leerNumeroWsCg($(this).find(".ws-precio").val());
+        linea.NoRetirado = Number(linea.TipoMovimiento) === 2 && $(this).find(".ws-noret").is(":checked");
     });
 
     const lineas = (hubPropCg("wsLineas") || []).filter(l => l.IdProducto > 0 && l.Cantidad > 0);
@@ -4013,6 +4070,7 @@ async function guardarVisitaUnificadaCg() {
                 IdProducto: l.IdProducto,
                 IdListaPrecio: l.IdListaPrecio > 0 ? l.IdListaPrecio : null,
                 TipoMovimiento: l.TipoMovimiento,
+                NoRetirado: Number(l.TipoMovimiento) === 2 && !!l.NoRetirado,
                 Cantidad: l.Cantidad,
                 PrecioVenta: l.PrecioVenta,
                 CostoUnitario: 0,
@@ -4625,7 +4683,10 @@ function renderHubStockCg(items) {
     const cont = $h("cgHubStockCards");
     if (!cont.length) return;
 
-    const list = (items || []).filter(x => (Number(x.Entregadas) || 0) !== 0 || (Number(x.Retiradas) || 0) !== 0);
+    const list = (items || []).filter(x =>
+        (Number(x.Entregadas) || 0) !== 0
+        || (Number(x.Retiradas) || 0) !== 0
+        || (Number(x.NoRetiradas) || 0) !== 0);
     if (!list.length) {
         cont.html(`<div class="cg-hub-stock-empty">Todavia no hay cajas en poder del cliente.</div>`);
         return;
@@ -4635,11 +4696,13 @@ function renderHubStockCg(items) {
         const enPoder = Number(s.EnPoderCliente) || 0;
         const poderCls = typeof clsSaldoMoney === "function" ? clsSaldoMoney(enPoder) : "";
         const tone = enPoder > 0 ? "has-stock" : (enPoder < 0 ? "neg-stock" : "zero-stock");
+        const noRet = Number(s.NoRetiradas) || 0;
         return `<div class="cg-hub-stock-card ${tone}">
             <div class="cg-hub-stock-name">${escapeCg(s.Producto)}</div>
             <div class="cg-hub-stock-nums">
                 <span><small>Entreg.</small><strong class="rp-money-in">${fmtQtyCg(s.Entregadas)}</strong></span>
                 <span><small>Retir.</small><strong class="rp-money-out">${fmtQtyCg(s.Retiradas)}</strong></span>
+                ${noRet > 0 ? `<span><small>No ret.</small><strong class="cg-val-noret">${fmtQtyCg(noRet)}</strong></span>` : ""}
                 <span class="cg-hub-stock-poder"><small>En poder</small><strong class="${poderCls}">${fmtQtyCg(enPoder)}</strong></span>
             </div>
         </div>`;
@@ -4865,6 +4928,7 @@ const CG_CARD_SCHEMAS = {
         fields: [
             { label: "Entregadas", value: r => fmtQtyCg(r.Entregadas), cls: "rp-money-in" },
             { label: "Retiradas", value: r => fmtQtyCg(r.Retiradas), cls: "rp-money-out" },
+            { label: "No retiradas", value: r => fmtQtyCg(r.NoRetiradas), cls: "cg-val-noret" },
             { label: "En poder", value: r => fmtQtyCg(r.EnPoderCliente), cls: r => typeof clsSaldoMoney === "function" ? clsSaldoMoney(r.EnPoderCliente) : "cg-val-accent", full: true }
         ]
     },
@@ -5018,6 +5082,7 @@ function renderControlMensualCardsCg(filas, mostrarAnio) {
                 <div class="cg-data-card-body">
                     <div class="cg-card-field"><span>Entreg.</span><strong class="rp-money-in">${fmtQtyCg(m.Entregadas)}</strong></div>
                     <div class="cg-card-field"><span>Retir.</span><strong class="rp-money-out">${fmtQtyCg(m.Retiradas)}</strong></div>
+                    <div class="cg-card-field"><span>No ret.</span><strong class="cg-val-noret">${fmtQtyCg(m.NoRetiradas)}</strong></div>
                     <div class="cg-card-field"><span>Total mes</span><strong class="cg-val-debe">${fmtMoneyCg(totalMes)}</strong></div>
                     <div class="cg-card-field"><span>Efectivo</span><strong class="${(Number(m.AbonoEfectivo) || 0) > 0 ? "cg-val-haber" : ""}">${fmtMoneyCg(m.AbonoEfectivo)}</strong></div>
                     <div class="cg-card-field"><span>Transf.</span><strong class="${(Number(m.AbonoTransferencia) || 0) > 0 ? "cg-val-haber" : ""}">${fmtMoneyCg(m.AbonoTransferencia)}</strong></div>

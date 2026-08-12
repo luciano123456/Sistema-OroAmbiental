@@ -473,6 +473,7 @@ public partial class SistemaOroAmbientalContext : DbContext
         modelBuilder.Entity<ClientesEntregasProducto>(entity =>
         {
             entity.Property(e => e.TipoMovimiento).HasDefaultValue(1);
+            entity.Property(e => e.NoRetirado).HasDefaultValue(false);
             entity.Property(e => e.Cantidad).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.CostoUnitario).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.DescTotal).HasColumnType("decimal(18, 2)");

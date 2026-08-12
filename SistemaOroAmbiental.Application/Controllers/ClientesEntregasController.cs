@@ -271,18 +271,22 @@ namespace SistemaOroAmbiental.Application.Controllers
         }
 
         private static ClientesEntregasProducto MapLineaOperacionGuardar(VMClienteEntregaLineaGuardar x)
-            => new()
+        {
+            var tipo = MapTipoMovimientoLinea(x.TipoMovimiento);
+            return new()
             {
                 Id = x.Id,
                 IdProducto = x.IdProducto,
                 IdListaPrecio = x.IdListaPrecio > 0 ? x.IdListaPrecio : null,
-                TipoMovimiento = MapTipoMovimientoLinea(x.TipoMovimiento),
+                TipoMovimiento = tipo,
+                NoRetirado = tipo == ClientesEntregasRepository.TIPO_LINEA_RETIRO && x.NoRetirado,
                 Cantidad = x.Cantidad,
                 PrecioVenta = x.PrecioVenta,
                 CostoUnitario = x.CostoUnitario,
                 PorcDescuento = x.PorcDescuento,
                 PorcIva = x.PorcIva
             };
+        }
 
         private static ClientesEntregasProductosRecuperado MapLineaRecuperadaGuardar(VMClienteEntregaLineaGuardar x)
             => new()
@@ -328,6 +332,7 @@ namespace SistemaOroAmbiental.Application.Controllers
                 IdProducto = l.IdProducto,
                 IdListaPrecio = l.IdListaPrecio,
                 TipoMovimiento = l.TipoMovimiento,
+                NoRetirado = l.NoRetirado,
                 Producto = l.IdProductoNavigation?.Nombre ?? "",
                 Medida = l.IdProductoNavigation?.IdMedidaNavigation?.Nombre,
                 ListaPrecio = l.IdListaPrecioNavigation?.Nombre,

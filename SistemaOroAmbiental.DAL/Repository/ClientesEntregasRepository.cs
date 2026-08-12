@@ -200,9 +200,15 @@ namespace SistemaOroAmbiental.DAL.Repository
 
         private static void NormalizarTipoLinea(ClientesEntregasProducto linea)
         {
-            linea.TipoMovimiento = linea.TipoMovimiento == TIPO_LINEA_RETIRO
-                ? TIPO_LINEA_RETIRO
-                : TIPO_LINEA_ENTREGA;
+            if (linea.TipoMovimiento == TIPO_LINEA_RETIRO)
+            {
+                linea.TipoMovimiento = TIPO_LINEA_RETIRO;
+            }
+            else
+            {
+                linea.TipoMovimiento = TIPO_LINEA_ENTREGA;
+                linea.NoRetirado = false;
+            }
         }
 
         private static bool EsRetiro(ClientesEntregasProducto linea)

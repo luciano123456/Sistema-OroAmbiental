@@ -1249,6 +1249,7 @@ window.__OA_ENTREGA_BUILD = "precio-entrega-lista-20260811";
             IdProducto: 0,
             IdListaPrecio: 0,
             TipoMovimiento: tipo,
+            NoRetirado: false,
             Cantidad: 1,
             PrecioVenta: 0,
             PorcDescuento: 0,
@@ -1256,6 +1257,7 @@ window.__OA_ENTREGA_BUILD = "precio-entrega-lista-20260811";
         }, preset || {});
         if (!linea._key) linea._key = CM.nextLineId++;
         linea.TipoMovimiento = tipo;
+        if (tipo !== TIPO_LINEA_RETIRO) linea.NoRetirado = false;
 
         CM.lineas.push(linea);
         renderLineas();
@@ -1294,7 +1296,8 @@ window.__OA_ENTREGA_BUILD = "precio-entrega-lista-20260811";
         if (tipo === TIPO_LINEA_RECUPERADO) {
             return `${l.IdProducto}|${TIPO_LINEA_RECUPERADO}|${idLista}|${cant}|${precio}|${desc}|${iva}`;
         }
-        return `${l.IdProducto}|${tipo}|${idLista}|${cant}|${precio}|${desc}|${iva}`;
+        const noRet = tipo === TIPO_LINEA_RETIRO && !!l.NoRetirado ? "1" : "0";
+        return `${l.IdProducto}|${tipo}|${noRet}|${idLista}|${cant}|${precio}|${desc}|${iva}`;
     }
 
     function keysLineasDuplicadasEntrega() {
@@ -1398,6 +1401,8 @@ window.__OA_ENTREGA_BUILD = "precio-entrega-lista-20260811";
             const prodOpts = htmlOpcionesProducto(linea);
             const calc = calcularLinea(linea);
             const t = Number(linea.TipoMovimiento);
+            const esRetiro = t === TIPO_LINEA_RETIRO;
+            const noRetChecked = esRetiro && !!linea.NoRetirado ? "checked" : "";
 
             const $row = $(`
                 <div class="en-linea" data-key="${k}" data-seccion="productos">
@@ -1427,9 +1432,15 @@ window.__OA_ENTREGA_BUILD = "precio-entrega-lista-20260811";
                             <span>Cant.</span>
                             <input type="text" inputmode="decimal" autocomplete="off" class="form-control vn-input vn-mini Inputmiles linea-cant" value="${fmtInputNum(linea.Cantidad)}" />
                         </label>
-                        <label class="en-field en-field--num en-field--precio">
+                            <label class="en-field en-field--num en-field--precio">
                             <span>Precio venta</span>
                             <input type="text" inputmode="decimal" autocomplete="off" class="form-control vn-input vn-mini Inputmiles linea-precio" value="${fmtInputNum(linea.PrecioVenta)}" />
+                            <div class="en-noret ${esRetiro ? "" : "d-none"}" title="Marcar si el producto no se retiró">
+                                <label>
+                                    <input type="checkbox" class="linea-noret" ${noRetChecked} />
+                                    <span>Producto no retirado</span>
+                                </label>
+                            </div>
                         </label>
                         <label class="en-field en-field--num">
                             <span>% Desc</span>
@@ -1468,12 +1479,21 @@ window.__OA_ENTREGA_BUILD = "precio-entrega-lista-20260811";
             $tipo.on("change", async function () {
                 if (CM.cargandoEntrega) return;
                 linea.TipoMovimiento = parseInt($(this).val(), 10) || TIPO_LINEA_ENTREGA;
+                if (linea.TipoMovimiento !== TIPO_LINEA_RETIRO) linea.NoRetirado = false;
+                syncUiNoRetiradoLinea($row, linea);
                 syncLineaFromRow($row, linea);
                 await sincronizarPrecioSegunTipoLinea($row, linea);
                 syncLineaFromRow($row, linea);
                 refrescarSelectsProducto();
                 actualizarBotonesAgregarLinea();
                 $row.find(".linea-subtotal").text(fmtMoney(calcularLinea(linea).subtotalFinal));
+                recalcularTotalesUI();
+            });
+
+            $row.find(".linea-noret").on("change", function () {
+                if (CM.cargandoEntrega) return;
+                syncLineaFromRow($row, linea);
+                actualizarAlertaDuplicadosLineasEntrega();
                 recalcularTotalesUI();
             });
 
@@ -1690,6 +1710,23 @@ window.__OA_ENTREGA_BUILD = "precio-entrega-lista-20260811";
         if ($tr.find(".linea-lista").length) {
             linea.IdListaPrecio = parseInt($tr.find(".linea-lista").val(), 10) || 0;
         }
+        if (Number(linea.TipoMovimiento) === TIPO_LINEA_RETIRO) {
+            linea.NoRetirado = $tr.find(".linea-noret").is(":checked");
+        } else {
+            linea.NoRetirado = false;
+        }
+        syncUiNoRetiradoLinea($tr, linea);
+    }
+
+    function syncUiNoRetiradoLinea($tr, linea) {
+        if (!$tr?.length) return;
+        const esRetiro = Number(linea?.TipoMovimiento) === TIPO_LINEA_RETIRO;
+        const $wrap = $tr.find(".en-noret");
+        $wrap.toggleClass("d-none", !esRetiro);
+        if (!esRetiro) {
+            $tr.find(".linea-noret").prop("checked", false);
+            if (linea) linea.NoRetirado = false;
+        }
     }
 
     function calcularLinea(linea) {
@@ -1760,6 +1797,7 @@ window.__OA_ENTREGA_BUILD = "precio-entrega-lista-20260811";
             IdProducto: Number(l.IdProducto ?? l.idProducto ?? 0) || 0,
             IdListaPrecio: Number(l.IdListaPrecio ?? l.idListaPrecio ?? 0) || 0,
             TipoMovimiento: tipoMovimiento,
+            NoRetirado: tipoMovimiento === TIPO_LINEA_RETIRO && !!(l.NoRetirado ?? l.noRetirado),
             Cantidad: Number(l.Cantidad ?? l.cantidad ?? 0) || 0,
             PrecioVenta: Number(l.PrecioVenta ?? l.precioVenta ?? 0) || 0,
             CostoUnitario: Number(l.CostoUnitario ?? l.costoUnitario ?? 0) || 0,
@@ -1798,7 +1836,8 @@ window.__OA_ENTREGA_BUILD = "precio-entrega-lista-20260811";
             NotaCliente: ($("#cNotaCliente").val() || "").trim() || null,
             Lineas: lineasOperacion.map(l => ({
                 ...mapLineaParaGuardar(l),
-                TipoMovimiento: Number(l.TipoMovimiento || TIPO_LINEA_ENTREGA)
+                TipoMovimiento: Number(l.TipoMovimiento || TIPO_LINEA_ENTREGA),
+                NoRetirado: Number(l.TipoMovimiento) === TIPO_LINEA_RETIRO && !!l.NoRetirado
             })),
             LineasRecuperadas: lineasRec.map(mapLineaParaGuardar),
             Cobros: cobrosParaGuardar().map(p => ({

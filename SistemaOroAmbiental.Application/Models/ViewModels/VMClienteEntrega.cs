@@ -38,6 +38,8 @@ namespace SistemaOroAmbiental.Application.Models.ViewModels
         public int IdProducto { get; set; }
         public int? IdListaPrecio { get; set; }
         public int TipoMovimiento { get; set; } = 1; // 1=Entrega, 2=Retiro, 3=Recuperado (inv. recuperado)
+        /// <summary>Solo Retiro: producto no retirado (sigue en poder del cliente).</summary>
+        public bool NoRetirado { get; set; }
         public string Producto { get; set; } = "";
         public string? Medida { get; set; }
         public string? ListaPrecio { get; set; }
@@ -113,6 +115,8 @@ namespace SistemaOroAmbiental.Application.Models.ViewModels
         public int IdProducto { get; set; }
         public int? IdListaPrecio { get; set; }
         public int TipoMovimiento { get; set; } = 1; // 1=Entrega, 2=Retiro, 3=Recuperado (inv. recuperado)
+        /// <summary>Solo Retiro: producto no retirado.</summary>
+        public bool NoRetirado { get; set; }
         public decimal Cantidad { get; set; }
         public decimal PrecioVenta { get; set; }
         public decimal CostoUnitario { get; set; }
