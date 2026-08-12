@@ -47,5 +47,20 @@ namespace SistemaOroAmbiental.DAL.Repository
         {
             return await Task.FromResult(_db.Set<T>().AsNoTracking().AsQueryable());
         }
+
+        public async Task<T?> BuscarDuplicado(int? idExcluir, string? nombre)
+        {
+            if (string.IsNullOrWhiteSpace(nombre))
+                return null;
+
+            var nombreNorm = nombre.Trim();
+            var query = _db.Set<T>().AsNoTracking().AsQueryable();
+
+            if (idExcluir.HasValue)
+                query = query.Where(e => EF.Property<int>(e, "Id") != idExcluir.Value);
+
+            return await query.FirstOrDefaultAsync(e =>
+                EF.Property<string>(e, "Nombre") == nombreNorm);
+        }
     }
 }

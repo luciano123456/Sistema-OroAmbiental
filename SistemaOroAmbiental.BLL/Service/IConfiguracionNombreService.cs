@@ -11,5 +11,7 @@ namespace SistemaOroAmbiental.BLL.Service
         Task<T?> Obtener(int id);
 
         Task<IQueryable<T>> ObtenerTodos();
+
+        Task<T?> BuscarDuplicado(int? idExcluir, string? nombre);
     }
 }
