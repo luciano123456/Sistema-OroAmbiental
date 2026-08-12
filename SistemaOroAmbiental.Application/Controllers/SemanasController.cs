@@ -10,5 +10,7 @@ namespace SistemaOroAmbiental.Application.Controllers
         public SemanasController(IConfiguracionNombreService<Semana> service) : base(service) { }
 
         protected override string NombreEntidadSingular => "semana";
+
+        protected override string ArticuloEntidad => "una";
     }
 }

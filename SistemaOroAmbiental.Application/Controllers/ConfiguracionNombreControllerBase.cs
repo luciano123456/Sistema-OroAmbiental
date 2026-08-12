@@ -21,6 +21,9 @@ namespace SistemaOroAmbiental.Application.Controllers
         /// <summary>Etiqueta en singular para mensajes (ej. "día", "semana").</summary>
         protected virtual string NombreEntidadSingular => "registro";
 
+        /// <summary>Artículo indefinido para mensajes ("un" / "una").</summary>
+        protected virtual string ArticuloEntidad => "un";
+
         [AllowAnonymous]
         [HttpGet]
         public virtual async Task<IActionResult> Lista()
@@ -49,7 +52,7 @@ namespace SistemaOroAmbiental.Application.Controllers
                 return Ok(new
                 {
                     valor = false,
-                    mensaje = $"Ya existe un {NombreEntidadSingular} con el nombre '{GetNombre(dup)}'.",
+                    mensaje = $"Ya existe {ArticuloEntidad} {NombreEntidadSingular} con el nombre '{GetNombre(dup)}'.",
                     tipo = "duplicado",
                     idReferencia = GetId(dup)
                 });
@@ -85,7 +88,7 @@ namespace SistemaOroAmbiental.Application.Controllers
                 return Ok(new
                 {
                     valor = false,
-                    mensaje = $"Ya existe un {NombreEntidadSingular} con el nombre '{GetNombre(dup)}'.",
+                    mensaje = $"Ya existe {ArticuloEntidad} {NombreEntidadSingular} con el nombre '{GetNombre(dup)}'.",
                     tipo = "duplicado",
                     idReferencia = GetId(dup)
                 });
