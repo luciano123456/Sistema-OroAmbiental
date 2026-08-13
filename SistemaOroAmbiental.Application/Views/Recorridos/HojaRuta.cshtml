@@ -1,4 +1,4 @@
-@model SistemaOroAmbiental.Models.HojaRutaDto
+﻿@model SistemaOroAmbiental.Models.HojaRutaDto
 @{
     Layout = null;
 
@@ -43,7 +43,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Hoja de ruta - @Model.Titulo</title>
-    <link href="~/css/HojaRuta.css?v=4.2" rel="stylesheet" asp-append-version="true" />
+    <link href="~/css/HojaRuta.css?v=4.3" rel="stylesheet" asp-append-version="true" />
 </head>
 <body class="hr-page@(multiplesHojas ? " hr-page--multi" : "")">
     <div class="hr-toolbar no-print">
@@ -75,11 +75,11 @@
                 <div class="hr-header-precios">
                     <div class="hr-precio-item">
                         <span>Descartador Grande</span>
-                        <strong>$ @FmtMoney(Model.PrecioDescartadorGrande)</strong>
+                        <strong>@(Model.PrecioDescartadorGrande > 0 ? $"$ {FmtMoney(Model.PrecioDescartadorGrande)}" : "â€”")</strong>
                     </div>
                     <div class="hr-precio-item">
                         <span>Descartador Chico</span>
-                        <strong>$ @FmtMoney(Model.PrecioDescartadorChico)</strong>
+                        <strong>@(Model.PrecioDescartadorChico > 0 ? $"$ {FmtMoney(Model.PrecioDescartadorChico)}" : "â€”")</strong>
                     </div>
                 </div>
             </header>
@@ -102,7 +102,7 @@
                                     @p.Cliente
                                     @if (p.EnLicencia)
                                     {
-                                        <span class="hr-badge-licencia">⚠ DE LICENCIA</span>
+                                        <span class="hr-badge-licencia">âš  DE LICENCIA</span>
                                     }
                                 </span>
                                 <div class="hr-stop-abono">

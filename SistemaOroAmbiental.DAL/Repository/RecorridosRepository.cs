@@ -974,58 +974,38 @@ namespace SistemaOroAmbiental.DAL.Repository
 
         private async Task<(decimal grande, decimal chico)> ObtenerPreciosDescartadoresReferencia()
         {
-            const decimal defaultGrande = 6000m;
-            const decimal defaultChico = 3000m;
-
             try
             {
-                var precios = await (
-                    from pp in _db.ProductosPrecios.AsNoTracking()
-                    join p in _db.Productos.AsNoTracking() on pp.IdProducto equals p.Id
-                    where p.Activo
-                    select new
-                    {
-                        p.Nombre,
-                        p.Abreviatura,
-                        pp.PrecioVenta
-                    }).ToListAsync();
+                var marcados = await _db.Productos.AsNoTracking()
+                    .Where(p => p.Activo && (p.EsDescartadorChicoHojaRuta || p.EsDescartadorGrandeHojaRuta))
+                    .Select(p => new { p.Id, p.EsDescartadorChicoHojaRuta, p.EsDescartadorGrandeHojaRuta })
+                    .ToListAsync();
 
-                static bool EsDescartador(string? nombre, string? abrev) =>
-                    (!string.IsNullOrWhiteSpace(nombre) && nombre.Contains("Descartador", StringComparison.OrdinalIgnoreCase))
-                    || (!string.IsNullOrWhiteSpace(abrev) && abrev.Contains("DESC", StringComparison.OrdinalIgnoreCase));
+                var idChico = marcados.FirstOrDefault(p => p.EsDescartadorChicoHojaRuta)?.Id;
+                var idGrande = marcados.FirstOrDefault(p => p.EsDescartadorGrandeHojaRuta)?.Id;
+                var ids = new[] { idChico, idGrande }.Where(x => x.HasValue).Select(x => x!.Value).Distinct().ToList();
 
-                decimal? grande = precios
-                    .Where(p => EsDescartador(p.Nombre, p.Abreviatura)
-                        && (p.Nombre?.Contains("Grande", StringComparison.OrdinalIgnoreCase) == true
-                            || p.Abreviatura?.Contains("G", StringComparison.OrdinalIgnoreCase) == true))
-                    .OrderByDescending(p => p.PrecioVenta)
-                    .Select(p => (decimal?)p.PrecioVenta)
-                    .FirstOrDefault()
-                    ?? precios
-                        .Where(p => p.Nombre != null && p.Nombre.Contains("Grande", StringComparison.OrdinalIgnoreCase))
-                        .Select(p => (decimal?)p.PrecioVenta)
-                        .FirstOrDefault();
+                if (ids.Count == 0)
+                    return (0, 0);
 
-                decimal? chico = precios
-                    .Where(p => EsDescartador(p.Nombre, p.Abreviatura)
-                        && (p.Nombre?.Contains("Chico", StringComparison.OrdinalIgnoreCase) == true
-                            || p.Abreviatura?.Contains("C", StringComparison.OrdinalIgnoreCase) == true)
-                        && p.Nombre?.Contains("Grande", StringComparison.OrdinalIgnoreCase) != true)
-                    .OrderBy(p => p.PrecioVenta)
-                    .Select(p => (decimal?)p.PrecioVenta)
-                    .FirstOrDefault()
-                    ?? precios
-                        .Where(p => p.Nombre != null && p.Nombre.Contains("Chico", StringComparison.OrdinalIgnoreCase))
-                        .Select(p => (decimal?)p.PrecioVenta)
-                        .FirstOrDefault();
+                var precios = await _db.ProductosPrecios.AsNoTracking()
+                    .Where(pp => ids.Contains(pp.IdProducto) && pp.PrecioVenta > 0)
+                    .GroupBy(pp => pp.IdProducto)
+                    .Select(g => new { IdProducto = g.Key, Precio = g.Max(x => x.PrecioVenta) })
+                    .ToListAsync();
 
-                return (
-                    grande.GetValueOrDefault(defaultGrande),
-                    chico.GetValueOrDefault(defaultChico));
+                decimal chico = 0;
+                decimal grande = 0;
+                if (idChico.HasValue)
+                    chico = precios.FirstOrDefault(p => p.IdProducto == idChico.Value)?.Precio ?? 0;
+                if (idGrande.HasValue)
+                    grande = precios.FirstOrDefault(p => p.IdProducto == idGrande.Value)?.Precio ?? 0;
+
+                return (grande, chico);
             }
             catch
             {
-                return (defaultGrande, defaultChico);
+                return (0, 0);
             }
         }
 

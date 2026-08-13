@@ -12,6 +12,12 @@ public partial class Producto
     /// <summary>Abreviatura para hoja de ruta (ej. C/C, DESC).</summary>
     public string? Abreviatura { get; set; }
 
+    /// <summary>Producto de referencia "Descartador Chico" en la hoja de ruta.</summary>
+    public bool EsDescartadorChicoHojaRuta { get; set; }
+
+    /// <summary>Producto de referencia "Descartador Grande" en la hoja de ruta.</summary>
+    public bool EsDescartadorGrandeHojaRuta { get; set; }
+
     public int IdCategoria { get; set; }
 
     public int IdMedida { get; set; }

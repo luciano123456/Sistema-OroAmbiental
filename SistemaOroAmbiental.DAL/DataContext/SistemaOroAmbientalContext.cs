@@ -1301,6 +1301,12 @@ public partial class SistemaOroAmbientalContext : DbContext
             entity.Property(e => e.Abreviatura)
                 .HasMaxLength(20)
                 .IsUnicode(false);
+            entity.Property(e => e.EsDescartadorChicoHojaRuta)
+                .IsRequired()
+                .HasDefaultValue(false);
+            entity.Property(e => e.EsDescartadorGrandeHojaRuta)
+                .IsRequired()
+                .HasDefaultValue(false);
 
             entity.HasOne(d => d.IdCategoriaNavigation).WithMany(p => p.Productos)
                 .HasForeignKey(d => d.IdCategoria)

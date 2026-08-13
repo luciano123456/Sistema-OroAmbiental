@@ -441,6 +441,10 @@
                 const lblActivo = this._id("lblActivoProducto");
                 if (chkActivo) chkActivo.checked = true;
                 if (lblActivo) lblActivo.textContent = "Activo";
+                const chkChico = this._id("chkDescartadorChicoHoja");
+                const chkGrande = this._id("chkDescartadorGrandeHoja");
+                if (chkChico) chkChico.checked = false;
+                if (chkGrande) chkGrande.checked = false;
 
                 await this.cargarCombos();
                 await this.cargarPreciosPorLista(0);
@@ -517,6 +521,10 @@
             const lblActivo = this._id("lblActivoProducto");
             if (chkActivo) chkActivo.checked = modelo.Activo !== false;
             if (lblActivo) lblActivo.textContent = (chkActivo && chkActivo.checked) ? "Activo" : "Inactivo";
+            const chkChico = this._id("chkDescartadorChicoHoja");
+            const chkGrande = this._id("chkDescartadorGrandeHoja");
+            if (chkChico) chkChico.checked = !!modelo.EsDescartadorChicoHojaRuta;
+            if (chkGrande) chkGrande.checked = !!modelo.EsDescartadorGrandeHojaRuta;
 
             if (modelo.IdCategoria) this._setFieldValue("cmbCategoria", modelo.IdCategoria, true);
             if (modelo.IdMedida) this._setFieldValue("cmbMedida", modelo.IdMedida, true);
@@ -671,17 +679,22 @@
             }
         }
 
-        async guardar() {
+        async guardar(reemplazarDescartador = false) {
             if (this.isSoloLectura()) return true;
             if (!this.validarCampos()) return false;
 
             const id = this._getFieldValue("txtId");
 
             const abrev = (this._getFieldValue("txtAbreviatura") || "").trim();
+            const chkChico = this._id("chkDescartadorChicoHoja");
+            const chkGrande = this._id("chkDescartadorGrandeHoja");
             const modelo = {
                 Id: id !== "" ? parseInt(id, 10) : 0,
                 Nombre: this._getFieldValue("txtNombre"),
                 Abreviatura: abrev || null,
+                EsDescartadorChicoHojaRuta: !!(chkChico && chkChico.checked),
+                EsDescartadorGrandeHojaRuta: !!(chkGrande && chkGrande.checked),
+                ReemplazarDescartadorHojaRuta: !!reemplazarDescartador,
                 IdCategoria: this._getIntOrNull("cmbCategoria"),
                 IdMedida: this._getIntOrNull("cmbMedida"),
                 CostoUnitario: this._getDecimal("txtCostoUnitario"),
@@ -706,6 +719,14 @@
                 });
 
                 if (!data?.valor) {
+                    if (data?.tipo === "descartador_ocupado") {
+                        const ok = typeof confirmarModal === "function"
+                            ? await confirmarModal(data.mensaje || "¿Reemplazar el descartador actual?")
+                            : window.confirm(data.mensaje || "¿Reemplazar el descartador actual?");
+                        if (ok) return this.guardar(true);
+                        return false;
+                    }
+
                     this.mostrarErrorCampos(
                         data?.mensaje || "No se pudo guardar.",
                         data?.idReferencia ?? null,
@@ -778,6 +799,7 @@
             this.setSoloLecturaAttribute(false);
             this.modalEl.querySelectorAll("input, select, textarea").forEach(el => {
                 if (el.id === "txtId") { el.value = ""; return; }
+                if (el.type === "checkbox") { el.checked = false; return; }
                 if (el.tagName === "SELECT") el.selectedIndex = 0;
                 else el.value = "";
             });
@@ -1025,6 +1047,17 @@
             if (chkActivo && lblActivo) {
                 chkActivo.addEventListener("change", () => {
                     lblActivo.textContent = chkActivo.checked ? "Activo" : "Inactivo";
+                });
+            }
+
+            const chkChico = this._id("chkDescartadorChicoHoja");
+            const chkGrande = this._id("chkDescartadorGrandeHoja");
+            if (chkChico && chkGrande) {
+                chkChico.addEventListener("change", () => {
+                    if (chkChico.checked) chkGrande.checked = false;
+                });
+                chkGrande.addEventListener("change", () => {
+                    if (chkGrande.checked) chkChico.checked = false;
                 });
             }
 

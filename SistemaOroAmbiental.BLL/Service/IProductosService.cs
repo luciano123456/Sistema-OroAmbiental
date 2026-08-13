@@ -5,9 +5,9 @@ namespace SistemaOroAmbiental.BLL.Service
 {
     public interface IProductosService
     {
-        Task<ServiceResult> Insertar(Producto model);
+        Task<ServiceResult> Insertar(Producto model, bool reemplazarDescartadorHojaRuta = false);
 
-        Task<ServiceResult> Actualizar(Producto model);
+        Task<ServiceResult> Actualizar(Producto model, bool reemplazarDescartadorHojaRuta = false);
 
         Task<ServiceResult> Eliminar(int id);
 

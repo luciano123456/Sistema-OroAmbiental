@@ -15,7 +15,7 @@ namespace SistemaOroAmbiental.BLL.Service
             _deleteChecker = deleteChecker;
         }
 
-        public async Task<ServiceResult> Insertar(Producto model)
+        public async Task<ServiceResult> Insertar(Producto model, bool reemplazarDescartadorHojaRuta = false)
         {
             if (!ValidarModelo(model, out var error))
                 return ServiceResult.Error(error, "validacion");
@@ -30,6 +30,10 @@ namespace SistemaOroAmbiental.BLL.Service
                     dup.Id);
             }
 
+            var conflicto = await ValidarDescartadorHojaRuta(model, null, reemplazarDescartadorHojaRuta);
+            if (conflicto != null)
+                return conflicto;
+
             var ok = await _repo.Insertar(model);
 
             return ok
@@ -37,7 +41,7 @@ namespace SistemaOroAmbiental.BLL.Service
                 : ServiceResult.Error("No se pudo guardar");
         }
 
-        public async Task<ServiceResult> Actualizar(Producto model)
+        public async Task<ServiceResult> Actualizar(Producto model, bool reemplazarDescartadorHojaRuta = false)
         {
             if (!ValidarModelo(model, out var error))
                 return ServiceResult.Error(error, "validacion");
@@ -52,11 +56,54 @@ namespace SistemaOroAmbiental.BLL.Service
                     dup.Id);
             }
 
+            var conflicto = await ValidarDescartadorHojaRuta(model, model.Id, reemplazarDescartadorHojaRuta);
+            if (conflicto != null)
+                return conflicto;
+
             var ok = await _repo.Actualizar(model);
 
             return ok
                 ? ServiceResult.Success("Producto modificado correctamente")
                 : ServiceResult.Error("No se pudo guardar");
+        }
+
+        private async Task<ServiceResult?> ValidarDescartadorHojaRuta(
+            Producto model,
+            int? idExcluir,
+            bool reemplazar)
+        {
+            if (model.EsDescartadorChicoHojaRuta && model.EsDescartadorGrandeHojaRuta)
+            {
+                return ServiceResult.Error(
+                    "Un producto no puede ser Descartador Chico y Grande a la vez. Elegí uno solo.",
+                    "validacion");
+            }
+
+            if (model.EsDescartadorChicoHojaRuta)
+            {
+                var otro = await _repo.BuscarDescartadorHojaRuta(true, false, idExcluir);
+                if (otro != null && !reemplazar)
+                {
+                    return ServiceResult.Error(
+                        $"El producto '{otro.Nombre}' ya está marcado como Descartador Chico en la hoja de ruta. ¿Deseás reemplazarlo por este?",
+                        "descartador_ocupado",
+                        otro.Id);
+                }
+            }
+
+            if (model.EsDescartadorGrandeHojaRuta)
+            {
+                var otro = await _repo.BuscarDescartadorHojaRuta(false, true, idExcluir);
+                if (otro != null && !reemplazar)
+                {
+                    return ServiceResult.Error(
+                        $"El producto '{otro.Nombre}' ya está marcado como Descartador Grande en la hoja de ruta. ¿Deseás reemplazarlo por este?",
+                        "descartador_ocupado",
+                        otro.Id);
+                }
+            }
+
+            return null;
         }
 
         public Task<ServiceResult> Eliminar(int id)
