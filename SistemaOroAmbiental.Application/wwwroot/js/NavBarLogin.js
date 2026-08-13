@@ -672,7 +672,7 @@ function guardarCambiosConfiguracion() {
         nuevoModelo = {
             Id: idConfiguracion !== "" ? idConfiguracion : 0,
             IdCombo: comboNombre != null ? idCombo : 0,
-            Nombre: $("#txtNombreConfiguracion").val()
+            Nombre: ($("#txtNombreConfiguracion").val() || "").trim()
         };
 
         if (controllerConfiguracion === "Cuentas") {

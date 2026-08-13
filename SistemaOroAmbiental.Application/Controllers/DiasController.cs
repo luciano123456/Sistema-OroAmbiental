@@ -8,5 +8,7 @@ namespace SistemaOroAmbiental.Application.Controllers
     public class DiasController : ConfiguracionNombreControllerBase<Dia>
     {
         public DiasController(IConfiguracionNombreService<Dia> service) : base(service) { }
+
+        protected override string NombreEntidadSingular => "día";
     }
 }

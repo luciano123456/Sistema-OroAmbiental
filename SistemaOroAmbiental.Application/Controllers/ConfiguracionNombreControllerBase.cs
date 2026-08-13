@@ -18,6 +18,12 @@ namespace SistemaOroAmbiental.Application.Controllers
             Service = service;
         }
 
+        /// <summary>Etiqueta en singular para mensajes (ej. "día", "semana").</summary>
+        protected virtual string NombreEntidadSingular => "registro";
+
+        /// <summary>Artículo indefinido para mensajes ("un" / "una").</summary>
+        protected virtual string ArticuloEntidad => "un";
+
         [AllowAnonymous]
         [HttpGet]
         public virtual async Task<IActionResult> Lista()
@@ -36,12 +42,33 @@ namespace SistemaOroAmbiental.Application.Controllers
         [HttpPost]
         public virtual async Task<IActionResult> Insertar([FromBody] VMGenericModel model)
         {
+            var nombre = (model.Nombre ?? "").Trim();
+            if (string.IsNullOrWhiteSpace(nombre))
+                return Ok(new { valor = false, mensaje = "El nombre es obligatorio.", tipo = "validacion" });
+
+            var dup = await Service.BuscarDuplicado(null, nombre);
+            if (dup != null)
+            {
+                return Ok(new
+                {
+                    valor = false,
+                    mensaje = $"Ya existe {ArticuloEntidad} {NombreEntidadSingular} con el nombre '{GetNombre(dup)}'.",
+                    tipo = "duplicado",
+                    idReferencia = GetId(dup)
+                });
+            }
+
             var entity = new TEntity();
-            SetNombre(entity, model.Nombre ?? "");
+            SetNombre(entity, nombre);
 
             bool respuesta = await Service.Insertar(entity);
 
-            return Ok(new { valor = respuesta, id = GetId(entity) });
+            return Ok(new
+            {
+                valor = respuesta,
+                id = GetId(entity),
+                mensaje = respuesta ? "Registrado correctamente" : "No se pudo guardar"
+            });
         }
 
         [HttpPut]
@@ -51,11 +78,31 @@ namespace SistemaOroAmbiental.Application.Controllers
             if (entity == null)
                 return NotFound();
 
-            SetNombre(entity, model.Nombre ?? "");
+            var nombre = (model.Nombre ?? "").Trim();
+            if (string.IsNullOrWhiteSpace(nombre))
+                return Ok(new { valor = false, mensaje = "El nombre es obligatorio.", tipo = "validacion" });
+
+            var dup = await Service.BuscarDuplicado(model.Id, nombre);
+            if (dup != null)
+            {
+                return Ok(new
+                {
+                    valor = false,
+                    mensaje = $"Ya existe {ArticuloEntidad} {NombreEntidadSingular} con el nombre '{GetNombre(dup)}'.",
+                    tipo = "duplicado",
+                    idReferencia = GetId(dup)
+                });
+            }
+
+            SetNombre(entity, nombre);
 
             bool respuesta = await Service.Actualizar(entity);
 
-            return Ok(new { valor = respuesta });
+            return Ok(new
+            {
+                valor = respuesta,
+                mensaje = respuesta ? "Modificado correctamente" : "No se pudo guardar"
+            });
         }
 
         [HttpDelete]
