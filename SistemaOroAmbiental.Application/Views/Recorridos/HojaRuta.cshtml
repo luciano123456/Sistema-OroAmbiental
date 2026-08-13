@@ -43,7 +43,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Hoja de ruta - @Model.Titulo</title>
-    <link href="~/css/HojaRuta.css?v=4.0" rel="stylesheet" asp-append-version="true" />
+    <link href="~/css/HojaRuta.css?v=4.1" rel="stylesheet" asp-append-version="true" />
 </head>
 <body class="hr-page@(multiplesHojas ? " hr-page--multi" : "")">
     <div class="hr-toolbar no-print">
@@ -72,6 +72,16 @@
                     <div class="hr-meta-item">
                         <span class="hr-meta-label">Fecha</span>
                         <span class="hr-meta-value hr-meta-value--blank">&nbsp;</span>
+                    </div>
+                </div>
+                <div class="hr-header-precios">
+                    <div class="hr-precio-item">
+                        <span>Descartador Grande</span>
+                        <strong>$ @FmtMoney(Model.PrecioDescartadorGrande)</strong>
+                    </div>
+                    <div class="hr-precio-item">
+                        <span>Descartador Chico</span>
+                        <strong>$ @FmtMoney(Model.PrecioDescartadorChico)</strong>
                     </div>
                 </div>
             </header>

@@ -271,9 +271,40 @@ namespace SistemaOroAmbiental.Application.Controllers
                 var cant = p.Cantidad % 1 == 0
                     ? ((int)p.Cantidad).ToString()
                     : p.Cantidad.ToString("0.####");
-                var lista = string.IsNullOrWhiteSpace(p.ListaPrecio) ? "" : $" ({p.ListaPrecio.Trim()})";
+                var etiqueta = EtiquetaListaPublicaHoja(p.ListaPrecio, p.TipoPago, p.TipoPagoCodigo);
+                var lista = string.IsNullOrWhiteSpace(etiqueta) ? "" : $" ({etiqueta})";
                 return $"{cant} {abrev}{lista} x $ {p.PrecioVenta:N0}";
             }));
+        }
+
+        private static string? EtiquetaListaPublicaHoja(string? listaPrecio, string? tipoPago, string? tipoPagoCodigo)
+        {
+            var lista = (listaPrecio ?? "").Trim();
+            var tipo = (tipoPago ?? "").Trim();
+            var codigo = (tipoPagoCodigo ?? "").Trim();
+            var listaLow = lista.ToLowerInvariant();
+            var tipoLow = tipo.ToLowerInvariant();
+
+            if ((!string.IsNullOrWhiteSpace(codigo) && codigo.Contains("efect", StringComparison.OrdinalIgnoreCase))
+                || tipoLow.Contains("efect")
+                || listaLow.Contains("efect")
+                || listaLow.Contains("regular")
+                || listaLow.Contains("caja"))
+                return "Caja chica";
+
+            if ((!string.IsNullOrWhiteSpace(codigo) && (codigo.Contains("transf", StringComparison.OrdinalIgnoreCase) || codigo.Contains("banco", StringComparison.OrdinalIgnoreCase)))
+                || tipoLow.Contains("transf")
+                || listaLow.Contains("transf")
+                || listaLow.Contains("banco"))
+                return "Transferencia";
+
+            if (listaLow.Contains("recargo") || listaLow.Contains("precio"))
+                return string.IsNullOrWhiteSpace(tipo) ? null : tipo;
+
+            if (!string.IsNullOrWhiteSpace(tipo))
+                return tipo;
+
+            return string.IsNullOrWhiteSpace(lista) ? null : lista;
         }
 
         private static List<(int IdSemana, int IdDia)> ParseRecorridosHojaRuta(string? recorridos, int idSemana, int idDia)

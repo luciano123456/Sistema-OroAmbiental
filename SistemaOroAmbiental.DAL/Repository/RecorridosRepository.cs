@@ -466,32 +466,28 @@ namespace SistemaOroAmbiental.DAL.Repository
                         partes.Add(s.Semana.Trim());
                     if (!string.IsNullOrWhiteSpace(s.Dia))
                         partes.Add(s.Dia.Trim());
+                    if (!string.IsNullOrWhiteSpace(camion))
+                        partes.Add(camion.Trim());
                     return string.Join(" ", partes.Where(p => !string.IsNullOrWhiteSpace(p)));
                 })
                 .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToList();
 
-            var camionTxt = camion.Trim();
             var titulo = dias.Count > 0 ? string.Join(" · ", dias) : "HOJA DE RUTA";
-
-            if (!string.IsNullOrWhiteSpace(camionTxt))
-                titulo = $"{camionTxt} — {titulo}";
-
             return titulo.ToUpperInvariant();
         }
 
         private static string ConstruirTituloHojaRuta(string semana, string dia, string camion, string zona)
         {
+            // Solo "PRIMER LUNES U1" (semana + día + unidad). Zona y demás no van en el título.
+            _ = zona;
             var partes = new List<string> { semana.Trim(), dia.Trim() };
             var camionTxt = camion.Trim();
             if (!string.IsNullOrWhiteSpace(camionTxt))
                 partes.Add(camionTxt);
 
             var titulo = string.Join(" ", partes.Where(p => !string.IsNullOrWhiteSpace(p)));
-            var zonaTxt = zona.Trim();
-            if (!string.IsNullOrWhiteSpace(zonaTxt))
-                titulo += " - " + zonaTxt;
-
             return titulo.ToUpperInvariant();
         }
 
@@ -810,11 +806,47 @@ namespace SistemaOroAmbiental.DAL.Repository
                 var cant = p.Cantidad % 1 == 0
                     ? ((int)p.Cantidad).ToString()
                     : p.Cantidad.ToString("0.####");
-                var lista = string.IsNullOrWhiteSpace(p.ListaPrecio) ? "" : $" ({p.ListaPrecio.Trim()})";
+                var etiqueta = EtiquetaListaPublicaHoja(p.ListaPrecio, p.TipoPago, p.TipoPagoCodigo);
+                var lista = string.IsNullOrWhiteSpace(etiqueta) ? "" : $" ({etiqueta})";
                 return $"{cant} {abrev}{lista} x $ {p.PrecioVenta:N0}";
             });
 
             return string.Join(" · ", partes);
+        }
+
+        /// <summary>
+        /// Etiqueta visible en hoja de ruta. Oculta nombres internos
+        /// ("Precio regular", "Con recargo", etc.) y muestra Caja chica / Transferencia.
+        /// </summary>
+        private static string? EtiquetaListaPublicaHoja(string? listaPrecio, string? tipoPago, string? tipoPagoCodigo)
+        {
+            var lista = (listaPrecio ?? "").Trim();
+            var tipo = (tipoPago ?? "").Trim();
+            var codigo = (tipoPagoCodigo ?? "").Trim();
+            var listaLow = lista.ToLowerInvariant();
+            var tipoLow = tipo.ToLowerInvariant();
+
+            if (EsCodigoEfectivo(codigo)
+                || tipoLow.Contains("efect")
+                || listaLow.Contains("efect")
+                || listaLow.Contains("regular")
+                || listaLow.Contains("caja"))
+                return "Caja chica";
+
+            if (EsCodigoTransferencia(codigo)
+                || tipoLow.Contains("transf")
+                || listaLow.Contains("transf")
+                || listaLow.Contains("banco"))
+                return "Transferencia";
+
+            // Nombres internos de lista no se muestran al chofer.
+            if (listaLow.Contains("recargo") || listaLow.Contains("precio"))
+                return string.IsNullOrWhiteSpace(tipo) ? null : tipo;
+
+            if (!string.IsNullOrWhiteSpace(tipo))
+                return tipo;
+
+            return string.IsNullOrWhiteSpace(lista) ? null : lista;
         }
 
         private async Task<(
@@ -954,18 +986,38 @@ namespace SistemaOroAmbiental.DAL.Repository
                     select new
                     {
                         p.Nombre,
+                        p.Abreviatura,
                         pp.PrecioVenta
                     }).ToListAsync();
 
+                static bool EsDescartador(string? nombre, string? abrev) =>
+                    (!string.IsNullOrWhiteSpace(nombre) && nombre.Contains("Descartador", StringComparison.OrdinalIgnoreCase))
+                    || (!string.IsNullOrWhiteSpace(abrev) && abrev.Contains("DESC", StringComparison.OrdinalIgnoreCase));
+
                 decimal? grande = precios
-                    .Where(p => p.Nombre.Contains("Grande", StringComparison.OrdinalIgnoreCase))
+                    .Where(p => EsDescartador(p.Nombre, p.Abreviatura)
+                        && (p.Nombre?.Contains("Grande", StringComparison.OrdinalIgnoreCase) == true
+                            || p.Abreviatura?.Contains("G", StringComparison.OrdinalIgnoreCase) == true))
+                    .OrderByDescending(p => p.PrecioVenta)
                     .Select(p => (decimal?)p.PrecioVenta)
-                    .FirstOrDefault();
+                    .FirstOrDefault()
+                    ?? precios
+                        .Where(p => p.Nombre != null && p.Nombre.Contains("Grande", StringComparison.OrdinalIgnoreCase))
+                        .Select(p => (decimal?)p.PrecioVenta)
+                        .FirstOrDefault();
 
                 decimal? chico = precios
-                    .Where(p => p.Nombre.Contains("Chico", StringComparison.OrdinalIgnoreCase))
+                    .Where(p => EsDescartador(p.Nombre, p.Abreviatura)
+                        && (p.Nombre?.Contains("Chico", StringComparison.OrdinalIgnoreCase) == true
+                            || p.Abreviatura?.Contains("C", StringComparison.OrdinalIgnoreCase) == true)
+                        && p.Nombre?.Contains("Grande", StringComparison.OrdinalIgnoreCase) != true)
+                    .OrderBy(p => p.PrecioVenta)
                     .Select(p => (decimal?)p.PrecioVenta)
-                    .FirstOrDefault();
+                    .FirstOrDefault()
+                    ?? precios
+                        .Where(p => p.Nombre != null && p.Nombre.Contains("Chico", StringComparison.OrdinalIgnoreCase))
+                        .Select(p => (decimal?)p.PrecioVenta)
+                        .FirstOrDefault();
 
                 return (
                     grande.GetValueOrDefault(defaultGrande),
