@@ -1,4 +1,4 @@
-﻿@{
+@{
     Layout = "_LayoutModulo";
     ViewData["Title"] = "Entregas - Nuevo / Modificar";
     var id = (int)(ViewBag.IdEntrega ?? ViewBag.Id ?? 0);
@@ -144,7 +144,7 @@
                         <div class="i"><i class="fa fa-cubes"></i></div>
                         <div class="txt">
                             <div class="t1">Productos <span class="vn-sec-count" id="cntProductos">(0)</span></div>
-                            <div class="t2">Entrega descuenta inventario Â· Retiro baja stock en poder del cliente</div>
+                            <div class="t2">Entrega descuenta inventario · Retiro baja stock en poder del cliente</div>
                         </div>
                     </div>
 
@@ -169,8 +169,8 @@
                     <div id="alertLineasDuplicadasEntrega" class="vn-alert-warning mb-3" hidden>
                         <i class="fa fa-exclamation-triangle"></i>
                         <span>
-                            <strong>LÃ­neas repetidas.</strong>
-                            No podÃ©s cargar dos lÃ­neas 100% iguales (producto, tipo, lista, cantidad, precio, desc. e IVA). Si cambia algÃºn dato, sÃ­ se permite.
+                            <strong>Líneas repetidas.</strong>
+                            No podés cargar dos líneas 100% iguales (producto, tipo, lista, cantidad, precio, desc. e IVA). Si cambia algún dato, sí se permite.
                         </span>
                     </div>
 
@@ -363,7 +363,7 @@
                 imp.disabled = !ok;
                 imp.readOnly = !ok;
                 if (!ok) imp.value = "";
-                imp.placeholder = ok ? "" : "ElegÃ­ cuenta";
+                imp.placeholder = ok ? "" : "Elegí cuenta";
             }
             function tick() {
                 document.querySelectorAll("#tbodyCobrosEntrega tr").forEach(syncImp);
