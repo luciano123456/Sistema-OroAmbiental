@@ -1337,25 +1337,25 @@ body.layout-modulo .container-fluid {
     border: 1px solid rgba(255, 255, 255, 0.12);
     background: rgba(255, 255, 255, 0.04);
     color: #b8c5da;
-    border-radius: 10px;
-    padding: 0.38rem 0.72rem;
-    font-size: 0.82rem;
+    border-radius: 8px;
+    padding: 0.28rem 0.5rem;
+    font-size: 0.72rem;
     font-weight: 700;
     cursor: pointer;
     transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, transform 0.1s ease;
     user-select: none;
-    line-height: 1.2;
+    line-height: 1.15;
 }
 
 .cg-cm-chip--anio {
-    min-width: 3.4rem;
+    min-width: 2.8rem;
     text-align: center;
 }
 
 .cg-cm-chip--mes {
-    padding: 0.42rem 0.2rem;
+    padding: 0.28rem 0.15rem;
     text-align: center;
-    font-size: 0.76rem;
+    font-size: 0.68rem;
 }
 
 .cg-cm-chip:hover {
