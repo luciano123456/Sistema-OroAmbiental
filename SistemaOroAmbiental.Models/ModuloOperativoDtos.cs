@@ -94,10 +94,14 @@ public class ClienteControlProductoMesDto
     public string? ListaPrecio { get; set; }
     public decimal Entregadas { get; set; }
     public decimal Retiradas { get; set; }
+    /// <summary>Cantidad de retiros marcados como producto no retirado.</summary>
+    public decimal NoRetiradas { get; set; }
     public decimal PrecioUnitarioEntrega { get; set; }
     public decimal PrecioUnitarioRetiro { get; set; }
+    public decimal PrecioUnitarioNoRetiro { get; set; }
     public decimal SubtotalEntregas { get; set; }
     public decimal SubtotalRetiros { get; set; }
+    public decimal SubtotalNoRetiros { get; set; }
 }
 
 public class ClienteControlProductoColumnaDto
@@ -129,9 +133,12 @@ public class ClienteControlMensualDto
     public DateTime? FechaVisita { get; set; }
     public decimal Entregadas { get; set; }
     public decimal Retiradas { get; set; }
+    /// <summary>Total de productos marcados como no retirados en el mes.</summary>
+    public decimal NoRetiradas { get; set; }
     public decimal StockCliente { get; set; }
     public decimal SubtotalEntregas { get; set; }
     public decimal SubtotalRetiros { get; set; }
+    public decimal SubtotalNoRetiros { get; set; }
     public decimal AbonoEfectivo { get; set; }
     public decimal AbonoTransferencia { get; set; }
     public DateTime? FechaTransferencia { get; set; }
@@ -201,6 +208,7 @@ public class ClienteStockDto
     public string Producto { get; set; } = "";
     public decimal Entregadas { get; set; }
     public decimal Retiradas { get; set; }
+    public decimal NoRetiradas { get; set; }
     public decimal EnPoderCliente { get; set; }
 }
 

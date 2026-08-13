@@ -37,5 +37,7 @@ namespace SistemaOroAmbiental.BLL.Service
             int idDia,
             int idUsuario,
             IReadOnlyList<(int IdCliente, int? IdEstablecimiento)> items);
+
+        Task<ServiceResult> SyncEstablecimientoEnRecorridos(int idEstablecimiento, int idUsuario);
     }
 }

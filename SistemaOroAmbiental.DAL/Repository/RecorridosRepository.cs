@@ -203,6 +203,10 @@ namespace SistemaOroAmbiental.DAL.Repository
         {
             try
             {
+                await AsegurarPosicionClientesRecorrido(model);
+                if (model.Posicion <= 0)
+                    return false;
+
                 _db.ClientesRecorridos.Add(model);
                 await _db.SaveChangesAsync();
                 return true;
@@ -1221,6 +1225,207 @@ namespace SistemaOroAmbiental.DAL.Repository
                 item.EnLicencia = EstaEnLicencia(cli, fecha.Date);
             }
         }
+
+        public async Task<(bool Ok, string Error)> SyncEstablecimientoEnRecorridos(int idEstablecimiento, int idUsuario)
+        {
+            if (idEstablecimiento <= 0)
+                return (false, "Establecimiento inválido.");
+
+            try
+            {
+                var est = await _db.ClientesEstablecimientos.AsNoTracking()
+                    .FirstOrDefaultAsync(e => e.Id == idEstablecimiento);
+                if (est == null)
+                    return (false, "Establecimiento no encontrado.");
+
+                var idSemana = est.IdSemanaRecoleccion;
+                var orden = est.OrdenRecorrido;
+                var desired = new List<(int IdCamion, int IdSemana, int IdDia)>();
+
+                if (idSemana > 0)
+                {
+                    if (est.IdCamion is > 0 && est.IdDiaRecoleccion > 0)
+                        desired.Add((est.IdCamion.Value, idSemana, est.IdDiaRecoleccion));
+
+                    var diasExtra = await _db.ClientesEstablecimientosDias.AsNoTracking()
+                        .Where(d =>
+                            d.IdEstablecimiento == idEstablecimiento &&
+                            d.IdDia > 0 &&
+                            d.IdCamion != null &&
+                            d.IdCamion > 0)
+                        .Select(d => new { d.IdDia, IdCamion = d.IdCamion!.Value })
+                        .ToListAsync();
+
+                    foreach (var d in diasExtra)
+                    {
+                        if (!desired.Any(x =>
+                                x.IdCamion == d.IdCamion &&
+                                x.IdSemana == idSemana &&
+                                x.IdDia == d.IdDia))
+                        {
+                            desired.Add((d.IdCamion, idSemana, d.IdDia));
+                        }
+                    }
+                }
+
+                desired = desired
+                    .GroupBy(x => (x.IdCamion, x.IdSemana, x.IdDia))
+                    .Select(g => g.First())
+                    .ToList();
+
+                var existentes = await _db.ClientesRecorridos
+                    .Where(r => r.IdEstablecimiento == idEstablecimiento)
+                    .ToListAsync();
+
+                var desiredKeys = new HashSet<(int, int, int)>(
+                    desired.Select(d => (d.IdCamion, d.IdSemana, d.IdDia)));
+
+                var aEliminar = existentes
+                    .Where(r => !desiredKeys.Contains((r.IdCamion, r.IdSemana, r.IdDia)))
+                    .ToList();
+                if (aEliminar.Count > 0)
+                    _db.ClientesRecorridos.RemoveRange(aEliminar);
+
+                var ahora = DateTime.Now;
+                var idUsuarioSafe = idUsuario > 0 ? idUsuario : est.IdUsuarioRegistra;
+
+                foreach (var slot in desired)
+                {
+                    var actual = existentes.FirstOrDefault(r =>
+                        r.IdCamion == slot.IdCamion &&
+                        r.IdSemana == slot.IdSemana &&
+                        r.IdDia == slot.IdDia);
+
+                    var posicion = await ResolverPosicionRecorridoAsync(
+                        slot.IdCamion,
+                        slot.IdSemana,
+                        slot.IdDia,
+                        orden,
+                        actual?.Id);
+
+                    if (actual != null)
+                    {
+                        var cambio = false;
+                        if (actual.IdCliente != est.IdCliente)
+                        {
+                            actual.IdCliente = est.IdCliente;
+                            cambio = true;
+                        }
+
+                        if (orden is > 0 && actual.Posicion != posicion)
+                        {
+                            actual.Posicion = posicion;
+                            cambio = true;
+                        }
+
+                        if (!actual.Activo)
+                        {
+                            actual.Activo = true;
+                            cambio = true;
+                        }
+
+                        if (cambio)
+                        {
+                            actual.IdUsuarioModifica = idUsuarioSafe;
+                            actual.FechaUsuarioModifica = ahora;
+                        }
+                    }
+                    else
+                    {
+                        _db.ClientesRecorridos.Add(new ClientesRecorrido
+                        {
+                            IdCliente = est.IdCliente,
+                            IdEstablecimiento = idEstablecimiento,
+                            IdCamion = slot.IdCamion,
+                            IdSemana = slot.IdSemana,
+                            IdDia = slot.IdDia,
+                            Posicion = posicion,
+                            Activo = true,
+                            IdUsuarioRegistra = idUsuarioSafe,
+                            FechaUsuarioRegistra = ahora
+                        });
+                    }
+                }
+
+                await _db.SaveChangesAsync();
+                return (true, "");
+            }
+            catch (Exception ex)
+            {
+                return (false, ex.Message);
+            }
+        }
+
+        public async Task EliminarPorEstablecimiento(int idEstablecimiento)
+        {
+            if (idEstablecimiento <= 0) return;
+
+            var rows = await _db.ClientesRecorridos
+                .Where(r => r.IdEstablecimiento == idEstablecimiento)
+                .ToListAsync();
+            if (rows.Count == 0) return;
+
+            _db.ClientesRecorridos.RemoveRange(rows);
+            await _db.SaveChangesAsync();
+        }
+
+        public async Task EliminarPorCliente(int idCliente)
+        {
+            if (idCliente <= 0) return;
+
+            var rows = await _db.ClientesRecorridos
+                .Where(r => r.IdCliente == idCliente)
+                .ToListAsync();
+            if (rows.Count == 0) return;
+
+            _db.ClientesRecorridos.RemoveRange(rows);
+            await _db.SaveChangesAsync();
+        }
+
+        private async Task AsegurarPosicionClientesRecorrido(ClientesRecorrido model)
+        {
+            if (model.Posicion > 0) return;
+            if (model.IdCamion <= 0 || model.IdSemana <= 0 || model.IdDia <= 0) return;
+
+            int? orden = null;
+            if (model.IdEstablecimiento is > 0)
+            {
+                orden = await _db.ClientesEstablecimientos.AsNoTracking()
+                    .Where(e => e.Id == model.IdEstablecimiento.Value)
+                    .Select(e => e.OrdenRecorrido)
+                    .FirstOrDefaultAsync();
+            }
+
+            model.Posicion = await ResolverPosicionRecorridoAsync(
+                model.IdCamion,
+                model.IdSemana,
+                model.IdDia,
+                orden,
+                model.Id > 0 ? model.Id : null);
+        }
+
+        private async Task<int> ResolverPosicionRecorridoAsync(
+            int idCamion,
+            int idSemana,
+            int idDia,
+            int? ordenDeseado,
+            int? idExcluir)
+        {
+            var query = _db.ClientesRecorridos.AsNoTracking()
+                .Where(r => r.IdCamion == idCamion && r.IdSemana == idSemana && r.IdDia == idDia);
+
+            if (idExcluir is > 0)
+                query = query.Where(r => r.Id != idExcluir.Value);
+
+            var ocupadas = await query.Select(r => r.Posicion).ToListAsync();
+            var set = new HashSet<int>(ocupadas);
+
+            if (ordenDeseado is > 0 && !set.Contains(ordenDeseado.Value))
+                return ordenDeseado.Value;
+
+            return (ocupadas.Count == 0 ? 0 : ocupadas.Max()) + 1;
+        }
+
         private async Task CargarProductosEnClientesRecorrido(List<ClientesRecorridoDto> list)
         {
             if (list == null || list.Count == 0)

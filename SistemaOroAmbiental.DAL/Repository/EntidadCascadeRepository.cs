@@ -128,6 +128,15 @@ namespace SistemaOroAmbiental.DAL.Repository
                     throw new InvalidOperationException($"No se pudo eliminar la entrega #{idEntrega}.");
             }
 
+            var recorridosCliente = await _db.ClientesRecorridos
+                .Where(r => r.IdCliente == idCliente)
+                .ToListAsync();
+            if (recorridosCliente.Count > 0)
+            {
+                _db.ClientesRecorridos.RemoveRange(recorridosCliente);
+                await _db.SaveChangesAsync();
+            }
+
             foreach (var idContrato in idsContratos)
             {
                 var docs = await _db.ContratosDocumentos

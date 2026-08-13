@@ -1435,12 +1435,6 @@ window.__OA_ENTREGA_BUILD = "precio-entrega-lista-20260811";
                             <label class="en-field en-field--num en-field--precio">
                             <span>Precio venta</span>
                             <input type="text" inputmode="decimal" autocomplete="off" class="form-control vn-input vn-mini Inputmiles linea-precio" value="${fmtInputNum(linea.PrecioVenta)}" />
-                            <div class="en-noret ${esRetiro ? "" : "d-none"}" title="Marcar si el producto no se retiró">
-                                <label>
-                                    <input type="checkbox" class="linea-noret" ${noRetChecked} />
-                                    <span>Producto no retirado</span>
-                                </label>
-                            </div>
                         </label>
                         <label class="en-field en-field--num">
                             <span>% Desc</span>
@@ -1456,6 +1450,11 @@ window.__OA_ENTREGA_BUILD = "precio-entrega-lista-20260811";
                             <span>Subtotal</span>
                             <strong class="linea-subtotal-cell linea-subtotal">${fmtMoney(calc.subtotalFinal)}</strong>
                         </div>
+                        <label class="en-noret ${esRetiro ? "" : "d-none"} ${noRetChecked ? "is-on" : ""}" title="Marcar si el producto no se retiró en esta visita">
+                            <input type="checkbox" class="linea-noret" ${noRetChecked} />
+                            <i class="fa fa-ban" aria-hidden="true"></i>
+                            <span>No retirado</span>
+                        </label>
                         <button type="button" class="btn btn-outline-danger btn-quitar-linea" title="Quitar">
                             <i class="fa fa-trash"></i>
                         </button>
@@ -1493,6 +1492,7 @@ window.__OA_ENTREGA_BUILD = "precio-entrega-lista-20260811";
             $row.find(".linea-noret").on("change", function () {
                 if (CM.cargandoEntrega) return;
                 syncLineaFromRow($row, linea);
+                syncUiNoRetiradoLinea($row, linea);
                 actualizarAlertaDuplicadosLineasEntrega();
                 recalcularTotalesUI();
             });
@@ -1725,7 +1725,13 @@ window.__OA_ENTREGA_BUILD = "precio-entrega-lista-20260811";
         $wrap.toggleClass("d-none", !esRetiro);
         if (!esRetiro) {
             $tr.find(".linea-noret").prop("checked", false);
+            $wrap.removeClass("is-on");
             if (linea) linea.NoRetirado = false;
+        } else if (linea) {
+            $tr.find(".linea-noret").prop("checked", !!linea.NoRetirado);
+            $wrap.toggleClass("is-on", !!linea.NoRetirado);
+        } else {
+            $wrap.toggleClass("is-on", $tr.find(".linea-noret").is(":checked"));
         }
     }
 

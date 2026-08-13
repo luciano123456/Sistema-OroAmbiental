@@ -2,7 +2,7 @@
    CLIENTES GESTION - Hub unificado por cliente
    (cliente + establecimientos: lineas completas + importe tras cuenta)
 ========================================================= */
-window.__OA_CG_BUILD = "entrega-precio-saldo-v25-20260811";
+window.__OA_CG_BUILD = "noret-chip-v26-20260812";
 
 const CG = {
     id: 0,
@@ -1302,7 +1302,10 @@ function obtenerModeloRecoleccionCg() {
         IdCamion: idCamion,
         IdListaPrecio: 0,
         DiasHorarios: ($("#cgDiasHorarios").val() || "").trim() || null,
-        OrdenRecorrido: intOrNullCg("#cgOrdenRecorrido"),
+        OrdenRecorrido: (() => {
+            const n = intOrNullCg("#cgOrdenRecorrido");
+            return n && n > 0 ? n : null;
+        })(),
         Kilos: Number.isNaN(kilos) ? null : kilos,
         IdTipoGenerador: intOrNullCg("#cgTipoGenerador"),
         DiasSemana: diasSemana,
@@ -3706,12 +3709,6 @@ function renderLineasWsCg() {
                 <label class="cg-ws-field cg-ws-field--num cg-ws-field--precio">
                     <span>Precio</span>
                     <input type="text" class="form-control Inputmiles ws-precio" value="${fmtQtyCg(Number(l.PrecioVenta) || 0)}" inputmode="decimal" />
-                    <div class="cg-ws-noret ${esRetiro ? "" : "d-none"}" title="Marcar si el producto no se retiró">
-                        <label>
-                            <input type="checkbox" class="ws-noret" ${noRetChecked} />
-                            <span>Producto no retirado</span>
-                        </label>
-                    </div>
                 </label>
             </div>
             <div class="cg-ws-linea-foot">
@@ -3719,6 +3716,11 @@ function renderLineasWsCg() {
                     <span>Subtotal</span>
                     <strong class="ws-sub">${fmtMoneyCg((Number(l.Cantidad) || 0) * (Number(l.PrecioVenta) || 0))}</strong>
                 </div>
+                <label class="cg-ws-noret ${esRetiro ? "" : "d-none"} ${noRetChecked ? "is-on" : ""}" title="Marcar si el producto no se retiró en esta visita">
+                    <input type="checkbox" class="ws-noret" ${noRetChecked} />
+                    <i class="fa fa-ban" aria-hidden="true"></i>
+                    <span>No retirado</span>
+                </label>
                 <button type="button" class="btn btn-outline-danger btn-sm btn-ws-quitar" data-idx="${i}" title="Quitar">
                     <i class="fa fa-trash"></i>
                 </button>
@@ -3743,9 +3745,13 @@ function sincronizarCheckNoRetiradoWsCg($row, linea) {
     $wrap.toggleClass("d-none", !esRetiro);
     if (!esRetiro) {
         $row.find(".ws-noret").prop("checked", false);
+        $wrap.removeClass("is-on");
         if (linea) linea.NoRetirado = false;
     } else if (linea) {
         $row.find(".ws-noret").prop("checked", !!linea.NoRetirado);
+        $wrap.toggleClass("is-on", !!linea.NoRetirado);
+    } else {
+        $wrap.toggleClass("is-on", $row.find(".ws-noret").is(":checked"));
     }
 }
 

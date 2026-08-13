@@ -194,6 +194,14 @@
             return this._toInt(this._getFieldValue(id));
         }
 
+        _getDecimalOrNull(id) {
+            const raw = (this._getFieldValue(id) || "").toString().trim();
+            if (!raw) return null;
+            const normalized = raw.replace(/\./g, "").replace(",", ".");
+            const n = Number(normalized);
+            return Number.isFinite(n) ? n : null;
+        }
+
         _refreshSelect2Field(id) {
             const el = this._id(id);
             if (!el || !window.jQuery) return;
@@ -1211,6 +1219,8 @@
             if (modelo.IdDiaRecoleccion) this._setFieldValue("cmbDiaEst", modelo.IdDiaRecoleccion, true);
             if (modelo.IdSemanaRecoleccion) this._setFieldValue("cmbSemanaEst", modelo.IdSemanaRecoleccion, true);
             if (modelo.IdCamion) this._setFieldValue("cmbCamionEst", modelo.IdCamion, true);
+            this._setFieldValue("txtOrdenRecorridoEst", modelo.OrdenRecorrido != null ? modelo.OrdenRecorrido : "");
+            this._setFieldValue("txtKilosEst", modelo.Kilos != null ? modelo.Kilos : "");
 
             this._setAuditoria(modelo);
 
@@ -1438,6 +1448,11 @@
                 IdSemanaRecoleccion: this._getIntOrNull("cmbSemanaEst") ?? 0,
                 IdListaPrecio: null,
                 IdCamion: this._getIntOrNull("cmbCamionEst"),
+                OrdenRecorrido: (() => {
+                    const n = this._getIntOrNull("txtOrdenRecorridoEst");
+                    return n && n > 0 ? n : null;
+                })(),
+                Kilos: this._getDecimalOrNull("txtKilosEst"),
                 DiasHorarios: (this._getFieldValue("txtDiasHorariosEst") || "").trim() || null
             };
 

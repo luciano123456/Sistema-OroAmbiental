@@ -208,6 +208,15 @@
                             <button type="button" class="rp-btn-plus" data-config-nombre="Camiones" data-config-controller="Camiones" title="Agregar camion"><i class="fa fa-plus"></i></button>
                         </div>
                     </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Nº recorrido</label>
+                        <input id="txtOrdenRecorridoEst" class="form-control" type="number" min="0" step="1" placeholder="Auto" title="Posición en la hoja de ruta. Vacío o 0 = al final." />
+                        <div class="form-text text-muted" style="font-size:0.72rem;line-height:1.25;">Vacío o 0 = se asigna al final</div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Kilos</label>
+                        <input id="txtKilosEst" class="form-control" type="number" min="0" step="0.01" />
+                    </div>
                     <div class="col-12">
                         <label class="form-label">Dias y horarios</label>
                         <textarea id="txtDiasHorariosEst" class="form-control cg-dias-horarios-text" rows="4"

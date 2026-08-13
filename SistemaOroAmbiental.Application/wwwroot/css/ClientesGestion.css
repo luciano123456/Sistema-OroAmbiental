@@ -3785,43 +3785,63 @@ body.layout-modulo .container-fluid {
     letter-spacing: 0.04em;
 }
 
-.cg-ws-field--precio {
-    align-items: stretch;
-}
-
 .cg-ws-noret {
-    display: block;
-    margin: 0.15rem 0 0;
-}
-
-.cg-ws-noret > label {
-    display: flex;
+    display: inline-flex;
     align-items: center;
-    gap: 0.35rem;
+    gap: 0.4rem;
     margin: 0;
+    padding: 0.35rem 0.7rem;
+    border-radius: 999px;
+    border: 1px solid rgba(148, 163, 184, 0.32);
+    background: rgba(15, 23, 42, 0.45);
+    color: #94a3b8;
+    font-size: 0.75rem;
+    font-weight: 700;
+    line-height: 1;
     cursor: pointer;
     user-select: none;
-    color: #f87171;
-    font-size: 0.72rem;
-    font-weight: 700;
-    line-height: 1.2;
+    white-space: nowrap;
+    flex-shrink: 0;
+    transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.cg-ws-noret:hover {
+    border-color: rgba(148, 163, 184, 0.55);
+    color: #cbd5e1;
 }
 
 .cg-ws-noret input[type="checkbox"] {
-    width: 0.95rem;
-    height: 0.95rem;
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
     margin: 0;
-    accent-color: #ef4444;
-    cursor: pointer;
-    flex-shrink: 0;
+    pointer-events: none;
 }
 
-.cg-ws-noret span {
-    color: #f87171;
+.cg-ws-noret > i {
+    font-size: 0.72rem;
+    opacity: 0.85;
+}
+
+.cg-ws-noret > span {
+    color: inherit;
     text-transform: none;
-    letter-spacing: 0;
+    letter-spacing: 0.01em;
     font-size: inherit;
     font-weight: inherit;
+}
+
+.cg-ws-noret.is-on {
+    border-color: rgba(251, 146, 60, 0.55);
+    background: rgba(251, 146, 60, 0.14);
+    color: #fdba74;
+    box-shadow: inset 0 0 0 1px rgba(251, 146, 60, 0.12);
+}
+
+.cg-ws-noret.is-on > i {
+    color: #fb923c;
+    opacity: 1;
 }
 
 .cg-val-noret,
@@ -3837,11 +3857,15 @@ body.layout-modulo .container-fluid {
 .cg-ws-linea-foot {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 12px;
+    justify-content: flex-start;
+    gap: 10px;
     margin-top: 10px;
     padding-top: 10px;
     border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.cg-ws-linea-foot .cg-ws-linea-subtotal {
+    margin-right: auto;
 }
 
 .cg-ws-linea-subtotal {

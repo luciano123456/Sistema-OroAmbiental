@@ -8,13 +8,16 @@ namespace SistemaOroAmbiental.BLL.Service
     {
         private readonly IClientesEstablecimientosRepository _repo;
         private readonly IDeleteConflictChecker _deleteChecker;
+        private readonly IRecorridosRepository _recorridosRepo;
 
         public ClientesEstablecimientosService(
             IClientesEstablecimientosRepository repo,
-            IDeleteConflictChecker deleteChecker)
+            IDeleteConflictChecker deleteChecker,
+            IRecorridosRepository recorridosRepo)
         {
             _repo = repo;
             _deleteChecker = deleteChecker;
+            _recorridosRepo = recorridosRepo;
         }
 
         public async Task<ServiceResult> Insertar(ClientesEstablecimiento model)
@@ -32,9 +35,11 @@ namespace SistemaOroAmbiental.BLL.Service
             }
 
             var ok = await _repo.Insertar(model);
-            return ok
-                ? ServiceResult.Success("Establecimiento registrado correctamente")
-                : ServiceResult.Error("No se pudo guardar");
+            if (!ok)
+                return ServiceResult.Error("No se pudo guardar");
+
+            await SyncRecorridosSafe(model.Id, model.IdUsuarioRegistra);
+            return ServiceResult.Success("Establecimiento registrado correctamente");
         }
 
         public async Task<ServiceResult> Actualizar(ClientesEstablecimiento model)
@@ -52,9 +57,12 @@ namespace SistemaOroAmbiental.BLL.Service
             }
 
             var ok = await _repo.Actualizar(model);
-            return ok
-                ? ServiceResult.Success("Establecimiento modificado correctamente")
-                : ServiceResult.Error("No se pudo guardar");
+            if (!ok)
+                return ServiceResult.Error("No se pudo guardar");
+
+            var idUsuario = model.IdUsuarioModifica ?? model.IdUsuarioRegistra;
+            await SyncRecorridosSafe(model.Id, idUsuario);
+            return ServiceResult.Success("Establecimiento modificado correctamente");
         }
 
         public Task<ServiceResult> Eliminar(int id)
@@ -68,6 +76,19 @@ namespace SistemaOroAmbiental.BLL.Service
         public Task<ClientesEstablecimiento?> Obtener(int id) => _repo.Obtener(id);
 
         public Task<IQueryable<ClientesEstablecimiento>> ObtenerTodos() => _repo.ObtenerTodos();
+
+        private async Task SyncRecorridosSafe(int idEstablecimiento, int idUsuario)
+        {
+            if (idEstablecimiento <= 0) return;
+            try
+            {
+                await _recorridosRepo.SyncEstablecimientoEnRecorridos(idEstablecimiento, idUsuario);
+            }
+            catch
+            {
+                // El alta/edición del establecimiento no debe fallar si la sync de ruta falla.
+            }
+        }
 
         private static ServiceResult? Validar(ClientesEstablecimiento model)
         {

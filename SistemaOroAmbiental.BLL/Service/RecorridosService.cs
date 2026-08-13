@@ -143,6 +143,17 @@ namespace SistemaOroAmbiental.BLL.Service
                     : $"{insertados} clientes agregados al recorrido.");
         }
 
+        public async Task<ServiceResult> SyncEstablecimientoEnRecorridos(int idEstablecimiento, int idUsuario)
+        {
+            if (idEstablecimiento <= 0)
+                return ServiceResult.Error("Establecimiento inválido.", "validacion");
+
+            var (ok, error) = await _repo.SyncEstablecimientoEnRecorridos(idEstablecimiento, idUsuario);
+            return ok
+                ? ServiceResult.Success("Recorridos sincronizados.")
+                : ServiceResult.Error(string.IsNullOrWhiteSpace(error) ? "No se pudo sincronizar el recorrido." : error);
+        }
+
         private static bool ValidarCeldaMatriz(RecorridosMatriz model, out string error)
         {
             if (model.IdCamion <= 0 || model.IdSemana <= 0 || model.IdDia <= 0)
@@ -193,11 +204,7 @@ namespace SistemaOroAmbiental.BLL.Service
                 return false;
             }
 
-            if (model.Posicion <= 0)
-            {
-                error = "La posición debe ser mayor a cero.";
-                return false;
-            }
+            // Posicion <= 0 se resuelve en el repositorio con OrdenRecorrido o último+1.
 
             if (!string.IsNullOrWhiteSpace(model.Observacion) && model.Observacion.Trim().Length > 500)
             {

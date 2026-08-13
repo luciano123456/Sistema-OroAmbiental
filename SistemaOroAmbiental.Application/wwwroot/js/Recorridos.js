@@ -344,6 +344,8 @@ function aplicarOrdenRecorridoDesdeEstablecimiento() {
     const est = establecimientosClienteCache.find(x => Number(x.Id) === idEst);
     if (est?.OrdenRecorrido != null && est.OrdenRecorrido > 0) {
         $("#crPosicion").val(est.OrdenRecorrido);
+    } else {
+        $("#crPosicion").val(getSiguientePosicionRecorrido());
     }
 }
 
@@ -894,15 +896,13 @@ function renderClientesRecorrido(data) {
     const html = data.map(item => {
         const enLicencia = !!item.EnLicencia;
         const noExportar = !!item.NoExportarHoja;
-        let badge;
-        if (enLicencia) {
-            badge = `<span class="rec-badge-activo rec-badge-activo--licencia" title="Cliente de licencia">
-                <i class="fa fa-exclamation-triangle"></i> De licencia
-            </span>`;
-        } else if (item.Activo) {
-            badge = '<span class="rec-badge-activo rec-badge-activo--si"><i class="fa fa-check-circle"></i> Activo</span>';
-        } else {
-            badge = '<span class="rec-badge-activo rec-badge-activo--no"><i class="fa fa-pause-circle"></i> Inactivo</span>';
+        let badge = "";
+        if (!enLicencia) {
+            if (item.Activo) {
+                badge = '<span class="rec-badge-activo rec-badge-activo--si"><i class="fa fa-check-circle"></i> Activo</span>';
+            } else {
+                badge = '<span class="rec-badge-activo rec-badge-activo--no"><i class="fa fa-pause-circle"></i> Inactivo</span>';
+            }
         }
 
         const domicilioTxt = (item.Domicilio || "").trim();
@@ -927,11 +927,11 @@ function renderClientesRecorrido(data) {
 
         const btnNoExport = enLicencia
             ? `<button type="button"
-                    class="rec-cliente-btn rec-cliente-btn--noexport${noExportar ? " is-on" : ""}"
+                    class="rec-cliente-btn rec-cliente-btn--export${noExportar ? " is-off" : ""}"
                     onclick="toggleNoExportarLicenciaRec(${item.Id})"
-                    title="${noExportar ? "Marcado: no se exporta a la hoja. Clic para volver a exportar." : "No exportar a la hoja de ruta"}">
-                    <i class="fa ${noExportar ? "fa-ban" : "fa-print"}"></i>
-                    <span>${noExportar ? "No exportar" : "Exportar"}</span>
+                    aria-pressed="${noExportar ? "true" : "false"}"
+                    title="${noExportar ? "No se incluye en la hoja. Clic para exportar." : "Se incluye en la hoja. Clic para no exportar."}">
+                    <i class="fa ${noExportar ? "fa-ban" : "fa-file-text-o"}" aria-hidden="true"></i>
                </button>`
             : "";
 
@@ -951,8 +951,8 @@ function renderClientesRecorrido(data) {
                 </div>
                 <div class="rec-cliente-main">
                     <div class="rec-cliente-name">
-                        ${enLicencia ? `<i class="fa fa-exclamation-triangle rec-licencia-warn" title="De licencia"></i>` : ""}
                         ${escapeHtml(item.Cliente)}
+                        ${enLicencia ? `<span class="rec-badge-activo rec-badge-activo--licencia" title="Cliente de licencia"><i class="fa fa-pause-circle" aria-hidden="true"></i> De licencia</span>` : ""}
                     </div>
                     <div class="rec-cliente-ubicacion">
                         <div class="rec-cliente-domicilio">
@@ -965,15 +965,22 @@ function renderClientesRecorrido(data) {
                         </div>
                     </div>
                     ${establecimiento}
+                    ${enLicencia ? `<div class="rec-cliente-licencia-hint ${noExportar ? "is-off" : ""}">
+                        <i class="fa ${noExportar ? "fa-ban" : "fa-check"}" aria-hidden="true"></i>
+                        ${noExportar ? "Excluido de la hoja de ruta" : "Incluido en la hoja de ruta"}
+                    </div>` : ""}
                 </div>
-                <div class="rec-cliente-status">${badge}${btnNoExport}</div>
-                <div class="rec-cliente-actions">
-                    <button type="button" class="rec-cliente-btn rec-cliente-btn--edit" onclick="editarClienteRecorrido(${item.Id})" title="Editar">
-                        <i class="fa fa-pencil"></i>
-                    </button>
-                    <button type="button" class="rec-cliente-btn rec-cliente-btn--delete" onclick="eliminarClienteRecorrido(${item.Id})" title="Quitar de la ruta">
-                        <i class="fa fa-trash"></i>
-                    </button>
+                <div class="rec-cliente-side">
+                    ${enLicencia ? "" : `<div class="rec-cliente-status">${badge}</div>`}
+                    <div class="rec-cliente-actions">
+                        ${btnNoExport}
+                        <button type="button" class="rec-cliente-btn rec-cliente-btn--edit" onclick="editarClienteRecorrido(${item.Id})" title="Editar">
+                            <i class="fa fa-pencil"></i>
+                        </button>
+                        <button type="button" class="rec-cliente-btn rec-cliente-btn--delete" onclick="eliminarClienteRecorrido(${item.Id})" title="Quitar de la ruta">
+                            <i class="fa fa-trash"></i>
+                        </button>
+                    </div>
                 </div>
                 <div class="rec-cliente-obs">
                     <label class="rec-cliente-obs-label">Observacion hoja de ruta</label>
@@ -1485,7 +1492,7 @@ async function guardarClienteRecorrido() {
         IdCamion: activo.idCamion,
         IdSemana: activo.idSemana,
         IdDia: activo.idDia,
-        Posicion: parseInt($("#crPosicion").val(), 10) || 1,
+        Posicion: parseInt($("#crPosicion").val(), 10) || 0,
         Activo: $("#crActivo").is(":checked"),
         Observacion: ($("#crObservacion").val() || "").trim() || null
     };

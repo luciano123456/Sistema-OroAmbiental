@@ -17,6 +17,7 @@ namespace SistemaOroAmbiental.DAL.Repository
         {
             try
             {
+                model.OrdenRecorrido = model.OrdenRecorrido is > 0 ? model.OrdenRecorrido : null;
                 _db.ClientesEstablecimientos.Add(model);
                 await _db.SaveChangesAsync();
                 return true;
@@ -53,7 +54,7 @@ namespace SistemaOroAmbiental.DAL.Repository
                 entity.IdSemanaRecoleccion = model.IdSemanaRecoleccion;
                 entity.IdListaPrecio = model.IdListaPrecio;
                 entity.IdCamion = model.IdCamion;
-                entity.OrdenRecorrido = model.OrdenRecorrido;
+                entity.OrdenRecorrido = model.OrdenRecorrido is > 0 ? model.OrdenRecorrido : null;
                 entity.Kilos = model.Kilos;
                 entity.HorarioRecoleccionDesde = model.HorarioRecoleccionDesde;
                 entity.HorarioRecoleccionHasta = model.HorarioRecoleccionHasta;
@@ -119,6 +120,11 @@ namespace SistemaOroAmbiental.DAL.Repository
                     .Where(x => x.IdEstablecimiento == id)
                     .ToListAsync();
                 _db.ClientesEstablecimientosContactos.RemoveRange(contactos);
+
+                var recorridos = await _db.ClientesRecorridos
+                    .Where(x => x.IdEstablecimiento == id)
+                    .ToListAsync();
+                _db.ClientesRecorridos.RemoveRange(recorridos);
 
                 _db.ClientesEstablecimientos.Remove(est);
                 await _db.SaveChangesAsync();

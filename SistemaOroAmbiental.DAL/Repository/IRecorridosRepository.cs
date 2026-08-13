@@ -36,5 +36,15 @@ namespace SistemaOroAmbiental.DAL.Repository
             int idDia,
             int idUsuario,
             IReadOnlyList<(int IdCliente, int? IdEstablecimiento)> items);
+
+        /// <summary>
+        /// Sincroniza ClientesRecorridos con la programación del establecimiento
+        /// (día/semana/unidad y OrdenRecorrido = número de recorrido).
+        /// </summary>
+        Task<(bool Ok, string Error)> SyncEstablecimientoEnRecorridos(int idEstablecimiento, int idUsuario);
+
+        Task EliminarPorEstablecimiento(int idEstablecimiento);
+
+        Task EliminarPorCliente(int idCliente);
     }
 }

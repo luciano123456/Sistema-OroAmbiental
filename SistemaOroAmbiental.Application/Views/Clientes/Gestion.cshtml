@@ -11,7 +11,7 @@
     <link href="~/css/Productora.css?v=6.2" rel="stylesheet" />
     <link href="~/css/disenopantallas.css?v=6.2" rel="stylesheet" />
     <link href="~/css/M_Generico.css?v=6.3" rel="stylesheet" />
-    <link href="~/css/ClientesGestion.css?v=20.4" rel="stylesheet" />
+    <link href="~/css/ClientesGestion.css?v=20.5" rel="stylesheet" />
     <link href="~/css/ClientesEstablecimientos.css?v=5.7" rel="stylesheet" />
     <link href="~/css/ContratosModal.css?v=5.4" rel="stylesheet" />
 }
@@ -431,8 +431,9 @@
                                 <select id="cgRecSemana" class="form-control"></select>
                             </div>
                             <div class="col-md-2">
-                                <label class="form-label">Orden en recorrido</label>
-                                <input id="cgOrdenRecorrido" class="form-control" type="number" min="1" step="1" />
+                                <label class="form-label">Nº recorrido</label>
+                                <input id="cgOrdenRecorrido" class="form-control" type="number" min="0" step="1" placeholder="Auto" title="Posición en la hoja de ruta. Vacío o 0 = al final." />
+                                <div class="form-text text-muted" style="font-size:0.72rem;line-height:1.25;">Vacío/0 = último</div>
                             </div>
                             <div class="col-md-2">
                                 <label class="form-label">Kilos</label>
@@ -671,7 +672,7 @@
                                 <div class="cg-ws-split">
                                     <section class="cg-ws-col">
                                         <div class="cg-ws-col-head">
-                                            <span>Entrega / retiro <small id="cgWsBuildBadge" class="cg-ws-build-badge">js·v24</small></span>
+                                            <span>Entrega / retiro <small id="cgWsBuildBadge" class="cg-ws-build-badge">js·v26</small></span>
                                             <div class="cg-ws-col-actions">
                                                 <a href="#" class="cg-hub-link" id="btnWsAbrirModuloEntregas" target="_blank">M&oacute;dulo</a>
                                                 <button type="button" class="cg-btn cg-btn--ghost cg-btn--xs" id="btnWsAgregarLinea">
@@ -1147,10 +1148,10 @@
     </script>
     <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-    <script src="~/js/Entities/M_ClientesEstablecimientos.js?v=7.2" asp-append-version="true"></script>
+    <script src="~/js/Entities/M_ClientesEstablecimientos.js?v=7.3" asp-append-version="true"></script>
     <script src="~/js/ContratosDocumentos.js?v=5.4"></script>
     <script src="~/js/Entities/M_Contratos.js?v=5.4"></script>
-    <script src="~/js/ClientesGestion.js?v=24.5" asp-append-version="true"></script>
+    <script src="~/js/ClientesGestion.js?v=24.7" asp-append-version="true"></script>
     <script>
         /* Guardia inline: corre aunque el .js esté cacheado viejo */
         (function () {

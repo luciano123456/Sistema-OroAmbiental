@@ -14,15 +14,18 @@ namespace SistemaOroAmbiental.Application.Controllers
         private readonly IClientesService _service;
         private readonly IClientesEstablecimientosService _establecimientosService;
         private readonly IClientesEstablecimientosRepository _establecimientosRepo;
+        private readonly IRecorridosService _recorridosService;
 
         public ClientesController(
             IClientesService service,
             IClientesEstablecimientosService establecimientosService,
-            IClientesEstablecimientosRepository establecimientosRepo)
+            IClientesEstablecimientosRepository establecimientosRepo,
+            IRecorridosService recorridosService)
         {
             _service = service;
             _establecimientosService = establecimientosService;
             _establecimientosRepo = establecimientosRepo;
+            _recorridosService = recorridosService;
         }
 
         [AllowAnonymous]
@@ -243,7 +246,7 @@ namespace SistemaOroAmbiental.Application.Controllers
                 est.HorarioRecoleccionHasta = new TimeSpan(18, 0, 0);
             }
 
-            est.OrdenRecorrido = model.OrdenRecorrido;
+            est.OrdenRecorrido = model.OrdenRecorrido is > 0 ? model.OrdenRecorrido : null;
             est.Kilos = model.Kilos;
             est.IdTipoGenerador = model.IdTipoGenerador ?? cliente.IdTipoGenerador;
 
@@ -282,11 +285,17 @@ namespace SistemaOroAmbiental.Application.Controllers
                 });
             }
 
+            var sync = await _recorridosService.SyncEstablecimientoEnRecorridos(idEst, idUsuario);
+            var mensaje = esNuevo ? "Establecimiento principal registrado." : "Recoleccion actualizada.";
+            if (!sync.Ok)
+                mensaje += " Atención: no se pudo sincronizar el recorrido (" + sync.Mensaje + ").";
+
             return Ok(new
             {
                 valor = true,
-                mensaje = esNuevo ? "Establecimiento principal registrado." : "Recoleccion actualizada.",
-                idEstablecimiento = idEst
+                mensaje,
+                idEstablecimiento = idEst,
+                syncOk = sync.Ok
             });
         }
 
