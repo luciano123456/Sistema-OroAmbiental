@@ -258,42 +258,57 @@ namespace SistemaOroAmbiental.DAL.Repository
 
             // Cuenta corriente e intereses:
             // - Vista cliente: planilla con CC completa.
-            // - Vista por establecimiento: cobros vinculados a entregas de ese/esos est.
-            //   (No se trae toda la CC: un est nuevo no debe heredar deuda de otro.)
+            // - Vista por establecimiento: cobros vinculados a entregas de ese/esos est
+            //   + intereses del cliente (son a nivel CC; si no se traen, al cargar un
+            //   interés desde el hub del est parece OK pero la planilla no lo muestra).
+            //   (No se trae el resto de la CC: un est nuevo no debe heredar deuda de otro.)
             List<ClientesCuentaCorrienteMovimiento> movimientosCc = new();
             try
             {
-                if (!filtrarEst)
-                {
-                    var cc = await _db.ClientesCuentaCorrientes
-                        .AsNoTracking()
-                        .FirstOrDefaultAsync(x => x.IdCliente == idCliente);
+                var cc = await _db.ClientesCuentaCorrientes
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(x => x.IdCliente == idCliente);
 
-                    if (cc != null)
+                if (cc != null)
+                {
+                    if (!filtrarEst)
                     {
                         movimientosCc = await _db.ClientesCuentaCorrienteMovimientos
                             .AsNoTracking()
                             .Where(m => m.IdCuentaCorriente == cc.Id)
                             .ToListAsync();
                     }
-                }
-                else if (entregas.Count > 0)
-                {
-                    var idsEntregaEst = entregas.Select(e => e.Id).Distinct().ToList();
-                    var idsCobro = await _db.ClientesCobros
-                        .AsNoTracking()
-                        .Where(c => c.IdEntrega != null && idsEntregaEst.Contains(c.IdEntrega.Value))
-                        .Select(c => c.Id)
-                        .ToListAsync();
-
-                    if (idsCobro.Count > 0)
+                    else
                     {
-                        movimientosCc = await _db.ClientesCuentaCorrienteMovimientos
+                        // Intereses del cliente (asignados a meses vía ref:YYYY-MM / concepto).
+                        var interesesCliente = await _db.ClientesCuentaCorrienteMovimientos
                             .AsNoTracking()
                             .Where(m =>
-                                m.TipoMovimiento == ClientesCuentaCorrienteRepository.TIPO_COBRO_CLIENTE &&
-                                idsCobro.Contains(m.IdMovimiento))
+                                m.IdCuentaCorriente == cc.Id &&
+                                m.TipoMovimiento == ClientesCuentaCorrienteRepository.TIPO_INTERES_CLIENTE)
                             .ToListAsync();
+                        movimientosCc.AddRange(interesesCliente);
+
+                        if (entregas.Count > 0)
+                        {
+                            var idsEntregaEst = entregas.Select(e => e.Id).Distinct().ToList();
+                            var idsCobro = await _db.ClientesCobros
+                                .AsNoTracking()
+                                .Where(c => c.IdEntrega != null && idsEntregaEst.Contains(c.IdEntrega.Value))
+                                .Select(c => c.Id)
+                                .ToListAsync();
+
+                            if (idsCobro.Count > 0)
+                            {
+                                var cobrosEst = await _db.ClientesCuentaCorrienteMovimientos
+                                    .AsNoTracking()
+                                    .Where(m =>
+                                        m.TipoMovimiento == ClientesCuentaCorrienteRepository.TIPO_COBRO_CLIENTE &&
+                                        idsCobro.Contains(m.IdMovimiento))
+                                    .ToListAsync();
+                                movimientosCc.AddRange(cobrosEst);
+                            }
+                        }
                     }
                 }
             }

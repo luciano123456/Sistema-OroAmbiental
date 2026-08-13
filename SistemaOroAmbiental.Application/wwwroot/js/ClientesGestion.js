@@ -2,7 +2,7 @@
    CLIENTES GESTION - Hub unificado por cliente
    (cliente + establecimientos: lineas completas + importe tras cuenta)
 ========================================================= */
-window.__OA_CG_BUILD = "entrega-precio-saldo-v25-20260811";
+window.__OA_CG_BUILD = "interes-layout-v26-20260813";
 
 const CG = {
     id: 0,
@@ -4484,10 +4484,19 @@ async function confirmarInteresCg() {
         if (!ok) return;
     }
 
+    // Asegurar tag ref:YYYY-MM en el concepto (el backend también lo agrega; refuerzo local).
+    let conceptoFinal = concepto;
+    if (anioRef && mesRef) {
+        const tag = `ref:${anioRef}-${String(mesRef).padStart(2, "0")}`;
+        if (!conceptoFinal.toLowerCase().includes(tag.toLowerCase())) {
+            conceptoFinal = `${conceptoFinal} · ${tag}`;
+        }
+    }
+
     const payload = {
         IdCliente: CG.id,
         Fecha: fecha,
-        Concepto: concepto,
+        Concepto: conceptoFinal,
         Importe: importe,
         AnioRef: anioRef,
         MesRef: mesRef
@@ -4508,13 +4517,63 @@ async function confirmarInteresCg() {
     exitoModal(data.mensaje || "Interés registrado.");
     CG.modalInteres?.hide();
 
+    // Actualización local inmediata para que Intereses / Total / Restante no queden en 0
+    // mientras vuelve el reload (y por si la solapa est filtraba mal los movimientos).
+    aplicarInteresLocalCg(anioRef, mesRef, {
+        Fecha: fecha,
+        Concepto: conceptoFinal,
+        Importe: importe,
+        AnioRef: anioRef,
+        MesRef: mesRef
+    });
+
     CG.tabsLoaded.controlMensual = false;
     CG.tabsLoaded.cuentaCorriente = false;
     const idsEst = isHubEstCg() ? idsEstablecimientoSeleccionadosCg() : null;
+    const mesKeep = hubPropCg("hubMesSel") || (anioRef && mesRef ? { anio: anioRef, mes: mesRef } : null);
+    if (mesKeep) setHubPropCg("hubMesSel", { anio: Number(mesKeep.anio), mes: Number(mesKeep.mes) });
     await cargarTabControlMensual(true, idsEst);
     if (typeof cargarTabCuentaCorriente === "function") {
         try { await cargarTabCuentaCorriente(true); } catch { /* opcional */ }
     }
+}
+
+/** Suma un interés recién cargado al estado en memoria y re-pinta planilla/workspace. */
+function aplicarInteresLocalCg(anio, mes, mov) {
+    if (!anio || !mes || !mov) return;
+    const data = hubPropCg("controlFiltrado");
+    if (!data) return;
+
+    if (!Array.isArray(data.Intereses)) data.Intereses = [];
+    const nuevo = {
+        Id: mov.Id || 0,
+        Fecha: mov.Fecha,
+        Concepto: mov.Concepto || "",
+        Importe: Number(mov.Importe) || 0,
+        AnioRef: Number(anio),
+        MesRef: Number(mes),
+        MesNombreRef: null
+    };
+    data.Intereses = [nuevo, ...data.Intereses];
+
+    const filas = Array.isArray(data.Filas) ? data.Filas : [];
+    const fila = filas.find(x => Number(x.Mes) === Number(mes) && Number(x.Anio || CG.controlAnio) === Number(anio));
+    if (fila) {
+        const prevCant = Number(fila.CantidadIntereses) || 0;
+        const prevTot = Number(fila.TotalIntereses) || 0;
+        const importe = Number(mov.Importe) || 0;
+        fila.CantidadIntereses = prevCant + 1;
+        fila.TotalIntereses = Math.round((prevTot + importe) * 100) / 100;
+        if (!Array.isArray(fila.Intereses)) fila.Intereses = [];
+        fila.Intereses = [nuevo, ...fila.Intereses];
+        const debe = Number(fila.Debe) || 0;
+        const haber = Number(fila.Haber) || 0;
+        fila.TotalMes = Math.round((debe + fila.TotalIntereses) * 100) / 100;
+        fila.RestanteMes = Math.round((fila.TotalMes - haber) * 100) / 100;
+    }
+
+    setHubPropCg("controlFiltrado", data);
+    renderControlMensualCg(data);
 }
 
 function truncarCg(txt, max) {
