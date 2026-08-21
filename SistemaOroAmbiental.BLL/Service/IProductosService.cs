@@ -20,5 +20,10 @@ namespace SistemaOroAmbiental.BLL.Service
         Task<Dictionary<int, decimal>> ObtenerStockTotalesPorProducto();
 
         Task<(Producto? producto, List<ProductoHistorialCostoFila> historial)> ObtenerHistorialCosto(int idProducto);
+
+        /// <summary>
+        /// Devuelve error descartador_ocupado si el rol ya está tomado por otro producto.
+        /// </summary>
+        Task<ServiceResult?> VerificarDescartadorHojaRuta(bool esChico, bool esGrande, int? idExcluir);
     }
 }

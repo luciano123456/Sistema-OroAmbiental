@@ -2711,8 +2711,58 @@ body.layout-modulo .container-fluid {
     gap: 0.4rem;
 }
 
+.cg-interes-hist-est {
+    display: inline-block;
+    max-width: 14rem;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #9eb2cf;
+    line-height: 1.25;
+}
+
 .cg-interes-hist-table {
     width: 100%;
+}
+
+.cg-interes-hist-table .cg-interes-hist-concepto,
+.cg-interes-hist-table .cg-interes-hist-importe {
+    background: rgba(15, 23, 42, 0.55);
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    color: #e2e8f0;
+    min-width: 0;
+}
+
+.cg-interes-hist-table .cg-interes-hist-concepto:focus,
+.cg-interes-hist-table .cg-interes-hist-importe:focus {
+    border-color: rgba(96, 165, 250, 0.7);
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+    outline: none;
+}
+
+.cg-interes-hist-table .cg-interes-hist-importe {
+    max-width: 7.5rem;
+    margin-left: auto;
+}
+
+.cg-interes-hist-actions {
+    white-space: nowrap;
+}
+
+.cg-interes-hist-actions .cg-btn {
+    min-width: 2rem;
+    padding: 0.25rem 0.4rem;
+}
+
+.cg-btn--danger-ghost {
+    color: #fca5a5;
+    border-color: rgba(248, 113, 113, 0.35);
+    background: rgba(127, 29, 29, 0.18);
+}
+
+.cg-btn--danger-ghost:hover {
+    color: #fff;
+    border-color: rgba(248, 113, 113, 0.7);
+    background: rgba(185, 28, 28, 0.45);
 }
 
 .cg-cm-vencido td.cg-cm-mes::after {
@@ -3007,13 +3057,14 @@ body.layout-modulo .container-fluid {
     display: none !important;
 }
 
-/* Densidad: columnas al contenido, sin estirar a todo el ancho */
+/* Ocupa el 100% del contenedor; si el contenido no entra, scroll horizontal */
 .cg-cm-planilla {
-    width: max-content;
-    min-width: 0;
+    width: 100%;
+    min-width: 100%;
     border-collapse: separate;
     border-spacing: 0;
     font-size: 0.7rem;
+    table-layout: auto;
 }
 
 .cg-cm-planilla thead th {
@@ -3078,7 +3129,6 @@ body.layout-modulo .container-fluid {
     color: #86efac !important;
     border-left: 1px solid rgba(52, 211, 153, 0.2) !important;
     min-width: 2.6rem;
-    max-width: 3.6rem;
     text-align: center;
     padding-left: 0.18rem !important;
     padding-right: 0.18rem !important;
@@ -3089,7 +3139,6 @@ body.layout-modulo .container-fluid {
     color: #fcd34d !important;
     border-left: 1px solid rgba(251, 191, 36, 0.2) !important;
     min-width: 2.6rem;
-    max-width: 3.6rem;
     text-align: center;
     padding-left: 0.18rem !important;
     padding-right: 0.18rem !important;
@@ -3100,7 +3149,6 @@ body.layout-modulo .container-fluid {
     color: #fca5a5 !important;
     border-left: 1px solid rgba(248, 113, 113, 0.25) !important;
     min-width: 2.6rem;
-    max-width: 3.6rem;
     text-align: center;
     padding-left: 0.18rem !important;
     padding-right: 0.18rem !important;
@@ -3219,18 +3267,18 @@ body.layout-modulo .container-fluid {
 .cg-cm-cell-money {
     text-align: right;
     font-variant-numeric: tabular-nums;
-    padding-left: 0.18rem !important;
-    padding-right: 0.22rem !important;
+    padding-left: 0.28rem !important;
+    padding-right: 0.32rem !important;
     white-space: nowrap;
-    min-width: 3.4rem;
+    min-width: 4.2rem;
     font-size: 0.68rem;
 }
 
 .cg-cm-planilla tbody td.cg-cm-date,
 .cg-cm-planilla thead th.cg-cm-date {
-    padding-left: 0.18rem !important;
-    padding-right: 0.18rem !important;
-    max-width: 4.4rem;
+    padding-left: 0.28rem !important;
+    padding-right: 0.28rem !important;
+    min-width: 4.4rem;
     font-size: 0.66rem;
 }
 
@@ -3252,6 +3300,28 @@ body.layout-modulo .container-fluid {
     width: 2.6rem !important;
     padding-left: 0.15rem !important;
     padding-right: 0.15rem !important;
+}
+
+.cg-cm-planilla .cg-cm-obs-eye {
+    width: 22px;
+    height: 22px;
+    box-shadow: 0 0 0 1px rgba(94, 234, 212, 0.08), 0 2px 6px rgba(13, 148, 136, 0.14);
+}
+
+.cg-cm-planilla .cg-cm-obs-eye:hover,
+.cg-cm-planilla .cg-cm-obs-eye:focus-visible {
+    transform: scale(1.06);
+    box-shadow: 0 0 0 1px rgba(94, 234, 212, 0.18), 0 3px 8px rgba(13, 148, 136, 0.22);
+}
+
+.cg-cm-planilla .cg-cm-obs-eye-stack {
+    width: 0.78rem;
+    height: 0.78rem;
+}
+
+.cg-cm-planilla .cg-cm-obs-eye-stack .fa {
+    font-size: 0.72rem;
+    line-height: 0.78rem;
 }
 
 /* Workspace del mes */

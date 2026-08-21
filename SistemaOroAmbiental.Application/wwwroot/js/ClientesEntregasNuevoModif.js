@@ -768,13 +768,21 @@ window.__OA_ENTREGA_BUILD = "precio-entrega-lista-20260811";
 
     /** Entrega / Retiro / Recuperado: trae precio de lista al elegir producto + lista. */
     function lineaTraePrecioDeLista(linea) {
+        // Solo retiro (y recuperados) toman tarifa de lista.
+        // Entrega queda en $ 0: es movimiento de stock, no cargo.
         const t = Number(linea?.TipoMovimiento);
-        return t === TIPO_LINEA_ENTREGA
-            || t === TIPO_LINEA_RETIRO
-            || t === TIPO_LINEA_RECUPERADO;
+        return t === TIPO_LINEA_RETIRO || t === TIPO_LINEA_RECUPERADO;
+    }
+
+    function forzarPrecioCeroEntrega($tr, linea) {
+        if (Number(linea?.TipoMovimiento) !== TIPO_LINEA_ENTREGA) return false;
+        linea.PrecioVenta = 0;
+        setValorInputMiles($tr.find(".linea-precio"), 0);
+        return true;
     }
 
     async function aplicarPrecioDesdeListaEntrega($tr, linea, { forzar = true } = {}) {
+        if (forzarPrecioCeroEntrega($tr, linea)) return true;
         if (!lineaTraePrecioDeLista(linea)) return false;
         const precio = await obtenerPrecioListaEntrega(linea.IdProducto, linea.IdListaPrecio);
         // Nunca pisar con 0: si no hay tarifa, dejar el valor actual.
@@ -786,6 +794,10 @@ window.__OA_ENTREGA_BUILD = "precio-entrega-lista-20260811";
     }
 
     async function sincronizarPrecioSegunTipoLinea($tr, linea) {
+        if (Number(linea.TipoMovimiento) === TIPO_LINEA_ENTREGA) {
+            forzarPrecioCeroEntrega($tr, linea);
+            return;
+        }
         if (linea.IdProducto > 0 && linea.IdListaPrecio > 0) {
             await aplicarPrecioDesdeListaEntrega($tr, linea, { forzar: true });
         }
@@ -1257,6 +1269,8 @@ window.__OA_ENTREGA_BUILD = "precio-entrega-lista-20260811";
         }, preset || {});
         if (!linea._key) linea._key = CM.nextLineId++;
         linea.TipoMovimiento = tipo;
+        // Entrega: siempre $0 aunque el preset traiga precio de lista/sugerido.
+        if (Number(linea.TipoMovimiento) === TIPO_LINEA_ENTREGA) linea.PrecioVenta = 0;
         if (tipo !== TIPO_LINEA_RETIRO) linea.NoRetirado = false;
 
         CM.lineas.push(linea);

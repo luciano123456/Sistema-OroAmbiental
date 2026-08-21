@@ -2,7 +2,7 @@
    CLIENTES GESTION - Hub unificado por cliente
    (cliente + establecimientos: lineas completas + importe tras cuenta)
 ========================================================= */
-window.__OA_CG_BUILD = "interes-noret-compact-v27-20260813";
+window.__OA_CG_BUILD = "est-mes-select-scroll-v30-20260814";
 
 const CG = {
     id: 0,
@@ -20,6 +20,8 @@ const CG = {
     modalControlMensual: null,
     modalInteres: null,
     modalInteresesHist: null,
+    interesesHistAnio: null,
+    interesesHistMes: null,
     modalContacto: null,
     controlAnual: null,
     controlFiltrado: null,
@@ -219,6 +221,7 @@ const API_CG = {
     ccResumen: "/ClientesCuentaCorriente/Resumen",
     ccRegistrarCobro: "/ClientesCuentaCorriente/RegistrarCobro",
     ccRegistrarInteres: "/ClientesCuentaCorriente/RegistrarInteres",
+    ccActualizarInteres: "/ClientesCuentaCorriente/ActualizarInteres",
     ccEliminar: id => `/ClientesCuentaCorriente/Eliminar?id=${id}`,
     cuentas: "/Cuentas/Lista",
     entregaNuevoModif: (idEntrega, idCliente, volverCliente = false) => {
@@ -924,12 +927,14 @@ function wireEventosCg() {
     $h("btnGuardarControlMensualCg").on("click", busyHandler(guardarVisitaUnificadaCg));
     $h("cgControlMensualBody").on("click", "tr[data-mes]", function (e) {
         if ($(e.target).closest(".cg-cm-int-eye, .cg-cm-obs-eye").length) return;
+        CG.hubActivo = "cliente";
         const anio = Number($(this).data("anio"));
         const mes = Number($(this).data("mes"));
         abrirWorkspaceMesCg(anio, mes);
     });
     $h("cgCards_controlMensual").on("click", "article[data-mes]", function (e) {
         if ($(e.target).closest(".cg-cm-int-eye, .cg-cm-obs-eye").length) return;
+        CG.hubActivo = "cliente";
         const anio = Number($(this).data("anio"));
         const mes = Number($(this).data("mes"));
         abrirWorkspaceMesCg(anio, mes);
@@ -952,20 +957,30 @@ function wireEventosCg() {
         $(this).text(abierto ? "Ver lista" : "Ocultar");
     });
     $h("btnCerrarMesDetail").on("click", () => {
+        CG.hubActivo = "cliente";
         $h("cgHubMesDetail").prop("hidden", true);
         setHubPropCg("hubMesSel", null);
         setHubPropCg("wsLineas", []);
         setHubPropCg("wsCobros", []);
-        $("#cgControlMensualBody tr").removeClass("is-selected");
+        $h("cgControlMensualBody").find("tr").removeClass("is-selected");
+        $h("cgCards_controlMensual").find("article").removeClass("is-selected");
         actualizarChipsAtrasosSeleccionCg(-1, -1);
     });
     $h("btnInteresMesHub").on("click", () => {
+        CG.hubActivo = "cliente";
+        CG.interesHubMode = "cliente";
         if (hubPropCg("hubMesSel")) abrirModalInteresCg(hubPropCg("hubMesSel").anio, hubPropCg("hubMesSel").mes);
     });
     $h("btnVerInteresesMesHub").on("click", () => {
+        CG.hubActivo = "cliente";
+        CG.interesHubMode = "cliente";
         if (hubPropCg("hubMesSel")) abrirModalInteresesHistCg(hubPropCg("hubMesSel").anio, hubPropCg("hubMesSel").mes);
     });
-    $h("btnVerInteresesCg").on("click", () => abrirModalInteresesHistCg(null, null));
+    $h("btnVerInteresesCg").on("click", () => {
+        CG.hubActivo = "cliente";
+        CG.interesHubMode = "cliente";
+        abrirModalInteresesHistCg(null, null);
+    });
     $(document).on("click", ".cg-cm-int-eye", function (e) {
         e.preventDefault();
         e.stopPropagation();
@@ -1778,7 +1793,12 @@ function renderContactosCg() {
 }
 
 function escapeCg(t) {
-    return String(t ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    return String(t ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
 }
 
 function limpiarFormContactoCg() {
@@ -2412,10 +2432,12 @@ function bindEstHubEventsCg() {
     });
     $(root).on("click", "#btnEstInteresMesHub", () => {
         CG.hubActivo = "est";
+        CG.interesHubMode = "est";
         if (hubPropCg("hubMesSel")) abrirModalInteresCg(hubPropCg("hubMesSel").anio, hubPropCg("hubMesSel").mes);
     });
     $(root).on("click", "#btnEstVerInteresesMesHub", () => {
         CG.hubActivo = "est";
+        CG.interesHubMode = "est";
         if (hubPropCg("hubMesSel")) abrirModalInteresesHistCg(hubPropCg("hubMesSel").anio, hubPropCg("hubMesSel").mes);
     });
     $(root).on("change", "#cgEstCmSinEntrega", () => {
@@ -2507,6 +2529,7 @@ function bindEstHubEventsCg() {
     $(root).on("click", "#btnEstVerInteresesCg", function (e) {
         e.preventDefault();
         CG.hubActivo = "est";
+        CG.interesHubMode = "est";
         if (typeof abrirModalInteresesHistCg === "function") abrirModalInteresesHistCg();
     });
 }
@@ -3275,8 +3298,12 @@ async function abrirWorkspaceMesCg(anio, mes, keepScroll) {
     if (!m) return;
 
     setHubPropCg("hubMesSel", { anio, mes });
-    $("#cgControlMensualBody tr").removeClass("is-selected");
-    $(`#cgControlMensualBody tr[data-anio="${anio}"][data-mes="${mes}"]`).addClass("is-selected");
+    const bodyId = mapHubDomIdCg("cgControlMensualBody");
+    const cardsId = mapHubDomIdCg("cgCards_controlMensual");
+    $(`#${bodyId} tr`).removeClass("is-selected");
+    $(`#${bodyId} tr[data-anio="${anio}"][data-mes="${mes}"]`).addClass("is-selected");
+    $(`#${cardsId} article`).removeClass("is-selected");
+    $(`#${cardsId} article[data-anio="${anio}"][data-mes="${mes}"]`).addClass("is-selected");
 
     $h("cgHubMesDetailTitulo").text(`${m.MesNombre} ${anio}`);
     const totalMes = Number(m.TotalMes != null ? m.TotalMes : ((Number(m.Debe) || 0) + (Number(m.TotalIntereses) || 0))) || 0;
@@ -3389,7 +3416,15 @@ async function abrirWorkspaceMesCg(anio, mes, keepScroll) {
     actualizarBotonInteresMesHub(m, anio, mes);
     actualizarChipsAtrasosSeleccionCg(anio, mes);
     if (!keepScroll) {
-        document.getElementById("cgHubMesDetail")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        const detailId = mapHubDomIdCg("cgHubMesDetail");
+        const rowEl = document.querySelector(
+            `#${mapHubDomIdCg("cgControlMensualBody")} tr[data-anio="${anio}"][data-mes="${mes}"]`
+        );
+        rowEl?.scrollIntoView({ behavior: "smooth", block: "center" });
+        // Luego el detalle del mes, como en la vista cliente.
+        setTimeout(() => {
+            document.getElementById(detailId)?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        }, 80);
     }
 }
 
@@ -3505,8 +3540,17 @@ async function obtenerPrecioListaWsCg(idProducto, idLista) {
     return null;
 }
 
-/** Entrega / Retiro: trae precio de lista al elegir producto + lista. */
+/** Entrega = $0; Retiro = precio de lista al elegir producto + lista. */
 async function sincronizarPrecioLineaWsCg($row, linea, campo) {
+    const tipo = Number(linea.TipoMovimiento || 1);
+
+    if (tipo === 1) {
+        // Entrega: siempre sin cargo (aunque haya lista elegida).
+        linea.PrecioVenta = 0;
+        $row.find(".ws-precio").val(fmtQtyCg(0));
+        return;
+    }
+
     if (campo === "tipo") {
         if (linea.IdProducto > 0 && linea.IdListaPrecio > 0) {
             const precio = await obtenerPrecioListaWsCg(linea.IdProducto, linea.IdListaPrecio);
@@ -3577,16 +3621,20 @@ async function cargarSugeridosWsCg(idEstablecimiento) {
 function agregarLineaWsCg(pref) {
     const idProducto = pref?.IdProducto || 0;
     const idLista = pref?.IdListaPrecio || 0;
+    const tipo = Number(pref?.TipoMovimiento || 1) || 1;
     let precio = Number(pref?.PrecioVenta) || 0;
-    if (!(precio > 0) && idProducto > 0) {
+    if (tipo === 1) {
+        // Entrega: sin cargo.
+        precio = 0;
+    } else if (!(precio > 0) && idProducto > 0) {
         const desdeSug = precioDesdeSugeridosWsCg(idProducto, idLista);
         if (desdeSug != null && Number(desdeSug) > 0) precio = Number(desdeSug);
     }
     hubPropCg("wsLineas").push({
         IdProducto: idProducto,
         IdListaPrecio: idLista,
-        TipoMovimiento: pref?.TipoMovimiento || 1,
-        NoRetirado: !!pref?.NoRetirado && Number(pref?.TipoMovimiento || 1) === 2,
+        TipoMovimiento: tipo,
+        NoRetirado: !!pref?.NoRetirado && tipo === 2,
         Cantidad: pref?.Cantidad || 1,
         PrecioVenta: precio
     });
@@ -4309,26 +4357,38 @@ function actualizarBotonInteresMesHub(m, anio, mes) {
 
     const cant = Number(m?.CantidadIntereses) || 0;
     const $ver = $h("btnVerInteresesMesHub");
-    $ver.toggleClass("d-none", cant <= 0);
-    if (cant > 0) {
-        $ver.html(`<i class="fa fa-eye"></i> Ver intereses (${cant})`);
-    }
+    // Siempre visible en el detalle del mes (cliente y establecimiento).
+    $ver.removeClass("d-none");
+    $ver.html(cant > 0
+        ? `<i class="fa fa-eye"></i> Ver intereses (${cant})`
+        : `<i class="fa fa-eye"></i> Ver intereses`);
 }
 
 function abrirModalInteresesHistCg(anioFiltro, mesFiltro) {
+    CG.interesesHistAnio = anioFiltro != null ? Number(anioFiltro) : null;
+    CG.interesesHistMes = mesFiltro != null ? Number(mesFiltro) : null;
+
     const todos = Array.isArray(hubPropCg("controlFiltrado")?.Intereses) ? hubPropCg("controlFiltrado").Intereses : [];
-    const filtrar = anioFiltro != null && mesFiltro != null;
+    const filtrar = CG.interesesHistAnio != null && CG.interesesHistMes != null;
     const lista = filtrar
-        ? interesesDelMesCg(anioFiltro, mesFiltro)
+        ? interesesDelMesCg(CG.interesesHistAnio, CG.interesesHistMes)
         : todos.slice().sort((a, b) => new Date(b.Fecha).getTime() - new Date(a.Fecha).getTime());
 
     if (filtrar) {
         const m = (hubPropCg("controlFiltrado")?.Filas || []).find(x =>
-            Number(x.Mes) === mesFiltro && Number(x.Anio || CG.controlAnio) === anioFiltro);
-        const nom = m?.MesNombre || `Mes ${mesFiltro}`;
-        $("#cgInteresesHistSub").text(`${nom} ${anioFiltro}`);
+            Number(x.Mes) === CG.interesesHistMes && Number(x.Anio || CG.controlAnio) === CG.interesesHistAnio);
+        const nom = m?.MesNombre || `Mes ${CG.interesesHistMes}`;
+        $("#cgInteresesHistSub").text(
+            isHubEstCg()
+                ? `${nom} ${CG.interesesHistAnio} · este establecimiento`
+                : `${nom} ${CG.interesesHistAnio} · todos los establecimientos`
+        );
     } else {
-        $("#cgInteresesHistSub").text("Todos los intereses del cliente");
+        $("#cgInteresesHistSub").text(
+            isHubEstCg()
+                ? "Intereses de este establecimiento"
+                : "Todos los intereses del cliente (con establecimiento)"
+        );
     }
 
     const total = lista.reduce((s, x) => s + (Number(x.Importe) || 0), 0);
@@ -4361,28 +4421,54 @@ function abrirModalInteresesHistCg(anioFiltro, mesFiltro) {
     `);
 
     if (!lista.length) {
-        $("#cgInteresesHistBody").html(`<div class="cg-hub-stock-empty">No hay intereses cargados${filtrar ? " en este mes" : ""}.</div>`);
+        $("#cgInteresesHistBody").html(`<div class="cg-hub-stock-empty">No hay intereses cargados${filtrar ? " en este mes" : ""}${isHubEstCg() ? " para este establecimiento" : ""}.</div>`);
     } else {
+        const mostrarEst = !isHubEstCg();
         $("#cgInteresesHistBody").html(`
             <table class="cg-hub-prod-table cg-interes-hist-table">
                 <thead>
                     <tr>
                         <th>Fecha</th>
                         <th>Mes ref.</th>
+                        ${mostrarEst ? "<th>Establecimiento</th>" : ""}
                         <th>Concepto</th>
                         <th class="text-end">Importe</th>
+                        <th class="text-center" style="width:7rem">Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
                     ${lista.map(i => {
+                        const id = Number(i.Id) || 0;
                         const mesRef = i.MesNombreRef
                             ? `${escapeCg(i.MesNombreRef)} ${i.AnioRef || ""}`
                             : (i.AnioRef && i.MesRef ? `${i.MesRef}/${i.AnioRef}` : "—");
-                        return `<tr>
+                        const conceptoEdit = conceptoInteresSinTagCg(i.Concepto || "");
+                        const importeEdit = fmtImporteInputCg(i.Importe);
+                        const disabled = id <= 0 ? "disabled" : "";
+                        const idEst = Number(i.IdEstablecimiento ?? i.idEstablecimiento) || 0;
+                        const estNom = (
+                            i.Establecimiento
+                            || i.establecimiento
+                            || (idEst > 0 ? `Est. #${idEst}` : "Cliente (general)")
+                        ).toString().trim();
+                        return `<tr class="cg-interes-hist-row" data-id="${id}" data-anio-ref="${i.AnioRef || ""}" data-mes-ref="${i.MesRef || ""}" data-est-id="${idEst || ""}" data-concepto-orig="${escapeCg(conceptoEdit)}" data-importe-orig="${Number(i.Importe) || 0}">
                             <td>${formatearFechaCortaCg(i.Fecha)}</td>
                             <td>${mesRef}</td>
-                            <td>${escapeCg(i.Concepto || "")}</td>
-                            <td class="text-end rp-money-out">${fmtMoneyCg(i.Importe)}</td>
+                            ${mostrarEst ? `<td><span class="cg-interes-hist-est">${escapeCg(estNom)}</span></td>` : ""}
+                            <td>
+                                <input type="text" class="form-control form-control-sm cg-interes-hist-concepto" value="${escapeCg(conceptoEdit)}" ${disabled} maxlength="250" />
+                            </td>
+                            <td class="text-end">
+                                <input type="text" class="form-control form-control-sm text-end cg-interes-hist-importe" value="${escapeCg(importeEdit)}" ${disabled} inputmode="decimal" />
+                            </td>
+                            <td class="text-center cg-interes-hist-actions">
+                                <button type="button" class="cg-btn cg-btn--ghost cg-btn--sm cg-interes-hist-save" title="Guardar cambios" ${disabled}>
+                                    <i class="fa fa-save"></i>
+                                </button>
+                                <button type="button" class="cg-btn cg-btn--danger-ghost cg-btn--sm cg-interes-hist-del" title="Eliminar y revertir interés" ${disabled}>
+                                    <i class="fa fa-trash"></i>
+                                </button>
+                            </td>
                         </tr>`;
                     }).join("")}
                 </tbody>
@@ -4394,14 +4480,170 @@ function abrirModalInteresesHistCg(anioFiltro, mesFiltro) {
         const mes = Number($(this).data("mes"));
         CG.modalInteresesHist?.hide();
         mostrarDetalleMesHub(anio, mes);
-        const row = document.querySelector(`#cgControlMensualBody tr[data-anio="${anio}"][data-mes="${mes}"]`);
+        const bodyId = mapHubDomIdCg("cgControlMensualBody");
+        const row = document.querySelector(`#${bodyId} tr[data-anio="${anio}"][data-mes="${mes}"]`);
         row?.scrollIntoView({ behavior: "smooth", block: "center" });
     });
+
+    $("#cgInteresesHistBody")
+        .off("click.cgIntHist")
+        .on("click.cgIntHist", ".cg-interes-hist-save", busyHandler(function () {
+            const $tr = $(this).closest("tr");
+            return guardarInteresHistCg($tr);
+        }))
+        .on("click.cgIntHist", ".cg-interes-hist-del", busyHandler(function () {
+            const $tr = $(this).closest("tr");
+            return eliminarInteresHistCg($tr);
+        }));
 
     CG.modalInteresesHist?.show();
 }
 
-function abrirModalInteresCg(anio, mes) {
+function conceptoInteresSinTagCg(concepto) {
+    return String(concepto || "")
+        .replace(/\s*[·•]\s*ref:\d{4}-\d{2}\s*/gi, " ")
+        .replace(/\s*ref:\d{4}-\d{2}\s*/gi, " ")
+        .replace(/\s*[·•]\s*est:\d+\s*/gi, " ")
+        .replace(/\s*est:\d+\s*/gi, " ")
+        .replace(/\s{2,}/g, " ")
+        .trim();
+}
+
+function fmtImporteInputCg(valor) {
+    const n = Number(valor) || 0;
+    if (n === 0) return "";
+    return n.toLocaleString("es-AR", {
+        minimumFractionDigits: Number.isInteger(n) ? 0 : 2,
+        maximumFractionDigits: 2
+    });
+}
+
+function leerImporteDesdeTextoCg(raw) {
+    if (raw == null || String(raw).trim() === "") return 0;
+    if (typeof parseNumero === "function") return parseNumero(raw) || 0;
+    if (typeof formatearSinMiles === "function") return formatearSinMiles(raw) || 0;
+    const n = parseFloat(String(raw).replace(/\./g, "").replace(",", "."));
+    return Number.isFinite(n) ? n : 0;
+}
+
+async function refrescarTrasCambioInteresCg() {
+    CG.tabsLoaded.controlMensual = false;
+    CG.tabsLoaded.cuentaCorriente = false;
+    const modo = CG.interesHubMode || (isHubEstCg() ? "est" : "cliente");
+    const mesKeep = hubPropCg("hubMesSel");
+
+    if (modo === "est") {
+        await withHubModeCg("est", async () => {
+            await cargarTabControlMensual(true, idsEstablecimientoSeleccionadosCg());
+            if (mesKeep) {
+                setHubPropCg("hubMesSel", { anio: Number(mesKeep.anio), mes: Number(mesKeep.mes) });
+                try { await abrirWorkspaceMesCg(Number(mesKeep.anio), Number(mesKeep.mes), true); } catch { /* opcional */ }
+            }
+        });
+        try {
+            await withHubModeCg("cliente", async () => {
+                CG.tabsLoaded.controlMensual = false;
+                await cargarTabControlMensual(true, null);
+            });
+        } catch { /* opcional */ }
+    } else {
+        await withHubModeCg("cliente", async () => {
+            await cargarTabControlMensual(true, null);
+            if (mesKeep) {
+                setHubPropCg("hubMesSel", { anio: Number(mesKeep.anio), mes: Number(mesKeep.mes) });
+                try { await abrirWorkspaceMesCg(Number(mesKeep.anio), Number(mesKeep.mes), true); } catch { /* opcional */ }
+            }
+        });
+    }
+
+    if (typeof cargarTabCuentaCorriente === "function") {
+        try { await cargarTabCuentaCorriente(true); } catch { /* opcional */ }
+    }
+    abrirModalInteresesHistCg(CG.interesesHistAnio, CG.interesesHistMes);
+}
+
+async function guardarInteresHistCg($tr) {
+    const id = Number($tr.data("id")) || 0;
+    if (id <= 0) {
+        errorModal("Este interés no se puede editar (sin Id). Recargá la planilla.");
+        return;
+    }
+
+    const concepto = ($tr.find(".cg-interes-hist-concepto").val() || "").trim();
+    const importe = leerImporteDesdeTextoCg($tr.find(".cg-interes-hist-importe").val());
+    const anioRef = Number($tr.data("anio-ref")) || null;
+    const mesRef = Number($tr.data("mes-ref")) || null;
+
+    if (!concepto) {
+        errorModal("El concepto es obligatorio.");
+        return;
+    }
+    if (importe <= 0) {
+        errorModal("El importe debe ser mayor a cero.");
+        return;
+    }
+
+    let conceptoFinal = concepto;
+    if (anioRef && mesRef) {
+        const tag = `ref:${anioRef}-${String(mesRef).padStart(2, "0")}`;
+        if (!conceptoFinal.toLowerCase().includes(tag.toLowerCase())) {
+            conceptoFinal = `${conceptoFinal} · ${tag}`;
+        }
+    }
+    const idEst = Number($tr.data("est-id")) || 0;
+    if (idEst > 0) {
+        const estTag = `est:${idEst}`;
+        if (!conceptoFinal.toLowerCase().includes(estTag.toLowerCase())) {
+            conceptoFinal = `${conceptoFinal} · ${estTag}`;
+        }
+    }
+
+    const data = await fetchJsonCg(API_CG.ccActualizarInteres, {
+        method: "POST",
+        headers: authCg(),
+        body: JSON.stringify({
+            Id: id,
+            Concepto: conceptoFinal,
+            Importe: importe,
+            AnioRef: anioRef,
+            MesRef: mesRef,
+            IdEstablecimiento: idEst > 0 ? idEst : null
+        })
+    });
+
+    if (!data?.valor) {
+        errorModal(data?.mensaje || "No se pudo actualizar el interés.");
+        return;
+    }
+
+    exitoModal(data.mensaje || "Interés actualizado.");
+    await refrescarTrasCambioInteresCg();
+}
+
+async function eliminarInteresHistCg($tr) {
+    const id = Number($tr.data("id")) || 0;
+    if (id <= 0) {
+        errorModal("Este interés no se puede eliminar (sin Id). Recargá la planilla.");
+        return;
+    }
+
+    const concepto = ($tr.find(".cg-interes-hist-concepto").val() || "").trim() || "este interés";
+    const ok = typeof confirmarModal === "function"
+        ? await confirmarModal(`¿Eliminar "${concepto}" y revertir el cargo en cuenta corriente?`)
+        : confirm(`¿Eliminar "${concepto}" y revertir el cargo en cuenta corriente?`);
+    if (!ok) return;
+
+    const data = await fetchJsonCg(API_CG.ccEliminar(id), { method: "DELETE", headers: authCg() });
+    if (!data?.valor) {
+        errorModal(data?.mensaje || "No se pudo eliminar el interés.");
+        return;
+    }
+
+    exitoModal(data.mensaje || "Interés eliminado y revertido.");
+    await refrescarTrasCambioInteresCg();
+}
+
+async function abrirModalInteresCg(anio, mes) {
     const filas = hubPropCg("controlFiltrado")?.Filas || [];
     const m = filas.find(x => Number(x.Mes) === mes && Number(x.Anio || CG.controlAnio) === anio);
     if (!m) return;
@@ -4416,6 +4658,7 @@ function abrirModalInteresCg(anio, mes) {
     const mesNom = m.MesNombre || `Mes ${mes}`;
     const cantPrev = Number(m.CantidadIntereses) || 0;
     const totalPrev = Number(m.TotalIntereses) || 0;
+    const modoInteres = CG.interesHubMode || (isHubEstCg() ? "est" : "cliente");
 
     $("#cgInteresAnio").val(anio);
     $("#cgInteresMes").val(mes);
@@ -4425,6 +4668,7 @@ function abrirModalInteresCg(anio, mes) {
     $("#cgInteresFecha").val(new Date().toISOString().slice(0, 10));
     $("#cgInteresConcepto").val(`Interés por atraso ${mesNom} ${anio}`);
     recalcularImporteInteresCg();
+    await prepararSelectEstInteresCg(modoInteres);
 
     const $aviso = $("#cgInteresAvisoExistente");
     if (cantPrev > 0) {
@@ -4446,6 +4690,45 @@ function abrirModalInteresCg(anio, mes) {
     }
 
     CG.modalInteres?.show();
+}
+
+async function prepararSelectEstInteresCg(modoInteres) {
+    const $wrap = $("#cgInteresEstWrap");
+    const $sel = $("#cgInteresEstablecimiento");
+    if (!$wrap.length || !$sel.length) return;
+
+    if (modoInteres === "est") {
+        const idEst = hubIdEstablecimientoCg() || (idsEstablecimientoSeleccionadosCg()[0] || 0);
+        const nom = (CG.establecimientos || []).find(e => Number(e.Id) === idEst)?.Nombre
+            || (CG.establecimientos || []).find(e => Number(e.Id) === idEst)?.nombre
+            || (idEst ? `Establecimiento #${idEst}` : "");
+        $wrap.removeClass("d-none");
+        $sel.prop("disabled", true).html(
+            idEst
+                ? `<option value="${idEst}" selected>${escapeCg(nom)}</option>`
+                : `<option value="">Sin establecimiento</option>`
+        );
+        return;
+    }
+
+    // Vista cliente: elegir establecimiento o dejar general.
+    $wrap.removeClass("d-none");
+    $sel.prop("disabled", false);
+    let lista = Array.isArray(CG.establecimientos) ? CG.establecimientos : [];
+    if (!lista.length && CG.id) {
+        try {
+            lista = await fetchJsonCg(API_CG.establecimientosPorCliente(CG.id), { headers: authCg() }) || [];
+            CG.establecimientos = lista;
+        } catch { lista = []; }
+    }
+    const opts = [`<option value="">Cliente (general) — sin establecimiento</option>`]
+        .concat(lista.map(e => {
+            const id = Number(e.Id ?? e.id) || 0;
+            if (!id) return "";
+            const nom = (e.Nombre ?? e.nombre ?? `Est. #${id}`).toString().trim();
+            return `<option value="${id}">${escapeCg(nom)}</option>`;
+        }).filter(Boolean));
+    $sel.html(opts.join(""));
 }
 
 function recalcularImporteInteresCg() {
@@ -4499,13 +4782,32 @@ async function confirmarInteresCg() {
         }
     }
 
+    const modoInteres = CG.interesHubMode || (isHubEstCg() ? "est" : "cliente");
+    let idEstInteres = 0;
+    if (modoInteres === "est") {
+        idEstInteres = hubIdEstablecimientoCg() || (idsEstablecimientoSeleccionadosCg()[0] || 0);
+    } else {
+        idEstInteres = parseInt($("#cgInteresEstablecimiento").val(), 10) || 0;
+    }
+    if (idEstInteres > 0) {
+        const estTag = `est:${idEstInteres}`;
+        if (!conceptoFinal.toLowerCase().includes(estTag.toLowerCase())) {
+            conceptoFinal = `${conceptoFinal} · ${estTag}`;
+        }
+    }
+
+    const estNomSel = idEstInteres > 0
+        ? (($("#cgInteresEstablecimiento option:selected").text() || "").trim() || `Est. #${idEstInteres}`)
+        : "Cliente (general)";
+
     const payload = {
         IdCliente: CG.id,
         Fecha: fecha,
         Concepto: conceptoFinal,
         Importe: importe,
         AnioRef: anioRef,
-        MesRef: mesRef
+        MesRef: mesRef,
+        IdEstablecimiento: idEstInteres > 0 ? idEstInteres : null
     };
 
     const data = await fetchJsonCg(API_CG.ccRegistrarInteres, {
@@ -4530,15 +4832,43 @@ async function confirmarInteresCg() {
         Concepto: conceptoFinal,
         Importe: importe,
         AnioRef: anioRef,
-        MesRef: mesRef
+        MesRef: mesRef,
+        IdEstablecimiento: idEstInteres > 0 ? idEstInteres : null,
+        Establecimiento: estNomSel
     });
 
     CG.tabsLoaded.controlMensual = false;
     CG.tabsLoaded.cuentaCorriente = false;
-    const idsEst = isHubEstCg() ? idsEstablecimientoSeleccionadosCg() : null;
     const mesKeep = hubPropCg("hubMesSel") || (anioRef && mesRef ? { anio: anioRef, mes: mesRef } : null);
     if (mesKeep) setHubPropCg("hubMesSel", { anio: Number(mesKeep.anio), mes: Number(mesKeep.mes) });
-    await cargarTabControlMensual(true, idsEst);
+
+    // Recargar el hub desde el que se cargó el interés (evita pintar en el DOM equivocado).
+    if (modoInteres === "est") {
+        await withHubModeCg("est", async () => {
+            const idsEst = idsEstablecimientoSeleccionadosCg();
+            await cargarTabControlMensual(true, idsEst);
+        });
+        // También refrescar planilla cliente si existe, para que vea el interés con el est.
+        try {
+            await withHubModeCg("cliente", async () => {
+                CG.tabsLoaded.controlMensual = false;
+                await cargarTabControlMensual(true, null);
+            });
+        } catch { /* opcional */ }
+    } else {
+        await withHubModeCg("cliente", async () => {
+            await cargarTabControlMensual(true, null);
+        });
+        // Si hay hub est abierto, refrescarlo también (filtra por est:).
+        if (document.getElementById("cgEstHubMount")?.querySelector(".cg-cm-planilla")) {
+            try {
+                await withHubModeCg("est", async () => {
+                    const idsEst = idsEstablecimientoSeleccionadosCg();
+                    if (idsEst.length) await cargarTabControlMensual(true, idsEst);
+                });
+            } catch { /* opcional */ }
+        }
+    }
     if (typeof cargarTabCuentaCorriente === "function") {
         try { await cargarTabCuentaCorriente(true); } catch { /* opcional */ }
     }
@@ -4558,7 +4888,9 @@ function aplicarInteresLocalCg(anio, mes, mov) {
         Importe: Number(mov.Importe) || 0,
         AnioRef: Number(anio),
         MesRef: Number(mes),
-        MesNombreRef: null
+        MesNombreRef: null,
+        IdEstablecimiento: mov.IdEstablecimiento != null ? Number(mov.IdEstablecimiento) || null : null,
+        Establecimiento: mov.Establecimiento || (mov.IdEstablecimiento ? `Est. #${mov.IdEstablecimiento}` : "Cliente (general)")
     };
     data.Intereses = [nuevo, ...data.Intereses];
 

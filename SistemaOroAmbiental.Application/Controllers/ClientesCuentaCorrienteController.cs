@@ -191,19 +191,38 @@ namespace SistemaOroAmbiental.Application.Controllers
         {
             int idUsuario = int.Parse(User.FindFirst("Id")!.Value);
 
-            var concepto = (model.Concepto ?? "").Trim();
-            if (model.AnioRef is >= 2000 and <= 2100 && model.MesRef is >= 1 and <= 12)
-            {
-                var tag = $"ref:{model.AnioRef.Value}-{model.MesRef.Value:D2}";
-                if (!concepto.Contains(tag, StringComparison.OrdinalIgnoreCase))
-                    concepto = string.IsNullOrWhiteSpace(concepto)
-                        ? $"Interés · {tag}"
-                        : $"{concepto} · {tag}";
-            }
+            var concepto = CompletarTagsConceptoInteres(
+                model.Concepto,
+                model.AnioRef,
+                model.MesRef,
+                model.IdEstablecimiento);
 
             var result = await _service.RegistrarInteres(
                 model.IdCliente,
                 model.Fecha,
+                concepto,
+                model.Importe,
+                idUsuario);
+
+            return Ok(new { valor = result.Ok, mensaje = result.Mensaje, tipo = result.Tipo });
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> ActualizarInteres([FromBody] VMClienteCCInteresUpdate model)
+        {
+            if (model == null || model.Id <= 0)
+                return BadRequest("Movimiento inválido.");
+
+            int idUsuario = int.Parse(User.FindFirst("Id")!.Value);
+
+            var concepto = CompletarTagsConceptoInteres(
+                model.Concepto,
+                model.AnioRef,
+                model.MesRef,
+                model.IdEstablecimiento);
+
+            var result = await _service.ActualizarInteres(
+                model.Id,
                 concepto,
                 model.Importe,
                 idUsuario);
@@ -216,6 +235,35 @@ namespace SistemaOroAmbiental.Application.Controllers
         {
             var result = await _service.Eliminar(id);
             return Ok(new { valor = result.Ok, mensaje = result.Mensaje, tipo = result.Tipo });
+        }
+
+        private static string CompletarTagsConceptoInteres(
+            string? conceptoRaw,
+            int? anioRef,
+            int? mesRef,
+            int? idEstablecimiento)
+        {
+            var concepto = (conceptoRaw ?? "").Trim();
+
+            if (anioRef is >= 2000 and <= 2100 && mesRef is >= 1 and <= 12)
+            {
+                var tag = $"ref:{anioRef.Value}-{mesRef.Value:D2}";
+                if (!concepto.Contains(tag, StringComparison.OrdinalIgnoreCase))
+                    concepto = string.IsNullOrWhiteSpace(concepto)
+                        ? $"Interés · {tag}"
+                        : $"{concepto} · {tag}";
+            }
+
+            if (idEstablecimiento is > 0)
+            {
+                var estTag = $"est:{idEstablecimiento.Value}";
+                if (!concepto.Contains(estTag, StringComparison.OrdinalIgnoreCase))
+                    concepto = string.IsNullOrWhiteSpace(concepto)
+                        ? $"Interés · {estTag}"
+                        : $"{concepto} · {estTag}";
+            }
+
+            return concepto;
         }
 
         private static string EtiquetaTipoMov(string tipo) => tipo switch

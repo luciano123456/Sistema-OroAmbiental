@@ -517,7 +517,7 @@ function renderListaRutas() {
             const key = `${s.Id}_${d.Id}`;
             const ruta = mapa[key];
             const zona = (ruta?.Zona || "").trim();
-            const label = `${s.Nombre} · ${d.Nombre}${zona ? " - " + zona : ""}`;
+            const label = zona || `${s.Nombre} · ${d.Nombre}`;
             items.push({ s, d, zona, label, key });
             opcionesRapidas.push({ key, label });
         });
@@ -679,7 +679,10 @@ function getRecorridoLabelText(extra) {
     const semana = semanas.find(s => s.Id === idSemana)?.Nombre || "";
     const dia = dias.find(d => d.Id === idDia)?.Nombre || "";
     const salida = getHorarioSalidaRecorrido(idSemana, idDia);
-    let base = `${camion} · ${semana} · ${dia}${zona ? " · " + zona : ""}`;
+    const zonaTxt = (zona || "").trim();
+    let base = zonaTxt
+        ? zonaTxt
+        : [camion, semana, dia].filter(Boolean).join(" · ");
     if (salida) base += ` · Salida ${salida}`;
     return extra ? `${base} · ${extra}` : base;
 }
@@ -1038,34 +1041,11 @@ function leerNumeroRec(valor) {
     return Number.isNaN(n) ? 0 : n;
 }
 
-function etiquetaListaPublicaRec(listaPrecio, tipoPago, tipoPagoCodigo) {
-    const lista = String(listaPrecio || "").trim();
-    const tipo = String(tipoPago || "").trim();
-    const codigo = String(tipoPagoCodigo || "").trim().toLowerCase();
-    const listaLow = lista.toLowerCase();
-    const tipoLow = tipo.toLowerCase();
-
-    if (codigo.includes("efect") || tipoLow.includes("efect") || listaLow.includes("efect")
-        || listaLow.includes("regular") || listaLow.includes("caja"))
-        return "Caja chica";
-
-    if (codigo.includes("transf") || codigo.includes("banco") || tipoLow.includes("transf")
-        || listaLow.includes("transf") || listaLow.includes("banco"))
-        return "Transferencia";
-
-    if (listaLow.includes("recargo") || listaLow.includes("precio"))
-        return tipo || "";
-
-    return tipo || lista || "";
-}
-
 function resumenProductosRec(productos) {
     if (!productos?.length) return "Sin productos";
     return productos.map(p => {
         const abrev = (p.Abreviatura || p.Producto || "PROD").trim();
-        const etiqueta = etiquetaListaPublicaRec(p.ListaPrecio, p.TipoPago, p.TipoPagoCodigo);
-        const listaTxt = etiqueta ? ` (${etiqueta})` : "";
-        return `${fmtCantRec(p.Cantidad)} ${abrev}${listaTxt} x $ ${fmtMoneyRec(p.PrecioVenta)}`;
+        return `${fmtCantRec(p.Cantidad)} ${abrev} x $ ${fmtMoneyRec(p.PrecioVenta)}`;
     }).join(" · ");
 }
 

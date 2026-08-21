@@ -1,5 +1,40 @@
 /* Estado de stock en grilla de productos */
 
+.prod-nombre-cell {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    max-width: 100%;
+}
+
+.prod-nombre-text {
+    min-width: 0;
+}
+
+.prod-hoja-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.45rem;
+    height: 1.45rem;
+    border-radius: 7px;
+    flex: 0 0 auto;
+    font-size: 0.78rem;
+    line-height: 1;
+}
+
+.prod-hoja-icon--chico {
+    color: #7dd3fc;
+    background: rgba(14, 165, 233, 0.16);
+    border: 1px solid rgba(56, 189, 248, 0.35);
+}
+
+.prod-hoja-icon--grande {
+    color: #a5b4fc;
+    background: rgba(99, 102, 241, 0.18);
+    border: 1px solid rgba(129, 140, 248, 0.4);
+}
+
 .prod-stock-estado {
     display: inline-flex;
     align-items: center;

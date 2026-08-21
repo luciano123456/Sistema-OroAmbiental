@@ -360,7 +360,15 @@ namespace SistemaOroAmbiental.DAL.Repository
             }
 
             decimal saldoAcumulado = 0;
-            var intereses = MapearInteresesCliente(movimientosCc);
+            var nombresEst = await ObtenerNombresEstablecimientosCliente(idCliente);
+            var intereses = MapearInteresesCliente(movimientosCc, nombresEst);
+            // Est: solo intereses de ese establecimiento. Cliente: todos (con nombre de est).
+            if (filtrarEst)
+            {
+                intereses = intereses
+                    .Where(i => i.IdEstablecimiento.HasValue && idsEst.Contains(i.IdEstablecimiento.Value))
+                    .ToList();
+            }
             if (periodos.Count > 0)
             {
                 var primero = periodos[0];
@@ -512,8 +520,19 @@ namespace SistemaOroAmbiental.DAL.Repository
                 .ToList();
         }
 
+        private async Task<Dictionary<int, string>> ObtenerNombresEstablecimientosCliente(int idCliente)
+        {
+            return await _db.ClientesEstablecimientos.AsNoTracking()
+                .Where(e => e.IdCliente == idCliente)
+                .Select(e => new { e.Id, e.Nombre })
+                .ToDictionaryAsync(
+                    e => e.Id,
+                    e => string.IsNullOrWhiteSpace(e.Nombre) ? $"Est. #{e.Id}" : e.Nombre.Trim());
+        }
+
         private static List<ClienteInteresMovDto> MapearInteresesCliente(
-            List<ClientesCuentaCorrienteMovimiento> movimientosCc)
+            List<ClientesCuentaCorrienteMovimiento> movimientosCc,
+            IReadOnlyDictionary<int, string>? nombresEst = null)
         {
             return movimientosCc
                 .Where(m => string.Equals(
@@ -525,6 +544,15 @@ namespace SistemaOroAmbiental.DAL.Repository
                 .Select(m =>
                 {
                     var (anioRef, mesRef) = ResolverPeriodoInteres(m);
+                    var idEst = ResolverEstablecimientoInteres(m.Concepto);
+                    string? nombreEst = null;
+                    if (idEst is > 0 && nombresEst != null && nombresEst.TryGetValue(idEst.Value, out var nom))
+                        nombreEst = nom;
+                    else if (idEst is > 0)
+                        nombreEst = $"Est. #{idEst.Value}";
+                    else
+                        nombreEst = "Cliente (general)";
+
                     return new ClienteInteresMovDto
                     {
                         Id = m.Id,
@@ -533,7 +561,9 @@ namespace SistemaOroAmbiental.DAL.Repository
                         Importe = m.Debe,
                         AnioRef = anioRef,
                         MesRef = mesRef,
-                        MesNombreRef = mesRef is >= 1 and <= 12 ? MesesNombres[mesRef.Value] : null
+                        MesNombreRef = mesRef is >= 1 and <= 12 ? MesesNombres[mesRef.Value] : null,
+                        IdEstablecimiento = idEst,
+                        Establecimiento = nombreEst
                     };
                 })
                 .ToList();
@@ -590,6 +620,18 @@ namespace SistemaOroAmbiental.DAL.Repository
 
             // Sin referencia clara: cae en el mes de la fecha del movimiento.
             return (mov.Fecha.Year, mov.Fecha.Month);
+        }
+
+        /// <summary>Lee tag est:ID del concepto. Null = interés general del cliente.</summary>
+        private static int? ResolverEstablecimientoInteres(string? concepto)
+        {
+            var tag = System.Text.RegularExpressions.Regex.Match(
+                concepto ?? "",
+                @"est:(\d+)",
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            if (!tag.Success) return null;
+            if (!int.TryParse(tag.Groups[1].Value, out var id) || id <= 0) return null;
+            return id;
         }
 
         /// <summary>

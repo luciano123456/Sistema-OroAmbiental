@@ -40,10 +40,11 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Hoja de ruta - @Model.Titulo</title>
-    <link href="~/css/HojaRuta.css?v=4.3" rel="stylesheet" asp-append-version="true" />
+    <link href="~/css/HojaRuta.css?v=4.5" rel="stylesheet" asp-append-version="true" />
 </head>
 <body class="hr-page@(multiplesHojas ? " hr-page--multi" : "")">
     <div class="hr-toolbar no-print">
@@ -75,11 +76,11 @@
                 <div class="hr-header-precios">
                     <div class="hr-precio-item">
                         <span>Descartador Grande</span>
-                        <strong>@(Model.PrecioDescartadorGrande > 0 ? $"$ {FmtMoney(Model.PrecioDescartadorGrande)}" : "â€”")</strong>
+                        <strong>@(Model.PrecioDescartadorGrande > 0 ? $"$ {FmtMoney(Model.PrecioDescartadorGrande)}" : "Sin Precio")</strong>
                     </div>
                     <div class="hr-precio-item">
                         <span>Descartador Chico</span>
-                        <strong>@(Model.PrecioDescartadorChico > 0 ? $"$ {FmtMoney(Model.PrecioDescartadorChico)}" : "â€”")</strong>
+                        <strong>@(Model.PrecioDescartadorChico > 0 ? $"$ {FmtMoney(Model.PrecioDescartadorChico)}" : "Sin Precio")</strong>
                     </div>
                 </div>
             </header>
@@ -102,7 +103,7 @@
                                     @p.Cliente
                                     @if (p.EnLicencia)
                                     {
-                                        <span class="hr-badge-licencia">âš  DE LICENCIA</span>
+                                        <span class="hr-badge-licencia">&#9888; DE LICENCIA</span>
                                     }
                                 </span>
                                 <div class="hr-stop-abono">
@@ -115,20 +116,13 @@
                                 <div class="hr-cell hr-cell-domicilio @ToneClass(p.Posicion)">
                                     <div class="hr-cell-label">Domicilio</div>
                                     <div class="hr-cell-value">@p.Domicilio</div>
-                                    <div class="hr-pagos">
-                                        <span>Transf: $ @FmtMoney(p.AbonoTransferencia)</span>
-                                        <span>Efect: $ @FmtMoney(p.AbonoEfectivo)</span>
-                                    </div>
                                 </div>
 
-                                <div class="hr-cell">
+                                <div class="hr-cell hr-cell-contacto">
                                     <div class="hr-cell-label">Localidad</div>
                                     <div class="hr-cell-value">@p.Localidad</div>
-                                </div>
-
-                                <div class="hr-cell">
-                                    <div class="hr-cell-label">Telefono</div>
-                                    <div class="hr-cell-value">@p.Telefono</div>
+                                    <div class="hr-cell-label hr-cell-label--stack">Tel&#233;fono</div>
+                                    <div class="hr-cell-value hr-cell-value--tel">@p.Telefono</div>
                                 </div>
 
                                 <div class="hr-cell">
@@ -136,18 +130,19 @@
                                     <div class="hr-cell-value">@p.Horario</div>
                                 </div>
 
-                                <div class="hr-cell hr-cell-box">
-                                    <div class="hr-cell-label">Cajas: Recibo del Cliente</div>
-                                    <div class="hr-write-box"></div>
-                                </div>
-
-                                <div class="hr-cell hr-cell-box">
-                                    <div class="hr-cell-label">Cajas: Entrego al Cliente</div>
-                                    <div class="hr-write-box"></div>
+                                <div class="hr-cell hr-cell-cajas">
+                                    <div class="hr-caja-row">
+                                        <span class="hr-cell-label">Cajas entregadas</span>
+                                        <span class="hr-write-box hr-write-box--sm"></span>
+                                    </div>
+                                    <div class="hr-caja-row">
+                                        <span class="hr-cell-label">Cajas recibidas</span>
+                                        <span class="hr-write-box hr-write-box--sm"></span>
+                                    </div>
                                 </div>
 
                                 <div class="hr-cell hr-cell-obs hr-tone-green@obsClass">
-                                    <div class="hr-cell-label">Observacion</div>
+                                    <div class="hr-cell-label">Observaci&#243;n</div>
                                     <div class="hr-cell-value">@p.Observacion</div>
                                 </div>
 

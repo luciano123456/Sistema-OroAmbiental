@@ -67,6 +67,18 @@ namespace SistemaOroAmbiental.Application.Models.ViewModels
         public decimal Importe { get; set; }
         public int? AnioRef { get; set; }
         public int? MesRef { get; set; }
+        /// <summary>Si viene, el interés queda asociado a ese establecimiento.</summary>
+        public int? IdEstablecimiento { get; set; }
+    }
+
+    public class VMClienteCCInteresUpdate
+    {
+        public int Id { get; set; }
+        public string Concepto { get; set; } = "";
+        public decimal Importe { get; set; }
+        public int? AnioRef { get; set; }
+        public int? MesRef { get; set; }
+        public int? IdEstablecimiento { get; set; }
     }
 
     public class VMClienteCCDetalleMovimiento

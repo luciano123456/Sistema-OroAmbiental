@@ -11,7 +11,7 @@
     <link href="~/css/Productora.css?v=6.2" rel="stylesheet" />
     <link href="~/css/disenopantallas.css?v=6.2" rel="stylesheet" />
     <link href="~/css/M_Generico.css?v=6.3" rel="stylesheet" />
-    <link href="~/css/ClientesGestion.css?v=20.5" rel="stylesheet" />
+    <link href="~/css/ClientesGestion.css?v=20.8" rel="stylesheet" />
     <link href="~/css/ClientesEstablecimientos.css?v=5.7" rel="stylesheet" />
     <link href="~/css/ContratosModal.css?v=5.4" rel="stylesheet" />
 }
@@ -1084,6 +1084,13 @@
                         <label class="form-label">Fecha</label>
                         <input type="date" id="cgInteresFecha" class="form-control" />
                     </div>
+                    <div class="col-12" id="cgInteresEstWrap">
+                        <label class="form-label">Establecimiento</label>
+                        <select id="cgInteresEstablecimiento" class="form-select">
+                            <option value="">Cliente (general) — sin establecimiento</option>
+                        </select>
+                        <div class="form-text">En la vista del cliente podés indicar a qué establecimiento corresponde este interés.</div>
+                    </div>
                     <div class="col-12">
                         <label class="form-label">Concepto</label>
                         <input type="text" id="cgInteresConcepto" class="form-control" maxlength="200" />
@@ -1114,6 +1121,7 @@
                 <div id="cgInteresesHistBody" class="cg-interes-hist-body"></div>
             </div>
             <div class="modal-footer rp-modal-footer">
+                <span class="text-muted small me-auto">Podés editar concepto/importe y guardar, o eliminar para revertir el cargo.</span>
                 <button class="rp-btn rp-btn-soft" data-bs-dismiss="modal"><i class="fa fa-times"></i> Cerrar</button>
             </div>
         </div>
@@ -1151,7 +1159,7 @@
     <script src="~/js/Entities/M_ClientesEstablecimientos.js?v=7.3" asp-append-version="true"></script>
     <script src="~/js/ContratosDocumentos.js?v=5.4"></script>
     <script src="~/js/Entities/M_Contratos.js?v=5.4"></script>
-    <script src="~/js/ClientesGestion.js?v=24.7" asp-append-version="true"></script>
+    <script src="~/js/ClientesGestion.js?v=25.1" asp-append-version="true"></script>
     <script>
         /* Guardia inline: corre aunque el .js esté cacheado viejo */
         (function () {

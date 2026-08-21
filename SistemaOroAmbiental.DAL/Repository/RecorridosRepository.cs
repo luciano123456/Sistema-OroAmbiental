@@ -461,6 +461,10 @@ namespace SistemaOroAmbiental.DAL.Repository
             var dias = secciones
                 .Select(s =>
                 {
+                    var zona = (s.Zona ?? "").Trim();
+                    if (!string.IsNullOrWhiteSpace(zona))
+                        return zona;
+
                     var partes = new List<string>();
                     if (!string.IsNullOrWhiteSpace(s.Semana))
                         partes.Add(s.Semana.Trim());
@@ -480,10 +484,13 @@ namespace SistemaOroAmbiental.DAL.Repository
 
         private static string ConstruirTituloHojaRuta(string semana, string dia, string camion, string zona)
         {
-            // Solo "PRIMER LUNES U1" (semana + día + unidad). Zona y demás no van en el título.
-            _ = zona;
-            var partes = new List<string> { semana.Trim(), dia.Trim() };
-            var camionTxt = camion.Trim();
+            // Si hay zona/barrio cargada, esa es el título de la hoja; si no, semana + día + unidad.
+            var zonaTxt = (zona ?? "").Trim();
+            if (!string.IsNullOrWhiteSpace(zonaTxt))
+                return zonaTxt.ToUpperInvariant();
+
+            var partes = new List<string> { (semana ?? "").Trim(), (dia ?? "").Trim() };
+            var camionTxt = (camion ?? "").Trim();
             if (!string.IsNullOrWhiteSpace(camionTxt))
                 partes.Add(camionTxt);
 
@@ -613,8 +620,8 @@ namespace SistemaOroAmbiental.DAL.Repository
             if (enLicencia)
             {
                 observacion = string.IsNullOrWhiteSpace(observacion)
-                    ? "⚠ DE LICENCIA"
-                    : "⚠ DE LICENCIA. " + observacion;
+                    ? "\u26A0 DE LICENCIA"
+                    : "\u26A0 DE LICENCIA. " + observacion;
                 alertaTipo = "alerta";
             }
 
@@ -806,47 +813,10 @@ namespace SistemaOroAmbiental.DAL.Repository
                 var cant = p.Cantidad % 1 == 0
                     ? ((int)p.Cantidad).ToString()
                     : p.Cantidad.ToString("0.####");
-                var etiqueta = EtiquetaListaPublicaHoja(p.ListaPrecio, p.TipoPago, p.TipoPagoCodigo);
-                var lista = string.IsNullOrWhiteSpace(etiqueta) ? "" : $" ({etiqueta})";
-                return $"{cant} {abrev}{lista} x $ {p.PrecioVenta:N0}";
+                return $"{cant} {abrev} x $ {p.PrecioVenta:N0}";
             });
 
             return string.Join(" · ", partes);
-        }
-
-        /// <summary>
-        /// Etiqueta visible en hoja de ruta. Oculta nombres internos
-        /// ("Precio regular", "Con recargo", etc.) y muestra Caja chica / Transferencia.
-        /// </summary>
-        private static string? EtiquetaListaPublicaHoja(string? listaPrecio, string? tipoPago, string? tipoPagoCodigo)
-        {
-            var lista = (listaPrecio ?? "").Trim();
-            var tipo = (tipoPago ?? "").Trim();
-            var codigo = (tipoPagoCodigo ?? "").Trim();
-            var listaLow = lista.ToLowerInvariant();
-            var tipoLow = tipo.ToLowerInvariant();
-
-            if (EsCodigoEfectivo(codigo)
-                || tipoLow.Contains("efect")
-                || listaLow.Contains("efect")
-                || listaLow.Contains("regular")
-                || listaLow.Contains("caja"))
-                return "Caja chica";
-
-            if (EsCodigoTransferencia(codigo)
-                || tipoLow.Contains("transf")
-                || listaLow.Contains("transf")
-                || listaLow.Contains("banco"))
-                return "Transferencia";
-
-            // Nombres internos de lista no se muestran al chofer.
-            if (listaLow.Contains("recargo") || listaLow.Contains("precio"))
-                return string.IsNullOrWhiteSpace(tipo) ? null : tipo;
-
-            if (!string.IsNullOrWhiteSpace(tipo))
-                return tipo;
-
-            return string.IsNullOrWhiteSpace(lista) ? null : lista;
         }
 
         private async Task<(
@@ -994,14 +964,12 @@ namespace SistemaOroAmbiental.DAL.Repository
                     .Select(g => new { IdProducto = g.Key, Precio = g.Max(x => x.PrecioVenta) })
                     .ToListAsync();
 
-                decimal chico = 0;
-                decimal grande = 0;
-                if (idChico.HasValue)
-                    chico = precios.FirstOrDefault(p => p.IdProducto == idChico.Value)?.Precio ?? 0;
-                if (idGrande.HasValue)
-                    grande = precios.FirstOrDefault(p => p.IdProducto == idGrande.Value)?.Precio ?? 0;
+                decimal Resolver(int? id) =>
+                    id.HasValue
+                        ? (precios.FirstOrDefault(p => p.IdProducto == id.Value)?.Precio ?? 0)
+                        : 0;
 
-                return (grande, chico);
+                return (Resolver(idGrande), Resolver(idChico));
             }
             catch
             {

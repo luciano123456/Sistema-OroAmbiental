@@ -134,6 +134,16 @@ namespace SistemaOroAmbiental.BLL.Service
         public Task<Dictionary<int, decimal>> ObtenerStockTotalesPorProducto()
             => _repo.ObtenerStockTotalesPorProducto();
 
+        public Task<ServiceResult?> VerificarDescartadorHojaRuta(bool esChico, bool esGrande, int? idExcluir)
+        {
+            var model = new Producto
+            {
+                EsDescartadorChicoHojaRuta = esChico,
+                EsDescartadorGrandeHojaRuta = esGrande
+            };
+            return ValidarDescartadorHojaRuta(model, idExcluir, reemplazar: false);
+        }
+
         public async Task<(Producto? producto, List<ProductoHistorialCostoFila> historial)> ObtenerHistorialCosto(int idProducto)
         {
             var producto = await _repo.Obtener(idProducto);

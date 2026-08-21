@@ -453,6 +453,47 @@ namespace SistemaOroAmbiental.DAL.Repository
             }
         }
 
+        public async Task<bool> ActualizarInteres(
+            int idMovimiento,
+            string concepto,
+            decimal importe,
+            int idUsuario)
+        {
+            if (idMovimiento <= 0 || importe <= 0 || string.IsNullOrWhiteSpace(concepto))
+                return false;
+
+            await using var trx = await _db.Database.BeginTransactionAsync();
+
+            try
+            {
+                var mov = await _db.ClientesCuentaCorrienteMovimientos
+                    .Include(x => x.IdCuentaCorrienteNavigation)
+                    .FirstOrDefaultAsync(x => x.Id == idMovimiento);
+
+                if (mov == null || mov.TipoMovimiento != TIPO_INTERES_CLIENTE)
+                    return false;
+
+                var cc = mov.IdCuentaCorrienteNavigation;
+                var delta = importe - mov.Debe;
+
+                mov.Concepto = concepto.Trim();
+                mov.Debe = importe;
+                mov.Haber = 0;
+                mov.IdUsuarioModifica = idUsuario;
+                mov.FechaUsuarioModifica = DateTime.Now;
+                cc.Saldo += delta;
+
+                await _db.SaveChangesAsync();
+                await trx.CommitAsync();
+                return true;
+            }
+            catch
+            {
+                await trx.RollbackAsync();
+                return false;
+            }
+        }
+
         public async Task<bool> Eliminar(int idMovimiento)
         {
             await using var trx = await _db.Database.BeginTransactionAsync();

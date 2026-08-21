@@ -169,6 +169,9 @@ public class ClienteInteresMovDto
     public int? AnioRef { get; set; }
     public int? MesRef { get; set; }
     public string? MesNombreRef { get; set; }
+    /// <summary>Null = interés a nivel cliente (general). Con valor = de ese establecimiento.</summary>
+    public int? IdEstablecimiento { get; set; }
+    public string? Establecimiento { get; set; }
 }
 
 public class ClienteControlAnualDto

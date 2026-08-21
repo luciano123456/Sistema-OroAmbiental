@@ -224,14 +224,19 @@ app.UseStaticFiles();
 
 app.Use(async (context, next) =>
 {
-    await next();
-    var ct = context.Response.ContentType;
-    if (!string.IsNullOrEmpty(ct)
-        && ct.StartsWith("text/html", StringComparison.OrdinalIgnoreCase)
-        && !ct.Contains("charset", StringComparison.OrdinalIgnoreCase))
+    // Igual que Sistema David: forzar charset UTF-8 en HTML antes de enviar headers
+    context.Response.OnStarting(() =>
     {
-        context.Response.ContentType = ct + "; charset=utf-8";
-    }
+        var ct = context.Response.ContentType;
+        if (!string.IsNullOrEmpty(ct)
+            && ct.StartsWith("text/html", StringComparison.OrdinalIgnoreCase)
+            && !ct.Contains("charset", StringComparison.OrdinalIgnoreCase))
+        {
+            context.Response.ContentType = ct + "; charset=utf-8";
+        }
+        return Task.CompletedTask;
+    });
+    await next();
 });
 
 app.UseRouting();

@@ -123,7 +123,30 @@ async function configurarDataTable(data) {
                     eliminar: "eliminarProducto"
                 }, "Productos"),
                 columnaGridId(),
-                { data: 'Nombre' },
+                {
+                    data: 'Nombre',
+                    render: (data, type, row) => {
+                        const nombre = data ?? "";
+                        if (type === "filter" || type === "sort" || type === "type" || type === "export") {
+                            return nombre;
+                        }
+
+                        const esc = String(nombre)
+                            .replace(/&/g, "&amp;")
+                            .replace(/</g, "&lt;")
+                            .replace(/>/g, "&gt;")
+                            .replace(/"/g, "&quot;");
+
+                        let icon = "";
+                        if (row?.EsDescartadorGrandeHojaRuta) {
+                            icon = `<span class="prod-hoja-icon prod-hoja-icon--grande" title="Descartador grande en hoja de ruta"><i class="fa fa-cubes" aria-hidden="true"></i></span>`;
+                        } else if (row?.EsDescartadorChicoHojaRuta) {
+                            icon = `<span class="prod-hoja-icon prod-hoja-icon--chico" title="Descartador chico en hoja de ruta"><i class="fa fa-cube" aria-hidden="true"></i></span>`;
+                        }
+
+                        return `<span class="prod-nombre-cell">${icon}<span class="prod-nombre-text">${esc}</span></span>`;
+                    }
+                },
                 { data: 'Categoria' },
                 { data: 'Medida' },
                 {

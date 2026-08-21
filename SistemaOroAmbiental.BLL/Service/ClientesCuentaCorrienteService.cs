@@ -134,6 +134,32 @@ namespace SistemaOroAmbiental.BLL.Service
                 : ServiceResult.Error("No se pudo registrar el interés.");
         }
 
+        public async Task<ServiceResult> ActualizarInteres(
+            int idMovimiento,
+            string concepto,
+            decimal importe,
+            int idUsuario)
+        {
+            if (idMovimiento <= 0)
+                return ServiceResult.Error("Movimiento inválido.", "validacion");
+
+            if (string.IsNullOrWhiteSpace(concepto))
+                return ServiceResult.Error("El concepto es obligatorio.", "validacion");
+
+            if (importe <= 0)
+                return ServiceResult.Error("El importe de interés debe ser mayor a cero.", "validacion");
+
+            var ok = await _repo.ActualizarInteres(
+                idMovimiento,
+                concepto.Trim(),
+                importe,
+                idUsuario);
+
+            return ok
+                ? ServiceResult.Success("Interés actualizado correctamente.")
+                : ServiceResult.Error("No se pudo actualizar el interés. Solo se pueden editar intereses manuales.");
+        }
+
         public async Task<ServiceResult> Eliminar(int id)
         {
             var ok = await _repo.Eliminar(id);

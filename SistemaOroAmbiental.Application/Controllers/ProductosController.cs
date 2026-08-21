@@ -214,6 +214,30 @@ namespace SistemaOroAmbiental.Application.Controllers
         }
 
         [HttpGet]
+        public async Task<IActionResult> VerificarDescartadorHojaRuta(bool esChico, bool esGrande, int? idExcluir = null)
+        {
+            var result = await _service.VerificarDescartadorHojaRuta(esChico, esGrande, idExcluir);
+            if (result == null)
+                return Ok(new { valor = true, tipo = "ok" });
+
+            string? productoOcupante = null;
+            if (result.IdReferencia is int idRef && idRef > 0)
+            {
+                var otro = await _service.Obtener(idRef);
+                productoOcupante = otro?.Nombre;
+            }
+
+            return Ok(new
+            {
+                valor = false,
+                mensaje = result.Mensaje,
+                tipo = result.Tipo,
+                idReferencia = result.IdReferencia,
+                productoOcupante
+            });
+        }
+
+        [HttpGet]
         public async Task<IActionResult> EditarInfo(int id)
         {
             var p = await _service.Obtener(id);
