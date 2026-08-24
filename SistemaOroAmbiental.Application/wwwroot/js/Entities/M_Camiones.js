@@ -50,6 +50,9 @@
             });
 
             window.camionModal = this;
+            this._manifiestos = typeof window.attachCamionesManifiestos === "function"
+                ? window.attachCamionesManifiestos(this.modalEl)
+                : null;
             this._bindEvents();
         }
 
@@ -107,6 +110,7 @@
 
             this.modalEl.querySelectorAll("input, select, textarea").forEach(el => {
                 if (el.id === "txtId") return;
+                if (el.closest("#tabManifiestosCamion")) return;
                 el.disabled = disabled;
                 el.readOnly = disabled;
             });
@@ -134,6 +138,7 @@
 
                 this._id("modalEdicionLabel").textContent = "Nuevo Camion";
                 this._id("btnGuardar").innerHTML = `<i class="fa fa-check"></i> Registrar`;
+                this._manifiestos?.reset?.();
 
                 this.bsModal.show();
 
@@ -206,6 +211,7 @@
 
             this.bsModal.show();
             this.setModalSoloLectura(soloLectura);
+            await this._manifiestos?.sync?.(modelo.Id, modelo.Nombre, soloLectura);
 
             if (typeof this.options.onOpen === "function") {
                 await this.options.onOpen(soloLectura ? "ver" : "editar", this, modelo);
@@ -245,7 +251,19 @@
                 }
 
                 this.cerrarErrorCampos();
-                this.cerrar();
+
+                if (esNuevo && data.id) {
+                    this._setFieldValue("txtId", data.id);
+                    modelo.Id = data.id;
+                    this._modeloActual = { ...modelo, Id: data.id };
+                    this._id("modalEdicionLabel").textContent = "Editar Camion";
+                    this._id("btnGuardar").innerHTML = `<i class="fa fa-check"></i> Guardar`;
+                    await this._manifiestos?.sync?.(data.id, modelo.Nombre, false);
+                    this._manifiestos?.irAManifiestos?.();
+                } else {
+                    this.cerrar();
+                }
+
                 exitoModal(data.mensaje || (esNuevo ? "Camion registrado correctamente" : "Camion modificado correctamente"));
 
                 if (typeof this.options.onSaved === "function") {
@@ -261,56 +279,46 @@
         }
 
         async eliminar(id) {
-            const confirmado = typeof confirmarModal === "function"
-                ? await confirmarModal("¿Desea eliminar este camion?")
-                : window.confirm("¿Desea eliminar este camion?");
-
-            if (!confirmado) return false;
-
-            try {
-                const url = this._replaceUrl(this.options.endpoints.eliminar, { id });
-                const data = await this._fetchJson(url, {
-                    method: "DELETE",
-                    headers: this._headers(false)
-                });
-
-                if (!data?.valor) {
-                    const msg = data?.mensaje || "No se pudo eliminar.";
-                    if (typeof errorModal === "function") {
-                        errorModal(msg);
-                    } else {
-                        this.mostrarErrorCampos(msg, data?.idReferencia ?? null, data?.tipo || "error");
-                    }
-                    return false;
-                }
-
-                if (typeof exitoModal === "function") {
-                    exitoModal(data.mensaje || "Camion eliminado correctamente");
-                }
-
-                if (typeof this.options.onDeleted === "function") {
-                    await this.options.onDeleted(data, id, this);
-                }
-
-                return true;
-            } catch (e) {
-                console.error(e);
-                errorModal("Ha ocurrido un error.");
+            if (typeof ejecutarEliminacionEntidad !== "function") {
+                errorModal("No está disponible el asistente de eliminación.");
                 return false;
             }
+
+            const resultado = await ejecutarEliminacionEntidad({
+                entidadLabel: "este camión",
+                urlDependencias: `/Camiones/DependenciasEliminar?id=${id}`,
+                urlEliminar: cascada => `/Camiones/Eliminar?id=${id}&cascada=${cascada ? "true" : "false"}`,
+                headers: this._headers(false),
+                fetchJson: (url, options) => this._fetchJson(url, options)
+            });
+
+            if (resultado.accion !== "ok") return false;
+
+            const data = resultado.data || {};
+            if (typeof exitoModal === "function") {
+                exitoModal(data.mensaje || data.Mensaje || "Camion eliminado correctamente");
+            }
+
+            if (typeof this.options.onDeleted === "function") {
+                await this.options.onDeleted(data, id, this);
+            }
+
+            return true;
         }
 
         limpiarModal() {
             this.setSoloLecturaAttribute(false);
-            this.modalEl.querySelectorAll("input, select, textarea").forEach(el => {
+            this.modalEl.querySelectorAll("#tabDatosCamion input, #tabDatosCamion select, #tabDatosCamion textarea").forEach(el => {
                 if (el.id === "txtId") { el.value = ""; return; }
                 if (el.tagName === "SELECT") el.selectedIndex = 0;
-                else el.value = "";
+                else if (el.type !== "checkbox") el.value = "";
             });
+            this._setFieldValue("txtId", "");
             this._validacion?.reset();
             this._id("infoAuditoria")?.classList.add("d-none");
             if (this._id("infoRegistro")) this._id("infoRegistro").innerHTML = "";
             if (this._id("infoModificacion")) this._id("infoModificacion").innerHTML = "";
+            this._manifiestos?.reset?.();
         }
 
         _valorCampoValido(el) {

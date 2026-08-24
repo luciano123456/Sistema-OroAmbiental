@@ -29,6 +29,10 @@ public partial class SistemaOroAmbientalContext : DbContext
 
     public virtual DbSet<RecorridosMatriz> RecorridosMatriz { get; set; }
 
+    public virtual DbSet<RecorridosManifiestoContador> RecorridosManifiestosContador { get; set; }
+
+    public virtual DbSet<RecorridoManifiesto> RecorridosManifiestos { get; set; }
+
     public virtual DbSet<ClientesRecorrido> ClientesRecorridos { get; set; }
 
     public virtual DbSet<ClientesControlMensual> ClientesControlMensuales { get; set; }
@@ -616,6 +620,9 @@ public partial class SistemaOroAmbientalContext : DbContext
                 .HasMaxLength(8)
                 .IsUnicode(false);
 
+            entity.HasIndex(e => e.IdCliente);
+            entity.HasIndex(e => new { e.IdSemanaRecoleccion, e.IdDiaRecoleccion, e.IdCamion });
+
             entity.HasOne(d => d.IdClienteNavigation).WithMany(p => p.ClientesEstablecimientos)
                 .HasForeignKey(d => d.IdCliente)
                 .OnDelete(DeleteBehavior.ClientSetNull)
@@ -783,6 +790,7 @@ public partial class SistemaOroAmbientalContext : DbContext
             entity.Property(e => e.FechaUsuarioModifica).HasColumnType("datetime");
             entity.Property(e => e.FechaUsuarioRegistra).HasColumnType("datetime");
 
+            entity.HasIndex(e => e.IdEstablecimiento);
             entity.HasOne(d => d.IdEstablecimientoNavigation).WithMany(p => p.ClientesEstablecimientosProductos)
                 .HasForeignKey(d => d.IdEstablecimiento)
                 .OnDelete(DeleteBehavior.ClientSetNull)
@@ -1638,13 +1646,77 @@ public partial class SistemaOroAmbientalContext : DbContext
                 .HasConstraintName("FK_RecorridosMatriz_UsuMod");
         });
 
+        modelBuilder.Entity<RecorridosManifiestoContador>(entity =>
+        {
+            entity.ToTable("RecorridosManifiestosContador");
+            entity.Property(e => e.FechaUsuarioModifica).HasColumnType("datetime");
+            entity.HasIndex(e => new { e.IdCamion, e.IdSemana, e.IdDia }).IsUnique();
+
+            entity.HasOne(d => d.IdCamionNavigation).WithMany()
+                .HasForeignKey(d => d.IdCamion)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_RecorridosManifiestosContador_Camiones");
+
+            entity.HasOne(d => d.IdSemanaNavigation).WithMany()
+                .HasForeignKey(d => d.IdSemana)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_RecorridosManifiestosContador_Semanas");
+
+            entity.HasOne(d => d.IdDiaNavigation).WithMany()
+                .HasForeignKey(d => d.IdDia)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_RecorridosManifiestosContador_Dias");
+
+            entity.HasOne(d => d.IdUsuarioModificaNavigation).WithMany()
+                .HasForeignKey(d => d.IdUsuarioModifica)
+                .HasConstraintName("FK_RecorridosManifiestosContador_UsuMod");
+        });
+
+        modelBuilder.Entity<RecorridoManifiesto>(entity =>
+        {
+            entity.ToTable("RecorridosManifiestos");
+            entity.Property(e => e.Nombre).HasMaxLength(120);
+            entity.Property(e => e.RazonSocial).HasMaxLength(200);
+            entity.Property(e => e.Cuit).HasMaxLength(30);
+            entity.Property(e => e.IdEstablecimientoCliente).HasMaxLength(40);
+            entity.Property(e => e.Direccion).HasMaxLength(250);
+            entity.Property(e => e.Localidad).HasMaxLength(120);
+            entity.Property(e => e.Telefono).HasMaxLength(40);
+            entity.Property(e => e.Cantidad).HasMaxLength(40);
+            entity.Property(e => e.Zona).HasMaxLength(120);
+            entity.Property(e => e.FechaGeneracion).HasColumnType("datetime");
+            entity.HasIndex(e => new { e.IdCamion, e.FechaGeneracion });
+            entity.HasIndex(e => new { e.IdCamion, e.Numero });
+
+            entity.HasOne(d => d.IdCamionNavigation).WithMany()
+                .HasForeignKey(d => d.IdCamion)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_RecorridosManifiestos_Camiones");
+
+            entity.HasOne(d => d.IdSemanaNavigation).WithMany()
+                .HasForeignKey(d => d.IdSemana)
+                .HasConstraintName("FK_RecorridosManifiestos_Semanas");
+
+            entity.HasOne(d => d.IdDiaNavigation).WithMany()
+                .HasForeignKey(d => d.IdDia)
+                .HasConstraintName("FK_RecorridosManifiestos_Dias");
+
+            entity.HasOne(d => d.IdUsuarioNavigation).WithMany()
+                .HasForeignKey(d => d.IdUsuario)
+                .HasConstraintName("FK_RecorridosManifiestos_Usuarios");
+        });
+
         modelBuilder.Entity<ClientesRecorrido>(entity =>
         {
             entity.ToTable("ClientesRecorridos");
             entity.Property(e => e.Activo).HasDefaultValueSql("((1))");
+            entity.Property(e => e.Reprogramado).HasDefaultValueSql("((0))");
             entity.Property(e => e.Observacion).HasMaxLength(500).IsUnicode(false);
             entity.Property(e => e.FechaUsuarioModifica).HasColumnType("datetime");
             entity.Property(e => e.FechaUsuarioRegistra).HasColumnType("datetime");
+
+            entity.HasIndex(e => new { e.IdCamion, e.IdSemana, e.IdDia });
+            entity.HasIndex(e => e.IdEstablecimiento);
 
             entity.HasOne(d => d.IdClienteNavigation).WithMany(p => p.ClientesRecorridos)
                 .HasForeignKey(d => d.IdCliente)

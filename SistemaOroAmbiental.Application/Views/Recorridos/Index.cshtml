@@ -9,7 +9,8 @@
     <link href="~/css/Productora.css?v=7.2" rel="stylesheet" />
     <link href="~/css/disenopantallas.css?v=8.1" rel="stylesheet" />
     <link href="~/css/M_Generico.css?v=7.2" rel="stylesheet" />
-    <link href="~/css/Recorridos.css?v=9.1" rel="stylesheet" />
+    <link href="~/css/Camiones.css?v=6.2" rel="stylesheet" />
+    <link href="~/css/Recorridos.css?v=9.4" rel="stylesheet" />
 }
 
 <div class="rec-page rec-sin-unidad">
@@ -136,15 +137,38 @@
                 <h5 class="rec-card-title"><i class="fa fa-users me-2"></i>Clientes del recorrido</h5>
                 <small class="text-muted-cc" id="lblRecorridoSeleccionado">Elegi un recorrido de la lista</small>
             </div>
-            <div class="d-flex gap-2 flex-wrap">
-                <button type="button" class="btn btn-outline-success btn-sm d-none" id="btnTraerProgramadosRec" disabled>
-                    <i class="fa fa-magic me-1"></i> Traer programados
+            <div class="d-flex rec-actions">
+                <button type="button" class="rec-action rec-action--magic d-none" id="btnTraerProgramadosRec" disabled>
+                    <i class="fa fa-magic"></i> Traer programados
                 </button>
-                <button type="button" class="btn btn-outline-light btn-sm" id="btnHojaRutaRecorrido" disabled>
-                    <i class="fa fa-print me-1"></i> Hoja de ruta
+                <button type="button" class="rec-action rec-action--print" id="btnHojaRutaRecorrido" disabled>
+                    <i class="fa fa-print"></i> Hoja de ruta
                 </button>
-                <button type="button" class="btn btn-success btn-sm rec-btn-add" id="btnNuevoClienteRecorrido" disabled>
-                    <i class="fa fa-plus me-1"></i> Agregar cliente
+                <button type="button" class="rec-action rec-action--txt" id="btnTxtMesRecorrido" disabled
+                        title="Exportar TXT de todas las semanas y clientes de la unidad">
+                    <i class="fa fa-calendar"></i> TXT mes
+                </button>
+                <button type="button" class="rec-action rec-action--txt" id="btnTxtSeleccionarRecorrido" disabled
+                        title="Elegir clientes de esta hoja para exportar TXT">
+                    <i class="fa fa-check-square-o"></i> Seleccionar TXT
+                </button>
+                <div class="rec-txt-sel-bar d-none" id="barTxtSeleccionRecorrido">
+                    <span class="rec-txt-sel-count" id="lblTxtSeleccionRecorrido">0 seleccionados</span>
+                    <button type="button" class="rec-action rec-action--ghost" id="btnTxtSelTodosRecorrido">
+                        <i class="fa fa-check-square-o"></i> Todos
+                    </button>
+                    <button type="button" class="rec-action rec-action--txt" id="btnTxtSelExportarRecorrido" disabled>
+                        <i class="fa fa-download"></i> Exportar TXT
+                    </button>
+                    <button type="button" class="rec-action rec-action--cancel" id="btnTxtSelCancelarRecorrido">
+                        <i class="fa fa-times"></i> Cancelar
+                    </button>
+                </div>
+                <button type="button" class="rec-action rec-action--mf" id="btnManifiestosRecorrido" disabled>
+                    <i class="fa fa-file-text-o"></i> Manifiestos
+                </button>
+                <button type="button" class="rec-action rec-action--add" id="btnNuevoClienteRecorrido" disabled>
+                    <i class="fa fa-plus"></i> Agregar cliente
                 </button>
             </div>
         </div>
@@ -203,6 +227,14 @@
                     <div class="col-md-4">
                         <label class="form-label" for="crPosicion">Posicion</label>
                         <input type="number" id="crPosicion" class="form-control rec-input" min="1" value="1" />
+                        <div id="avisoOrdenRecorridoCr" class="rp-orden-aviso" hidden>
+                            <div class="rp-orden-aviso-text"></div>
+                            <div class="rp-orden-aviso-actions">
+                                <button type="button" class="btn btn-warning" data-orden-aviso="si">Sí, reemplazar y desplazar</button>
+                                <button type="button" class="btn btn-outline-light" data-orden-aviso="no">No</button>
+                            </div>
+                            <div class="rp-orden-aviso-estado" hidden></div>
+                        </div>
                     </div>
                     <div class="col-md-12">
                         <label class="form-label" for="crEstablecimiento">Establecimiento <span class="text-muted-cc">(opcional)</span></label>
@@ -213,7 +245,7 @@
                         <textarea id="crObservacion" class="form-control rec-input" rows="2" maxlength="500"
                                   placeholder="Notas que se imprimen en la columna Observacion de la hoja de ruta"></textarea>
                     </div>
-                    <div class="col-md-12">
+                    <div class="col-md-6">
                         <div class="rp-activo-box">
                             <div class="rp-activo-box-head">
                                 <span class="rp-activo-box-title">Estado en el recorrido</span>
@@ -222,6 +254,18 @@
                                 <input type="checkbox" id="crActivo" class="rp-switch-input" checked>
                                 <span class="rp-switch-slider"></span>
                                 <span class="rp-activo-estado-text" id="lblCrActivo">Activo</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="rp-activo-box rec-reprog-box">
+                            <div class="rp-activo-box-head">
+                                <span class="rp-activo-box-title">Reprogramado</span>
+                            </div>
+                            <label class="rp-switch mb-0 rp-switch-block">
+                                <input type="checkbox" id="crReprogramado" class="rp-switch-input">
+                                <span class="rp-switch-slider"></span>
+                                <span class="rp-activo-estado-text" id="lblCrReprogramado">Normal</span>
                             </label>
                         </div>
                     </div>
@@ -237,8 +281,48 @@
     </div>
 </div>
 
+<div class="modal fade rp-modal" id="modalManifiestoRecorrido" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rec-modal">
+            <div class="modal-header rec-modal-header">
+                <h5 class="modal-title m-0" id="modalManifiestoRecorridoTitulo">Generar manifiestos</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body rec-modal-body">
+                <input type="hidden" id="mfIdRecorrido" value="0" />
+                <input type="hidden" id="mfModoExport" value="manifiesto" />
+                <div class="row g-3">
+                    <div class="col-12">
+                        <label class="form-label" for="mfNombreManifiesto">Nombre</label>
+                        <input type="text" id="mfNombreManifiesto" class="form-control rec-input" maxlength="120"
+                               placeholder="Nombre del recorrido o del cliente" />
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label" for="mfNumeroManifiesto">Manifiesto Nº</label>
+                        <input type="number" id="mfNumeroManifiesto" class="form-control rec-input" min="1" step="1" />
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label" for="mfFechaIntercambio">Fecha de programación</label>
+                        <input type="date" id="mfFechaIntercambio" class="form-control rec-input" />
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer rec-modal-footer rec-modal-footer--actions">
+                <button type="button" class="rec-modal-btn rec-modal-btn--ghost" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="rec-modal-btn rec-modal-btn--txt" id="btnExportarTxtIntercambioRecorrido">
+                    <i class="fa fa-download"></i> Exportar TXT
+                </button>
+                <button type="button" class="rec-modal-btn rec-modal-btn--ok" id="btnConfirmarManifiestoRecorrido">
+                    <i class="fa fa-file-text-o"></i> Generar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-    <script src="~/js/Entities/M_Camiones.js?v=7.2"></script>
-    <script src="~/js/Recorridos.js?v=9.7"></script>
+    <script src="~/js/CamionesManifiestos.js?v=6.5"></script>
+    <script src="~/js/Entities/M_Camiones.js?v=8.2"></script>
+    <script src="~/js/Recorridos.js?v=10.8"></script>
 }

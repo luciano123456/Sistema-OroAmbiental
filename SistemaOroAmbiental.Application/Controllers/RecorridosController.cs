@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using SistemaOroAmbiental.Application.Helpers;
 using SistemaOroAmbiental.Application.Models.ViewModels;
 using SistemaOroAmbiental.BLL.Common;
 using SistemaOroAmbiental.BLL.Service;
@@ -13,15 +15,18 @@ namespace SistemaOroAmbiental.Application.Controllers
         private readonly IRecorridosService _service;
         private readonly ICamionesService _camionesService;
         private readonly IClientesEstablecimientosProductosService _productosEstService;
+        private readonly IWebHostEnvironment _env;
 
         public RecorridosController(
             IRecorridosService service,
             ICamionesService camionesService,
-            IClientesEstablecimientosProductosService productosEstService)
+            IClientesEstablecimientosProductosService productosEstService,
+            IWebHostEnvironment env)
         {
             _service = service;
             _camionesService = camionesService;
             _productosEstService = productosEstService;
+            _env = env;
         }
 
         [AllowAnonymous]
@@ -33,14 +38,17 @@ namespace SistemaOroAmbiental.Application.Controllers
         [HttpGet]
         public async Task<IActionResult> Camiones(bool soloActivos = true)
         {
-            var camiones = (await _camionesService.ObtenerTodos(soloActivos)).ToList();
+            var camiones = await (await _camionesService.ObtenerTodos(soloActivos))
+                .OrderBy(c => c.Nombre)
+                .Select(c => new
+                {
+                    c.Id,
+                    c.Nombre,
+                    c.Activo
+                })
+                .ToListAsync();
 
-            return Ok(camiones.Select(c => new
-            {
-                c.Id,
-                c.Nombre,
-                c.Activo
-            }));
+            return Ok(camiones);
         }
 
         [HttpGet]
@@ -182,6 +190,250 @@ namespace SistemaOroAmbiental.Application.Controllers
             return View("HojaRuta", model);
         }
 
+        [HttpGet]
+        public async Task<IActionResult> SiguienteNumeroManifiesto(
+            int idCamion,
+            int idSemana,
+            int idDia,
+            string? recorridos)
+        {
+            if (idCamion <= 0)
+                return Ok(new { numero = 1, ultimo = 0 });
+
+            var lista = ParseRecorridosHojaRuta(recorridos, idSemana, idDia);
+            if (lista.Count == 0)
+                return Ok(new { numero = 1, ultimo = 0 });
+
+            var numero = await _service.ObtenerSiguienteNumeroManifiesto(idCamion, lista);
+            return Ok(new
+            {
+                numero,
+                ultimo = Math.Max(0, numero - 1)
+            });
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> RegistrarNumeroManifiesto([FromBody] VMManifiestoNumeroRequest request)
+        {
+            if (request == null || request.IdCamion <= 0)
+            {
+                return Ok(new
+                {
+                    valor = false,
+                    mensaje = "Datos incompletos.",
+                    tipo = "validacion"
+                });
+            }
+
+            var lista = ParseRecorridosHojaRuta(request.Recorridos, request.IdSemana, request.IdDia);
+            if (lista.Count == 0)
+            {
+                return Ok(new
+                {
+                    valor = false,
+                    mensaje = "No se indicó la hoja de ruta.",
+                    tipo = "validacion"
+                });
+            }
+
+            var idClaim = User.FindFirst("Id")?.Value;
+            int.TryParse(idClaim, out var idUsuario);
+
+            var result = await _service.RegistrarUltimoNumeroManifiesto(
+                request.IdCamion,
+                lista,
+                request.UltimoNumero,
+                idUsuario);
+
+            return Ok(new
+            {
+                valor = result.Ok,
+                mensaje = result.Mensaje,
+                tipo = result.Tipo
+            });
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> Manifiestos(
+            int idCamion,
+            int idSemana,
+            int idDia,
+            string? recorridos,
+            string? excluirIds,
+            int? numeroInicial,
+            int? idRecorrido,
+            string? nombre,
+            DateTime? fecha)
+        {
+            if (idCamion <= 0)
+                return NotFound();
+
+            var lista = ParseRecorridosHojaRuta(recorridos, idSemana, idDia);
+            if (lista.Count == 0)
+                return NotFound();
+
+            var numero = numeroInicial ?? 0;
+            if (numero <= 0)
+                numero = await _service.ObtenerSiguienteNumeroManifiesto(idCamion, lista);
+
+            var excluir = ParseIdsExcluirHoja(excluirIds);
+            var model = await _service.ObtenerManifiestos(
+                idCamion,
+                lista,
+                numero,
+                excluir,
+                idRecorrido);
+
+            if (model == null)
+                return NotFound();
+
+            var nombreTxt = (nombre ?? "").Trim();
+            if (string.IsNullOrWhiteSpace(nombreTxt) && model.Items.Count == 1)
+                nombreTxt = model.Items[0].RazonSocial;
+            model.Nombre = nombreTxt;
+            if (!string.IsNullOrWhiteSpace(nombreTxt))
+                model.Titulo = nombreTxt;
+            model.FechaProgramacion = (fecha ?? DateTime.Today).Date;
+
+            var idClaim = User.FindFirst("Id")?.Value;
+            int.TryParse(idClaim, out var idUsuario);
+            var ultimo = model.NumeroInicial + Math.Max(0, model.Items.Count - 1);
+            if (ultimo > 0)
+                await _service.RegistrarUltimoNumeroManifiesto(idCamion, lista, ultimo, idUsuario);
+
+            await _service.GuardarHistorialManifiestos(idCamion, model, nombreTxt, idUsuario);
+
+            return PdfManifiesto(model);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> ManifiestosPorCamion(int idCamion)
+        {
+            if (idCamion <= 0)
+                return BadRequest();
+
+            var data = await _service.ListarManifiestosPorCamion(idCamion);
+            return Ok(data);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> RutasManifiestoCamion(int idCamion)
+        {
+            if (idCamion <= 0)
+                return BadRequest();
+
+            var data = await _service.ListarRutasManifiestoCamion(idCamion);
+            return Ok(data);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> ManifiestoHistorial(int idCamion, string? ids)
+        {
+            if (idCamion <= 0)
+                return NotFound();
+
+            var listaIds = (ids ?? "")
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Select(x => int.TryParse(x, out var n) ? n : 0)
+                .Where(n => n > 0)
+                .ToList();
+
+            if (listaIds.Count == 0)
+                return NotFound();
+
+            var model = await _service.ObtenerManifiestosHistorial(idCamion, listaIds);
+            if (model == null)
+                return NotFound();
+
+            if (model.FechaProgramacion == default)
+                model.FechaProgramacion = DateTime.Today;
+
+            return PdfManifiesto(model);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> SiguienteNumeroManifiestoCamion(int idCamion)
+        {
+            var numero = await _service.ObtenerSiguienteNumeroManifiestoCamion(idCamion);
+            return Ok(new
+            {
+                numero,
+                ultimo = Math.Max(0, numero - 1)
+            });
+        }
+
+        [HttpDelete]
+        public async Task<IActionResult> EliminarManifiestoHistorial(int idCamion, int id)
+        {
+            var result = await _service.EliminarManifiestoHistorial(idCamion, id);
+            return Ok(new
+            {
+                valor = result.Ok,
+                mensaje = result.Mensaje,
+                tipo = result.Tipo
+            });
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> ArchivoIntercambio(
+            int idCamion,
+            int idSemana,
+            int idDia,
+            string? recorridos,
+            string? excluirIds,
+            string? incluirIds,
+            DateTime? fecha,
+            int? numeroInicial,
+            int? idRecorrido,
+            string? nombre,
+            bool mesCompleto = false)
+        {
+            if (idCamion <= 0)
+                return NotFound();
+
+            var lista = ParseRecorridosHojaRuta(recorridos, idSemana, idDia);
+            if (!mesCompleto && lista.Count == 0)
+                return NotFound();
+
+            var incluir = ParseIdsExcluirHoja(incluirIds);
+            var excluir = incluir.Count > 0 ? new List<int>() : ParseIdsExcluirHoja(excluirIds);
+
+            var numero = numeroInicial ?? 0;
+            if (numero <= 0)
+            {
+                numero = mesCompleto
+                    ? await _service.ObtenerSiguienteNumeroManifiestoCamion(idCamion)
+                    : await _service.ObtenerSiguienteNumeroManifiesto(idCamion, lista);
+            }
+
+            var model = await _service.ObtenerArchivoIntercambio(
+                idCamion,
+                lista,
+                fecha?.Date ?? DateTime.Today,
+                numero,
+                excluir,
+                idRecorrido,
+                nombre,
+                mesCompleto,
+                incluir.Count > 0 ? incluir : null);
+
+            if (model == null || model.Items.Count == 0)
+                return NotFound();
+
+            var bytes = ArchivoIntercambioFormatter.Generar(model);
+
+            var idClaim = User.FindFirst("Id")?.Value;
+            int.TryParse(idClaim, out var idUsuario);
+            var ultimo = model.NumeroInicial + model.Items.Count - 1;
+            var listaRegistro = ParseRecorridosHojaRuta(model.RecorridosParam, 0, 0);
+            if (listaRegistro.Count == 0)
+                listaRegistro = lista;
+            if (ultimo > 0 && listaRegistro.Count > 0)
+                await _service.RegistrarUltimoNumeroManifiesto(idCamion, listaRegistro, ultimo, idUsuario);
+
+            return File(bytes, "text/plain; charset=windows-1252", model.NombreArchivo);
+        }
+
         private async Task PersistirProductosHojaRuta(List<VMHojaRutaParadaOverride>? paradas, int idUsuario)
         {
             if (paradas == null) return;
@@ -273,6 +525,13 @@ namespace SistemaOroAmbiental.Application.Controllers
                     : p.Cantidad.ToString("0.####");
                 return $"{cant} {abrev} x $ {p.PrecioVenta:N0}";
             }));
+        }
+
+        private FileContentResult PdfManifiesto(ManifiestosHojaDto model)
+        {
+            var header = Path.Combine(_env.WebRootPath, "Imagenes", "manifiesto-header.jpg");
+            var bytes = ManifiestoPdfGenerator.Generar(model, header);
+            return File(bytes, "application/pdf", ManifiestoPdfGenerator.NombreArchivo(model));
         }
 
         private static List<(int IdSemana, int IdDia)> ParseRecorridosHojaRuta(string? recorridos, int idSemana, int idDia)
@@ -394,7 +653,7 @@ namespace SistemaOroAmbiental.Application.Controllers
             int idUsuario = int.Parse(User.FindFirst("Id")!.Value);
 
             var entity = MapEntidad(model, idUsuario, esNuevo: true);
-            ServiceResult result = await _service.InsertarClientesRecorrido(entity);
+            ServiceResult result = await _service.InsertarClientesRecorrido(entity, model.DesplazarSiOcupada);
 
             return Ok(new
             {
@@ -411,7 +670,7 @@ namespace SistemaOroAmbiental.Application.Controllers
             int idUsuario = int.Parse(User.FindFirst("Id")!.Value);
 
             var entity = MapEntidad(model, idUsuario, esNuevo: false);
-            ServiceResult result = await _service.ActualizarClientesRecorrido(entity);
+            ServiceResult result = await _service.ActualizarClientesRecorrido(entity, model.DesplazarSiOcupada);
 
             return Ok(new
             {
@@ -457,6 +716,7 @@ namespace SistemaOroAmbiental.Application.Controllers
                 Dia = r.IdDiaNavigation?.Nombre,
                 r.Posicion,
                 r.Activo,
+                r.Reprogramado,
                 r.Observacion,
                 r.FechaUsuarioRegistra,
                 UsuarioRegistra = r.IdUsuarioRegistraNavigation?.Usuario,
@@ -477,6 +737,7 @@ namespace SistemaOroAmbiental.Application.Controllers
                 IdDia = model.IdDia,
                 Posicion = model.Posicion,
                 Activo = model.Activo,
+                Reprogramado = model.Reprogramado,
                 Observacion = string.IsNullOrWhiteSpace(model.Observacion) ? null : model.Observacion.Trim()
             };
 

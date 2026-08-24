@@ -212,6 +212,14 @@
                         <label class="form-label">Nº recorrido</label>
                         <input id="txtOrdenRecorridoEst" class="form-control" type="number" min="0" step="1" placeholder="Auto" title="Posición en la hoja de ruta. Vacío o 0 = al final." />
                         <div class="form-text text-muted" style="font-size:0.72rem;line-height:1.25;">Vacío o 0 = se asigna al final</div>
+                        <div id="avisoOrdenRecorridoEst" class="rp-orden-aviso" hidden>
+                            <div class="rp-orden-aviso-text"></div>
+                            <div class="rp-orden-aviso-actions">
+                                <button type="button" class="btn btn-warning" data-orden-aviso="si">Sí, reemplazar y desplazar</button>
+                                <button type="button" class="btn btn-outline-light" data-orden-aviso="no">No</button>
+                            </div>
+                            <div class="rp-orden-aviso-estado" hidden></div>
+                        </div>
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Kilos</label>

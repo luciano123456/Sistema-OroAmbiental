@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using SistemaOroAmbiental.Application.Models.ViewModels;
 using SistemaOroAmbiental.BLL.Common;
 using SistemaOroAmbiental.BLL.Service;
@@ -33,18 +34,20 @@ namespace SistemaOroAmbiental.Application.Controllers
             if (idCliente <= 0)
                 return Ok(new List<object>());
 
-            var items = (await _service.ObtenerTodos())
+            var items = await (await _service.ObtenerTodos())
                 .Where(x => x.IdCliente == idCliente)
-                .ToList();
+                .OrderBy(x => x.Nombre)
+                .Select(e => new
+                {
+                    e.Id,
+                    e.Nombre,
+                    e.IdCliente,
+                    Etiqueta = e.Nombre,
+                    e.OrdenRecorrido
+                })
+                .ToListAsync();
 
-            return Ok(items.Select(e => new
-            {
-                e.Id,
-                e.Nombre,
-                e.IdCliente,
-                Etiqueta = e.Nombre,
-                e.OrdenRecorrido
-            }));
+            return Ok(items);
         }
 
         [HttpGet]
@@ -150,6 +153,15 @@ namespace SistemaOroAmbiental.Application.Controllers
             });
         }
 
+        [HttpGet]
+        public async Task<IActionResult> OcupanteOrdenRecorrido(
+            int idCamion, int idDia, int idSemana, int orden, int idExcluir = 0)
+        {
+            var info = await _service.ObtenerOcupanteOrdenRecorrido(
+                idCamion, idDia, idSemana, orden, idExcluir > 0 ? idExcluir : null);
+            return Ok(info);
+        }
+
         [HttpPost]
         public async Task<IActionResult> Insertar([FromBody] VMClienteEstablecimiento model)
         {
@@ -161,7 +173,7 @@ namespace SistemaOroAmbiental.Application.Controllers
 
             var entity = MapearEntidad(model, idUsuario, esNuevo: true);
 
-            ServiceResult result = await _service.Insertar(entity);
+            ServiceResult result = await _service.Insertar(entity, model.DesplazarOrdenRecorrido);
 
             return Ok(new
             {
@@ -184,7 +196,7 @@ namespace SistemaOroAmbiental.Application.Controllers
 
             var entity = MapearEntidad(model, idUsuario, esNuevo: false);
 
-            ServiceResult result = await _service.Actualizar(entity);
+            ServiceResult result = await _service.Actualizar(entity, model.DesplazarOrdenRecorrido);
 
             return Ok(new
             {

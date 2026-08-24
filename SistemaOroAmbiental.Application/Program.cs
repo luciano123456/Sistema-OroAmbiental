@@ -29,6 +29,7 @@ builder.Services.AddScoped(typeof(IConfiguracionNombreRepository<>), typeof(Conf
 builder.Services.AddScoped(typeof(IConfiguracionNombreService<>), typeof(ConfiguracionNombreService<>));
 builder.Services.AddScoped<IDeleteConflictChecker, DeleteConflictChecker>();
 builder.Services.AddScoped<IEntidadCascadeRepository, EntidadCascadeRepository>();
+builder.Services.AddScoped<ICatalogoCascadeRepository, CatalogoCascadeRepository>();
 
 builder.Services.AddScoped<IUsuariosRepository<User>, UsuariosRepository>();
 builder.Services.AddScoped<IUsuariosService, UsuariosService>();

@@ -755,9 +755,9 @@ namespace SistemaOroAmbiental.DAL.Repository
                         Entregadas = cantEnt,
                         Retiradas = cantRet,
                         NoRetiradas = cantNoRet,
-                        PrecioUnitarioEntrega = cantEnt > 0 ? subEnt / cantEnt : 0,
-                        PrecioUnitarioRetiro = cantRet > 0 ? subRet / cantRet : 0,
-                        PrecioUnitarioNoRetiro = cantNoRet > 0 ? subNoRet / cantNoRet : 0,
+                        PrecioUnitarioEntrega = cantEnt != 0 ? subEnt / cantEnt : 0,
+                        PrecioUnitarioRetiro = cantRet != 0 ? subRet / cantRet : 0,
+                        PrecioUnitarioNoRetiro = cantNoRet != 0 ? subNoRet / cantNoRet : 0,
                         SubtotalEntregas = subEnt,
                         SubtotalRetiros = subRet,
                         SubtotalNoRetiros = subNoRet
@@ -840,7 +840,7 @@ namespace SistemaOroAmbiental.DAL.Repository
                         EnPoderCliente = entregadas - retiradas
                     };
                 })
-                .Where(x => x.Entregadas > 0 || x.Retiradas > 0 || x.NoRetiradas > 0)
+                .Where(x => x.Entregadas != 0 || x.Retiradas != 0 || x.NoRetiradas != 0)
                 .OrderBy(x => x.Producto)
                 .ToList();
         }

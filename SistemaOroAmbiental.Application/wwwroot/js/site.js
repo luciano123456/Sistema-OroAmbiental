@@ -28,7 +28,7 @@ if (document.readyState === "loading") {
     ensureRpToastStack();
 }
 
-const RP_MODALES_FEEDBACK = new Set(["modalConfirmar"]);
+const RP_MODALES_FEEDBACK = new Set(["modalConfirmar", "modalEliminarCascada"]);
 const RP_MODAL_Z_BASE = 10000056;
 const RP_MODAL_Z_MIN_FEEDBACK = 10000090;
 const RP_MODAL_Z_STEP = 20;
@@ -370,6 +370,51 @@ window.setBusyButton = setBusyButton;
 window.withBusy = withBusy;
 window.busyHandler = busyHandler;
 
+function ensureProcesoOverlay() {
+    let el = document.getElementById("rpProcesoOverlay");
+    if (el) return el;
+
+    el = document.createElement("div");
+    el.id = "rpProcesoOverlay";
+    el.className = "rp-proceso-overlay";
+    el.setAttribute("aria-live", "assertive");
+    el.innerHTML = `
+        <div class="rp-proceso-card" role="status">
+            <span class="spinner-border text-light" aria-hidden="true"></span>
+            <p class="rp-proceso-text">Generando...</p>
+        </div>`;
+    document.body.appendChild(el);
+    return el;
+}
+
+function mostrarProcesoOverlay(texto) {
+    const el = ensureProcesoOverlay();
+    const label = el.querySelector(".rp-proceso-text");
+    if (label) label.textContent = texto || "Generando...";
+    el.classList.add("is-visible");
+    el.setAttribute("aria-busy", "true");
+}
+
+function ocultarProcesoOverlay() {
+    const el = document.getElementById("rpProcesoOverlay");
+    if (!el) return;
+    el.classList.remove("is-visible");
+    el.removeAttribute("aria-busy");
+}
+
+async function conProceso(texto, fn) {
+    mostrarProcesoOverlay(texto);
+    try {
+        return await fn();
+    } finally {
+        ocultarProcesoOverlay();
+    }
+}
+
+window.mostrarProcesoOverlay = mostrarProcesoOverlay;
+window.ocultarProcesoOverlay = ocultarProcesoOverlay;
+window.conProceso = conProceso;
+
 /** Clase CSS para saldo/total: + verde, - rojo, 0 amarillo */
 function clsSaldoMoney(n) {
     const v = Number(n || 0);
@@ -646,10 +691,31 @@ async function ejecutarEliminacionEntidad(opts) {
         const btnCascada = document.getElementById("btnEliminarCascadaConfirmar");
         const btnManual = document.getElementById("btnEliminarCascadaManual");
 
+        const tipoCascada = (depInfo?.tipoCascada || depInfo?.TipoCascada || "eliminar").toLowerCase();
+        const permiteCascada = depInfo?.permiteCascada ?? depInfo?.PermiteCascada ?? true;
+
         if (titulo) titulo.textContent = `Eliminar ${entidadLabel}`;
         if (intro) {
             intro.textContent = depInfo?.mensajeResumen || depInfo?.MensajeResumen
-                || `Este registro tiene datos asociados que impiden borrarlo directamente:`;
+                || (tipoCascada === "desvincular"
+                    ? `Tenés registros asociados a ${entidadLabel}. ¿Querés desvincularlos y eliminar?`
+                    : `Este registro tiene datos asociados que impiden borrarlo directamente:`);
+        }
+
+        const ayuda = document.getElementById("modalEliminarCascadaAyuda");
+        if (ayuda) {
+            ayuda.innerHTML = tipoCascada === "desvincular"
+                ? `<strong>Eliminar en cascada:</strong> borra este valor y desvincula o reasigna lo listado. Los clientes, establecimientos y demás registros se mantienen.<br />
+                   <strong>Hacerlo manualmente:</strong> te muestra los pasos para ir quitando cada asociación por separado.`
+                : `<strong>Eliminar en cascada:</strong> borra el registro y todo lo listado arriba.<br />
+                   <strong>Hacerlo manualmente:</strong> le muestra los pasos para ir quitando cada cosa por separado.`;
+        }
+
+        if (btnCascada) {
+            btnCascada.style.display = permiteCascada ? "" : "none";
+            btnCascada.innerHTML = tipoCascada === "desvincular"
+                ? `<i class="fa fa-trash-o"></i> Sí, eliminar en cascada`
+                : `<i class="fa fa-trash-o"></i> Eliminar todo en cascada`;
         }
 
         if (lista) {
@@ -673,7 +739,7 @@ async function ejecutarEliminacionEntidad(opts) {
             resolve(valor);
         };
 
-        btnCascada.onclick = () => cerrar("cascada");
+        if (btnCascada) btnCascada.onclick = () => cerrar("cascada");
         btnManual.onclick = () => cerrar("manual");
         modalEl.addEventListener("hidden.bs.modal", () => {
             if (!resuelto) cerrar("cancelar");
@@ -698,10 +764,14 @@ async function ejecutarEliminacionEntidad(opts) {
         return { accion: "cancelar" };
     }
 
+    const tipoCascadaFinal = (depInfo?.tipoCascada || depInfo?.TipoCascada || "eliminar").toLowerCase();
+    const msgConfirmCascada = tipoCascadaFinal === "desvincular"
+        ? `¿Confirma eliminar ${entidadLabel}? Los registros asociados se desvincularán o se reasignarán. Esta acción no se puede deshacer.`
+        : `¿Confirma eliminar ${entidadLabel} y TODOS los registros asociados listados? Esta accion no se puede deshacer.`;
+
     const okCascada = typeof confirmarModal === "function"
-        ? await confirmarModal(
-            `¿Confirma eliminar ${entidadLabel} y TODOS los registros asociados listados? Esta accion no se puede deshacer.`)
-        : window.confirm("¿Eliminar todo en cascada?");
+        ? await confirmarModal(msgConfirmCascada)
+        : window.confirm(tipoCascadaFinal === "desvincular" ? "¿Eliminar en cascada?" : "¿Eliminar todo en cascada?");
 
     if (!okCascada) return { accion: "cancelar" };
 
@@ -723,6 +793,73 @@ async function ejecutarEliminacionEntidad(opts) {
 }
 
 window.ejecutarEliminacionEntidad = ejecutarEliminacionEntidad;
+
+function rpNombreOcupanteOrden(info) {
+    const cliente = (info?.cliente || info?.Cliente || "").trim();
+    const nombre = (info?.nombre || info?.Nombre || "").trim();
+    if (cliente && nombre && cliente !== nombre) return `${cliente} (${nombre})`;
+    return cliente || nombre || "otra persona";
+}
+
+function rpBindAvisoOrdenRecorrido(root, onDecision) {
+    if (!root) return;
+    root.querySelectorAll("[data-orden-aviso]").forEach(btn => {
+        btn.addEventListener("click", () => {
+            const si = btn.getAttribute("data-orden-aviso") === "si";
+            root.dataset.decision = si ? "si" : "no";
+            root.classList.toggle("is-si", si);
+            root.classList.toggle("is-no", !si);
+            const actions = root.querySelector(".rp-orden-aviso-actions");
+            const estado = root.querySelector(".rp-orden-aviso-estado");
+            if (actions) actions.hidden = true;
+            if (estado) {
+                estado.hidden = false;
+                estado.textContent = si
+                    ? "Queda asentado: se toma esta ubicación y se desplaza al resto +1."
+                    : "Queda asentado: no se desplazan las demás ubicaciones.";
+            }
+            if (typeof onDecision === "function") onDecision(si);
+        });
+    });
+}
+
+function rpMostrarAvisoOrdenRecorrido(root, { posicion, nombre } = {}) {
+    if (!root) return;
+    root.hidden = false;
+    root.dataset.decision = "";
+    root.classList.remove("is-si", "is-no");
+    const text = root.querySelector(".rp-orden-aviso-text");
+    const actions = root.querySelector(".rp-orden-aviso-actions");
+    const estado = root.querySelector(".rp-orden-aviso-estado");
+    if (text) {
+        text.textContent = `Ya tenés a ${nombre || "otra persona"} en la ubicación ${posicion}. ¿Querés reemplazarla y desplazar a todos los demás 1 ubicación?`;
+    }
+    if (actions) actions.hidden = false;
+    if (estado) {
+        estado.hidden = true;
+        estado.textContent = "";
+    }
+}
+
+function rpOcultarAvisoOrdenRecorrido(root) {
+    if (!root) return;
+    root.hidden = true;
+    root.dataset.decision = "";
+    root.classList.remove("is-si", "is-no");
+}
+
+function rpDecisionAvisoOrdenRecorrido(root) {
+    const v = root?.dataset?.decision;
+    if (v === "si") return true;
+    if (v === "no") return false;
+    return null;
+}
+
+window.rpNombreOcupanteOrden = rpNombreOcupanteOrden;
+window.rpBindAvisoOrdenRecorrido = rpBindAvisoOrdenRecorrido;
+window.rpMostrarAvisoOrdenRecorrido = rpMostrarAvisoOrdenRecorrido;
+window.rpOcultarAvisoOrdenRecorrido = rpOcultarAvisoOrdenRecorrido;
+window.rpDecisionAvisoOrdenRecorrido = rpDecisionAvisoOrdenRecorrido;
 
 
 const formatoMoneda = new Intl.NumberFormat('es-AR', {

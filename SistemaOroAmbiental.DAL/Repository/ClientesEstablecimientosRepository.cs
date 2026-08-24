@@ -272,5 +272,102 @@ namespace SistemaOroAmbiental.DAL.Repository
                 _ => 0
             };
         }
+
+        public async Task<OrdenRecorridoOcupanteDto> ObtenerOcupanteOrdenRecorrido(
+            int idCamion, int idDia, int idSemana, int orden, int? idExcluirEstablecimiento)
+        {
+            if (idCamion <= 0 || idDia <= 0 || idSemana <= 0 || orden <= 0)
+                return new OrdenRecorridoOcupanteDto { Ocupado = false, Posicion = orden };
+
+            var estQuery = _db.ClientesEstablecimientos.AsNoTracking()
+                .Where(x => x.IdCamion == idCamion
+                    && x.IdDiaRecoleccion == idDia
+                    && x.IdSemanaRecoleccion == idSemana
+                    && x.OrdenRecorrido == orden);
+
+            if (idExcluirEstablecimiento is > 0)
+                estQuery = estQuery.Where(x => x.Id != idExcluirEstablecimiento.Value);
+
+            var est = await estQuery
+                .Select(x => new OrdenRecorridoOcupanteDto
+                {
+                    Ocupado = true,
+                    Posicion = orden,
+                    IdEstablecimiento = x.Id,
+                    IdCliente = x.IdCliente,
+                    Nombre = x.Nombre,
+                    Cliente = x.IdClienteNavigation.Nombre
+                })
+                .FirstOrDefaultAsync();
+
+            if (est != null)
+                return est;
+
+            var recQuery = _db.ClientesRecorridos.AsNoTracking()
+                .Where(r => r.IdCamion == idCamion
+                    && r.IdDia == idDia
+                    && r.IdSemana == idSemana
+                    && r.Posicion == orden);
+
+            if (idExcluirEstablecimiento is > 0)
+                recQuery = recQuery.Where(r => r.IdEstablecimiento != idExcluirEstablecimiento.Value);
+
+            var rec = await recQuery
+                .Select(r => new OrdenRecorridoOcupanteDto
+                {
+                    Ocupado = true,
+                    Posicion = orden,
+                    IdEstablecimiento = r.IdEstablecimiento,
+                    IdCliente = r.IdCliente,
+                    Nombre = r.IdEstablecimientoNavigation != null ? r.IdEstablecimientoNavigation.Nombre : null,
+                    Cliente = r.IdClienteNavigation.Nombre
+                })
+                .FirstOrDefaultAsync();
+
+            return rec ?? new OrdenRecorridoOcupanteDto { Ocupado = false, Posicion = orden };
+        }
+
+        public async Task DesplazarOrdenRecorridoSiOcupado(
+            int idCamion, int idDia, int idSemana, int orden, int? idExcluirEstablecimiento)
+        {
+            if (idCamion <= 0 || idDia <= 0 || idSemana <= 0 || orden <= 0)
+                return;
+
+            var estQuery = _db.ClientesEstablecimientos
+                .Where(x => x.IdCamion == idCamion
+                    && x.IdDiaRecoleccion == idDia
+                    && x.IdSemanaRecoleccion == idSemana
+                    && x.OrdenRecorrido != null
+                    && x.OrdenRecorrido >= orden);
+
+            if (idExcluirEstablecimiento is > 0)
+                estQuery = estQuery.Where(x => x.Id != idExcluirEstablecimiento.Value);
+
+            var ests = await estQuery.OrderByDescending(x => x.OrdenRecorrido).ToListAsync();
+            var ocupadaEst = ests.Any(x => x.OrdenRecorrido == orden);
+
+            var recQuery = _db.ClientesRecorridos
+                .Where(r => r.IdCamion == idCamion
+                    && r.IdDia == idDia
+                    && r.IdSemana == idSemana
+                    && r.Posicion >= orden);
+
+            if (idExcluirEstablecimiento is > 0)
+                recQuery = recQuery.Where(r => r.IdEstablecimiento != idExcluirEstablecimiento.Value);
+
+            var recs = await recQuery.OrderByDescending(r => r.Posicion).ToListAsync();
+            var ocupadaRec = recs.Any(r => r.Posicion == orden);
+
+            if (!ocupadaEst && !ocupadaRec)
+                return;
+
+            foreach (var e in ests)
+                e.OrdenRecorrido = (e.OrdenRecorrido ?? orden) + 1;
+
+            foreach (var r in recs)
+                r.Posicion += 1;
+
+            await _db.SaveChangesAsync();
+        }
     }
 }

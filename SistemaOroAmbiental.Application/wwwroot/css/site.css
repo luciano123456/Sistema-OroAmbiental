@@ -1571,3 +1571,88 @@ button.is-busy .spinner-border,
         padding: 0.85rem 0.85rem 0.85rem 0.75rem;
     }
 }
+
+.rp-proceso-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(8, 15, 28, 0.62);
+    backdrop-filter: blur(3px);
+}
+
+.rp-proceso-overlay.is-visible {
+    display: flex;
+}
+
+.rp-proceso-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.9rem;
+    min-width: 240px;
+    max-width: min(420px, calc(100vw - 2rem));
+    padding: 1.35rem 1.6rem 1.25rem;
+    border-radius: 16px;
+    background: linear-gradient(180deg, #1a2740 0%, #132033 100%);
+    border: 1px solid rgba(148, 163, 184, 0.22);
+    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.38);
+    color: #e8eef8;
+    text-align: center;
+}
+
+.rp-proceso-text {
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: 650;
+    letter-spacing: 0.01em;
+}
+
+.rp-orden-aviso {
+    margin-top: 0.45rem;
+    padding: 0.55rem 0.7rem;
+    border-radius: 8px;
+    background: rgba(245, 158, 11, 0.12);
+    border: 1px solid rgba(245, 158, 11, 0.45);
+    color: #fde68a;
+    font-size: 0.78rem;
+    line-height: 1.35;
+}
+
+.rp-orden-aviso[hidden] {
+    display: none !important;
+}
+
+.rp-orden-aviso-text {
+    margin-bottom: 0.45rem;
+}
+
+.rp-orden-aviso-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+}
+
+.rp-orden-aviso-actions .btn {
+    font-size: 0.72rem;
+    padding: 0.2rem 0.55rem;
+}
+
+.rp-orden-aviso-estado {
+    margin-top: 0.35rem;
+    font-weight: 650;
+}
+
+.rp-orden-aviso.is-si {
+    background: rgba(52, 211, 153, 0.12);
+    border-color: rgba(52, 211, 153, 0.4);
+    color: #a7f3d0;
+}
+
+.rp-orden-aviso.is-no {
+    background: rgba(148, 163, 184, 0.12);
+    border-color: rgba(148, 163, 184, 0.4);
+    color: #cbd5e1;
+}

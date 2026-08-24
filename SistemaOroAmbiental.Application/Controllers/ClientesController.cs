@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using SistemaOroAmbiental.Application.Models.ViewModels;
 using SistemaOroAmbiental.BLL.Common;
 using SistemaOroAmbiental.BLL.Service;
@@ -46,6 +47,48 @@ namespace SistemaOroAmbiental.Application.Controllers
         {
             var clientes = (await _service.ObtenerTodos(soloActivos)).ToList();
             return Ok(clientes.Select(MapVm).ToList());
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> Combo(string? q, int take = 40, int? id = null)
+        {
+            take = Math.Clamp(take, 1, 80);
+            var query = await _service.ObtenerTodos(true);
+            var texto = (q ?? "").Trim();
+            if (texto.Length > 0)
+            {
+                if (int.TryParse(texto, out var nro))
+                {
+                    query = query.Where(c =>
+                        c.Nombre.Contains(texto) ||
+                        (c.Cuit != null && c.Cuit.Contains(texto)) ||
+                        c.NumeroCliente == nro);
+                }
+                else
+                {
+                    query = query.Where(c =>
+                        c.Nombre.Contains(texto) ||
+                        (c.Cuit != null && c.Cuit.Contains(texto)));
+                }
+            }
+
+            var list = await query
+                .OrderBy(c => c.Nombre)
+                .Take(take)
+                .Select(c => new { c.Id, c.Nombre })
+                .ToListAsync();
+
+            if (id is > 0 && list.All(x => x.Id != id.Value))
+            {
+                var extra = await (await _service.ObtenerTodos(false))
+                    .Where(c => c.Id == id.Value)
+                    .Select(c => new { c.Id, c.Nombre })
+                    .FirstOrDefaultAsync();
+                if (extra != null)
+                    list.Insert(0, extra);
+            }
+
+            return Ok(list);
         }
 
         [HttpPost]
@@ -249,6 +292,24 @@ namespace SistemaOroAmbiental.Application.Controllers
             est.OrdenRecorrido = model.OrdenRecorrido is > 0 ? model.OrdenRecorrido : null;
             est.Kilos = model.Kilos;
             est.IdTipoGenerador = model.IdTipoGenerador ?? cliente.IdTipoGenerador;
+
+            if (model.DesplazarOrdenRecorrido && est.OrdenRecorrido is > 0)
+            {
+                var idExcluir = esNuevo ? (int?)null : est.Id;
+                var semana = est.IdSemanaRecoleccion;
+                var orden = est.OrdenRecorrido.Value;
+                var slots = new HashSet<(int Camion, int Dia)>();
+                if (est.IdCamion is > 0 && est.IdDiaRecoleccion > 0)
+                    slots.Add((est.IdCamion.Value, est.IdDiaRecoleccion));
+                foreach (var d in diasEntrada)
+                {
+                    if (d.IdCamion is > 0 && d.IdDia > 0)
+                        slots.Add((d.IdCamion.Value, d.IdDia));
+                }
+
+                foreach (var (camion, dia) in slots)
+                    await _establecimientosRepo.DesplazarOrdenRecorridoSiOcupado(camion, dia, semana, orden, idExcluir);
+            }
 
             ServiceResult result = esNuevo
                 ? await _establecimientosService.Insertar(est)

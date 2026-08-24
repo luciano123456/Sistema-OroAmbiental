@@ -6,38 +6,27 @@
      data-bs-backdrop="static"
      data-bs-keyboard="false">
 
-    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content rp-modal-shell">
 
-        <div class="modal-content">
-
-            <div class="modal-header colorEncabezado">
-
-                <h5 class="modal-title fw-bold" id="modalEdicionLabel">
-                    Nuevo Camion
-                </h5>
-
-                <button type="button"
-                        class="btn-close"
-                        data-bs-dismiss="modal"></button>
-
+            <div class="modal-header colorEncabezado rp-modal-header">
+                <div class="rp-modal-title-wrap">
+                    <h5 class="modal-title fw-bold mb-0" id="modalEdicionLabel">Nuevo Camion</h5>
+                    <small class="rp-modal-subtitle" id="modalEdicionSub">Datos de la unidad y manifiestos patogénicos</small>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
 
             <div class="modal-body">
 
-                <div id="errorCampos"
-                     class="rp-error-panel d-none mb-2">
-
+                <div id="errorCampos" class="rp-error-panel d-none mb-2">
                     <div class="rp-error-icon">
                         <i class="fa fa-exclamation-triangle"></i>
                     </div>
-
                     <div class="rp-error-content">
-                        <div class="rp-error-title">
-                            No se pudo guardar
-                        </div>
+                        <div class="rp-error-title">No se pudo guardar</div>
                         <div class="rp-error-message"></div>
                     </div>
-
                     <button type="button"
                             class="rp-error-close"
                             onclick="cerrarErrorCamposCamion()">
@@ -45,37 +34,174 @@
                     </button>
                 </div>
 
-                <form class="row g-3">
+                <div class="rp-tabs-shell">
+                    <ul class="nav rp-tabs-modern">
+                        <li class="nav-item">
+                            <button class="nav-link active" id="tabBtnDatosCamion" data-bs-toggle="tab" data-bs-target="#tabDatosCamion" type="button">
+                                <i class="fa fa-truck"></i><span>Datos</span>
+                            </button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link" id="tabBtnManifiestosCamion" data-bs-toggle="tab" data-bs-target="#tabManifiestosCamion" type="button" disabled>
+                                <i class="fa fa-file-text-o"></i><span>Manifiestos</span>
+                                <span class="cmf-tab-count" id="cmfTabCount" hidden>0</span>
+                            </button>
+                        </li>
+                    </ul>
+                </div>
 
-                    <input type="text" id="txtId" hidden />
+                <div class="tab-content mt-3">
 
-                    <div class="col-md-8">
-                        <label class="form-label">Nombre</label>
-                        <input id="txtNombre" class="form-control" maxlength="120" required />
-                        <div class="invalid-feedback">Campo obligatorio</div>
-                    </div>
+                    <div class="tab-pane fade show active" id="tabDatosCamion">
+                        <form class="row g-3">
+                            <input type="text" id="txtId" hidden />
 
-                    <div class="col-md-4">
-                        <div class="rp-activo-box">
-                            <div class="rp-activo-box-head">
-                                <span class="rp-activo-box-title">Estado del registro</span>
-                                <span class="rp-activo-box-sub">Camiones inactivos no se listan por defecto.</span>
+                            <div class="col-md-8">
+                                <label class="form-label">Nombre</label>
+                                <input id="txtNombre" class="form-control" maxlength="120" required />
+                                <div class="invalid-feedback">Campo obligatorio</div>
                             </div>
-                            <label class="rp-switch mb-0 rp-switch-block">
-                                <input type="checkbox" id="chkActivoCamion" class="rp-switch-input" checked>
-                                <span class="rp-switch-slider"></span>
-                                <span class="rp-activo-estado-text" id="lblActivoCamion">Activo</span>
-                            </label>
+
+                            <div class="col-md-4">
+                                <div class="rp-activo-box">
+                                    <div class="rp-activo-box-head">
+                                        <span class="rp-activo-box-title">Estado del registro</span>
+                                        <span class="rp-activo-box-sub">Camiones inactivos no se listan por defecto.</span>
+                                    </div>
+                                    <label class="rp-switch mb-0 rp-switch-block">
+                                        <input type="checkbox" id="chkActivoCamion" class="rp-switch-input" checked>
+                                        <span class="rp-switch-slider"></span>
+                                        <span class="rp-activo-estado-text" id="lblActivoCamion">Activo</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </form>
+
+                        <div class="rp-auditoria d-none mt-3" id="infoAuditoria">
+                            <div id="infoRegistro"></div>
+                            <div id="infoModificacion"></div>
                         </div>
                     </div>
 
-                </form>
+                    <div class="tab-pane fade" id="tabManifiestosCamion">
+                        <div class="cmf-lock" id="cmfLock">
+                            <i class="fa fa-lock"></i>
+                            <p>Guardá el camión para armar y consultar manifiestos de esta unidad.</p>
+                        </div>
 
-                <div class="rp-auditoria d-none mt-3" id="infoAuditoria">
-                    <div id="infoRegistro"></div>
-                    <div id="infoModificacion"></div>
+                        <div class="cmf-panel d-none" id="cmfPanel">
+                            <div class="cmf-hero">
+                                <div class="cmf-hero-brand">
+                                    <span class="cmf-hero-icon"><i class="fa fa-file-text-o"></i></span>
+                                    <div>
+                                        <div class="cmf-hero-kicker">Manifiestos patogénicos</div>
+                                        <div class="cmf-hero-name" id="cmfHeroNombre">Unidad</div>
+                                    </div>
+                                </div>
+                                <div class="cmf-kpis">
+                                    <div class="cmf-kpi">
+                                        <span>Emitidos</span>
+                                        <strong id="cmfKpiTotal">0</strong>
+                                    </div>
+                                    <div class="cmf-kpi">
+                                        <span>Último Nº</span>
+                                        <strong id="cmfKpiUltimo">—</strong>
+                                    </div>
+                                    <div class="cmf-kpi">
+                                        <span>Última fecha</span>
+                                        <strong id="cmfKpiFecha">—</strong>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="cmf-grid">
+                                <section class="cmf-card cmf-card--composer">
+                                    <div class="cmf-card-head">
+                                        <i class="fa fa-magic"></i>
+                                        <div>
+                                            <h6>Nuevo manifiesto</h6>
+                                            <small id="cmfComposerSub">Elegí recorrido, clientes y número</small>
+                                        </div>
+                                    </div>
+
+                                    <div class="cmf-composer-empty is-visible" id="cmfComposerEmpty">
+                                        <i class="fa fa-map-o"></i>
+                                        <h6>Esta unidad no tiene recorridos</h6>
+                                        <p>
+                                            Para generar manifiestos o el TXT de planta, primero tenés que asignarle
+                                            clientes en <strong>Recorridos</strong> (semana, día y hoja).
+                                            Cuando la unidad tenga paradas, volvé acá y vas a poder armarlos.
+                                        </p>
+                                    </div>
+
+                                    <div id="cmfComposerForm" class="is-hidden">
+                                    <div class="cmf-field">
+                                        <label>Recorrido</label>
+                                        <div class="cmf-routes" id="cmfRutas"></div>
+                                    </div>
+
+                                    <div class="cmf-field">
+                                        <div class="cmf-field-row">
+                                            <label>Clientes de la hoja</label>
+                                            <button type="button" class="cmf-link" id="cmfBtnTodos" hidden>Seleccionar todos</button>
+                                        </div>
+                                        <div class="cmf-clients" id="cmfClientes">
+                                            <div class="cmf-empty-mini">Elegí un recorrido para ver los clientes.</div>
+                                        </div>
+                                    </div>
+
+                                    <div class="row g-2">
+                                        <div class="col-md-5">
+                                            <label class="form-label" for="cmfNombre">Nombre</label>
+                                            <input id="cmfNombre" class="form-control" maxlength="120" placeholder="Ej. Zona Norte · Lunes" />
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="form-label" for="cmfNumero">Nº inicial</label>
+                                            <input id="cmfNumero" class="form-control" type="number" min="1" step="1" />
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label" for="cmfFecha">Fecha de programación</label>
+                                            <input id="cmfFecha" class="form-control" type="date" />
+                                        </div>
+                                    </div>
+
+                                    <div class="cmf-actions" id="cmfAcciones">
+                                        <button type="button" class="cmf-btn cmf-btn--primary" id="cmfBtnGenerar">
+                                            <i class="fa fa-file-text-o"></i>
+                                            Generar manifiestos
+                                        </button>
+                                        <button type="button" class="cmf-btn cmf-btn--ghost" id="cmfBtnTxt">
+                                            <i class="fa fa-download"></i>
+                                            TXT planta
+                                        </button>
+                                    </div>
+                                    </div>
+                                </section>
+
+                                <section class="cmf-card cmf-card--history">
+                                    <div class="cmf-card-head">
+                                        <i class="fa fa-history"></i>
+                                        <div>
+                                            <h6>Historial de esta unidad</h6>
+                                            <small>Reimprimí o quitá del listado</small>
+                                        </div>
+                                    </div>
+                                    <div class="cmf-search">
+                                        <i class="fa fa-search"></i>
+                                        <input type="search" id="cmfBuscar" placeholder="Buscar por cliente, número o recorrido" autocomplete="off" />
+                                    </div>
+                                    <div class="cmf-list" id="cmfLista">
+                                        <div class="cmf-empty">
+                                            <i class="fa fa-file-o"></i>
+                                            <p>Todavía no hay manifiestos en esta unidad.</p>
+                                        </div>
+                                    </div>
+                                </section>
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
-
             </div>
 
             <div class="modal-footer">
@@ -90,7 +216,5 @@
             </div>
 
         </div>
-
     </div>
-
 </div>

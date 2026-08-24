@@ -2,7 +2,7 @@
    CLIENTES GESTION - Hub unificado por cliente
    (cliente + establecimientos: lineas completas + importe tras cuenta)
 ========================================================= */
-window.__OA_CG_BUILD = "est-mes-select-scroll-v30-20260814";
+window.__OA_CG_BUILD = "noret-sin-lista-v34-20260821";
 
 const CG = {
     id: 0,
@@ -822,6 +822,14 @@ function wireEventosCg() {
     $("#btnEliminarClienteCg").on("click", busyHandler(eliminarClienteCg));
     $("#btnCerrarErrorCg").on("click", cerrarErrorCg);
 
+    const avisoOrdenCg = document.getElementById("avisoOrdenRecorridoCg");
+    if (typeof rpBindAvisoOrdenRecorrido === "function") {
+        rpBindAvisoOrdenRecorrido(avisoOrdenCg);
+    }
+    $("#cgOrdenRecorrido").on("input change", verificarOrdenRecorridoCg);
+    $("#cgRecSemana").on("change", verificarOrdenRecorridoCg);
+    CG_REC_CAMION_SELECTORS.forEach(sel => $(sel).on("change", verificarOrdenRecorridoCg));
+
     $("#cgActivo").on("change", function () {
         $("#lblActivoCg").text(this.checked ? "Activo" : "Inactivo");
     });
@@ -926,14 +934,14 @@ function wireEventosCg() {
     // Legacy bindings replaced by delegated handlers above (hub-aware).
     $h("btnGuardarControlMensualCg").on("click", busyHandler(guardarVisitaUnificadaCg));
     $h("cgControlMensualBody").on("click", "tr[data-mes]", function (e) {
-        if ($(e.target).closest(".cg-cm-int-eye, .cg-cm-obs-eye").length) return;
+        if ($(e.target).closest(".cg-cm-int-eye, .cg-cm-obs-eye, .cg-cm-visita-cell").length) return;
         CG.hubActivo = "cliente";
         const anio = Number($(this).data("anio"));
         const mes = Number($(this).data("mes"));
         abrirWorkspaceMesCg(anio, mes);
     });
     $h("cgCards_controlMensual").on("click", "article[data-mes]", function (e) {
-        if ($(e.target).closest(".cg-cm-int-eye, .cg-cm-obs-eye").length) return;
+        if ($(e.target).closest(".cg-cm-int-eye, .cg-cm-obs-eye, .cg-cm-visita-cell").length) return;
         CG.hubActivo = "cliente";
         const anio = Number($(this).data("anio"));
         const mes = Number($(this).data("mes"));
@@ -996,6 +1004,47 @@ function wireEventosCg() {
         syncHubActivoFromElCg(this);
         abrirModalObsControlCg(this);
     });
+    $(document).on("click", ".cg-cm-visita-edit", function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        syncHubActivoFromElCg(this);
+        iniciarEdicionFechaVisitaCg(this);
+    });
+    $(document).on("click", ".cg-cm-visita-ok", function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        guardarFechaVisitaInlineCg(this);
+    });
+    $(document).on("click", ".cg-cm-visita-cancel", function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        cancelarEdicionFechaVisitaCg(this);
+    });
+    $(document).on("click", ".cg-cm-visita-cal", function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        abrirCalendarioFechaVisitaCg(this);
+    });
+    $(document).on("change", ".cg-cm-visita-picker", function () {
+        const iso = (this.value || "").trim();
+        if (!iso) return;
+        $(this).closest(".cg-cm-visita-editor").find(".cg-cm-visita-input").val(isoADdMmYyyyCg(iso));
+    });
+    $(document).on("input", ".cg-cm-visita-input", function () {
+        enmascararFechaCortaInputCg(this);
+    });
+    $(document).on("keydown", ".cg-cm-visita-editor", function (e) {
+        if (e.key === "Escape") {
+            e.preventDefault();
+            cancelarEdicionFechaVisitaCg(this);
+        } else if (e.key === "Enter") {
+            e.preventDefault();
+            guardarFechaVisitaInlineCg(this);
+        }
+    });
+    $(document).on("click", ".cg-cm-visita-editor", function (e) {
+        e.stopPropagation();
+    });
     $h("cgCmSinEntrega").on("change", syncSinEntregaUiCg);
     $h("cgCmFechaVisita").on("change", function () {
         $h("cgWsFechaEntrega").val($(this).val() || "");
@@ -1049,6 +1098,21 @@ function wireEventosCg() {
         renderLineasWsCg();
         actualizarResumenCobrosWsCg();
     });
+    $(document).off("click.noretSign").on("click.noretSign", "#cgWsLineasBody .ws-noret-sign, #cgEstWsLineasBody .ws-noret-sign", function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        syncHubActivoFromElCg(this);
+        const $row = $(this).closest(".cg-ws-linea");
+        const idx = Number($row.data("idx"));
+        const linea = hubPropCg("wsLineas")[idx];
+        if (!linea) return;
+        leerCamposLineaWsDesdeDomCg($row, linea);
+        aplicarSignoNoRetiradoWsCg($row, linea, Number($(this).data("sign")));
+        $row.find(".ws-sub").text(fmtMoneyCg(subtotalLineaWsCg(linea)));
+        refrescarSaldosNoRetiradoWsCg();
+        actualizarResumenCobrosWsCg();
+        actualizarAlertaDuplicadosLineasWsCg();
+    });
     $h("cgWsLineasBody").on("change input", "select, input", async function () {
         const idx = Number($(this).closest(".cg-ws-linea").data("idx"));
         const linea = hubPropCg("wsLineas")[idx];
@@ -1059,17 +1123,13 @@ function wireEventosCg() {
             : $(this).hasClass("ws-tipo") ? "tipo"
             : "otro";
 
-        linea.IdProducto = Number($row.find(".ws-prod").val()) || 0;
-        linea.IdListaPrecio = Number($row.find(".ws-lista").val()) || 0;
-        linea.TipoMovimiento = Number($row.find(".ws-tipo").val()) || 1;
-        linea.Cantidad = leerNumeroWsCg($row.find(".ws-cant").val());
-        linea.PrecioVenta = leerNumeroWsCg($row.find(".ws-precio").val());
-        linea.NoRetirado = Number(linea.TipoMovimiento) === 2 && $row.find(".ws-noret").is(":checked");
-        sincronizarCheckNoRetiradoWsCg($row, linea);
+        leerCamposLineaWsDesdeDomCg($row, linea);
+        sincronizarUiNoRetiradoWsCg($row, linea);
 
         await sincronizarPrecioLineaWsCg($row, linea, campo);
 
-        $row.find(".ws-sub").text(fmtMoneyCg(linea.Cantidad * linea.PrecioVenta));
+        $row.find(".ws-sub").text(fmtMoneyCg(subtotalLineaWsCg(linea)));
+        refrescarSaldosNoRetiradoWsCg();
         actualizarResumenCobrosWsCg();
         actualizarAlertaDuplicadosLineasWsCg();
     });
@@ -1268,6 +1328,7 @@ async function cargarRecoleccionPrincipalCg() {
             const camionId = diasMap[d.id];
             if (camionId) $(`#cgRecCamion${d.id}`).val(String(camionId)).trigger("change");
         });
+        verificarOrdenRecorridoCg();
     } catch (e) {
         console.warn("No se pudo cargar recoleccion principal:", e);
     }
@@ -1278,6 +1339,53 @@ function limpiarRecoleccionCg() {
     CG_REC_CAMION_SELECTORS.forEach(sel => $(sel).val("").trigger("change"));
     $("#cgRecSemana").val("").trigger("change");
     CG.idDiaRecoleccionLegacy = 0;
+    if (typeof rpOcultarAvisoOrdenRecorrido === "function") {
+        rpOcultarAvisoOrdenRecorrido(document.getElementById("avisoOrdenRecorridoCg"));
+    }
+}
+
+let _ordenRecorridoCgTimer = null;
+function verificarOrdenRecorridoCg() {
+    clearTimeout(_ordenRecorridoCgTimer);
+    _ordenRecorridoCgTimer = setTimeout(() => verificarOrdenRecorridoCgNow(), 280);
+}
+
+async function verificarOrdenRecorridoCgNow() {
+    const root = document.getElementById("avisoOrdenRecorridoCg");
+    const orden = intOrNullCg("#cgOrdenRecorrido");
+    const semana = intOrNullCg("#cgRecSemana");
+    const idExcluir = parseInt($("#cgEstId").val(), 10) || 0;
+
+    if (!orden || orden <= 0 || !semana) {
+        if (typeof rpOcultarAvisoOrdenRecorrido === "function")
+            rpOcultarAvisoOrdenRecorrido(root);
+        return;
+    }
+
+    const dias = obtenerDiasSemanaRecoleccionCg();
+    for (const d of dias) {
+        if (!d.IdCamion) continue;
+        try {
+            const info = await fetchJsonCg(
+                `/ClientesEstablecimientos/OcupanteOrdenRecorrido?idCamion=${d.IdCamion}&idDia=${d.IdDia}&idSemana=${semana}&orden=${orden}&idExcluir=${idExcluir}`,
+                { headers: authCg() }
+            );
+            if (info?.Ocupado || info?.ocupado) {
+                if (typeof rpMostrarAvisoOrdenRecorrido === "function") {
+                    rpMostrarAvisoOrdenRecorrido(root, {
+                        posicion: orden,
+                        nombre: typeof rpNombreOcupanteOrden === "function" ? rpNombreOcupanteOrden(info) : "otra persona"
+                    });
+                }
+                return;
+            }
+        } catch (e) {
+            console.warn(e);
+        }
+    }
+
+    if (typeof rpOcultarAvisoOrdenRecorrido === "function")
+        rpOcultarAvisoOrdenRecorrido(root);
 }
 
 function obtenerDiasSemanaRecoleccionCg() {
@@ -1321,6 +1429,8 @@ function obtenerModeloRecoleccionCg() {
             const n = intOrNullCg("#cgOrdenRecorrido");
             return n && n > 0 ? n : null;
         })(),
+        DesplazarOrdenRecorrido: typeof rpDecisionAvisoOrdenRecorrido === "function"
+            && rpDecisionAvisoOrdenRecorrido(document.getElementById("avisoOrdenRecorridoCg")) === true,
         Kilos: Number.isNaN(kilos) ? null : kilos,
         IdTipoGenerador: intOrNullCg("#cgTipoGenerador"),
         DiasSemana: diasSemana,
@@ -1368,6 +1478,13 @@ async function cargarRecorridosAsignadosCg() {
 
 async function guardarRecoleccionPrincipalCg() {
     if (CG.id <= 0 || !tieneDatosRecoleccionCg()) return { ok: true };
+
+    const aviso = document.getElementById("avisoOrdenRecorridoCg");
+    if (aviso && !aviso.hidden
+        && typeof rpDecisionAvisoOrdenRecorrido === "function"
+        && rpDecisionAvisoOrdenRecorrido(aviso) === null) {
+        return { ok: false, mensaje: "El Nº de recorrido ya está ocupado. Indicá si querés reemplazar y desplazar a los demás." };
+    }
 
     try {
         const data = await fetchJsonCg(API_CG.recoleccionPrincipalGuardar, {
@@ -2412,12 +2529,12 @@ function bindEstHubEventsCg() {
         abrirWorkspaceMesCg(now.getFullYear(), now.getMonth() + 1);
     });
     $(root).on("click", "#cgEstControlMensualBody tr[data-mes]", function (e) {
-        if ($(e.target).closest(".cg-cm-int-eye, .cg-cm-obs-eye").length) return;
+        if ($(e.target).closest(".cg-cm-int-eye, .cg-cm-obs-eye, .cg-cm-visita-cell").length) return;
         CG.hubActivo = "est";
         abrirWorkspaceMesCg(Number($(this).data("anio")), Number($(this).data("mes")));
     });
     $(root).on("click", "#cgEstCards_controlMensual article[data-mes]", function (e) {
-        if ($(e.target).closest(".cg-cm-int-eye, .cg-cm-obs-eye").length) return;
+        if ($(e.target).closest(".cg-cm-int-eye, .cg-cm-obs-eye, .cg-cm-visita-cell").length) return;
         CG.hubActivo = "est";
         abrirWorkspaceMesCg(Number($(this).data("anio")), Number($(this).data("mes")));
     });
@@ -2508,17 +2625,13 @@ function bindEstHubEventsCg() {
             : $(this).hasClass("ws-tipo") ? "tipo"
             : "otro";
 
-        linea.IdProducto = Number($row.find(".ws-prod").val()) || 0;
-        linea.IdListaPrecio = Number($row.find(".ws-lista").val()) || 0;
-        linea.TipoMovimiento = Number($row.find(".ws-tipo").val()) || 1;
-        linea.Cantidad = leerNumeroWsCg($row.find(".ws-cant").val());
-        linea.PrecioVenta = leerNumeroWsCg($row.find(".ws-precio").val());
-        linea.NoRetirado = Number(linea.TipoMovimiento) === 2 && $row.find(".ws-noret").is(":checked");
-        sincronizarCheckNoRetiradoWsCg($row, linea);
+        leerCamposLineaWsDesdeDomCg($row, linea);
+        sincronizarUiNoRetiradoWsCg($row, linea);
 
         await sincronizarPrecioLineaWsCg($row, linea, campo);
 
-        $row.find(".ws-sub").text(fmtMoneyCg(linea.Cantidad * linea.PrecioVenta));
+        $row.find(".ws-sub").text(fmtMoneyCg(subtotalLineaWsCg(linea)));
+        refrescarSaldosNoRetiradoWsCg();
         actualizarResumenCobrosWsCg();
         actualizarAlertaDuplicadosLineasWsCg();
     });
@@ -2850,11 +2963,12 @@ function renderRecorridosCg(items, huboError, containerSelector) {
     }
 
     cont.html(items.map(r => `
-        <div class="cg-recorrido-item ${r.Activo ? "" : "cg-recorrido-inactivo"}" data-id="${r.Id}">
+        <div class="cg-recorrido-item ${r.Activo ? "" : "cg-recorrido-inactivo"}${r.Reprogramado ? " cg-recorrido-reprogramado" : ""}" data-id="${r.Id}">
             <div class="cg-recorrido-main">
                 <i class="fa fa-truck me-2"></i>
                 <strong>${escapeCg(r.RecorridoTexto || `${r.Camion} ${r.Semana} ${r.Dia}`)}</strong>
                 <span class="badge bg-info ms-2">Pos. ${r.Posicion ?? "-"}</span>
+                ${r.Reprogramado ? `<span class="badge bg-danger ms-2">Reprogramado</span>` : ""}
                 ${r.Establecimiento ? `<small class="text-muted ms-2">${escapeCg(r.Establecimiento)}</small>` : ""}
             </div>
             <div class="cg-recorrido-meta">
@@ -2874,6 +2988,7 @@ function renderRecorridosCg(items, huboError, containerSelector) {
                           data-id-dia="${r.IdDia}"
                           data-posicion="${r.Posicion ?? 1}"
                           data-activo="${r.Activo ? "1" : "0"}"
+                          data-reprogramado="${r.Reprogramado ? "1" : "0"}"
                           placeholder="Indicaciones para el chofer (se ven en la hoja de ruta)">${escapeCg(r.Observacion || "")}</textarea>
             </div>
         </div>`).join(""));
@@ -2904,6 +3019,7 @@ async function guardarObservacionRecorridoCg(el) {
         IdDia: parseInt($el.data("id-dia"), 10),
         Posicion: parseInt($el.data("posicion"), 10) || 1,
         Activo: String($el.data("activo")) === "1",
+        Reprogramado: String($el.data("reprogramado")) === "1",
         Observacion: valor || null
     };
 
@@ -3258,14 +3374,14 @@ function renderControlMensualCg(data) {
             ? columnas.map(c => {
                 const p = mapaProd[c.IdProducto];
                 const q = Number(p?.NoRetiradas) || 0;
-                return `<td class="cg-cm-cell-qty cg-cm-cell-noret ${q === 0 ? "is-empty" : ""}" title="${escapeCg(c.Nombre)}">${q === 0 ? "—" : fmtQtyCg(q)}</td>`;
+                return `<td class="cg-cm-cell-qty cg-cm-cell-noret ${q === 0 ? "is-empty" : (q < 0 ? "is-neg" : "")}" title="${escapeCg(c.Nombre)}">${q === 0 ? "—" : fmtQtySignedCg(q)}</td>`;
             }).join("")
             : `<td class="cg-cm-cell-qty cg-cm-cell-noret is-empty">—</td>`;
 
         return `<tr class="${rowClass}${sel}${vencido}" data-anio="${anio}" data-mes="${m.Mes}">
             ${mostrarAnio ? `<td class="cg-cm-sticky-left cg-cm-col-anio cg-cm-mes">${anio}</td>` : ""}
             <td class="${mostrarAnio ? "cg-cm-sticky-left-2" : "cg-cm-sticky-left"} cg-cm-mes">${escapeCg(m.MesNombre)}${badgeAtraso}</td>
-            <td class="${mostrarAnio ? "cg-cm-sticky-left-3" : "cg-cm-sticky-left-2"} cg-cm-date">${formatearFechaCortaCg(m.FechaVisita)}</td>
+            <td class="${mostrarAnio ? "cg-cm-sticky-left-3" : "cg-cm-sticky-left-2"} cg-cm-date">${celdaFechaVisitaCg(m, anio)}</td>
             ${celdasEnt}
             ${celdasRet}
             ${celdasNoRet}
@@ -3314,7 +3430,7 @@ async function abrirWorkspaceMesCg(anio, mes, keepScroll) {
     $h("cgMesWsKpis").html(`
         <div class="cg-mes-ws-kpi"><span>Entregadas</span><strong>${fmtQtyCg(m.Entregadas)}</strong></div>
         <div class="cg-mes-ws-kpi"><span>Retiradas</span><strong>${fmtQtyCg(m.Retiradas)}</strong></div>
-        <div class="cg-mes-ws-kpi cg-mes-ws-kpi--noret"><span>No retiradas</span><strong>${fmtQtyCg(m.NoRetiradas)}</strong></div>
+        <div class="cg-mes-ws-kpi cg-mes-ws-kpi--noret"><span>No retiradas</span><strong>${fmtQtySignedCg(m.NoRetiradas)}</strong></div>
         <div class="cg-mes-ws-kpi"><span>Stock mes</span><strong>${fmtQtyCg(m.StockCliente)}</strong></div>
         <div class="cg-mes-ws-kpi cg-mes-ws-kpi--total" title="Retiros del mes + intereses">
             <span>Total mes</span><strong class="cg-val-debe">${fmtMoneyCg(totalMes)}</strong>
@@ -3384,7 +3500,7 @@ async function abrirWorkspaceMesCg(anio, mes, keepScroll) {
                     <td class="text-end cg-prod-td-ret ${ret ? "is-filled" : "is-zero"}">${fmtQtyCg(p.Retiradas)}</td>
                     <td class="text-end cg-prod-td-ret ${ret ? "is-filled" : "is-zero"}">${fmtMoneyCg(p.PrecioUnitarioRetiro)}</td>
                     <td class="text-end cg-prod-td-ret cg-prod-td-sub ${subRet ? "is-filled" : "is-zero"}">${fmtMoneyCg(p.SubtotalRetiros)}</td>
-                    <td class="text-end cg-prod-td-noret ${noRet ? "is-filled" : "is-zero"}">${fmtQtyCg(p.NoRetiradas)}</td>
+                    <td class="text-end cg-prod-td-noret ${noRet ? (noRet < 0 ? "is-filled is-neg" : "is-filled") : "is-zero"}">${fmtQtySignedCg(p.NoRetiradas)}</td>
                     <td class="text-end cg-prod-td-noret ${noRet ? "is-filled" : "is-zero"}">${fmtMoneyCg(p.PrecioUnitarioNoRetiro)}</td>
                     <td class="text-end cg-prod-td-noret cg-prod-td-sub ${subNoRet ? "is-filled" : "is-zero"}">${fmtMoneyCg(p.SubtotalNoRetiros)}</td>
                 </tr>`;
@@ -3540,12 +3656,9 @@ async function obtenerPrecioListaWsCg(idProducto, idLista) {
     return null;
 }
 
-/** Entrega = $0; Retiro = precio de lista al elegir producto + lista. */
+/** Entrega y Retiro: precio de lista al elegir producto + lista. */
 async function sincronizarPrecioLineaWsCg($row, linea, campo) {
-    const tipo = Number(linea.TipoMovimiento || 1);
-
-    if (tipo === 1) {
-        // Entrega: siempre sin cargo (aunque haya lista elegida).
+    if (campo === "lista" && !(Number(linea.IdListaPrecio) > 0)) {
         linea.PrecioVenta = 0;
         $row.find(".ws-precio").val(fmtQtyCg(0));
         return;
@@ -3623,10 +3736,7 @@ function agregarLineaWsCg(pref) {
     const idLista = pref?.IdListaPrecio || 0;
     const tipo = Number(pref?.TipoMovimiento || 1) || 1;
     let precio = Number(pref?.PrecioVenta) || 0;
-    if (tipo === 1) {
-        // Entrega: sin cargo.
-        precio = 0;
-    } else if (!(precio > 0) && idProducto > 0) {
+    if (!(precio > 0) && idProducto > 0) {
         const desdeSug = precioDesdeSugeridosWsCg(idProducto, idLista);
         if (desdeSug != null && Number(desdeSug) > 0) precio = Number(desdeSug);
     }
@@ -3635,7 +3745,8 @@ function agregarLineaWsCg(pref) {
         IdListaPrecio: idLista,
         TipoMovimiento: tipo,
         NoRetirado: !!pref?.NoRetirado && tipo === 2,
-        Cantidad: pref?.Cantidad || 1,
+        NoRetiradoSigno: Number(pref?.NoRetiradoSigno) === -1 ? -1 : 1,
+        Cantidad: magnitudCantidadWsCg(pref?.Cantidad || 1) || 1,
         PrecioVenta: precio
     });
     renderLineasWsCg();
@@ -3652,13 +3763,15 @@ function normNumClaveWsCg(n) {
 function claveLineaWsCompletaCg(l) {
     const tipo = Number(l.TipoMovimiento || 1);
     const idLista = Number(l.IdListaPrecio) > 0 ? Number(l.IdListaPrecio) : 0;
-    const noRet = tipo === 2 && !!l.NoRetirado ? "1" : "0";
+    const noRet = tipo === 2 && !!l.NoRetirado
+        ? (signoNoRetiradoWsCg(l) < 0 ? "-1" : "1")
+        : "0";
     return [
         Number(l.IdProducto) || 0,
         tipo,
         noRet,
         idLista,
-        normNumClaveWsCg(l.Cantidad),
+        normNumClaveWsCg(magnitudCantidadWsCg(l.Cantidad)),
         normNumClaveWsCg(l.PrecioVenta),
         normNumClaveWsCg(l.PorcDescuento || 0),
         normNumClaveWsCg(l.PorcIva || 0)
@@ -3722,7 +3835,12 @@ function renderLineasWsCg() {
 
     $h("cgWsLineasBody").html(hubPropCg("wsLineas").map((l, i) => {
         const esRetiro = Number(l.TipoMovimiento || 1) === 2;
-        const noRetChecked = esRetiro && !!l.NoRetirado ? "checked" : "";
+        const noretOn = esRetiro && !!l.NoRetirado;
+        const noretSign = noretOn ? signoNoRetiradoWsCg(l) : 0;
+        const noretCls = noretOn
+            ? (noretSign < 0 ? "is-on is-neg" : "is-on is-pos")
+            : "";
+        const cantMostrar = magnitudCantidadWsCg(l.Cantidad) || Number(l.Cantidad) || 0;
         return `
         <div class="cg-ws-linea" data-idx="${i}">
             <div class="cg-ws-linea-top">
@@ -3752,7 +3870,7 @@ function renderLineasWsCg() {
                 </label>
                 <label class="cg-ws-field cg-ws-field--num">
                     <span>Cantidad</span>
-                    <input type="text" class="form-control Inputmiles ws-cant" value="${fmtQtyCg(l.Cantidad)}" inputmode="decimal" />
+                    <input type="text" class="form-control Inputmiles ws-cant" value="${fmtQtyCg(cantMostrar)}" inputmode="decimal" />
                 </label>
                 <label class="cg-ws-field cg-ws-field--num cg-ws-field--precio">
                     <span>Precio</span>
@@ -3762,13 +3880,19 @@ function renderLineasWsCg() {
             <div class="cg-ws-linea-foot">
                 <div class="cg-ws-linea-subtotal">
                     <span>Subtotal</span>
-                    <strong class="ws-sub">${fmtMoneyCg((Number(l.Cantidad) || 0) * (Number(l.PrecioVenta) || 0))}</strong>
+                    <strong class="ws-sub">${fmtMoneyCg(subtotalLineaWsCg(l))}</strong>
                 </div>
-                <label class="cg-ws-noret ${esRetiro ? "" : "d-none"} ${noRetChecked ? "is-on" : ""}" title="Marcar si el producto no se retiró en esta visita">
-                    <input type="checkbox" class="ws-noret" ${noRetChecked} />
-                    <i class="fa fa-ban" aria-hidden="true"></i>
-                    <span>No retirado</span>
-                </label>
+                <div class="cg-ws-noret-ctl ${esRetiro ? "" : "d-none"} ${noretCls}" data-sign="${noretSign}"
+                     title="No retirado + suma al saldo (quedó sin retirar). No retirado − resta y lo compensa.">
+                    <button type="button" class="cg-ws-noret-btn ws-noret-sign" data-sign="-1" title="No retirado −">−</button>
+                    <div class="cg-ws-noret-mid">
+                        <i class="fa fa-ban" aria-hidden="true"></i>
+                        <span class="cg-ws-noret-label">No retirado</span>
+                        <strong class="cg-ws-noret-qty">${noretOn ? fmtQtySignedCg(cantidadEfectivaWsCg(l)) : ""}</strong>
+                    </div>
+                    <button type="button" class="cg-ws-noret-btn ws-noret-sign" data-sign="1" title="No retirado +">+</button>
+                </div>
+                <span class="cg-ws-noret-saldo d-none" title="Saldo de no retirado de este producto"></span>
                 <button type="button" class="btn btn-outline-danger btn-sm btn-ws-quitar" data-idx="${i}" title="Quitar">
                     <i class="fa fa-trash"></i>
                 </button>
@@ -3781,26 +3905,147 @@ function renderLineasWsCg() {
         if (l.IdProducto) $row.find(".ws-prod").val(String(l.IdProducto));
         if (l.IdListaPrecio) $row.find(".ws-lista").val(String(l.IdListaPrecio));
         $row.find(".ws-tipo").val(String(l.TipoMovimiento || 1));
-        sincronizarCheckNoRetiradoWsCg($row, l);
+        sincronizarUiNoRetiradoWsCg($row, l);
     });
     actualizarAlertaDuplicadosLineasWsCg();
 }
 
-function sincronizarCheckNoRetiradoWsCg($row, linea) {
+function magnitudCantidadWsCg(n) {
+    const v = Number(n);
+    return Number.isFinite(v) ? Math.abs(v) : 0;
+}
+
+function signoNoRetiradoWsCg(linea) {
+    if (!(Number(linea?.TipoMovimiento) === 2 && linea?.NoRetirado)) return 1;
+    return Number(linea.NoRetiradoSigno) === -1 ? -1 : 1;
+}
+
+function cantidadEfectivaWsCg(linea) {
+    const mag = magnitudCantidadWsCg(linea?.Cantidad);
+    if (Number(linea?.TipoMovimiento) === 2 && linea?.NoRetirado) {
+        return mag * signoNoRetiradoWsCg(linea);
+    }
+    return mag;
+}
+
+function subtotalLineaWsCg(linea) {
+    return cantidadEfectivaWsCg(linea) * (Number(linea?.PrecioVenta) || 0);
+}
+
+function lineaConCantidadWsCg(linea) {
+    return Number(linea?.IdProducto) > 0 && magnitudCantidadWsCg(linea?.Cantidad) > 0;
+}
+
+function fmtQtySignedCg(n) {
+    const v = Number(n) || 0;
+    const abs = fmtQtyCg(Math.abs(v));
+    if (v > 0) return "+" + abs;
+    if (v < 0) return "−" + abs;
+    return abs;
+}
+
+function saldoNoRetiradoProductoWsCg(idProducto) {
+    const idP = Number(idProducto || 0);
+    if (idP <= 0) return 0;
+    const saved = (hubPropCg("stockCliente") || []).find(s => Number(s.IdProducto) === idP);
+    let saldo = Number(saved?.NoRetiradas) || 0;
+    (hubPropCg("wsLineas") || []).forEach(l => {
+        if (Number(l.IdProducto) !== idP) return;
+        if (Number(l.TipoMovimiento) !== 2 || !l.NoRetirado) return;
+        saldo += cantidadEfectivaWsCg(l);
+    });
+    return saldo;
+}
+
+function leerCamposLineaWsDesdeDomCg($row, linea) {
+    linea.IdProducto = Number($row.find(".ws-prod").val()) || 0;
+    linea.IdListaPrecio = Number($row.find(".ws-lista").val()) || 0;
+    linea.TipoMovimiento = Number($row.find(".ws-tipo").val()) || 1;
+    const rawCant = leerNumeroWsCg($row.find(".ws-cant").val());
+    linea.PrecioVenta = leerNumeroWsCg($row.find(".ws-precio").val());
+    if (Number(linea.TipoMovimiento) === 2 && rawCant < 0) {
+        linea.NoRetirado = true;
+        linea.NoRetiradoSigno = -1;
+        linea.Cantidad = Math.abs(rawCant);
+        $row.find(".ws-cant").val(fmtQtyCg(linea.Cantidad));
+    } else {
+        linea.Cantidad = Math.abs(rawCant);
+    }
+    if (Number(linea.TipoMovimiento) !== 2) {
+        linea.NoRetirado = false;
+        linea.NoRetiradoSigno = 1;
+    }
+}
+
+function aplicarSignoNoRetiradoWsCg($row, linea, signWanted) {
+    const want = Number(signWanted) === -1 ? -1 : 1;
+    if (Number(linea.TipoMovimiento) !== 2) {
+        linea.NoRetirado = false;
+        linea.NoRetiradoSigno = 1;
+        sincronizarUiNoRetiradoWsCg($row, linea);
+        return;
+    }
+    if (linea.NoRetirado && signoNoRetiradoWsCg(linea) === want) {
+        linea.NoRetirado = false;
+        linea.NoRetiradoSigno = 1;
+    } else {
+        linea.NoRetirado = true;
+        linea.NoRetiradoSigno = want;
+        if (!(magnitudCantidadWsCg(linea.Cantidad) > 0)) {
+            linea.Cantidad = 1;
+            $row.find(".ws-cant").val(fmtQtyCg(1));
+        }
+    }
+    sincronizarUiNoRetiradoWsCg($row, linea);
+}
+
+function sincronizarUiNoRetiradoWsCg($row, linea) {
     if (!$row?.length) return;
     const esRetiro = Number(linea?.TipoMovimiento || $row.find(".ws-tipo").val() || 1) === 2;
-    const $wrap = $row.find(".cg-ws-noret");
-    $wrap.toggleClass("d-none", !esRetiro);
+    const $ctl = $row.find(".cg-ws-noret-ctl");
+    const $saldo = $row.find(".cg-ws-noret-saldo");
+    $ctl.toggleClass("d-none", !esRetiro);
+
     if (!esRetiro) {
-        $row.find(".ws-noret").prop("checked", false);
-        $wrap.removeClass("is-on");
-        if (linea) linea.NoRetirado = false;
-    } else if (linea) {
-        $row.find(".ws-noret").prop("checked", !!linea.NoRetirado);
-        $wrap.toggleClass("is-on", !!linea.NoRetirado);
-    } else {
-        $wrap.toggleClass("is-on", $row.find(".ws-noret").is(":checked"));
+        if (linea) {
+            linea.NoRetirado = false;
+            linea.NoRetiradoSigno = 1;
+        }
+        $ctl.removeClass("is-on is-pos is-neg").attr("data-sign", "0");
+        $ctl.find(".cg-ws-noret-qty").text("");
+        $saldo.addClass("d-none").text("");
+        return;
     }
+
+    const on = !!linea?.NoRetirado;
+    const sign = on ? signoNoRetiradoWsCg(linea) : 0;
+    $ctl.toggleClass("is-on", on)
+        .toggleClass("is-pos", on && sign > 0)
+        .toggleClass("is-neg", on && sign < 0)
+        .attr("data-sign", String(sign));
+    $ctl.find(".cg-ws-noret-qty").text(on ? fmtQtySignedCg(cantidadEfectivaWsCg(linea)) : "");
+
+    const idProd = Number(linea?.IdProducto) || 0;
+    if (idProd > 0) {
+        const saldo = saldoNoRetiradoProductoWsCg(idProd);
+        $saldo.removeClass("d-none is-zero is-pos is-neg")
+            .addClass(saldo > 0 ? "is-pos" : (saldo < 0 ? "is-neg" : "is-zero"))
+            .text(`saldo ${fmtQtySignedCg(saldo)}`);
+    } else {
+        $saldo.addClass("d-none").text("");
+    }
+}
+
+function refrescarSaldosNoRetiradoWsCg() {
+    $h("cgWsLineasBody").find(".cg-ws-linea").each(function () {
+        const i = Number($(this).data("idx"));
+        const ln = hubPropCg("wsLineas")[i];
+        if (ln) sincronizarUiNoRetiradoWsCg($(this), ln);
+    });
+}
+
+function sincronizarCheckNoRetiradoWsCg($row, linea) {
+    sincronizarUiNoRetiradoWsCg($row, linea);
 }
 
 function agregarCobroWsCg(preset) {
@@ -3923,7 +4168,7 @@ function totalPorTipoWsCg(lineas, tipo) {
     const t = Number(tipo);
     return (lineas || [])
         .filter(l => Number(l.TipoMovimiento || 1) === t)
-        .reduce((s, l) => s + (Number(l.Cantidad) || 0) * (Number(l.PrecioVenta) || 0), 0);
+        .reduce((s, l) => s + subtotalLineaWsCg(l), 0);
 }
 
 /** Lo cobrable = entrega + retiro. */
@@ -3932,7 +4177,7 @@ function totalCobrableWsCg(lineas) {
 }
 
 function actualizarResumenCobrosWsCg() {
-    const lineas = (hubPropCg("wsLineas") || []).filter(l => l.IdProducto > 0 && l.Cantidad > 0);
+    const lineas = (hubPropCg("wsLineas") || []).filter(lineaConCantidadWsCg);
     const cobros = cobrosWsParaGuardarCg();
     const totalEnt = totalPorTipoWsCg(lineas, 1);
     const totalRet = totalPorTipoWsCg(lineas, 2);
@@ -4064,19 +4309,14 @@ async function guardarVisitaUnificadaCg() {
         const idx = Number($(this).data("idx"));
         const linea = hubPropCg("wsLineas")[idx];
         if (!linea) return;
-        linea.IdProducto = Number($(this).find(".ws-prod").val()) || 0;
-        linea.IdListaPrecio = Number($(this).find(".ws-lista").val()) || 0;
-        linea.TipoMovimiento = Number($(this).find(".ws-tipo").val()) || 1;
-        linea.Cantidad = leerNumeroWsCg($(this).find(".ws-cant").val());
-        linea.PrecioVenta = leerNumeroWsCg($(this).find(".ws-precio").val());
-        linea.NoRetirado = Number(linea.TipoMovimiento) === 2 && $(this).find(".ws-noret").is(":checked");
+        leerCamposLineaWsDesdeDomCg($(this), linea);
     });
 
-    const lineas = (hubPropCg("wsLineas") || []).filter(l => l.IdProducto > 0 && l.Cantidad > 0);
+    const lineas = (hubPropCg("wsLineas") || []).filter(lineaConCantidadWsCg);
     const cobros = cobrosWsParaGuardarCg();
     const hayProductos = lineas.length > 0;
 
-    if (lineas.some(l => Number(l.TipoMovimiento) === 2 && !(Number(l.IdListaPrecio) > 0))) {
+    if (lineas.some(l => Number(l.TipoMovimiento) === 2 && !l.NoRetirado && !(Number(l.IdListaPrecio) > 0))) {
         errorModal("Seleccioná la lista / tipo de pago en las líneas de retiro.");
         return;
     }
@@ -4125,7 +4365,7 @@ async function guardarVisitaUnificadaCg() {
                 IdListaPrecio: l.IdListaPrecio > 0 ? l.IdListaPrecio : null,
                 TipoMovimiento: l.TipoMovimiento,
                 NoRetirado: Number(l.TipoMovimiento) === 2 && !!l.NoRetirado,
-                Cantidad: l.Cantidad,
+                Cantidad: cantidadEfectivaWsCg(l),
                 PrecioVenta: l.PrecioVenta,
                 CostoUnitario: 0,
                 PorcDescuento: 0,
@@ -4323,6 +4563,239 @@ function actualizarChipsAtrasosSeleccionCg(anio, mes) {
         const m = Number($(this).data("mes"));
         $(this).toggleClass("is-active", a === anio && m === mes);
     });
+}
+
+function celdaFechaVisitaCg(m, anio, enCard) {
+    const txt = formatearFechaCortaCg(m.FechaVisita) || "—";
+    const wrap = enCard ? "cg-cm-visita-cell cg-cm-visita-card" : "cg-cm-visita-cell";
+    const label = enCard ? `<span class="cg-cm-visita-label">Visita:</span>` : "";
+    return `<div class="${wrap}">
+        ${label}
+        <span class="cg-cm-visita-txt">${escapeCg(txt)}</span>
+        <button type="button" class="cg-cm-visita-edit" data-anio="${anio}" data-mes="${m.Mes}"
+                title="Cambiar fecha de visita">
+            <i class="fa fa-pencil" aria-hidden="true"></i>
+        </button>
+    </div>`;
+}
+
+function limitesMesIsoCg(anio, mes) {
+    const last = new Date(anio, mes, 0).getDate();
+    const mm = String(mes).padStart(2, "0");
+    return {
+        min: `${anio}-${mm}-01`,
+        max: `${anio}-${mm}-${String(last).padStart(2, "0")}`
+    };
+}
+
+function isoADdMmYyyyCg(iso) {
+    const s = (iso || "").toString().slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return "";
+    const [y, m, d] = s.split("-");
+    return `${d}/${m}/${y}`;
+}
+
+function ddMmYyyyAIsoCg(txt) {
+    const raw = (txt || "").trim();
+    if (!raw) return "";
+    if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+    let d, m, y;
+    const slash = raw.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+    if (slash) {
+        d = Number(slash[1]);
+        m = Number(slash[2]);
+        y = Number(slash[3]);
+    } else {
+        const digits = raw.replace(/\D/g, "");
+        if (digits.length !== 8) return "";
+        d = Number(digits.slice(0, 2));
+        m = Number(digits.slice(2, 4));
+        y = Number(digits.slice(4, 8));
+    }
+    if (!y || m < 1 || m > 12 || d < 1 || d > 31) return "";
+    const dt = new Date(y, m - 1, d);
+    if (dt.getFullYear() !== y || dt.getMonth() !== m - 1 || dt.getDate() !== d) return "";
+    return `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+}
+
+function fechaPerteneceAlMesCg(iso, anio, mes) {
+    if (!iso || iso.length < 10) return false;
+    const [y, m] = iso.split("-").map(Number);
+    return y === Number(anio) && m === Number(mes);
+}
+
+function isoDefaultVisitaMesCg(anio, mes, fechaExistente) {
+    const existente = fechaInputCg(fechaExistente);
+    if (existente && fechaPerteneceAlMesCg(existente, anio, mes)) return existente;
+    const { min, max } = limitesMesIsoCg(anio, mes);
+    const hoy = new Date();
+    const last = Number(max.slice(8));
+    const day = String(Math.min(Math.max(hoy.getDate(), 1), last)).padStart(2, "0");
+    const cand = `${anio}-${String(mes).padStart(2, "0")}-${day}`;
+    if (cand < min) return min;
+    if (cand > max) return max;
+    return cand;
+}
+
+function enmascararFechaCortaInputCg(el) {
+    const digits = (el.value || "").replace(/\D/g, "").slice(0, 8);
+    let next = digits;
+    if (digits.length > 4) next = `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
+    else if (digits.length > 2) next = `${digits.slice(0, 2)}/${digits.slice(2)}`;
+    if (el.value !== next) el.value = next;
+}
+
+function abrirCalendarioFechaVisitaCg(btn) {
+    const picker = $(btn).closest(".cg-cm-visita-editor").find(".cg-cm-visita-picker").get(0);
+    if (!picker) return;
+    const iso = ddMmYyyyAIsoCg($(btn).closest(".cg-cm-visita-editor").find(".cg-cm-visita-input").val());
+    if (iso) picker.value = iso;
+    try {
+        if (typeof picker.showPicker === "function") picker.showPicker();
+        else picker.click();
+    } catch {
+        picker.click();
+    }
+}
+
+function iniciarEdicionFechaVisitaCg(btn) {
+    const $btn = $(btn);
+    const anio = Number($btn.data("anio"));
+    const mes = Number($btn.data("mes"));
+    if (!anio || !mes) return;
+
+    const $cell = $btn.closest(".cg-cm-visita-cell");
+    if (!$cell.length || $cell.hasClass("is-editing")) return;
+
+    $(".cg-cm-visita-cell.is-editing").each(function () {
+        if (this !== $cell[0]) cancelarEdicionFechaVisitaCg(this);
+    });
+
+    const filas = hubPropCg("controlFiltrado")?.Filas || [];
+    const m = filas.find(x => Number(x.Mes) === mes && Number(x.Anio || CG.controlAnio) === anio);
+    const lim = limitesMesIsoCg(anio, mes);
+    const iso = isoDefaultVisitaMesCg(anio, mes, m?.FechaVisita);
+
+    $cell.data("prev-html", $cell.html());
+    $cell.addClass("is-editing");
+    $cell.html(`
+        <div class="cg-cm-visita-editor" data-anio="${anio}" data-mes="${mes}">
+            <input type="text" class="cg-cm-visita-input" inputmode="numeric" autocomplete="off" maxlength="10"
+                   placeholder="dd/mm/aaaa" value="${isoADdMmYyyyCg(iso)}" aria-label="Fecha de visita">
+            <input type="date" class="cg-cm-visita-picker" min="${lim.min}" max="${lim.max}" value="${iso}" tabindex="-1" aria-hidden="true">
+            <button type="button" class="cg-cm-visita-btn cg-cm-visita-cal" title="Calendario">
+                <i class="fa fa-calendar" aria-hidden="true"></i>
+            </button>
+            <button type="button" class="cg-cm-visita-btn cg-cm-visita-ok" title="Aceptar">
+                <i class="fa fa-check" aria-hidden="true"></i>
+            </button>
+            <button type="button" class="cg-cm-visita-btn cg-cm-visita-cancel" title="Cancelar">
+                <i class="fa fa-times" aria-hidden="true"></i>
+            </button>
+        </div>`);
+    const input = $cell.find(".cg-cm-visita-input").get(0);
+    if (input) {
+        input.focus();
+        input.select();
+    }
+}
+
+function cancelarEdicionFechaVisitaCg(el) {
+    const $cell = $(el).closest(".cg-cm-visita-cell");
+    const prev = $cell.data("prev-html");
+    $cell.removeClass("is-editing");
+    if (prev) $cell.html(prev);
+}
+
+async function guardarFechaVisitaInlineCg(el) {
+    const $ed = $(el).closest(".cg-cm-visita-editor");
+    if (!$ed.length || $ed.data("saving")) return;
+
+    const anio = Number($ed.data("anio"));
+    const mes = Number($ed.data("mes"));
+    const fecha = ddMmYyyyAIsoCg($ed.find(".cg-cm-visita-input").val());
+    if (!anio || !mes) return;
+    if (!fecha) {
+        errorModal("Indicá la fecha de la visita (dd/mm/aaaa).");
+        $ed.find(".cg-cm-visita-input").trigger("focus");
+        return;
+    }
+    if (!fechaPerteneceAlMesCg(fecha, anio, mes)) {
+        const nom = (MES_NOMBRES_CG[mes] || "ese mes").toLowerCase();
+        errorModal(`Solo se pueden elegir días de ${nom} ${anio}.`);
+        $ed.find(".cg-cm-visita-input").trigger("focus");
+        return;
+    }
+
+    const filas = hubPropCg("controlFiltrado")?.Filas || [];
+    const m = filas.find(x => Number(x.Mes) === mes && Number(x.Anio || CG.controlAnio) === anio);
+    if (!m) {
+        errorModal("No se encontró el mes para actualizar la fecha.");
+        return;
+    }
+
+    const actual = fechaInputCg(m.FechaVisita);
+    if (actual === fecha) {
+        cancelarEdicionFechaVisitaCg(el);
+        return;
+    }
+
+    $ed.data("saving", true);
+    $ed.find("input, button").prop("disabled", true);
+
+    const modelo = {
+        Id: Number(m.IdControl) || 0,
+        IdCliente: CG.id,
+        IdEstablecimiento: hubIdEstablecimientoCg(),
+        Anio: anio,
+        Mes: mes,
+        FechaVisita: parseFechaCg(fecha),
+        SinEntrega: !!m.SinEntrega,
+        CajasAFavor: parseInt(m.CajasAFavor, 10) || 0,
+        Observaciones: (m.Observaciones || "").trim() || null,
+        AbonoEfectivo: Number(m.AbonoEfectivo) || 0,
+        AbonoTransferencia: Number(m.AbonoTransferencia) || 0,
+        FechaTransferencia: parseFechaCg(fechaInputCg(m.FechaTransferencia))
+    };
+
+    try {
+        const data = await fetchJsonCg(API_CG.guardarControlMensual, {
+            method: "POST",
+            headers: authCg(),
+            body: JSON.stringify(modelo)
+        });
+
+        if (!data?.valor) {
+            errorModal(data?.mensaje || "No se pudo actualizar la fecha de visita.");
+            $ed.data("saving", false);
+            $ed.find("input, button").prop("disabled", false);
+            return;
+        }
+
+        m.FechaVisita = fecha;
+        const sel = hubPropCg("hubMesSel");
+        if (sel && Number(sel.anio) === anio && Number(sel.mes) === mes) {
+            $h("cgCmFechaVisita").val(fecha);
+            $h("cgWsFechaEntrega").val(fecha);
+        }
+
+        if (typeof exitoModal === "function") exitoModal("Fecha de visita actualizada.");
+
+        if (isHubEstCg()) {
+            await cargarHubEstablecimientoCg(true);
+        } else {
+            CG.tabsLoaded.controlMensual = false;
+            await cargarTabControlMensual(true);
+        }
+        if (hubPropCg("hubMesSel")) {
+            await abrirWorkspaceMesCg(hubPropCg("hubMesSel").anio, hubPropCg("hubMesSel").mes, true);
+        }
+    } catch (e) {
+        console.error(e);
+        errorModal("No se pudo actualizar la fecha de visita.");
+        $ed.data("saving", false);
+        $ed.find("input, button").prop("disabled", false);
+    }
 }
 
 function celdaInteresesMesCg(m, anio) {
@@ -5099,7 +5572,7 @@ function renderHubStockCg(items) {
             <div class="cg-hub-stock-nums">
                 <span><small>Entreg.</small><strong class="rp-money-in">${fmtQtyCg(s.Entregadas)}</strong></span>
                 <span><small>Retir.</small><strong class="rp-money-out">${fmtQtyCg(s.Retiradas)}</strong></span>
-                ${noRet > 0 ? `<span><small>No ret.</small><strong class="cg-val-noret">${fmtQtyCg(noRet)}</strong></span>` : ""}
+                ${noRet !== 0 ? `<span><small>No ret.</small><strong class="cg-val-noret ${noRet < 0 ? "is-neg" : ""}">${fmtQtySignedCg(noRet)}</strong></span>` : ""}
                 <span class="cg-hub-stock-poder"><small>En poder</small><strong class="${poderCls}">${fmtQtyCg(enPoder)}</strong></span>
             </div>
         </div>`;
@@ -5325,7 +5798,7 @@ const CG_CARD_SCHEMAS = {
         fields: [
             { label: "Entregadas", value: r => fmtQtyCg(r.Entregadas), cls: "rp-money-in" },
             { label: "Retiradas", value: r => fmtQtyCg(r.Retiradas), cls: "rp-money-out" },
-            { label: "No retiradas", value: r => fmtQtyCg(r.NoRetiradas), cls: "cg-val-noret" },
+            { label: "No retiradas", value: r => fmtQtySignedCg(r.NoRetiradas), cls: "cg-val-noret" },
             { label: "En poder", value: r => fmtQtyCg(r.EnPoderCliente), cls: r => typeof clsSaldoMoney === "function" ? clsSaldoMoney(r.EnPoderCliente) : "cg-val-accent", full: true }
         ]
     },
@@ -5472,14 +5945,14 @@ function renderControlMensualCardsCg(filas, mostrarAnio) {
                 <div class="cg-data-card-head">
                     <div class="cg-data-card-head-text">
                         <div class="cg-data-card-title">${escapeCg(m.MesNombre)}${mostrarAnio ? ` ${anio}` : ""}</div>
-                        <div class="cg-data-card-sub">Visita: ${formatearFechaCortaCg(m.FechaVisita) || "-"}</div>
+                        <div class="cg-data-card-sub">${celdaFechaVisitaCg(m, anio, true)}</div>
                     </div>
                     ${badge}
                 </div>
                 <div class="cg-data-card-body">
                     <div class="cg-card-field"><span>Entreg.</span><strong class="rp-money-in">${fmtQtyCg(m.Entregadas)}</strong></div>
                     <div class="cg-card-field"><span>Retir.</span><strong class="rp-money-out">${fmtQtyCg(m.Retiradas)}</strong></div>
-                    <div class="cg-card-field"><span>No ret.</span><strong class="cg-val-noret">${fmtQtyCg(m.NoRetiradas)}</strong></div>
+                    <div class="cg-card-field"><span>No ret.</span><strong class="cg-val-noret">${fmtQtySignedCg(m.NoRetiradas)}</strong></div>
                     <div class="cg-card-field"><span>Total mes</span><strong class="cg-val-debe">${fmtMoneyCg(totalMes)}</strong></div>
                     <div class="cg-card-field"><span>Efectivo</span><strong class="${(Number(m.AbonoEfectivo) || 0) > 0 ? "cg-val-haber" : ""}">${fmtMoneyCg(m.AbonoEfectivo)}</strong></div>
                     <div class="cg-card-field"><span>Transf.</span><strong class="${(Number(m.AbonoTransferencia) || 0) > 0 ? "cg-val-haber" : ""}">${fmtMoneyCg(m.AbonoTransferencia)}</strong></div>

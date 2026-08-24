@@ -1243,6 +1243,7 @@
 
             this._mostrarUi();
             this.setModalSoloLectura(soloLectura);
+            this._verificarOrdenRecorrido();
 
             if (typeof this.options.onOpen === "function") {
                 await this.options.onOpen(soloLectura ? "ver" : "editar", this, modelo);
@@ -1423,6 +1424,17 @@
             if (this.isSoloLectura()) return true;
             if (!this.validarCampos()) return false;
 
+            const avisoPendiente = this._id("avisoOrdenRecorridoEst");
+            if (avisoPendiente && !avisoPendiente.hidden
+                && typeof rpDecisionAvisoOrdenRecorrido === "function"
+                && rpDecisionAvisoOrdenRecorrido(avisoPendiente) === null) {
+                this.mostrarErrorCampos(
+                    "El Nº de recorrido ya está ocupado. Indicá si querés reemplazar y desplazar a los demás.",
+                    null,
+                    "validacion");
+                return false;
+            }
+
             const id = this._getFieldValue("txtIdEst");
 
             const modelo = {
@@ -1451,6 +1463,11 @@
                 OrdenRecorrido: (() => {
                     const n = this._getIntOrNull("txtOrdenRecorridoEst");
                     return n && n > 0 ? n : null;
+                })(),
+                DesplazarOrdenRecorrido: (() => {
+                    const aviso = this._id("avisoOrdenRecorridoEst");
+                    return typeof rpDecisionAvisoOrdenRecorrido === "function"
+                        && rpDecisionAvisoOrdenRecorrido(aviso) === true;
                 })(),
                 Kilos: this._getDecimalOrNull("txtKilosEst"),
                 DiasHorarios: (this._getFieldValue("txtDiasHorariosEst") || "").trim() || null
@@ -1590,6 +1607,9 @@
             this.prepararContactosNuevo();
             this.prepararProductosNuevo();
             this._syncIvaCardUI();
+            if (typeof rpOcultarAvisoOrdenRecorrido === "function") {
+                rpOcultarAvisoOrdenRecorrido(this._id("avisoOrdenRecorridoEst"));
+            }
         }
 
         _valorCampoValido(el) {
@@ -1795,6 +1815,64 @@
                     this._localidadLegacy = null;
                     this._actualizarCodigosGeo();
                 });
+            }
+
+            this._bindAvisoOrdenRecorrido();
+        }
+
+        _bindAvisoOrdenRecorrido() {
+            const root = this._id("avisoOrdenRecorridoEst");
+            if (root && typeof rpBindAvisoOrdenRecorrido === "function") {
+                rpBindAvisoOrdenRecorrido(root);
+            }
+
+            const input = this._id("txtOrdenRecorridoEst");
+            if (input) {
+                input.addEventListener("input", () => this._verificarOrdenRecorrido());
+                input.addEventListener("change", () => this._verificarOrdenRecorrido());
+            }
+
+            ["cmbDiaEst", "cmbSemanaEst", "cmbCamionEst"].forEach(id => {
+                const el = this._id(id);
+                if (!el || !window.jQuery) return;
+                window.jQuery(el).off("change.ordenRec").on("change.ordenRec", () => this._verificarOrdenRecorrido());
+            });
+        }
+
+        _verificarOrdenRecorrido() {
+            clearTimeout(this._ordenRecorridoTimer);
+            this._ordenRecorridoTimer = setTimeout(() => this._verificarOrdenRecorridoNow(), 280);
+        }
+
+        async _verificarOrdenRecorridoNow() {
+            const root = this._id("avisoOrdenRecorridoEst");
+            const orden = this._getIntOrNull("txtOrdenRecorridoEst");
+            const idCamion = this._getIntOrNull("cmbCamionEst");
+            const idDia = this._getIntOrNull("cmbDiaEst");
+            const idSemana = this._getIntOrNull("cmbSemanaEst");
+            const idExcluir = this._getIntOrNull("txtIdEst") || 0;
+
+            if (!orden || orden <= 0 || !idCamion || !idDia || !idSemana) {
+                if (typeof rpOcultarAvisoOrdenRecorrido === "function")
+                    rpOcultarAvisoOrdenRecorrido(root);
+                return;
+            }
+
+            try {
+                const url = `/ClientesEstablecimientos/OcupanteOrdenRecorrido?idCamion=${idCamion}&idDia=${idDia}&idSemana=${idSemana}&orden=${orden}&idExcluir=${idExcluir}`;
+                const info = await this._fetchJson(url, { headers: this._headers(false) });
+                if (info?.Ocupado || info?.ocupado) {
+                    if (typeof rpMostrarAvisoOrdenRecorrido === "function") {
+                        rpMostrarAvisoOrdenRecorrido(root, {
+                            posicion: orden,
+                            nombre: typeof rpNombreOcupanteOrden === "function" ? rpNombreOcupanteOrden(info) : "otra persona"
+                        });
+                    }
+                } else if (typeof rpOcultarAvisoOrdenRecorrido === "function") {
+                    rpOcultarAvisoOrdenRecorrido(root);
+                }
+            } catch (e) {
+                console.warn(e);
             }
         }
 

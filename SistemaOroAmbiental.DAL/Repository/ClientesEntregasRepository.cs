@@ -184,7 +184,7 @@ namespace SistemaOroAmbiental.DAL.Repository
             out decimal subtotalCosto,
             out decimal ganancia)
         {
-            var cant = cantidad > 0 ? cantidad : 0;
+            var cant = cantidad;
 
             descUnitario = Math.Round(precioVenta * porcDescuento / 100m, 4);
             descTotal = Math.Round(descUnitario * cant, 2);

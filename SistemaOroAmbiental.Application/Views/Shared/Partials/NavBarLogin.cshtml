@@ -1,10 +1,10 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
-<link href="~/css/NavBarLogin.css?v=5.7" rel="stylesheet" />
+<link href="~/css/NavBarLogin.css?v=6.0" rel="stylesheet" />
 <link href="~/css/RpAvatar.css?v=1.0" rel="stylesheet" />
 
 <div class="rp-navbar-shell">
-<nav class="navbar navbar-expand-lg rp-navbar sticky-top">
-    <div class="container-fluid">
+<nav class="navbar navbar-expand-xl rp-navbar sticky-top">
+    <div class="container-fluid rp-navbar-inner">
         <a class="navbar-brand rp-brand" href="@Url.Action("Index", "Clientes")" title="Inicio">
             <span class="rp-brand-icon"><i class="fa fa-leaf"></i></span>
             <span class="rp-brand-text">
@@ -12,18 +12,53 @@
                 <span class="rp-brand-sub">Sistema de gestion</span>
             </span>
         </a>
-        <button class="navbar-toggler rp-nav-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-label="Menu">
-            <span class="navbar-toggler-icon"></span>
-        </button>
+
+        <div class="rp-nav-toolbar">
+            <ul class="navbar-nav rp-nav-user">
+                <li class="nav-item d-flex align-items-center me-2 d-none" id="sessionCountdownNav">
+                    <div class="rp-session-timer" id="sessionCountdown" title="Tiempo restante de sesion">
+                        <i class="fa fa-clock-o" aria-hidden="true"></i>
+                        <span class="rp-session-timer-label">Sesion</span>
+                        <strong id="sessionCountdownText">--:--:--</strong>
+                    </div>
+                </li>
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle rp-nav-user-link" href="#" id="userDropdown" role="button"
+                       data-bs-toggle="dropdown" data-bs-auto-close="outside" data-bs-offset="0,4" aria-expanded="false">
+                        <span class="rp-user-avatar rp-avatar-circle rp-avatar-circle--sm" id="rpNavUserAvatar"><i class="fa fa-user"></i></span>
+                        <span class="rp-user-name" id="userName">Usuario</span>
+                        <i class="fa fa-chevron-down rp-user-chev"></i>
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end rp-nav-dropdown rp-nav-user-menu">
+                        <li>
+                            <a class="dropdown-item rp-nav-item" href="/Usuarios/Configuracion">
+                                <span class="rp-nav-ico sm blue"><i class="fa fa-cog"></i></span>
+                                <span class="rp-nav-item-text"><span class="rp-nav-item-title">Configuraciones</span></span>
+                            </a>
+                        </li>
+                        <li><hr class="dropdown-divider dropdown-divider-dark"></li>
+                        <li>
+                            <a class="dropdown-item rp-nav-item rp-nav-logout" href="#" onclick="cerrarSesion(); return false;">
+                                <span class="rp-nav-ico sm red"><i class="fa fa-sign-out"></i></span>
+                                <span class="rp-nav-item-text"><span class="rp-nav-item-title">Cerrar sesion</span></span>
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+            </ul>
+            <button class="navbar-toggler rp-nav-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Menu">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+        </div>
 
         <div class="collapse navbar-collapse" id="navbarSupportedContent">
-            <ul class="navbar-nav me-auto mb-2 mb-lg-0 rp-nav-main">
+            <ul class="navbar-nav me-auto mb-2 mb-xl-0 rp-nav-main">
 
                 <li class="nav-item dropdown" id="seccionClientes">
                     <a class="nav-link dropdown-toggle rp-nav-link" href="@Url.Action("Index", "Clientes")" role="button"
                        data-bs-toggle="dropdown" data-bs-auto-close="outside" data-bs-offset="0,4" aria-expanded="false">
                         <span class="rp-nav-ico teal"><i class="fa fa-users"></i></span>
-                        <span>Clientes</span>
+                        <span class="rp-nav-label">Clientes</span>
                     </a>
                     <ul class="dropdown-menu rp-nav-dropdown">
                         <li>
@@ -58,7 +93,7 @@
                     <a class="nav-link dropdown-toggle rp-nav-link" href="@Url.Action("Index", "Productos")" role="button"
                        data-bs-toggle="dropdown" data-bs-auto-close="outside" data-bs-offset="0,4" aria-expanded="false">
                         <span class="rp-nav-ico orange"><i class="fa fa-cubes"></i></span>
-                        <span>Productos</span>
+                        <span class="rp-nav-label">Productos</span>
                     </a>
                     <ul class="dropdown-menu rp-nav-dropdown">
                         <li>
@@ -86,7 +121,7 @@
                     <a class="nav-link dropdown-toggle rp-nav-link" href="#" role="button"
                        data-bs-toggle="dropdown" data-bs-auto-close="outside" data-bs-offset="0,4" aria-expanded="false">
                         <span class="rp-nav-ico cyan"><i class="fa fa-truck"></i></span>
-                        <span>Transporte</span>
+                        <span class="rp-nav-label">Transporte</span>
                     </a>
                     <ul class="dropdown-menu rp-nav-dropdown">
                         <li><h6 class="dropdown-header rp-nav-group"><span class="rp-nav-ico xs cyan"><i class="fa fa-truck"></i></span> Flota</h6></li>
@@ -109,7 +144,7 @@
                     <a class="nav-link dropdown-toggle rp-nav-link" href="@Url.Action("Index", "Proveedores")" role="button"
                        data-bs-toggle="dropdown" data-bs-auto-close="outside" data-bs-offset="0,4" aria-expanded="false">
                         <span class="rp-nav-ico indigo"><i class="fa fa-industry"></i></span>
-                        <span>Proveedores</span>
+                        <span class="rp-nav-label">Proveedores</span>
                     </a>
                     <ul class="dropdown-menu rp-nav-dropdown">
                         <li>
@@ -143,66 +178,38 @@
                 <li class="nav-item" id="seccionFinanzas">
                     <a class="nav-link rp-nav-link" href="@Url.Action("Index", "Finanzas")">
                         <span class="rp-nav-ico gold"><i class="fa fa-money"></i></span>
-                        <span>Finanzas</span>
+                        <span class="rp-nav-label">Finanzas</span>
                     </a>
                 </li>
 
                 <li class="nav-item" id="seccionAnalisisDatos">
-                    <a class="nav-link rp-nav-link" href="@Url.Action("Index", "AnalisisDatos")">
+                    <a class="nav-link rp-nav-link" href="@Url.Action("Index", "AnalisisDatos")" title="Análisis de datos">
                         <span class="rp-nav-ico cyan"><i class="fa fa-line-chart"></i></span>
-                        <span>Análisis de datos</span>
+                        <span class="rp-nav-label">
+                            <span class="rp-nav-full">Análisis de datos</span>
+                            <span class="rp-nav-short">Análisis</span>
+                        </span>
                     </a>
                 </li>
 
                 <li class="nav-item" id="seccionUsuarios">
                     <a class="nav-link rp-nav-link" href="@Url.Action("Index", "Usuarios")">
                         <span class="rp-nav-ico slate"><i class="fa fa-id-card-o"></i></span>
-                        <span>Usuarios</span>
+                        <span class="rp-nav-label">Usuarios</span>
                     </a>
                 </li>
 
                 <li class="nav-item" id="seccionConfiguraciones">
-                    <a class="nav-link rp-nav-link" href="#" onclick="abrirConfiguraciones(); return false;">
+                    <a class="nav-link rp-nav-link" href="#" title="Configuraciones" onclick="abrirConfiguraciones(); return false;">
                         <span class="rp-nav-ico gray"><i class="fa fa-sliders"></i></span>
-                        <span>Configuraciones</span>
+                        <span class="rp-nav-label">
+                            <span class="rp-nav-full">Configuraciones</span>
+                            <span class="rp-nav-short">Config</span>
+                        </span>
                     </a>
                 </li>
 
             </ul>
-
-            <ul class="navbar-nav ms-auto rp-nav-user">
-                <li class="nav-item d-flex align-items-center me-2 d-none" id="sessionCountdownNav">
-                    <div class="rp-session-timer" id="sessionCountdown" title="Tiempo restante de sesion">
-                        <i class="fa fa-clock-o" aria-hidden="true"></i>
-                        <span class="rp-session-timer-label">Sesion</span>
-                        <strong id="sessionCountdownText">--:--:--</strong>
-                    </div>
-                </li>
-                <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle rp-nav-user-link" href="#" id="userDropdown" role="button"
-                       data-bs-toggle="dropdown" data-bs-auto-close="outside" data-bs-offset="0,4" aria-expanded="false">
-                        <span class="rp-user-avatar rp-avatar-circle rp-avatar-circle--sm" id="rpNavUserAvatar"><i class="fa fa-user"></i></span>
-                        <span class="rp-user-name" id="userName">Usuario</span>
-                        <i class="fa fa-chevron-down rp-user-chev"></i>
-                    </a>
-                    <ul class="dropdown-menu dropdown-menu-end rp-nav-dropdown rp-nav-user-menu">
-                        <li>
-                            <a class="dropdown-item rp-nav-item" href="/Usuarios/Configuracion">
-                                <span class="rp-nav-ico sm blue"><i class="fa fa-cog"></i></span>
-                                <span class="rp-nav-item-text"><span class="rp-nav-item-title">Configuraciones</span></span>
-                            </a>
-                        </li>
-                        <li><hr class="dropdown-divider dropdown-divider-dark"></li>
-                        <li>
-                            <a class="dropdown-item rp-nav-item rp-nav-logout" href="#" onclick="cerrarSesion(); return false;">
-                                <span class="rp-nav-ico sm red"><i class="fa fa-sign-out"></i></span>
-                                <span class="rp-nav-item-text"><span class="rp-nav-item-title">Cerrar sesion</span></span>
-                            </a>
-                        </li>
-                    </ul>
-                </li>
-            </ul>
-
         </div>
     </div>
 </nav>
@@ -682,4 +689,4 @@
 
 
 <script src="~/js/RpAvatar.js?v=1.0" asp-append-version="true"></script>
-<script src="~/js/NavBarLogin.js?v=5.9" asp-append-version="true"></script>
+<script src="~/js/NavBarLogin.js?v=6.1" asp-append-version="true"></script>

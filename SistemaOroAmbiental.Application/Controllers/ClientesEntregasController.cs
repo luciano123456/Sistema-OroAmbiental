@@ -250,7 +250,7 @@ namespace SistemaOroAmbiental.Application.Controllers
 
             foreach (var x in model.Lineas ?? new List<VMClienteEntregaLineaGuardar>())
             {
-                if (x.IdProducto <= 0 || x.Cantidad <= 0)
+                if (x.IdProducto <= 0 || x.Cantidad == 0)
                     continue;
 
                 if (x.TipoMovimiento == ClientesEntregasRepository.TIPO_LINEA_RECUPERADO)

@@ -21,6 +21,8 @@ public partial class ClientesRecorrido
 
     public bool Activo { get; set; } = true;
 
+    public bool Reprogramado { get; set; }
+
     public string? Observacion { get; set; }
 
     public int IdUsuarioRegistra { get; set; }

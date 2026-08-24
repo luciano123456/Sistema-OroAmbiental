@@ -61,6 +61,8 @@ public class ClientesRecorridoDto
     public string Zona { get; set; } = "";
     public int Posicion { get; set; }
     public bool Activo { get; set; }
+    /// <summary>Marcado para reprogramar la visita; se muestra en rojo.</summary>
+    public bool Reprogramado { get; set; }
     /// <summary>Cliente en periodo de licencia (fechas o estado).</summary>
     public bool EnLicencia { get; set; }
     public DateTime? FechaLicenciaDesde { get; set; }
@@ -70,6 +72,9 @@ public class ClientesRecorridoDto
     public string? Observacion { get; set; }
     public string RecorridoTexto { get; set; } = "";
     public List<HojaRutaParadaProductoDto> Productos { get; set; } = new();
+
+    [System.Text.Json.Serialization.JsonIgnore]
+    public string? EstadoNombre { get; set; }
 }
 
 public class RecorridoSugeridoDto
@@ -353,6 +358,7 @@ public class HojaRutaParadaDto
     public string AlertaTipo { get; set; } = "normal";
     public bool Activo { get; set; } = true;
     public bool EnLicencia { get; set; }
+    public bool Reprogramado { get; set; }
     public string? ProductosResumen { get; set; }
     public List<HojaRutaParadaProductoDto> Productos { get; set; } = new();
 }
@@ -372,4 +378,125 @@ public class HojaRutaParadaProductoDto
     public decimal PrecioVenta { get; set; }
     public decimal PrecioEfectivo { get; set; }
     public decimal PrecioTransferencia { get; set; }
+    /// <summary>Precio de catálogo de la lista asignada (para marcar desvíos sin otra consulta).</summary>
+    public decimal PrecioLista { get; set; }
+}
+
+public static class ManifiestoDatosEmpresa
+{
+    public const string TransportistaCuit = "30-71529832/1";
+    public const string TransportistaRazonSocial = "ORO AMBIENTAL GROUP SRL";
+    public const string TransportistaDomicilio = "L.M. CAMPOS Nº : 333 Piso: 1";
+    public const string TransportistaTelefono = "01144038835";
+    public const string TransportistaLocalidad = "CIUDAD AUTONOMA DE BUENOS AIRES";
+    public const string OperadorRazonSocial = "HABITAT ECOLOGICO S.A.";
+    public const string OperadorIdEstablecimiento = "7566";
+    public const string OperadorCuit = "30-66362548/5";
+    public const string OperadorDomicilio = "BLANCO ENCALADA Nº : 3040";
+    public const string OperadorLocalidad = "LANUS";
+    public const string OperadorTelefono = "011-424-68761";
+    public const string OrigenDelResiduo = "Generador";
+    public const string TipoDestino = "Tratador";
+    public const string CategoriaResiduo = "Y1";
+    public const string CategoriaDesechoPrincipal = "Y1 -  Desechos clínicos resultantes de la atención médica prestada en hospitales, controles, centros médicos y clínicas para la salud humana y animal (Legislado en la Provincia de Buenos Aires por la Ley 11.347).-";
+    public const string CaracteristicaPeligrosidad = "H6.2 -";
+    public const string EstadoFisico = "Solido";
+    public const string IntercambioEmail = "info@oroambientalgroup.com";
+}
+
+public class ArchivoIntercambioDto
+{
+    public string NombreArchivo { get; set; } = "INTERCAMBIO.txt";
+    public DateTime Fecha { get; set; }
+    public int NumeroInicial { get; set; }
+    public string RecorridosParam { get; set; } = "";
+    public List<ArchivoIntercambioItemDto> Items { get; set; } = new();
+}
+
+public class ArchivoIntercambioItemDto
+{
+    public int NumeroCliente { get; set; }
+    public string CodigoOpds { get; set; } = "";
+    public string RazonSocial { get; set; } = "";
+    public string Calle { get; set; } = "";
+    public string NumeroCalle { get; set; } = "";
+    public string CodigoPostal { get; set; } = "";
+    public string CodigoLocalidad { get; set; } = "";
+    public string CodigoPartido { get; set; } = "";
+    public string NombreProvincia { get; set; } = "";
+    public string Cuit { get; set; } = "";
+    public string NombreIva { get; set; } = "";
+    public string CodigoTipoGenerador { get; set; } = "";
+    public decimal Kilos { get; set; }
+    public int NumeroManifiesto { get; set; }
+}
+
+public class ManifiestosHojaDto
+{
+    public int IdCamion { get; set; }
+    public int IdSemana { get; set; }
+    public int IdDia { get; set; }
+    public string RecorridosParam { get; set; } = "";
+    public string Titulo { get; set; } = "";
+    public string Nombre { get; set; } = "";
+    public DateTime FechaProgramacion { get; set; }
+    public int NumeroInicial { get; set; }
+    public List<ManifiestoItemDto> Items { get; set; } = new();
+}
+
+public class ManifiestoItemDto
+{
+    public int IdRecorrido { get; set; }
+    public int? IdCliente { get; set; }
+    public int? IdEstablecimientoDb { get; set; }
+    public int IdSemana { get; set; }
+    public int IdDia { get; set; }
+    public int Posicion { get; set; }
+    public int Numero { get; set; }
+    public string IdEstablecimiento { get; set; } = "";
+    public string RazonSocial { get; set; } = "";
+    public string Cuit { get; set; } = "";
+    public string Direccion { get; set; } = "";
+    public string Localidad { get; set; } = "";
+    public string Telefono { get; set; } = "";
+    public string Domicilio { get; set; } = "";
+    public string Cantidad { get; set; } = "";
+}
+
+public class ManifiestoHistorialDto
+{
+    public int Id { get; set; }
+    public int IdCamion { get; set; }
+    public int Numero { get; set; }
+    public string Nombre { get; set; } = "";
+    public string RazonSocial { get; set; } = "";
+    public string Cuit { get; set; } = "";
+    public string Recorrido { get; set; } = "";
+    public string Zona { get; set; } = "";
+    public string Localidad { get; set; } = "";
+    public string Cantidad { get; set; } = "";
+    public DateTime FechaGeneracion { get; set; }
+    public string Usuario { get; set; } = "";
+}
+
+public class ManifiestosCamionDto
+{
+    public int IdCamion { get; set; }
+    public string Camion { get; set; } = "";
+    public int Total { get; set; }
+    public int UltimoNumero { get; set; }
+    public int SiguienteNumero { get; set; }
+    public DateTime? UltimaFecha { get; set; }
+    public List<ManifiestoHistorialDto> Items { get; set; } = new();
+}
+
+public class RecorridoOpcionManifiestoDto
+{
+    public int IdSemana { get; set; }
+    public int IdDia { get; set; }
+    public string Semana { get; set; } = "";
+    public string Dia { get; set; } = "";
+    public string Zona { get; set; } = "";
+    public string Label { get; set; } = "";
+    public int CantidadClientes { get; set; }
 }

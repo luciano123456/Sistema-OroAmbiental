@@ -214,6 +214,34 @@ body.hr-page {
     vertical-align: middle;
 }
 
+.hr-stop-reprogramado {
+    border-color: #b91c1c;
+    box-shadow: inset 4px 0 0 #dc2626;
+}
+
+.hr-stop-reprogramado .hr-stop-head {
+    background: #fecaca;
+    color: #7f1d1d;
+}
+
+.hr-stop-reprogramado .hr-stop-cliente,
+.hr-stop-reprogramado .hr-abono-label {
+    color: #7f1d1d;
+}
+
+.hr-badge-reprogramado {
+    display: inline-block;
+    margin-left: 0.4rem;
+    padding: 0.1rem 0.45rem;
+    border-radius: 4px;
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.03em;
+    background: #dc2626;
+    color: #fff;
+    vertical-align: middle;
+}
+
 /* Cabecera clara: N° + cliente en negro + abono */
 .hr-stop-head {
     display: grid;

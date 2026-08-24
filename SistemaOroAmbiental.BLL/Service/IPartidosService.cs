@@ -7,7 +7,9 @@ namespace SistemaOroAmbiental.BLL.Service
     {
         Task<bool> Actualizar(Partido model);
         Task<bool> Insertar(Partido model);
-        Task<ServiceResult> Eliminar(int id);
+        Task<ServiceResult> Eliminar(int id, bool cascada = false);
+
+        Task<DependenciasEliminacionInfo> ObtenerDependenciasEliminar(int id);
         Task<Partido?> Obtener(int id);
         Task<IQueryable<Partido>> ObtenerTodos();
         Task<IQueryable<Partido>> ObtenerPorProvincia(int idProvincia);

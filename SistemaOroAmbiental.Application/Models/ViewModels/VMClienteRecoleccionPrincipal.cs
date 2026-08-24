@@ -13,6 +13,7 @@ namespace SistemaOroAmbiental.Application.Models.ViewModels
         public string HorarioRecoleccionHasta { get; set; } = "";
         public string? DiasHorarios { get; set; }
         public int? OrdenRecorrido { get; set; }
+        public bool DesplazarOrdenRecorrido { get; set; }
         public decimal? Kilos { get; set; }
         public int? IdTipoGenerador { get; set; }
         /// <summary>Todos los dias con unidad asignada (1=Lunes ... 7=Domingo).</summary>

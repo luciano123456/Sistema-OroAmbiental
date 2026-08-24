@@ -44,7 +44,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Hoja de ruta - @Model.Titulo</title>
-    <link href="~/css/HojaRuta.css?v=4.5" rel="stylesheet" asp-append-version="true" />
+    <link href="~/css/HojaRuta.css?v=4.6" rel="stylesheet" asp-append-version="true" />
 </head>
 <body class="hr-page@(multiplesHojas ? " hr-page--multi" : "")">
     <div class="hr-toolbar no-print">
@@ -96,7 +96,7 @@
                     {
                         var obsClass = p.AlertaTipo == "alerta" ? " hr-cell-obs--alert" : "";
 
-                        <section class="hr-stop @(p.Activo ? "" : "hr-stop-inactivo")@(p.EnLicencia ? " hr-stop-licencia" : "")">
+                        <section class="hr-stop @(p.Activo ? "" : "hr-stop-inactivo")@(p.EnLicencia ? " hr-stop-licencia" : "")@(p.Reprogramado ? " hr-stop-reprogramado" : "")">
                             <div class="hr-stop-head">
                                 <span class="hr-stop-num">@p.Posicion</span>
                                 <span class="hr-stop-cliente">
@@ -104,6 +104,10 @@
                                     @if (p.EnLicencia)
                                     {
                                         <span class="hr-badge-licencia">&#9888; DE LICENCIA</span>
+                                    }
+                                    @if (p.Reprogramado)
+                                    {
+                                        <span class="hr-badge-reprogramado">REPROGRAMADO</span>
                                     }
                                 </span>
                                 <div class="hr-stop-abono">

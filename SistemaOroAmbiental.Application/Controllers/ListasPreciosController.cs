@@ -12,12 +12,12 @@ namespace SistemaOroAmbiental.Application.Controllers
     public class ListasPreciosController : Controller
     {
         private readonly IListasPreciosService _service;
-        private readonly IDeleteConflictChecker _deleteChecker;
+        private readonly ICatalogoCascadeRepository _cascade;
 
-        public ListasPreciosController(IListasPreciosService service, IDeleteConflictChecker deleteChecker)
+        public ListasPreciosController(IListasPreciosService service, ICatalogoCascadeRepository cascade)
         {
             _service = service;
-            _deleteChecker = deleteChecker;
+            _cascade = cascade;
         }
 
         [AllowAnonymous]
@@ -83,15 +83,36 @@ namespace SistemaOroAmbiental.Application.Controllers
             return Ok(new { valor = ok, mensaje = ok ? "Modificado correctamente" : "No se pudo guardar" });
         }
 
-        [HttpDelete]
-        public async Task<IActionResult> Eliminar(int id)
+        [HttpGet]
+        public async Task<IActionResult> DependenciasEliminar(int id)
         {
-            var bloqueo = await _deleteChecker.ListaPrecioAsync(id);
-            if (!string.IsNullOrWhiteSpace(bloqueo))
-                return Ok(new { valor = false, mensaje = bloqueo, tipo = "relacion" });
+            var info = await _cascade.ObtenerDependenciasAsync<ListasPrecio>(id);
+            return Ok(info);
+        }
 
+        [HttpDelete]
+        public async Task<IActionResult> Eliminar(int id, bool cascada = false)
+        {
             try
             {
+                var deps = await _cascade.ObtenerDependenciasAsync<ListasPrecio>(id);
+                if (deps.TieneDependencias && !cascada)
+                    return Ok(new { valor = false, mensaje = deps.MensajeResumen, tipo = "dependencias" });
+
+                if (deps.TieneDependencias && cascada)
+                {
+                    if (!deps.PermiteCascada)
+                        return Ok(new { valor = false, mensaje = deps.MensajeResumen, tipo = "relacion" });
+
+                    await _cascade.EliminarEnCascadaAsync<ListasPrecio>(id);
+                    return Ok(new
+                    {
+                        valor = true,
+                        mensaje = "Eliminado correctamente. Los registros asociados se desvincularon.",
+                        tipo = "success"
+                    });
+                }
+
                 var ok = await _service.Eliminar(id);
                 return Ok(new
                 {
@@ -100,11 +121,18 @@ namespace SistemaOroAmbiental.Application.Controllers
                     tipo = ok ? "success" : "validacion"
                 });
             }
+            catch (InvalidOperationException ex)
+            {
+                return Ok(new { valor = false, mensaje = ex.Message, tipo = "relacion" });
+            }
             catch (DbUpdateException)
             {
-                var msg = await _deleteChecker.ListaPrecioAsync(id)
-                    ?? "No se pudo eliminar porque tiene registros relacionados.";
-                return Ok(new { valor = false, mensaje = msg, tipo = "relacion" });
+                return Ok(new
+                {
+                    valor = false,
+                    mensaje = "No se pudo eliminar porque tiene registros relacionados.",
+                    tipo = "relacion"
+                });
             }
         }
 

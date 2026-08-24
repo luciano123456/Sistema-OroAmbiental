@@ -58,15 +58,54 @@ namespace SistemaOroAmbiental.Application.Controllers
             return Ok(new { valor = respuesta });
         }
 
-        [HttpDelete]
-        public virtual async Task<IActionResult> Eliminar(int id, [FromServices] IDeleteConflictChecker deleteChecker)
+        [HttpGet]
+        public virtual async Task<IActionResult> DependenciasEliminar(int id, [FromServices] ICatalogoCascadeRepository cascade)
         {
-            var bloqueo = await deleteChecker.CatalogoAsync<TEntity>(id);
-            if (!string.IsNullOrWhiteSpace(bloqueo))
-                return Ok(new { valor = false, mensaje = bloqueo, tipo = "relacion" });
+            var info = await cascade.ObtenerDependenciasAsync<TEntity>(id);
+            return Ok(info);
+        }
 
+        [HttpDelete]
+        public virtual async Task<IActionResult> Eliminar(
+            int id,
+            [FromServices] ICatalogoCascadeRepository cascade,
+            bool cascada = false)
+        {
             try
             {
+                var deps = await cascade.ObtenerDependenciasAsync<TEntity>(id);
+
+                if (deps.TieneDependencias && !cascada)
+                {
+                    return Ok(new
+                    {
+                        valor = false,
+                        mensaje = deps.MensajeResumen,
+                        tipo = "dependencias"
+                    });
+                }
+
+                if (deps.TieneDependencias && cascada)
+                {
+                    if (!deps.PermiteCascada)
+                    {
+                        return Ok(new
+                        {
+                            valor = false,
+                            mensaje = deps.MensajeResumen,
+                            tipo = "relacion"
+                        });
+                    }
+
+                    await cascade.EliminarEnCascadaAsync<TEntity>(id);
+                    return Ok(new
+                    {
+                        valor = true,
+                        mensaje = "Eliminado correctamente. Los registros asociados se desvincularon o reasignaron.",
+                        tipo = "success"
+                    });
+                }
+
                 bool respuesta = await Service.Eliminar(id);
                 return Ok(new
                 {
@@ -75,11 +114,18 @@ namespace SistemaOroAmbiental.Application.Controllers
                     tipo = respuesta ? "success" : "validacion"
                 });
             }
+            catch (InvalidOperationException ex)
+            {
+                return Ok(new { valor = false, mensaje = ex.Message, tipo = "relacion" });
+            }
             catch (DbUpdateException)
             {
-                var msg = await deleteChecker.CatalogoAsync<TEntity>(id)
-                    ?? "No se pudo eliminar porque tiene registros relacionados.";
-                return Ok(new { valor = false, mensaje = msg, tipo = "relacion" });
+                return Ok(new
+                {
+                    valor = false,
+                    mensaje = "No se pudo eliminar porque tiene registros relacionados.",
+                    tipo = "relacion"
+                });
             }
         }
 

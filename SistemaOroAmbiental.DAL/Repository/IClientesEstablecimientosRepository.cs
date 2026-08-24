@@ -15,5 +15,9 @@ namespace SistemaOroAmbiental.DAL.Repository
         Task<List<ClientesEstablecimientosDia>> ObtenerDiasAdicionales(int idEstablecimiento);
         Task<bool> ReemplazarDiasAdicionales(int idEstablecimiento, IReadOnlyList<ClientesEstablecimientosDia> dias, int idUsuario);
         Task<int> ObtenerPrimerIdCatalogo(string tabla);
+        Task<OrdenRecorridoOcupanteDto> ObtenerOcupanteOrdenRecorrido(
+            int idCamion, int idDia, int idSemana, int orden, int? idExcluirEstablecimiento);
+        Task DesplazarOrdenRecorridoSiOcupado(
+            int idCamion, int idDia, int idSemana, int orden, int? idExcluirEstablecimiento);
     }
 }

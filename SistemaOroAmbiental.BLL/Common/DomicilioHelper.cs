@@ -2,12 +2,12 @@ namespace SistemaOroAmbiental.BLL.Common;
 
 /// <summary>
 /// Armado de domicilio y padding para archivo TXT de intercambio con planta de tratamiento.
-/// Calle: 40 caracteres | Número: 13 caracteres (según archivo de referencia).
+/// Calle: 40 caracteres | Número: 5 caracteres (instructivo Habitat).
 /// </summary>
 public static class DomicilioHelper
 {
     public const int TxtAnchoCalle = 40;
-    public const int TxtAnchoNumero = 13;
+    public const int TxtAnchoNumero = 5;
 
     public static string Componer(string? calle, string? numero, string? pisoDepartamento, string? legacy = null)
     {

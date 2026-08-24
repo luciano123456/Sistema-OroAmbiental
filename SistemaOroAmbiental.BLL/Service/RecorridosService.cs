@@ -55,19 +55,19 @@ namespace SistemaOroAmbiental.BLL.Service
             return _repo.ListarPorCliente(idCliente);
         }
 
-        public async Task<ServiceResult> InsertarClientesRecorrido(ClientesRecorrido model)
+        public async Task<ServiceResult> InsertarClientesRecorrido(ClientesRecorrido model, bool desplazarSiOcupada = true)
         {
             if (!ValidarClientesRecorrido(model, out var error))
                 return ServiceResult.Error(error, "validacion");
 
-            var ok = await _repo.InsertarClientesRecorrido(model);
+            var ok = await _repo.InsertarClientesRecorrido(model, desplazarSiOcupada);
 
             return ok
                 ? ServiceResult.Success("Cliente agregado al recorrido")
                 : ServiceResult.Error("No se pudo guardar");
         }
 
-        public async Task<ServiceResult> ActualizarClientesRecorrido(ClientesRecorrido model)
+        public async Task<ServiceResult> ActualizarClientesRecorrido(ClientesRecorrido model, bool desplazarSiOcupada = true)
         {
             if (model.Id <= 0)
                 return ServiceResult.Error("Registro inválido.", "validacion");
@@ -75,7 +75,7 @@ namespace SistemaOroAmbiental.BLL.Service
             if (!ValidarClientesRecorrido(model, out var error))
                 return ServiceResult.Error(error, "validacion");
 
-            var ok = await _repo.ActualizarClientesRecorrido(model);
+            var ok = await _repo.ActualizarClientesRecorrido(model, desplazarSiOcupada);
 
             return ok
                 ? ServiceResult.Success("Recorrido de cliente modificado")
@@ -102,6 +102,137 @@ namespace SistemaOroAmbiental.BLL.Service
                 return Task.FromResult<HojaRutaDto?>(null);
 
             return _repo.ObtenerHojaRuta(idCamion, recorridos, fecha.Date, idsRecorridoExcluir);
+        }
+
+        public Task<int> ObtenerSiguienteNumeroManifiesto(
+            int idCamion,
+            IReadOnlyList<(int IdSemana, int IdDia)> recorridos)
+        {
+            if (idCamion <= 0 || recorridos == null || recorridos.Count == 0)
+                return Task.FromResult(1);
+
+            return _repo.ObtenerSiguienteNumeroManifiesto(idCamion, recorridos);
+        }
+
+        public async Task<ServiceResult> RegistrarUltimoNumeroManifiesto(
+            int idCamion,
+            IReadOnlyList<(int IdSemana, int IdDia)> recorridos,
+            int ultimoNumero,
+            int idUsuario)
+        {
+            if (idCamion <= 0 || recorridos == null || recorridos.Count == 0)
+                return ServiceResult.Error("Recorrido inválido.", "validacion");
+
+            if (ultimoNumero <= 0)
+                return ServiceResult.Error("El número de manifiesto debe ser mayor a cero.", "validacion");
+
+            var (ok, error) = await _repo.RegistrarUltimoNumeroManifiesto(
+                idCamion, recorridos, ultimoNumero, idUsuario);
+
+            return ok
+                ? ServiceResult.Success("Número de manifiesto guardado.")
+                : ServiceResult.Error(
+                    string.IsNullOrWhiteSpace(error) ? "No se pudo guardar el número de manifiesto." : error,
+                    "error");
+        }
+
+        public Task GuardarHistorialManifiestos(
+            int idCamion,
+            ManifiestosHojaDto model,
+            string nombre,
+            int idUsuario)
+        {
+            if (idCamion <= 0 || model?.Items == null || model.Items.Count == 0)
+                return Task.CompletedTask;
+
+            return _repo.GuardarHistorialManifiestos(idCamion, model, nombre ?? "", idUsuario);
+        }
+
+        public Task<ManifiestosCamionDto> ListarManifiestosPorCamion(int idCamion)
+        {
+            if (idCamion <= 0)
+                return Task.FromResult(new ManifiestosCamionDto { SiguienteNumero = 1 });
+
+            return _repo.ListarManifiestosPorCamion(idCamion);
+        }
+
+        public Task<ManifiestosHojaDto?> ObtenerManifiestosHistorial(int idCamion, IReadOnlyList<int> ids)
+        {
+            if (idCamion <= 0 || ids == null || ids.Count == 0)
+                return Task.FromResult<ManifiestosHojaDto?>(null);
+
+            return _repo.ObtenerManifiestosHistorial(idCamion, ids);
+        }
+
+        public Task<List<RecorridoOpcionManifiestoDto>> ListarRutasManifiestoCamion(int idCamion)
+        {
+            if (idCamion <= 0)
+                return Task.FromResult(new List<RecorridoOpcionManifiestoDto>());
+
+            return _repo.ListarRutasManifiestoCamion(idCamion);
+        }
+
+        public Task<int> ObtenerSiguienteNumeroManifiestoCamion(int idCamion)
+        {
+            if (idCamion <= 0)
+                return Task.FromResult(1);
+
+            return _repo.ObtenerSiguienteNumeroManifiestoCamion(idCamion);
+        }
+
+        public async Task<ServiceResult> EliminarManifiestoHistorial(int idCamion, int id)
+        {
+            if (idCamion <= 0 || id <= 0)
+                return ServiceResult.Error("Manifiesto inválido.", "validacion");
+
+            var (ok, error) = await _repo.EliminarManifiestoHistorial(idCamion, id);
+            return ok
+                ? ServiceResult.Success("Manifiesto eliminado del historial.")
+                : ServiceResult.Error(
+                    string.IsNullOrWhiteSpace(error) ? "No se pudo eliminar el manifiesto." : error,
+                    "error");
+        }
+
+        public Task<ManifiestosHojaDto?> ObtenerManifiestos(
+            int idCamion,
+            IReadOnlyList<(int IdSemana, int IdDia)> recorridos,
+            int numeroInicial,
+            IReadOnlyCollection<int>? idsRecorridoExcluir = null,
+            int? idRecorrido = null)
+        {
+            if (idCamion <= 0 || recorridos == null || recorridos.Count == 0)
+                return Task.FromResult<ManifiestosHojaDto?>(null);
+
+            return _repo.ObtenerManifiestos(idCamion, recorridos, numeroInicial, idsRecorridoExcluir, idRecorrido);
+        }
+
+        public Task<ArchivoIntercambioDto?> ObtenerArchivoIntercambio(
+            int idCamion,
+            IReadOnlyList<(int IdSemana, int IdDia)> recorridos,
+            DateTime fecha,
+            int numeroInicial,
+            IReadOnlyCollection<int>? idsRecorridoExcluir = null,
+            int? idRecorrido = null,
+            string? nombre = null,
+            bool mesCompleto = false,
+            IReadOnlyCollection<int>? idsRecorridoIncluir = null)
+        {
+            if (idCamion <= 0)
+                return Task.FromResult<ArchivoIntercambioDto?>(null);
+
+            if (!mesCompleto && (recorridos == null || recorridos.Count == 0))
+                return Task.FromResult<ArchivoIntercambioDto?>(null);
+
+            return _repo.ObtenerArchivoIntercambio(
+                idCamion,
+                recorridos ?? Array.Empty<(int, int)>(),
+                fecha.Date,
+                numeroInicial > 0 ? numeroInicial : 1,
+                idsRecorridoExcluir,
+                idRecorrido,
+                nombre,
+                mesCompleto,
+                idsRecorridoIncluir);
         }
 
         public Task<List<RecorridoSugeridoDto>> ListarSugeridosPorRecoleccion(int idCamion, int idSemana, int idDia)

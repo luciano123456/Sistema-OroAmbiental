@@ -20,9 +20,26 @@
     z-index: 1;
 }
 
-.rp-navbar .container-fluid,
+.rp-navbar-inner {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.15rem 0.35rem;
+}
+
+.rp-nav-toolbar {
+    display: flex;
+    align-items: center;
+    flex-wrap: nowrap;
+    gap: 8px;
+    margin-left: auto;
+    order: 2;
+    flex-shrink: 0;
+}
+
 .rp-navbar .navbar-collapse {
-    overflow: visible !important;
+    order: 3;
+    flex-basis: 100%;
 }
 
 .rp-navbar .nav-item.dropdown {
@@ -48,12 +65,17 @@
     height: 8px;
 }
 
-.rp-brand {
+.rp-navbar a.navbar-brand.rp-brand {
     display: flex;
     align-items: center;
     gap: 12px;
     padding: 0.25rem 0.5rem 0.25rem 0;
     text-decoration: none !important;
+    white-space: nowrap;
+    word-break: normal;
+    text-align: left;
+    flex-shrink: 0;
+    order: 1;
 }
 
 .rp-brand:hover .rp-brand-icon {
@@ -96,12 +118,23 @@
 }
 
 .rp-nav-toggler {
-    border-color: rgba(255, 255, 255, 0.2);
-    padding: 0.35rem 0.55rem;
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    border-radius: 10px;
+    padding: 0.4rem 0.6rem;
+    margin: 0;
 }
 
-.rp-nav-toggler .navbar-toggler-icon {
-    filter: invert(1);
+.rp-nav-toggler:focus {
+    box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.28);
+}
+
+.rp-nav-toggler[aria-expanded="true"] {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.35);
+}
+
+.rp-nav-main {
+    align-items: center;
 }
 
 .rp-nav-link {
@@ -114,6 +147,17 @@
     padding: 0.5rem 0.85rem !important;
     border-radius: 10px;
     transition: background 0.2s ease, color 0.2s ease;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.rp-nav-label {
+    white-space: nowrap;
+    line-height: 1.2;
+}
+
+.rp-nav-short {
+    display: none;
 }
 
 .rp-nav-link:hover,
@@ -202,6 +246,10 @@
     transition: background 0.15s ease;
 }
 
+.rp-navbar .navbar-nav .dropdown-menu .dropdown-item.rp-nav-item {
+    color: rgba(248, 250, 252, 0.92) !important;
+}
+
 .rp-nav-item:hover,
 .rp-nav-item:focus,
 .rp-nav-item.active {
@@ -233,6 +281,12 @@
     margin-top: 1px;
 }
 
+.rp-nav-user {
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: nowrap;
+}
+
 .rp-nav-user-link {
     display: inline-flex !important;
     align-items: center;
@@ -241,6 +295,7 @@
     border-radius: 999px;
     background: rgba(255, 255, 255, 0.06);
     border: 1px solid rgba(255, 255, 255, 0.1);
+    white-space: nowrap;
 }
 
 .rp-nav-user-link:hover {
@@ -276,6 +331,10 @@
     color: #f8fafc;
 }
 
+.rp-nav-user-link.dropdown-toggle::after {
+    display: none;
+}
+
 .rp-nav-user-menu {
     min-width: 220px;
 }
@@ -289,20 +348,219 @@
     margin: 6px 0;
 }
 
-@media (max-width: 991.98px) {
-    .rp-nav-dropdown {
-        border: none;
-        box-shadow: none;
-        background: rgba(0, 0, 0, 0.2);
-        margin-left: 8px;
+@media (min-width: 1200px) {
+    .rp-navbar .container-fluid,
+    .rp-navbar .navbar-collapse {
+        overflow: visible !important;
+    }
+
+    .rp-navbar .navbar-collapse {
+        order: 1;
+        flex-basis: auto;
+        flex-grow: 1;
+        flex-shrink: 1;
+        min-width: 0;
+    }
+
+    .rp-nav-toolbar {
+        order: 2;
+        margin-left: 0.35rem;
+    }
+
+    .rp-nav-main {
+        flex-wrap: nowrap;
+        width: 100%;
+        justify-content: flex-start;
+        gap: 1px;
+    }
+
+    .rp-nav-main > .nav-item {
+        flex-shrink: 0;
+    }
+}
+
+@media (min-width: 1200px) and (max-width: 1599.98px) {
+    .rp-navbar {
+        padding: 0.35rem 0.5rem;
+    }
+
+    .rp-navbar a.navbar-brand.rp-brand {
+        gap: 8px;
+        padding-right: 0.25rem;
+    }
+
+    .rp-brand-icon {
+        width: 36px;
+        height: 36px;
+        font-size: 17px;
+        border-radius: 10px;
+    }
+
+    .rp-brand-title {
+        font-size: 0.95rem;
     }
 
     .rp-brand-sub {
         display: none;
     }
 
+    .rp-nav-link {
+        gap: 6px;
+        font-size: 0.8rem;
+        padding: 0.38rem 0.5rem !important;
+    }
+
+    .rp-nav-link.dropdown-toggle {
+        padding-right: 1.15rem !important;
+    }
+
+    .rp-nav-main .rp-nav-link > .rp-nav-ico {
+        width: 26px;
+        height: 26px;
+        font-size: 12px;
+        border-radius: 8px;
+    }
+
+    .rp-user-name {
+        max-width: 110px;
+        font-size: 0.8rem;
+    }
+
+    .rp-nav-user-link {
+        gap: 8px;
+        padding: 0.25rem 0.5rem 0.25rem 0.25rem !important;
+    }
+}
+
+@media (min-width: 1200px) and (max-width: 1399.98px) {
+    .rp-nav-full {
+        display: none;
+    }
+
+    .rp-nav-short {
+        display: inline;
+    }
+
+    .rp-nav-link {
+        padding: 0.35rem 0.42rem !important;
+    }
+
+    .rp-nav-link.dropdown-toggle {
+        padding-right: 1.05rem !important;
+    }
+
+    .rp-user-name {
+        max-width: 88px;
+    }
+}
+
+@media (max-width: 1199.98px) {
+    .rp-navbar {
+        padding: 0.4rem 0.65rem;
+    }
+
+    .rp-navbar .navbar-collapse {
+        margin-top: 0.45rem;
+        padding: 0.55rem 0.2rem 0.7rem;
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
+        max-height: min(70vh, calc(100dvh - 72px));
+        overflow-x: hidden;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+    }
+
+    .rp-navbar .navbar-collapse.show,
+    .rp-navbar .navbar-collapse.collapsing {
+        width: 100%;
+    }
+
+    .rp-nav-dropdown {
+        position: static !important;
+        transform: none !important;
+        inset: auto !important;
+        border: none;
+        box-shadow: none;
+        background: rgba(0, 0, 0, 0.22);
+        margin: 0 0 4px 10px !important;
+        min-width: 0;
+        width: calc(100% - 10px);
+    }
+
+    .rp-navbar .nav-item.dropdown > .dropdown-menu::before {
+        display: none;
+    }
+
+    .rp-brand-sub {
+        display: none;
+    }
+
+    .rp-nav-main {
+        width: 100%;
+        gap: 2px;
+    }
+
     .rp-nav-main .nav-item {
         margin-bottom: 2px;
+        width: 100%;
+    }
+
+    .rp-nav-link {
+        width: 100%;
+        padding: 0.7rem 0.8rem !important;
+        border-radius: 12px;
+    }
+
+    .rp-nav-short {
+        display: none;
+    }
+
+    .rp-nav-full {
+        display: inline;
+    }
+
+    .rp-navbar .rp-nav-item {
+        white-space: normal;
+    }
+
+    .rp-user-name {
+        max-width: 120px;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .rp-brand-title {
+        font-size: 0.95rem;
+    }
+
+    .rp-brand-icon {
+        width: 36px;
+        height: 36px;
+        font-size: 17px;
+    }
+
+    .rp-user-name,
+    .rp-user-chev {
+        display: none;
+    }
+
+    .rp-nav-user-link {
+        padding: 0.2rem !important;
+        gap: 0;
+        border-radius: 50%;
+    }
+
+    .rp-nav-user-link::after {
+        display: none;
+    }
+
+    .rp-session-timer {
+        padding: 6px 8px;
+    }
+}
+
+@media (max-width: 379.98px) {
+    .rp-brand-text {
+        display: none;
     }
 }
 

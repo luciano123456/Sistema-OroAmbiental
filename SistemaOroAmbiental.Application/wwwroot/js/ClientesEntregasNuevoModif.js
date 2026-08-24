@@ -402,7 +402,7 @@ window.__OA_ENTREGA_BUILD = "precio-entrega-lista-20260811";
                 erroresProductos.push("Hay lineas sin producto seleccionado.");
             }
 
-            const cantidadInvalida = CM.lineas.some(l => l.IdProducto > 0 && !(Number(l.Cantidad) > 0));
+            const cantidadInvalida = CM.lineas.some(l => l.IdProducto > 0 && !(Math.abs(Number(l.Cantidad) || 0) > 0));
             if (cantidadInvalida) {
                 erroresProductos.push("Las cantidades deben ser mayores a cero.");
             }
@@ -410,6 +410,7 @@ window.__OA_ENTREGA_BUILD = "precio-entrega-lista-20260811";
             const sinListaRetiro = CM.lineas.some(l =>
                 l.IdProducto > 0
                 && Number(l.TipoMovimiento) === TIPO_LINEA_RETIRO
+                && !l.NoRetirado
                 && !(Number(l.IdListaPrecio) > 0));
             if (sinListaRetiro) {
                 erroresProductos.push("Seleccioná la lista / tipo de pago en las líneas de retiro.");
@@ -768,21 +769,11 @@ window.__OA_ENTREGA_BUILD = "precio-entrega-lista-20260811";
 
     /** Entrega / Retiro / Recuperado: trae precio de lista al elegir producto + lista. */
     function lineaTraePrecioDeLista(linea) {
-        // Solo retiro (y recuperados) toman tarifa de lista.
-        // Entrega queda en $ 0: es movimiento de stock, no cargo.
         const t = Number(linea?.TipoMovimiento);
-        return t === TIPO_LINEA_RETIRO || t === TIPO_LINEA_RECUPERADO;
-    }
-
-    function forzarPrecioCeroEntrega($tr, linea) {
-        if (Number(linea?.TipoMovimiento) !== TIPO_LINEA_ENTREGA) return false;
-        linea.PrecioVenta = 0;
-        setValorInputMiles($tr.find(".linea-precio"), 0);
-        return true;
+        return t === TIPO_LINEA_ENTREGA || t === TIPO_LINEA_RETIRO || t === TIPO_LINEA_RECUPERADO;
     }
 
     async function aplicarPrecioDesdeListaEntrega($tr, linea, { forzar = true } = {}) {
-        if (forzarPrecioCeroEntrega($tr, linea)) return true;
         if (!lineaTraePrecioDeLista(linea)) return false;
         const precio = await obtenerPrecioListaEntrega(linea.IdProducto, linea.IdListaPrecio);
         // Nunca pisar con 0: si no hay tarifa, dejar el valor actual.
@@ -794,10 +785,6 @@ window.__OA_ENTREGA_BUILD = "precio-entrega-lista-20260811";
     }
 
     async function sincronizarPrecioSegunTipoLinea($tr, linea) {
-        if (Number(linea.TipoMovimiento) === TIPO_LINEA_ENTREGA) {
-            forzarPrecioCeroEntrega($tr, linea);
-            return;
-        }
         if (linea.IdProducto > 0 && linea.IdListaPrecio > 0) {
             await aplicarPrecioDesdeListaEntrega($tr, linea, { forzar: true });
         }
@@ -1262,6 +1249,7 @@ window.__OA_ENTREGA_BUILD = "precio-entrega-lista-20260811";
             IdListaPrecio: 0,
             TipoMovimiento: tipo,
             NoRetirado: false,
+            NoRetiradoSigno: 1,
             Cantidad: 1,
             PrecioVenta: 0,
             PorcDescuento: 0,
@@ -1269,9 +1257,17 @@ window.__OA_ENTREGA_BUILD = "precio-entrega-lista-20260811";
         }, preset || {});
         if (!linea._key) linea._key = CM.nextLineId++;
         linea.TipoMovimiento = tipo;
-        // Entrega: siempre $0 aunque el preset traiga precio de lista/sugerido.
-        if (Number(linea.TipoMovimiento) === TIPO_LINEA_ENTREGA) linea.PrecioVenta = 0;
-        if (tipo !== TIPO_LINEA_RETIRO) linea.NoRetirado = false;
+        if (tipo !== TIPO_LINEA_RETIRO) {
+            linea.NoRetirado = false;
+            linea.NoRetiradoSigno = 1;
+        }
+        if (Number(linea.Cantidad) < 0 && tipo === TIPO_LINEA_RETIRO) {
+            linea.NoRetirado = true;
+            linea.NoRetiradoSigno = -1;
+            linea.Cantidad = Math.abs(Number(linea.Cantidad));
+        } else {
+            linea.Cantidad = Math.abs(Number(linea.Cantidad) || 0) || 1;
+        }
 
         CM.lineas.push(linea);
         renderLineas();
@@ -1310,7 +1306,9 @@ window.__OA_ENTREGA_BUILD = "precio-entrega-lista-20260811";
         if (tipo === TIPO_LINEA_RECUPERADO) {
             return `${l.IdProducto}|${TIPO_LINEA_RECUPERADO}|${idLista}|${cant}|${precio}|${desc}|${iva}`;
         }
-        const noRet = tipo === TIPO_LINEA_RETIRO && !!l.NoRetirado ? "1" : "0";
+        const noRet = tipo === TIPO_LINEA_RETIRO && !!l.NoRetirado
+            ? (Number(l.NoRetiradoSigno) === -1 ? "-1" : "1")
+            : "0";
         return `${l.IdProducto}|${tipo}|${noRet}|${idLista}|${cant}|${precio}|${desc}|${iva}`;
     }
 
@@ -1416,7 +1414,9 @@ window.__OA_ENTREGA_BUILD = "precio-entrega-lista-20260811";
             const calc = calcularLinea(linea);
             const t = Number(linea.TipoMovimiento);
             const esRetiro = t === TIPO_LINEA_RETIRO;
-            const noRetChecked = esRetiro && !!linea.NoRetirado ? "checked" : "";
+            const noretOn = esRetiro && !!linea.NoRetirado;
+            const noretSign = noretOn ? (Number(linea.NoRetiradoSigno) === -1 ? -1 : 1) : 0;
+            const noretCls = noretOn ? (noretSign < 0 ? "is-on is-neg" : "is-on is-pos") : "";
 
             const $row = $(`
                 <div class="en-linea" data-key="${k}" data-seccion="productos">
@@ -1442,19 +1442,19 @@ window.__OA_ENTREGA_BUILD = "precio-entrega-lista-20260811";
                                 ${htmlOpcionesListaPrecio(linea)}
                             </select>
                         </label>
-                        <label class="en-field en-field--num">
+                        <label class="en-field en-field--num en-field--cant">
                             <span>Cant.</span>
                             <input type="text" inputmode="decimal" autocomplete="off" class="form-control vn-input vn-mini Inputmiles linea-cant" value="${fmtInputNum(linea.Cantidad)}" />
                         </label>
-                            <label class="en-field en-field--num en-field--precio">
+                        <label class="en-field en-field--num en-field--precio">
                             <span>Precio venta</span>
                             <input type="text" inputmode="decimal" autocomplete="off" class="form-control vn-input vn-mini Inputmiles linea-precio" value="${fmtInputNum(linea.PrecioVenta)}" />
                         </label>
-                        <label class="en-field en-field--num">
+                        <label class="en-field en-field--num en-field--desc">
                             <span>% Desc</span>
                             <input type="text" inputmode="decimal" autocomplete="off" class="form-control vn-input vn-mini Inputmiles linea-desc" value="${fmtInputNum(linea.PorcDescuento)}" />
                         </label>
-                        <label class="en-field en-field--num">
+                        <label class="en-field en-field--num en-field--iva">
                             <span>% IVA</span>
                             <input type="text" inputmode="decimal" autocomplete="off" class="form-control vn-input vn-mini Inputmiles linea-iva" value="${fmtInputNum(linea.PorcIva)}" />
                         </label>
@@ -1464,11 +1464,16 @@ window.__OA_ENTREGA_BUILD = "precio-entrega-lista-20260811";
                             <span>Subtotal</span>
                             <strong class="linea-subtotal-cell linea-subtotal">${fmtMoney(calc.subtotalFinal)}</strong>
                         </div>
-                        <label class="en-noret ${esRetiro ? "" : "d-none"} ${noRetChecked ? "is-on" : ""}" title="Marcar si el producto no se retiró en esta visita">
-                            <input type="checkbox" class="linea-noret" ${noRetChecked} />
-                            <i class="fa fa-ban" aria-hidden="true"></i>
-                            <span>No retirado</span>
-                        </label>
+                        <div class="en-noret-ctl ${esRetiro ? "" : "d-none"} ${noretCls}" data-sign="${noretSign}"
+                             title="No retirado + suma al saldo (quedó sin retirar). No retirado − resta y lo compensa.">
+                            <button type="button" class="en-noret-btn linea-noret-sign" data-sign="-1" title="No retirado −">−</button>
+                            <div class="en-noret-mid">
+                                <i class="fa fa-ban" aria-hidden="true"></i>
+                                <span>No retirado</span>
+                                <strong class="en-noret-qty">${noretOn ? (noretSign < 0 ? "−" : "+") + fmtInputNum(Math.abs(Number(linea.Cantidad) || 0)) : ""}</strong>
+                            </div>
+                            <button type="button" class="en-noret-btn linea-noret-sign" data-sign="1" title="No retirado +">+</button>
+                        </div>
                         <button type="button" class="btn btn-outline-danger btn-quitar-linea" title="Quitar">
                             <i class="fa fa-trash"></i>
                         </button>
@@ -1492,7 +1497,10 @@ window.__OA_ENTREGA_BUILD = "precio-entrega-lista-20260811";
             $tipo.on("change", async function () {
                 if (CM.cargandoEntrega) return;
                 linea.TipoMovimiento = parseInt($(this).val(), 10) || TIPO_LINEA_ENTREGA;
-                if (linea.TipoMovimiento !== TIPO_LINEA_RETIRO) linea.NoRetirado = false;
+                if (linea.TipoMovimiento !== TIPO_LINEA_RETIRO) {
+                    linea.NoRetirado = false;
+                    linea.NoRetiradoSigno = 1;
+                }
                 syncUiNoRetiradoLinea($row, linea);
                 syncLineaFromRow($row, linea);
                 await sincronizarPrecioSegunTipoLinea($row, linea);
@@ -1503,10 +1511,27 @@ window.__OA_ENTREGA_BUILD = "precio-entrega-lista-20260811";
                 recalcularTotalesUI();
             });
 
-            $row.find(".linea-noret").on("change", function () {
+            $row.find(".linea-noret-sign").on("click", function (e) {
+                e.preventDefault();
                 if (CM.cargandoEntrega) return;
                 syncLineaFromRow($row, linea);
+                const want = Number($(this).data("sign")) === -1 ? -1 : 1;
+                if (Number(linea.TipoMovimiento) !== TIPO_LINEA_RETIRO) {
+                    linea.NoRetirado = false;
+                    linea.NoRetiradoSigno = 1;
+                } else if (linea.NoRetirado && (Number(linea.NoRetiradoSigno) === -1 ? -1 : 1) === want) {
+                    linea.NoRetirado = false;
+                    linea.NoRetiradoSigno = 1;
+                } else {
+                    linea.NoRetirado = true;
+                    linea.NoRetiradoSigno = want;
+                    if (!(Math.abs(Number(linea.Cantidad) || 0) > 0)) {
+                        linea.Cantidad = 1;
+                        $row.find(".linea-cant").val(fmtInputNum(1));
+                    }
+                }
                 syncUiNoRetiradoLinea($row, linea);
+                $row.find(".linea-subtotal").text(fmtMoney(calcularLinea(linea).subtotalFinal));
                 actualizarAlertaDuplicadosLineasEntrega();
                 recalcularTotalesUI();
             });
@@ -1516,6 +1541,9 @@ window.__OA_ENTREGA_BUILD = "precio-entrega-lista-20260811";
                 linea.IdListaPrecio = parseInt($(this).val(), 10) || 0;
                 if (linea.IdProducto > 0 && linea.IdListaPrecio > 0) {
                     await aplicarPrecioDesdeListaEntrega($row, linea, { forzar: true });
+                } else if (!(linea.IdListaPrecio > 0)) {
+                    linea.PrecioVenta = 0;
+                    setValorInputMiles($row.find(".linea-precio"), 0);
                 }
                 syncLineaFromRow($row, linea);
                 $row.find(".linea-subtotal").text(fmtMoney(calcularLinea(linea).subtotalFinal));
@@ -1603,7 +1631,7 @@ window.__OA_ENTREGA_BUILD = "precio-entrega-lista-20260811";
                                 ${htmlOpcionesListaPrecio(linea)}
                             </select>
                         </label>
-                        <label class="en-field en-field--num">
+                        <label class="en-field en-field--num en-field--cant">
                             <span>Cant.</span>
                             <input type="text" inputmode="decimal" autocomplete="off" class="form-control vn-input vn-mini Inputmiles linea-cant" value="${fmtInputNum(linea.Cantidad)}" />
                         </label>
@@ -1611,11 +1639,11 @@ window.__OA_ENTREGA_BUILD = "precio-entrega-lista-20260811";
                             <span>Precio ref.</span>
                             <input type="text" inputmode="decimal" autocomplete="off" class="form-control vn-input vn-mini Inputmiles linea-precio" value="${fmtInputNum(linea.PrecioVenta)}" />
                         </label>
-                        <label class="en-field en-field--num">
+                        <label class="en-field en-field--num en-field--desc">
                             <span>% Desc</span>
                             <input type="text" inputmode="decimal" autocomplete="off" class="form-control vn-input vn-mini Inputmiles linea-desc" value="${fmtInputNum(linea.PorcDescuento)}" />
                         </label>
-                        <label class="en-field en-field--num">
+                        <label class="en-field en-field--num en-field--iva">
                             <span>% IVA</span>
                             <input type="text" inputmode="decimal" autocomplete="off" class="form-control vn-input vn-mini Inputmiles linea-iva" value="${fmtInputNum(linea.PorcIva)}" />
                         </label>
@@ -1649,6 +1677,9 @@ window.__OA_ENTREGA_BUILD = "precio-entrega-lista-20260811";
                 linea.IdListaPrecio = parseInt($(this).val(), 10) || 0;
                 if (linea.IdProducto > 0 && linea.IdListaPrecio > 0) {
                     await aplicarPrecioDesdeListaEntrega($row, linea, { forzar: true });
+                } else if (!(linea.IdListaPrecio > 0)) {
+                    linea.PrecioVenta = 0;
+                    setValorInputMiles($row.find(".linea-precio"), 0);
                 }
                 syncLineaFromRow($row, linea);
                 $row.find(".linea-subtotal").text(fmtMoney(calcularLinea(linea).subtotalFinal));
@@ -1716,7 +1747,7 @@ window.__OA_ENTREGA_BUILD = "precio-entrega-lista-20260811";
         } else if ($tr.find(".linea-tipo").length) {
             linea.TipoMovimiento = parseInt($tr.find(".linea-tipo").val(), 10) || TIPO_LINEA_ENTREGA;
         }
-        linea.Cantidad = leerNum($tr.find(".linea-cant").val());
+        linea.Cantidad = Math.abs(leerNum($tr.find(".linea-cant").val()));
         linea.PrecioVenta = leerNum($tr.find(".linea-precio").val());
         linea.PorcDescuento = leerNum($tr.find(".linea-desc").val());
         linea.PorcIva = leerNum($tr.find(".linea-iva").val());
@@ -1724,10 +1755,9 @@ window.__OA_ENTREGA_BUILD = "precio-entrega-lista-20260811";
         if ($tr.find(".linea-lista").length) {
             linea.IdListaPrecio = parseInt($tr.find(".linea-lista").val(), 10) || 0;
         }
-        if (Number(linea.TipoMovimiento) === TIPO_LINEA_RETIRO) {
-            linea.NoRetirado = $tr.find(".linea-noret").is(":checked");
-        } else {
+        if (Number(linea.TipoMovimiento) !== TIPO_LINEA_RETIRO) {
             linea.NoRetirado = false;
+            linea.NoRetiradoSigno = 1;
         }
         syncUiNoRetiradoLinea($tr, linea);
     }
@@ -1735,22 +1765,37 @@ window.__OA_ENTREGA_BUILD = "precio-entrega-lista-20260811";
     function syncUiNoRetiradoLinea($tr, linea) {
         if (!$tr?.length) return;
         const esRetiro = Number(linea?.TipoMovimiento) === TIPO_LINEA_RETIRO;
-        const $wrap = $tr.find(".en-noret");
-        $wrap.toggleClass("d-none", !esRetiro);
+        const $ctl = $tr.find(".en-noret-ctl");
+        $ctl.toggleClass("d-none", !esRetiro);
         if (!esRetiro) {
-            $tr.find(".linea-noret").prop("checked", false);
-            $wrap.removeClass("is-on");
-            if (linea) linea.NoRetirado = false;
-        } else if (linea) {
-            $tr.find(".linea-noret").prop("checked", !!linea.NoRetirado);
-            $wrap.toggleClass("is-on", !!linea.NoRetirado);
-        } else {
-            $wrap.toggleClass("is-on", $tr.find(".linea-noret").is(":checked"));
+            if (linea) {
+                linea.NoRetirado = false;
+                linea.NoRetiradoSigno = 1;
+            }
+            $ctl.removeClass("is-on is-pos is-neg").attr("data-sign", "0");
+            $ctl.find(".en-noret-qty").text("");
+            return;
         }
+        const on = !!linea?.NoRetirado;
+        const sign = on ? (Number(linea.NoRetiradoSigno) === -1 ? -1 : 1) : 0;
+        $ctl.toggleClass("is-on", on)
+            .toggleClass("is-pos", on && sign > 0)
+            .toggleClass("is-neg", on && sign < 0)
+            .attr("data-sign", String(sign));
+        const mag = Math.abs(Number(linea?.Cantidad) || 0);
+        $ctl.find(".en-noret-qty").text(on ? ((sign < 0 ? "−" : "+") + fmtInputNum(mag)) : "");
+    }
+
+    function cantidadEfectivaLinea(linea) {
+        const mag = Math.abs(Number(linea?.Cantidad) || 0);
+        if (Number(linea?.TipoMovimiento) === TIPO_LINEA_RETIRO && linea?.NoRetirado) {
+            return mag * (Number(linea.NoRetiradoSigno) === -1 ? -1 : 1);
+        }
+        return mag;
     }
 
     function calcularLinea(linea) {
-        const cant = Number(linea.Cantidad || 0);
+        const cant = cantidadEfectivaLinea(linea);
         const costo = Number(linea.PrecioVenta || 0);
         const porcDesc = Number(linea.PorcDescuento || 0);
         const porcIva = Number(linea.PorcIva || 0);
@@ -1811,14 +1856,17 @@ window.__OA_ENTREGA_BUILD = "precio-entrega-lista-20260811";
     }
 
     function mapLineaDesdeApi(l, tipoMovimiento) {
+        const cant = Number(l.Cantidad ?? l.cantidad ?? 0) || 0;
+        const noRet = tipoMovimiento === TIPO_LINEA_RETIRO && !!(l.NoRetirado ?? l.noRetirado);
         return {
             _key: CM.nextLineId++,
             Id: Number(l.Id ?? l.id ?? 0) || 0,
             IdProducto: Number(l.IdProducto ?? l.idProducto ?? 0) || 0,
             IdListaPrecio: Number(l.IdListaPrecio ?? l.idListaPrecio ?? 0) || 0,
             TipoMovimiento: tipoMovimiento,
-            NoRetirado: tipoMovimiento === TIPO_LINEA_RETIRO && !!(l.NoRetirado ?? l.noRetirado),
-            Cantidad: Number(l.Cantidad ?? l.cantidad ?? 0) || 0,
+            NoRetirado: noRet,
+            NoRetiradoSigno: noRet && cant < 0 ? -1 : 1,
+            Cantidad: Math.abs(cant) || 0,
             PrecioVenta: Number(l.PrecioVenta ?? l.precioVenta ?? 0) || 0,
             CostoUnitario: Number(l.CostoUnitario ?? l.costoUnitario ?? 0) || 0,
             PorcDescuento: Number(l.PorcDescuento ?? l.porcDescuento ?? 0) || 0,
@@ -1856,6 +1904,7 @@ window.__OA_ENTREGA_BUILD = "precio-entrega-lista-20260811";
             NotaCliente: ($("#cNotaCliente").val() || "").trim() || null,
             Lineas: lineasOperacion.map(l => ({
                 ...mapLineaParaGuardar(l),
+                Cantidad: cantidadEfectivaLinea(l),
                 TipoMovimiento: Number(l.TipoMovimiento || TIPO_LINEA_ENTREGA),
                 NoRetirado: Number(l.TipoMovimiento) === TIPO_LINEA_RETIRO && !!l.NoRetirado
             })),
