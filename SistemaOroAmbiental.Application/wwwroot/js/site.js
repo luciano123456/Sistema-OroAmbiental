@@ -1234,11 +1234,33 @@ function renderAccionesGrid(id, acciones, modulo = null) {
         </button>`
         : "";
 
+    const btnReclamar = (acciones.reclamar && tienePermiso(mod, "VER"))
+        ? `
+        <button type="button"
+            class="btn btn-sm rp-act rp-act-msg"
+            title="Reclamar deuda (WhatsApp / mail)"
+            onclick="${acciones.reclamar}(${id})">
+            <i class="fa fa-whatsapp"></i>
+        </button>`
+        : "";
+
+    const btnWhatsapp = (acciones.whatsapp && tienePermiso(mod, "VER"))
+        ? `
+        <button type="button"
+            class="btn btn-sm rp-act rp-act-msg"
+            title="Mensaje WhatsApp"
+            onclick="${acciones.whatsapp}(${id})">
+            <i class="fa fa-whatsapp"></i>
+        </button>`
+        : "";
+
     return `
         <div class="rp-row-actions" data-id="${id}">
             ${btnVer}
             ${btnEditar}
             ${btnEliminar}
+            ${btnWhatsapp}
+            ${btnReclamar}
         </div>
     `;
 }

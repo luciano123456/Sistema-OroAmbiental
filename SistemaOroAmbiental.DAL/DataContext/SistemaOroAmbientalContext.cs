@@ -33,6 +33,10 @@ public partial class SistemaOroAmbientalContext : DbContext
 
     public virtual DbSet<RecorridoManifiesto> RecorridosManifiestos { get; set; }
 
+    public virtual DbSet<ClientesCertificadoTratamiento> ClientesCertificadosTratamiento { get; set; }
+
+    public virtual DbSet<CertificadosTratamientoContador> CertificadosTratamientoContador { get; set; }
+
     public virtual DbSet<ClientesRecorrido> ClientesRecorridos { get; set; }
 
     public virtual DbSet<ClientesControlMensual> ClientesControlMensuales { get; set; }
@@ -76,6 +80,8 @@ public partial class SistemaOroAmbientalContext : DbContext
     public virtual DbSet<ClientesEstado> ClientesEstados { get; set; }
 
     public virtual DbSet<ClientesMotivo> ClientesMotivos { get; set; }
+
+    public virtual DbSet<ClientesActividad> ClientesActividades { get; set; }
 
     public virtual DbSet<ClientesProfesion> ClientesProfesiones { get; set; }
 
@@ -235,22 +241,22 @@ public partial class SistemaOroAmbientalContext : DbContext
                 .IsRequired()
                 .HasDefaultValueSql("((1))");
             entity.Property(e => e.CodPostal)
-                .HasMaxLength(10)
+                .HasMaxLength(IntercambioTxtCampos.CodigoPostal)
                 .IsUnicode(false);
             entity.Property(e => e.Cuit)
-                .HasMaxLength(20)
+                .HasMaxLength(IntercambioTxtCampos.Cuit)
                 .IsUnicode(false);
             entity.Property(e => e.Domicilio)
                 .HasMaxLength(200)
                 .IsUnicode(false);
             entity.Property(e => e.Calle)
-                .HasMaxLength(100)
+                .HasMaxLength(IntercambioTxtCampos.Calle)
                 .IsUnicode(false);
             entity.Property(e => e.Numero)
-                .HasMaxLength(20)
+                .HasMaxLength(IntercambioTxtCampos.Numero)
                 .IsUnicode(false);
             entity.Property(e => e.PisoDepartamento)
-                .HasMaxLength(50)
+                .HasMaxLength(IntercambioTxtCampos.Adicional)
                 .IsUnicode(false);
             entity.Property(e => e.Email)
                 .HasMaxLength(100)
@@ -258,13 +264,13 @@ public partial class SistemaOroAmbientalContext : DbContext
             entity.Property(e => e.FechaUsuarioModifica).HasColumnType("datetime");
             entity.Property(e => e.FechaUsuarioRegistra).HasColumnType("datetime");
             entity.Property(e => e.Nombre)
-                .HasMaxLength(100)
+                .HasMaxLength(IntercambioTxtCampos.RazonSocial)
                 .IsUnicode(false);
             entity.Property(e => e.Telefono)
-                .HasMaxLength(50)
+                .HasMaxLength(IntercambioTxtCampos.Telefono)
                 .IsUnicode(false);
             entity.Property(e => e.TelefonoAlt)
-                .HasMaxLength(50)
+                .HasMaxLength(IntercambioTxtCampos.Telefono)
                 .IsUnicode(false);
             entity.Property(e => e.MotivoDetalle)
                 .HasMaxLength(500)
@@ -584,22 +590,22 @@ public partial class SistemaOroAmbientalContext : DbContext
         modelBuilder.Entity<ClientesEstablecimiento>(entity =>
         {
             entity.Property(e => e.CodPostal)
-                .HasMaxLength(10)
+                .HasMaxLength(IntercambioTxtCampos.CodigoPostal)
                 .IsUnicode(false);
             entity.Property(e => e.Cuit)
-                .HasMaxLength(20)
+                .HasMaxLength(IntercambioTxtCampos.Cuit)
                 .IsUnicode(false);
             entity.Property(e => e.Domicilio)
                 .HasMaxLength(200)
                 .IsUnicode(false);
             entity.Property(e => e.Calle)
-                .HasMaxLength(100)
+                .HasMaxLength(IntercambioTxtCampos.Calle)
                 .IsUnicode(false);
             entity.Property(e => e.Numero)
-                .HasMaxLength(20)
+                .HasMaxLength(IntercambioTxtCampos.Numero)
                 .IsUnicode(false);
             entity.Property(e => e.PisoDepartamento)
-                .HasMaxLength(50)
+                .HasMaxLength(IntercambioTxtCampos.Adicional)
                 .IsUnicode(false);
             entity.Property(e => e.FechaUsuarioModifica).HasColumnType("datetime");
             entity.Property(e => e.FechaUsuarioRegistra).HasColumnType("datetime");
@@ -617,7 +623,7 @@ public partial class SistemaOroAmbientalContext : DbContext
                 .HasMaxLength(100)
                 .IsUnicode(false);
             entity.Property(e => e.IdEstablecimientoCliente)
-                .HasMaxLength(8)
+                .HasMaxLength(IntercambioTxtCampos.CodigoOpds)
                 .IsUnicode(false);
 
             entity.HasIndex(e => e.IdCliente);
@@ -635,6 +641,10 @@ public partial class SistemaOroAmbientalContext : DbContext
             entity.HasOne(d => d.IdTipoGeneradorNavigation).WithMany(p => p.ClientesEstablecimientos)
                 .HasForeignKey(d => d.IdTipoGenerador)
                 .HasConstraintName("FK_ClientesEstablecimientos_ClientesTiposGenerador");
+
+            entity.HasOne(d => d.IdActividadNavigation).WithMany(p => p.ClientesEstablecimientos)
+                .HasForeignKey(d => d.IdActividad)
+                .HasConstraintName("FK_ClientesEstablecimientos_ClientesActividades");
 
             entity.HasOne(d => d.IdDiaRecoleccionNavigation).WithMany(p => p.ClientesEstablecimientos)
                 .HasForeignKey(d => d.IdDiaRecoleccion)
@@ -816,6 +826,13 @@ public partial class SistemaOroAmbientalContext : DbContext
         });
 
         modelBuilder.Entity<ClientesProfesion>(entity =>
+        {
+            entity.Property(e => e.Nombre)
+                .HasMaxLength(150)
+                .IsUnicode(false);
+        });
+
+        modelBuilder.Entity<ClientesActividad>(entity =>
         {
             entity.Property(e => e.Nombre)
                 .HasMaxLength(150)
@@ -1539,7 +1556,7 @@ public partial class SistemaOroAmbientalContext : DbContext
         modelBuilder.Entity<Partido>(entity =>
         {
             entity.Property(e => e.Codigo)
-                .HasMaxLength(20)
+                .HasMaxLength(IntercambioTxtCampos.CodigoPartido)
                 .IsUnicode(false);
             entity.Property(e => e.Nombre)
                 .HasMaxLength(120)
@@ -1554,7 +1571,7 @@ public partial class SistemaOroAmbientalContext : DbContext
         modelBuilder.Entity<Localidad>(entity =>
         {
             entity.Property(e => e.Codigo)
-                .HasMaxLength(20)
+                .HasMaxLength(IntercambioTxtCampos.CodigoLocalidad)
                 .IsUnicode(false);
             entity.Property(e => e.Nombre)
                 .HasMaxLength(120)
@@ -1704,6 +1721,56 @@ public partial class SistemaOroAmbientalContext : DbContext
             entity.HasOne(d => d.IdUsuarioNavigation).WithMany()
                 .HasForeignKey(d => d.IdUsuario)
                 .HasConstraintName("FK_RecorridosManifiestos_Usuarios");
+        });
+
+        modelBuilder.Entity<CertificadosTratamientoContador>(entity =>
+        {
+            entity.ToTable("CertificadosTratamientoContador");
+            entity.Property(e => e.FechaUsuarioModifica).HasColumnType("datetime");
+            entity.HasOne(d => d.IdUsuarioModificaNavigation).WithMany()
+                .HasForeignKey(d => d.IdUsuarioModifica)
+                .HasConstraintName("FK_CertTratCont_Usuarios");
+        });
+
+        modelBuilder.Entity<ClientesCertificadoTratamiento>(entity =>
+        {
+            entity.ToTable("ClientesCertificadosTratamiento");
+            entity.Property(e => e.RazonSocial).HasMaxLength(200);
+            entity.Property(e => e.CheNro).HasMaxLength(40);
+            entity.Property(e => e.Calle).HasMaxLength(120);
+            entity.Property(e => e.NumeroCalle).HasMaxLength(20);
+            entity.Property(e => e.Piso).HasMaxLength(40);
+            entity.Property(e => e.Localidad).HasMaxLength(120);
+            entity.Property(e => e.Cuit).HasMaxLength(30);
+            entity.Property(e => e.Cantidad).HasMaxLength(40);
+            entity.Property(e => e.RutaPdf).HasMaxLength(500);
+            entity.Property(e => e.NombreArchivo).HasMaxLength(200);
+            entity.Property(e => e.FechaEmision).HasColumnType("date");
+            entity.Property(e => e.FechaTratamiento).HasColumnType("date");
+            entity.Property(e => e.FechaGeneracion).HasColumnType("datetime");
+            entity.HasIndex(e => new { e.IdCliente, e.FechaGeneracion });
+            entity.HasIndex(e => e.NumeroCertificado);
+
+            entity.HasOne(d => d.IdClienteNavigation).WithMany()
+                .HasForeignKey(d => d.IdCliente)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ClientesCertTrat_Clientes");
+
+            entity.HasOne(d => d.IdEstablecimientoNavigation).WithMany()
+                .HasForeignKey(d => d.IdEstablecimiento)
+                .HasConstraintName("FK_ClientesCertTrat_Establecimientos");
+
+            entity.HasOne(d => d.IdManifiestoHistorialNavigation).WithMany()
+                .HasForeignKey(d => d.IdManifiestoHistorial)
+                .HasConstraintName("FK_ClientesCertTrat_Manifiestos");
+
+            entity.HasOne(d => d.IdUsuarioNavigation).WithMany()
+                .HasForeignKey(d => d.IdUsuario)
+                .HasConstraintName("FK_ClientesCertTrat_Usuarios");
+
+            entity.HasOne(d => d.IdCamionNavigation).WithMany()
+                .HasForeignKey(d => d.IdCamion)
+                .HasConstraintName("FK_ClientesCertTrat_Camiones");
         });
 
         modelBuilder.Entity<ClientesRecorrido>(entity =>

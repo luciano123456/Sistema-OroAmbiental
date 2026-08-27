@@ -39,7 +39,7 @@ namespace SistemaOroAmbiental.BLL.Service
             int ultimoNumero,
             int idUsuario);
 
-        Task GuardarHistorialManifiestos(
+        Task<GuardarHistorialManifiestoResultDto> GuardarHistorialManifiestos(
             int idCamion,
             ManifiestosHojaDto model,
             string nombre,

@@ -433,11 +433,8 @@ async function configurarDataTable(data) {
             orderCellsTop: true,
             fixedHeader: true,
             drawCallback: function () {
-                const api = this.api();
-                if (typeof ajustarColumnasGrillaLista === "function") {
-                    ajustarColumnasGrillaLista(api, "#grd_Usuarios");
-                }
-                api.rows({ page: "current" }).every(function () {
+                if (window.RpGridView && !RpGridView.debeMostrarTabla()) return;
+                this.api().rows({ page: "current" }).every(function () {
                     pintarAvataresDondeEstaEnFila($(this.node()), this.data());
                 });
             },
@@ -448,14 +445,24 @@ async function configurarDataTable(data) {
                     maxColumnIndex: 9
                 });
                 configurarOpcionesColumnas();
-                setTimeout(() => gridUsuarios.columns.adjust(), 10);
+                setTimeout(() => {
+                    if (typeof ajustarColumnasGrillaLista === "function") {
+                        ajustarColumnasGrillaLista(api, "#grd_Usuarios");
+                    }
+                }, 200);
                 actualizarKpis(data);
+                if (window.RpGridView) {
+                    RpGridView.renderCards("usuarios");
+                }
             }
         });
 
     } else {
         gridUsuarios.clear().rows.add(data).draw();
         actualizarKpis(data);
+        if (window.RpGridView) {
+            RpGridView.renderCards("usuarios");
+        }
     }
 }
 
@@ -1491,6 +1498,8 @@ async function refrescarPresenciaUsuarios() {
         if (!response.ok) return;
         const data = await response.json();
         const map = new Map((data || []).map(x => [Number(x.Id), x]));
+        const enCards = window.RpGridView && !RpGridView.debeMostrarTabla();
+        let huboCambios = false;
 
         gridUsuarios.rows({ page: "current" }).every(function () {
             const row = this.data();
@@ -1510,6 +1519,7 @@ async function refrescarPresenciaUsuarios() {
 
             if (sameOnline && sameModulo && sameAvatar) return true;
 
+            huboCambios = true;
             row.EnLinea = online;
             row.UltimoModulo = modulo;
             row.AvatarColor = remote.AvatarColor;
@@ -1517,6 +1527,8 @@ async function refrescarPresenciaUsuarios() {
             row.AvatarFoto = remote.AvatarFoto;
             row.Nombre = remote.Nombre || row.Nombre;
             row.Apellido = remote.Apellido || row.Apellido;
+
+            if (enCards) return true;
 
             const $tr = $(this.node());
             const $cell = $tr.find(".usr-user-cell");
@@ -1538,6 +1550,10 @@ async function refrescarPresenciaUsuarios() {
             }
             return true;
         });
+
+        if (huboCambios && enCards && window.RpGridView) {
+            RpGridView.renderCards("usuarios");
+        }
     } catch {
         /* silencioso: no impacta UX */
     }

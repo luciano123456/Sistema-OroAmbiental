@@ -402,6 +402,79 @@ public static class ManifiestoDatosEmpresa
     public const string CaracteristicaPeligrosidad = "H6.2 -";
     public const string EstadoFisico = "Solido";
     public const string IntercambioEmail = "info@oroambientalgroup.com";
+
+    // Certificado de tratamiento de residuos patogénicos
+    public const string CertificadoTratadorRazonSocial = "HABITAT ECOLOGICO S.A.";
+    public const string CertificadoTratadorCalle = "BLANCO ENCALADA";
+    public const string CertificadoTratadorNumero = "3040";
+    public const string CertificadoTratadorLocalidad = "LANUS";
+    public const string CertificadoNombreResiduo = "Residuos Patogenicos";
+    public const string CertificadoTipoResiduo = "Y1";
+    public const string CertificadoPeligrosidad = "H6.2";
+    public const string CertificadoEstadoFisico = "Solido";
+    public const string CertificadoTipoTratamiento = "P2";
+    public const string CertificadoResiduosTratamiento = "RESIDUO SOLIDO URBANO";
+    public const string CertificadoDisposicionFinal = "ARX ARCILLEX S.A.";
+    public const string CertificadoTextoLegal =
+        "El presente documento certifica que los residuos consignados en el mismo fueron tratados en la planta de tratamiento consignada, de acuerdo a los procesos y tecnologías presentadas y aprobadas por el O.P.D.S.. Garantizando, el tratador que se han eliminado o minimizado sus características de peligrosidad de tal manera de poder ser destinados a disposición final autorizada.";
+}
+
+public class CertificadoTratamientoItemDto
+{
+    public int NumeroManifiesto { get; set; }
+    public int NumeroCertificado { get; set; }
+    public int NumeroOrdenOperaciones { get; set; }
+    public DateTime FechaEmision { get; set; }
+    public DateTime FechaTratamiento { get; set; }
+    public string Cantidad { get; set; } = "";
+    public string RazonSocial { get; set; } = "";
+    public string CheNro { get; set; } = "";
+    public string Calle { get; set; } = "";
+    public string NumeroCalle { get; set; } = "";
+    public string Piso { get; set; } = "";
+    public string Localidad { get; set; } = "";
+}
+
+public class CertificadosTratamientoLoteDto
+{
+    public List<CertificadoTratamientoItemDto> Items { get; set; } = new();
+}
+
+public class ClienteDocumentoManifiestoDto
+{
+    public string Tipo { get; set; } = "";
+    public int Id { get; set; }
+    public int? IdCamion { get; set; }
+    public string Camion { get; set; } = "";
+    public int Numero { get; set; }
+    public int? NumeroCertificado { get; set; }
+    public int? NumeroManifiesto { get; set; }
+    public string RazonSocial { get; set; } = "";
+    public string Cantidad { get; set; } = "";
+    public string Recorrido { get; set; } = "";
+    public DateTime Fecha { get; set; }
+    public string Usuario { get; set; } = "";
+    public bool TieneCertificado { get; set; }
+    public int? IdCertificado { get; set; }
+}
+
+public class SiguienteNumeroCertificadoDto
+{
+    public int NumeroCertificado { get; set; }
+    public int NumeroOrden { get; set; }
+}
+
+public class GuardarHistorialManifiestoResultDto
+{
+    public List<HistorialManifiestoGuardadoDto> Items { get; set; } = new();
+}
+
+public class HistorialManifiestoGuardadoDto
+{
+    public int Id { get; set; }
+    public int Numero { get; set; }
+    public int? IdCliente { get; set; }
+    public int? IdEstablecimientoDb { get; set; }
 }
 
 public class ArchivoIntercambioDto
@@ -461,6 +534,9 @@ public class ManifiestoItemDto
     public string Telefono { get; set; } = "";
     public string Domicilio { get; set; } = "";
     public string Cantidad { get; set; } = "";
+    public string Calle { get; set; } = "";
+    public string NumeroCalle { get; set; } = "";
+    public string Piso { get; set; } = "";
 }
 
 public class ManifiestoHistorialDto

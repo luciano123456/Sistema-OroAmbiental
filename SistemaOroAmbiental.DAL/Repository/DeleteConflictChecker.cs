@@ -207,6 +207,7 @@ namespace SistemaOroAmbiental.DAL.Repository
                 nameof(Semana) => await SemanaAsync(id),
                 nameof(EntregasEstado) => await EntregaEstadoAsync(id),
                 nameof(ClientesProfesion) => await ClienteProfesionAsync(id),
+                nameof(ClientesActividad) => await ClienteActividadAsync(id),
                 nameof(TiposContrato) => await TipoContratoAsync(id),
                 nameof(UsuariosEstado) => await UsuarioEstadoAsync(id),
                 nameof(UsuariosRol) => await UsuarioRolAsync(id),
@@ -370,6 +371,14 @@ namespace SistemaOroAmbiental.DAL.Repository
                 return $"No se pudo eliminar esta profesión porque tiene {fer} feriado(s) asociado(s).";
 
             return null;
+        }
+
+        private async Task<string?> ClienteActividadAsync(int id)
+        {
+            var est = await _db.ClientesEstablecimientos.CountAsync(x => x.IdActividad == id);
+            return est > 0
+                ? $"No se pudo eliminar esta actividad porque tiene {est} establecimiento(s) asociado(s)."
+                : null;
         }
 
         private async Task<string?> TipoContratoAsync(int id)

@@ -206,6 +206,10 @@ $(document).ready(async () => {
     $("#btnManifiestosRecorrido").on("click", () => abrirModalManifiestoRecorrido(0, "manifiesto"));
     $("#btnConfirmarManifiestoRecorrido").on("click", busyHandler(confirmarManifiestoRecorrido, { label: "Generando..." }));
     $("#btnExportarTxtIntercambioRecorrido").on("click", busyHandler(exportarArchivoIntercambioRecorrido, { label: "Generando..." }));
+    $("#mfGenerarCertificados").on("change", function () {
+        const on = $(this).is(":checked");
+        $("#mfCertificadosPanel").toggleClass("d-none", !on);
+    });
     $("#mfNumeroManifiesto, #mfNombreManifiesto").on("keydown", function (e) {
         if (e.key === "Enter") {
             e.preventDefault();
@@ -1656,11 +1660,15 @@ async function abrirModalManifiestoRecorrido(idRecorrido, modo) {
         $("#btnConfirmarManifiestoRecorrido").addClass("d-none");
         $("#btnExportarTxtIntercambioRecorrido").removeClass("d-none");
         $("#mfNombreManifiesto").val(`MES ${camionNombre}`);
+        $("#mfGenerarCertificados").closest(".col-12").addClass("d-none");
+        $("#mfCertificadosPanel").addClass("d-none");
     } else if (esSel) {
         $("#modalManifiestoRecorridoTitulo").text(`Exportar TXT (${txtSeleccionIds.size} cliente${txtSeleccionIds.size === 1 ? "" : "s"})`);
         $("#btnConfirmarManifiestoRecorrido").addClass("d-none");
         $("#btnExportarTxtIntercambioRecorrido").removeClass("d-none");
         $("#mfNombreManifiesto").val(nombreRecorridoParaManifiesto());
+        $("#mfGenerarCertificados").closest(".col-12").addClass("d-none");
+        $("#mfCertificadosPanel").addClass("d-none");
     } else if (esTxt) {
         $("#modalManifiestoRecorridoTitulo").text(id > 0 ? "Exportar TXT a planta" : "Exportar TXT de intercambio");
         $("#btnConfirmarManifiestoRecorrido").addClass("d-none");
@@ -1668,16 +1676,20 @@ async function abrirModalManifiestoRecorrido(idRecorrido, modo) {
         $("#mfNombreManifiesto").val(id > 0
             ? (item?.Cliente || nombreRecorridoParaManifiesto())
             : nombreRecorridoParaManifiesto());
+        $("#mfGenerarCertificados").closest(".col-12").addClass("d-none");
+        $("#mfCertificadosPanel").addClass("d-none");
     } else if (id > 0) {
         $("#modalManifiestoRecorridoTitulo").text("Armar manifiesto");
         $("#btnConfirmarManifiestoRecorrido").removeClass("d-none");
         $("#btnExportarTxtIntercambioRecorrido").addClass("d-none");
         $("#mfNombreManifiesto").val(item?.Cliente || nombreRecorridoParaManifiesto());
+        $("#mfGenerarCertificados").closest(".col-12").removeClass("d-none");
     } else {
         $("#modalManifiestoRecorridoTitulo").text("Generar manifiestos");
         $("#btnConfirmarManifiestoRecorrido").removeClass("d-none");
         $("#btnExportarTxtIntercambioRecorrido").removeClass("d-none");
         $("#mfNombreManifiesto").val(nombreRecorridoParaManifiesto());
+        $("#mfGenerarCertificados").closest(".col-12").removeClass("d-none");
     }
 
     const hoy = new Date();
@@ -1685,6 +1697,20 @@ async function abrirModalManifiestoRecorrido(idRecorrido, modo) {
     const mm = String(hoy.getMonth() + 1).padStart(2, "0");
     const dd = String(hoy.getDate()).padStart(2, "0");
     $("#mfFechaIntercambio").val(`${yyyy}-${mm}-${dd}`);
+    $("#mfGenerarCertificados").prop("checked", true);
+    $("#mfCertificadosPanel").removeClass("d-none");
+    $("#mfFechaEmisionCert").val(`${yyyy}-${mm}-${dd}`);
+    $("#mfFechaTratamientoCert").val(`${yyyy}-${mm}-${dd}`);
+
+    try {
+        const certData = await fetchJson("/Recorridos/SiguienteNumeroCertificado");
+        $("#mfNumeroCertificado").val(String(Number(certData?.numeroCertificado ?? certData?.NumeroCertificado) || 1));
+        $("#mfNumeroOrdenCert").val(String(Number(certData?.numeroOrden ?? certData?.NumeroOrden) || 1));
+    } catch (e) {
+        console.warn(e);
+        $("#mfNumeroCertificado").val("1");
+        $("#mfNumeroOrdenCert").val("1");
+    }
 
     $("#mfNumeroManifiesto").val("");
     try {
@@ -1758,28 +1784,58 @@ async function confirmarManifiestoRecorrido() {
     const idRecorrido = parseInt($("#mfIdRecorrido").val(), 10) || 0;
     if (idRecorrido > 0) params.set("idRecorrido", String(idRecorrido));
 
-    const url = `/Recorridos/Manifiestos?${params.toString()}`;
+    const conCert = $("#mfGenerarCertificados").is(":checked");
+    if (conCert) {
+        params.set("generarCertificados", "true");
+        const fe = ($("#mfFechaEmisionCert").val() || "").trim();
+        const ft = ($("#mfFechaTratamientoCert").val() || "").trim();
+        const nc = parseInt($("#mfNumeroCertificado").val(), 10);
+        const no = parseInt($("#mfNumeroOrdenCert").val(), 10);
+        if (fe) params.set("fechaEmision", fe);
+        if (ft) params.set("fechaTratamiento", ft);
+        if (Number.isFinite(nc) && nc > 0) params.set("numeroCertificadoInicial", String(nc));
+        if (Number.isFinite(no) && no > 0) params.set("numeroOrdenInicial", String(no));
+    }
 
     try {
-        await conProceso("Generando manifiestos...", async () => {
-            const response = await fetch(url, {
+        await conProceso(conCert ? "Generando manifiestos y certificados..." : "Generando manifiestos...", async () => {
+            params.set("formato", "manifiesto");
+            const responseMf = await fetch(`/Recorridos/Manifiestos?${params.toString()}`, {
                 headers: { Authorization: "Bearer " + getTokenRec() }
             });
 
-            if (response.status === 404) {
+            if (responseMf.status === 404) {
                 errorModal("No hay clientes para armar el manifiesto en esta hoja.");
                 return;
             }
 
-            if (!response.ok) {
+            if (!responseMf.ok) {
                 errorModal("No se pudieron generar los manifiestos.");
                 return;
             }
 
-            await descargarRespuestaArchivo(response, "Manifiesto.pdf");
+            await descargarRespuestaArchivo(responseMf, "Manifiesto.pdf");
+
+            if (conCert) {
+                // Pequeña pausa para que el navegador no bloquee la 2ª descarga.
+                await new Promise(r => setTimeout(r, 350));
+                params.set("formato", "certificados");
+                const responseCert = await fetch(`/Recorridos/Manifiestos?${params.toString()}`, {
+                    headers: { Authorization: "Bearer " + getTokenRec() }
+                });
+                if (responseCert.ok) {
+                    await descargarRespuestaArchivo(responseCert, "Certificado.pdf");
+                } else if (typeof errorModal === "function") {
+                    errorModal("El manifiesto se descargó, pero no se pudo generar el certificado.");
+                    return;
+                }
+            }
+
             if (modalManifiestoRecorrido) modalManifiestoRecorrido.hide();
             if (typeof exitoModal === "function") {
-                exitoModal("Se descargó el manifiesto en PDF.");
+                exitoModal(conCert
+                    ? "Se descargaron el manifiesto y el certificado."
+                    : "Se descargó el manifiesto en PDF.");
             }
         });
     } catch (e) {

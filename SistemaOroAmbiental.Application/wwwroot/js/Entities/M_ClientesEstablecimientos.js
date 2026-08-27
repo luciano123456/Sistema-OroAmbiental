@@ -29,6 +29,7 @@
                     listasPrecios: "/ListasPrecios/Lista",
                     camiones: "/Camiones/Lista?soloActivos=true",
                     tiposGenerador: "/ClientesTiposGenerador/Lista",
+                    actividades: "/ClientesActividades/Lista",
                     contactosLista: "/ClientesEstablecimientosContactos/ListaPorEstablecimiento?idEstablecimiento={idEstablecimiento}",
                     contactosInsertar: "/ClientesEstablecimientosContactos/Insertar",
                     contactosActualizar: "/ClientesEstablecimientosContactos/Actualizar",
@@ -104,6 +105,7 @@
                 Semanas: { selectId: "cmbSemanaEst", url: this.options.endpoints.semanas },
                 ListasPrecios: { selectId: "cmbListaPrecioProdEst", url: this.options.endpoints.listasPrecios },
                 ClientesTiposGenerador: { selectId: "cmbTipoGeneradorEst", url: this.options.endpoints.tiposGenerador, textField: "Etiqueta" },
+                ClientesActividades: { selectId: "cmbActividadEst", url: this.options.endpoints.actividades },
                 Camiones: { selectId: "cmbCamionEst", url: this.options.endpoints.camiones }
             };
 
@@ -258,7 +260,7 @@
             };
             [
                 "cmbClienteEst", "cmbCondicionIvaEst", "cmbProvinciaEst", "cmbPartidoEst",
-                "cmbLocalidadEst", "cmbTipoGeneradorEst",
+                "cmbLocalidadEst", "cmbTipoGeneradorEst", "cmbActividadEst",
                 "cmbDiaEst", "cmbSemanaEst", "cmbCamionEst",
                 "cmbProductoEst", "cmbListaPrecioProdEst"
             ].forEach(id => {
@@ -1216,6 +1218,7 @@
                 this._refreshSelect2Field("cmbLocalidadEst");
             }
             if (modelo.IdTipoGenerador) this._setFieldValue("cmbTipoGeneradorEst", modelo.IdTipoGenerador, true);
+            if (modelo.IdActividad) this._setFieldValue("cmbActividadEst", modelo.IdActividad, true);
             if (modelo.IdDiaRecoleccion) this._setFieldValue("cmbDiaEst", modelo.IdDiaRecoleccion, true);
             if (modelo.IdSemanaRecoleccion) this._setFieldValue("cmbSemanaEst", modelo.IdSemanaRecoleccion, true);
             if (modelo.IdCamion) this._setFieldValue("cmbCamionEst", modelo.IdCamion, true);
@@ -1396,6 +1399,7 @@
             this.resetSelect("cmbPartidoEst", "Seleccionar");
             this.resetSelect("cmbLocalidadEst", "Seleccionar");
             this.resetSelect("cmbTipoGeneradorEst", "Seleccionar");
+            this.resetSelect("cmbActividadEst", "Seleccionar");
             this.resetSelect("cmbDiaEst", "Seleccionar");
             this.resetSelect("cmbSemanaEst", "Seleccionar");
             this.resetSelect("cmbCamionEst", "Seleccionar");
@@ -1408,6 +1412,7 @@
                 this._llenarCombo("cmbCondicionIvaEst", this.options.endpoints.condicionesIva, seq),
                 this._llenarCombo("cmbProvinciaEst", this.options.endpoints.provincias, seq),
                 this._llenarComboTiposGenerador(seq),
+                this._llenarCombo("cmbActividadEst", this.options.endpoints.actividades, seq),
                 this._llenarCombo("cmbDiaEst", this.options.endpoints.dias, seq),
                 this._llenarCombo("cmbSemanaEst", this.options.endpoints.semanas, seq),
                 this._llenarCombo("cmbCamionEst", this.options.endpoints.camiones, seq),
@@ -1449,6 +1454,7 @@
                 Numero: (this._getFieldValue("txtNumeroEst") || "").trim() || null,
                 PisoDepartamento: (this._getFieldValue("txtPisoDeptoEst") || "").trim() || null,
                 IdTipoGenerador: this._getIntOrNull("cmbTipoGeneradorEst"),
+                IdActividad: this._getIntOrNull("cmbActividadEst"),
                 IdProvincia: this._getIntOrNull("cmbProvinciaEst"),
                 IdPartido: this._getIntOrNull("cmbPartidoEst"),
                 IdLocalidad: this._getIntOrNull("cmbLocalidadEst"),

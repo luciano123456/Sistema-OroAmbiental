@@ -119,14 +119,19 @@ async function configurarDataTableEst(data) {
             data: data,
             language: { sLengthMenu: "Mostrar MENU registros", url: "//cdn.datatables.net/plug-ins/2.0.7/i18n/es-MX.json" },
             autoWidth: false,
-            columnDefs: typeof columnDefsGridLista === "function" ? columnDefsGridLista() : [],
+            columnDefs: [
+                { targets: 0, className: "rp-col-acciones", width: "188px", orderable: false },
+                { targets: 1, className: "rp-col-id", width: "92px" }
+            ],
             scrollX: true,
             scrollCollapse: true,
             columns: [
                 columnaGridAcciones({
                     ver: "verEstablecimiento",
                     editar: "editarEstablecimiento",
-                    eliminar: "eliminarEstablecimiento"
+                    eliminar: "eliminarEstablecimiento",
+                    reclamar: "abrirReclamoDeudaEstablecimiento",
+                    whatsapp: "abrirMensajeWhatsappEstablecimiento"
                 }, "Clientes"),
                 columnaGridId(),
                 { data: "IdEstablecimientoCliente", defaultContent: "" },

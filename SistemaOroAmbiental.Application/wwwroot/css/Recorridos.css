@@ -1276,6 +1276,84 @@
     padding: 0.75rem 1rem;
 }
 
+/* Checkbox certificados */
+.oa-check {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.85rem;
+    margin: 0.35rem 0 0;
+    padding: 0.85rem 1rem;
+    border-radius: 14px;
+    border: 1px solid rgba(52, 211, 153, 0.28);
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(59, 130, 246, 0.08));
+    cursor: pointer;
+    user-select: none;
+    transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.oa-check:hover {
+    border-color: rgba(52, 211, 153, 0.5);
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.12);
+}
+
+.oa-check input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.oa-check-box {
+    flex: 0 0 auto;
+    width: 1.35rem;
+    height: 1.35rem;
+    margin-top: 0.1rem;
+    border-radius: 0.4rem;
+    border: 2px solid rgba(148, 163, 184, 0.55);
+    background: rgba(15, 23, 42, 0.65);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: transparent;
+    transition: all 0.15s ease;
+}
+
+.oa-check-box i {
+    font-size: 0.72rem;
+    line-height: 1;
+}
+
+.oa-check input:checked + .oa-check-box {
+    border-color: #34d399;
+    background: linear-gradient(145deg, #10b981, #059669);
+    color: #fff;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+}
+
+.oa-check-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    min-width: 0;
+}
+
+.oa-check-text strong {
+    color: #e8eef7;
+    font-size: 0.9rem;
+    font-weight: 650;
+}
+
+.oa-check-text small {
+    color: #94a3b8;
+    font-size: 0.75rem;
+    line-height: 1.35;
+}
+
+.oa-cert-panel {
+    margin-top: 0.35rem;
+    padding: 0.85rem 0.25rem 0.15rem;
+    border-top: 1px dashed rgba(148, 163, 184, 0.25);
+}
+
 @media (max-width: 768px) {
     .rec-toolbar {
         width: 100%;

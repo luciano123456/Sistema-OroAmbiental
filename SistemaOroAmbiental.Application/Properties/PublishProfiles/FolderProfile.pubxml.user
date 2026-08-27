@@ -3,7 +3,7 @@
 <Project>
   <PropertyGroup>
     <_PublishTargetUrl>D:\Publicaciones Webs\SistemaOroAmbiental</_PublishTargetUrl>
-    <History>True|2026-08-21T18:12:05.7354775Z||;True|2026-08-21T02:30:04.4591424-03:00||;True|2026-08-21T02:29:49.0928577-03:00||;True|2026-08-14T00:20:17.8262323-03:00||;True|2026-08-13T12:45:35.4734436-03:00||;True|2026-08-13T12:22:31.9164382-03:00||;True|2026-08-12T12:35:43.4086662-03:00||;True|2026-08-06T12:35:24.4883496-03:00||;True|2026-08-06T01:37:20.3335473-03:00||;True|2026-08-05T10:14:25.0535464-03:00||;True|2026-08-05T10:14:17.9647582-03:00||;True|2026-08-04T13:35:55.1822570-03:00||;True|2026-08-04T12:48:56.6794838-03:00||;True|2026-08-04T12:48:42.9349335-03:00||;True|2026-08-03T17:36:43.6859920-03:00||;True|2026-08-03T17:36:28.9864353-03:00||;True|2026-08-03T16:13:49.8468903-03:00||;True|2026-07-31T13:26:24.9979661-03:00||;True|2026-07-30T17:00:45.7007517-03:00||;True|2026-07-30T16:22:15.2926487-03:00||;True|2026-07-30T10:39:39.0465184-03:00||;True|2026-07-29T12:40:47.2555091-03:00||;True|2026-07-29T01:53:46.5696699-03:00||;True|2026-07-28T12:11:47.8324500-03:00||;True|2026-07-28T11:32:21.0867614-03:00||;True|2026-07-28T11:02:05.3241821-03:00||;True|2026-07-28T10:55:47.7478355-03:00||;True|2026-07-28T10:55:28.0227804-03:00||;True|2026-07-28T02:47:59.7108356-03:00||;True|2026-07-23T15:46:55.5245224-03:00||;True|2026-07-23T15:25:33.3339107-03:00||;True|2026-05-28T02:26:44.0369537-03:00||;True|2026-05-28T02:18:52.6183947-03:00||;True|2026-05-28T02:11:39.4250829-03:00||;True|2026-05-28T02:11:18.7744890-03:00||;True|2026-05-28T02:08:24.5888913-03:00||;True|2026-05-28T02:05:47.9929034-03:00||;True|2026-05-22T14:45:59.6858432-03:00||;True|2026-05-22T14:45:53.1454479-03:00||;True|2026-05-22T13:35:34.1649039-03:00||;True|2026-05-22T13:25:06.7944089-03:00||;True|2026-05-22T13:08:56.8323196-03:00||;True|2026-04-02T16:36:02.2659843-03:00||;True|2026-04-02T04:43:45.9892414-03:00||;True|2026-03-30T16:42:38.9829677-03:00||;True|2026-03-30T16:36:51.4400355-03:00||;True|2026-03-30T15:38:02.1330758-03:00||;True|2026-03-29T00:52:30.6897306-03:00||;True|2026-03-21T02:47:36.2684676-03:00||;True|2026-03-02T02:28:42.6919597-03:00||;True|2026-03-02T02:14:42.1640304-03:00||;True|2026-02-26T02:07:13.7997676-03:00||;True|2026-02-26T02:03:17.5123264-03:00||;True|2026-02-26T01:59:42.9479354-03:00||;True|2026-02-21T07:42:34.0406289-03:00||;True|2026-02-21T07:31:52.1547139-03:00||;True|2026-02-21T07:27:55.9546246-03:00||;True|2026-02-18T20:24:30.7518990-03:00||;True|2026-02-18T20:21:18.3235652-03:00||;True|2026-02-16T19:22:50.5531319-03:00||;True|2025-07-29T02:51:07.0177832-03:00||;True|2025-07-29T02:50:56.9678421-03:00||;True|2025-07-29T02:46:39.4414630-03:00||;True|2025-07-29T02:44:00.2722681-03:00||;True|2025-06-29T23:26:58.0824451-03:00||;True|2025-05-29T23:49:19.3864678-03:00||;True|2025-05-28T00:43:44.4281880-03:00||;True|2025-05-28T00:31:35.3388304-03:00||;True|2025-05-28T00:31:13.8717052-03:00||;True|2025-05-28T00:27:53.6765124-03:00||;True|2025-04-26T02:54:13.6621334-03:00||;True|2025-04-26T02:45:05.0430095-03:00||;True|2025-04-25T02:02:07.7055893-03:00||;True|2025-04-25T02:01:56.8158633-03:00||;True|2025-04-25T01:59:36.2860368-03:00||;True|2025-04-25T01:48:36.6325680-03:00||;True|2025-04-25T01:39:58.4038976-03:00||;True|2025-04-25T01:36:54.5227465-03:00||;False|2025-04-25T01:36:43.1194289-03:00||;True|2025-04-24T22:11:51.9710747-03:00||;True|2025-04-24T15:34:07.7326625-03:00||;True|2025-04-24T12:47:10.4491689-03:00||;True|2025-04-24T12:44:33.6964155-03:00||;True|2025-04-24T02:14:46.9418069-03:00||;True|2025-04-24T02:13:02.4597199-03:00||;True|2025-04-24T02:09:35.6076147-03:00||;True|2025-04-24T02:09:27.5489914-03:00||;True|2025-04-22T13:50:48.8079215-03:00||;</History>
+    <History>True|2026-08-26T20:23:18.6313024Z||;True|2026-08-26T17:04:39.5191094-03:00||;True|2026-08-26T16:52:45.4033402-03:00||;True|2026-08-26T16:03:49.2524845-03:00||;True|2026-08-26T12:41:43.5691991-03:00||;True|2026-08-26T10:23:46.8565423-03:00||;True|2026-08-26T09:52:45.0212758-03:00||;True|2026-08-25T10:53:51.3496649-03:00||;True|2026-08-21T15:12:05.7354775-03:00||;True|2026-08-21T02:30:04.4591424-03:00||;True|2026-08-21T02:29:49.0928577-03:00||;True|2026-08-14T00:20:17.8262323-03:00||;True|2026-08-13T12:45:35.4734436-03:00||;True|2026-08-13T12:22:31.9164382-03:00||;True|2026-08-12T12:35:43.4086662-03:00||;True|2026-08-06T12:35:24.4883496-03:00||;True|2026-08-06T01:37:20.3335473-03:00||;True|2026-08-05T10:14:25.0535464-03:00||;True|2026-08-05T10:14:17.9647582-03:00||;True|2026-08-04T13:35:55.1822570-03:00||;True|2026-08-04T12:48:56.6794838-03:00||;True|2026-08-04T12:48:42.9349335-03:00||;True|2026-08-03T17:36:43.6859920-03:00||;True|2026-08-03T17:36:28.9864353-03:00||;True|2026-08-03T16:13:49.8468903-03:00||;True|2026-07-31T13:26:24.9979661-03:00||;True|2026-07-30T17:00:45.7007517-03:00||;True|2026-07-30T16:22:15.2926487-03:00||;True|2026-07-30T10:39:39.0465184-03:00||;True|2026-07-29T12:40:47.2555091-03:00||;True|2026-07-29T01:53:46.5696699-03:00||;True|2026-07-28T12:11:47.8324500-03:00||;True|2026-07-28T11:32:21.0867614-03:00||;True|2026-07-28T11:02:05.3241821-03:00||;True|2026-07-28T10:55:47.7478355-03:00||;True|2026-07-28T10:55:28.0227804-03:00||;True|2026-07-28T02:47:59.7108356-03:00||;True|2026-07-23T15:46:55.5245224-03:00||;True|2026-07-23T15:25:33.3339107-03:00||;True|2026-05-28T02:26:44.0369537-03:00||;True|2026-05-28T02:18:52.6183947-03:00||;True|2026-05-28T02:11:39.4250829-03:00||;True|2026-05-28T02:11:18.7744890-03:00||;True|2026-05-28T02:08:24.5888913-03:00||;True|2026-05-28T02:05:47.9929034-03:00||;True|2026-05-22T14:45:59.6858432-03:00||;True|2026-05-22T14:45:53.1454479-03:00||;True|2026-05-22T13:35:34.1649039-03:00||;True|2026-05-22T13:25:06.7944089-03:00||;True|2026-05-22T13:08:56.8323196-03:00||;True|2026-04-02T16:36:02.2659843-03:00||;True|2026-04-02T04:43:45.9892414-03:00||;True|2026-03-30T16:42:38.9829677-03:00||;True|2026-03-30T16:36:51.4400355-03:00||;True|2026-03-30T15:38:02.1330758-03:00||;True|2026-03-29T00:52:30.6897306-03:00||;True|2026-03-21T02:47:36.2684676-03:00||;True|2026-03-02T02:28:42.6919597-03:00||;True|2026-03-02T02:14:42.1640304-03:00||;True|2026-02-26T02:07:13.7997676-03:00||;True|2026-02-26T02:03:17.5123264-03:00||;True|2026-02-26T01:59:42.9479354-03:00||;True|2026-02-21T07:42:34.0406289-03:00||;True|2026-02-21T07:31:52.1547139-03:00||;True|2026-02-21T07:27:55.9546246-03:00||;True|2026-02-18T20:24:30.7518990-03:00||;True|2026-02-18T20:21:18.3235652-03:00||;True|2026-02-16T19:22:50.5531319-03:00||;True|2025-07-29T02:51:07.0177832-03:00||;True|2025-07-29T02:50:56.9678421-03:00||;True|2025-07-29T02:46:39.4414630-03:00||;True|2025-07-29T02:44:00.2722681-03:00||;True|2025-06-29T23:26:58.0824451-03:00||;True|2025-05-29T23:49:19.3864678-03:00||;True|2025-05-28T00:43:44.4281880-03:00||;True|2025-05-28T00:31:35.3388304-03:00||;True|2025-05-28T00:31:13.8717052-03:00||;True|2025-05-28T00:27:53.6765124-03:00||;True|2025-04-26T02:54:13.6621334-03:00||;True|2025-04-26T02:45:05.0430095-03:00||;True|2025-04-25T02:02:07.7055893-03:00||;True|2025-04-25T02:01:56.8158633-03:00||;True|2025-04-25T01:59:36.2860368-03:00||;True|2025-04-25T01:48:36.6325680-03:00||;True|2025-04-25T01:39:58.4038976-03:00||;True|2025-04-25T01:36:54.5227465-03:00||;False|2025-04-25T01:36:43.1194289-03:00||;True|2025-04-24T22:11:51.9710747-03:00||;True|2025-04-24T15:34:07.7326625-03:00||;True|2025-04-24T12:47:10.4491689-03:00||;True|2025-04-24T12:44:33.6964155-03:00||;True|2025-04-24T02:14:46.9418069-03:00||;True|2025-04-24T02:13:02.4597199-03:00||;True|2025-04-24T02:09:35.6076147-03:00||;True|2025-04-24T02:09:27.5489914-03:00||;True|2025-04-22T13:50:48.8079215-03:00||;</History>
     <LastFailureDetails />
   </PropertyGroup>
   <ItemGroup>
@@ -26,10 +26,10 @@
       <publishTime>07/30/2026 09:41:51</publishTime>
     </File>
     <File Include="Views/Camiones/Index.cshtml">
-      <publishTime>08/21/2026 13:00:21</publishTime>
+      <publishTime>08/26/2026 09:19:15</publishTime>
     </File>
     <File Include="Views/Clientes/Gestion.cshtml">
-      <publishTime>08/21/2026 13:40:33</publishTime>
+      <publishTime>08/26/2026 16:58:55</publishTime>
     </File>
     <File Include="Views/Clientes/Index.cshtml">
       <publishTime>08/11/2026 14:44:21</publishTime>
@@ -44,7 +44,10 @@
       <publishTime>08/21/2026 12:40:43</publishTime>
     </File>
     <File Include="Views/ClientesEstablecimientos/Index.cshtml">
-      <publishTime>08/21/2026 13:40:01</publishTime>
+      <publishTime>08/26/2026 12:39:40</publishTime>
+    </File>
+    <File Include="Views/ClientesEstablecimientos/_ModalReclamoDeuda.cshtml">
+      <publishTime>08/25/2026 17:46:27</publishTime>
     </File>
     <File Include="Views/Compras/Index.cshtml">
       <publishTime>07/30/2026 09:41:51</publishTime>
@@ -65,13 +68,13 @@
       <publishTime>04/02/2026 04:41:06</publishTime>
     </File>
     <File Include="Views/Entities/M_Camiones.cshtml">
-      <publishTime>08/21/2026 02:00:59</publishTime>
+      <publishTime>08/26/2026 09:17:47</publishTime>
     </File>
     <File Include="Views/Entities/M_Clientes.cshtml">
-      <publishTime>07/30/2026 09:41:51</publishTime>
+      <publishTime>08/24/2026 11:09:34</publishTime>
     </File>
     <File Include="Views/Entities/M_ClientesEstablecimientos.cshtml">
-      <publishTime>08/13/2026 11:04:16</publishTime>
+      <publishTime>08/25/2026 12:52:12</publishTime>
     </File>
     <File Include="Views/Entities/M_Contratos.cshtml">
       <publishTime>08/11/2026 14:44:21</publishTime>
@@ -95,7 +98,7 @@
       <publishTime>04/02/2026 04:41:21</publishTime>
     </File>
     <File Include="Views/Entities/_EstablecimientoEditorBody.cshtml">
-      <publishTime>08/21/2026 13:21:42</publishTime>
+      <publishTime>08/26/2026 16:50:59</publishTime>
     </File>
     <File Include="Views/Finanzas/Index.cshtml">
       <publishTime>08/05/2026 22:00:46</publishTime>
@@ -116,13 +119,13 @@
       <publishTime>07/30/2026 09:41:51</publishTime>
     </File>
     <File Include="Views/Gastos/Index.cshtml">
-      <publishTime>08/21/2026 01:30:42</publishTime>
+      <publishTime>08/26/2026 10:18:49</publishTime>
     </File>
     <File Include="Views/Inventario/Index.cshtml">
       <publishTime>08/05/2026 22:00:46</publishTime>
     </File>
     <File Include="Views/LibroDiario/Index.cshtml">
-      <publishTime>08/21/2026 01:30:42</publishTime>
+      <publishTime>08/26/2026 10:18:49</publishTime>
     </File>
     <File Include="Views/Login/Index.cshtml">
       <publishTime>08/05/2026 22:00:46</publishTime>
@@ -170,10 +173,10 @@
       <publishTime>01/01/0001 00:00:00</publishTime>
     </File>
     <File Include="Views/Recorridos/HojaRuta.cshtml">
-      <publishTime>08/21/2026 01:06:13</publishTime>
+      <publishTime>08/26/2026 17:03:47</publishTime>
     </File>
     <File Include="Views/Recorridos/Index.cshtml">
-      <publishTime>08/21/2026 13:40:16</publishTime>
+      <publishTime>08/26/2026 09:19:12</publishTime>
     </File>
     <File Include="Views/Recorridos/Manifiestos.cshtml">
       <publishTime>08/21/2026 12:18:53</publishTime>
@@ -188,22 +191,22 @@
       <publishTime>07/30/2026 09:41:51</publishTime>
     </File>
     <File Include="Views/Shared/Partials/NavBarLogin.cshtml">
-      <publishTime>08/21/2026 13:00:20</publishTime>
+      <publishTime>08/26/2026 16:43:19</publishTime>
     </File>
     <File Include="Views/Shared/Partials/ProductosHubNav.cshtml">
       <publishTime>07/30/2026 09:41:51</publishTime>
     </File>
     <File Include="Views/Shared/_Layout.cshtml">
-      <publishTime>08/21/2026 13:42:11</publishTime>
+      <publishTime>08/25/2026 12:51:48</publishTime>
     </File>
     <File Include="Views/Shared/_Layout.cshtml.css">
       <publishTime>08/11/2025 23:47:33</publishTime>
     </File>
     <File Include="Views/Shared/_LayoutEmbed.cshtml">
-      <publishTime>08/21/2026 13:42:11</publishTime>
+      <publishTime>08/25/2026 12:51:49</publishTime>
     </File>
     <File Include="Views/Shared/_LayoutModulo.cshtml">
-      <publishTime>08/21/2026 13:42:11</publishTime>
+      <publishTime>08/25/2026 12:51:49</publishTime>
     </File>
     <File Include="Views/Shared/_ValidationScriptsPartial.cshtml">
       <publishTime>07/27/2026 18:11:34</publishTime>
@@ -215,10 +218,10 @@
       <publishTime>04/02/2026 04:42:26</publishTime>
     </File>
     <File Include="Views/Usuarios/Configuracion.cshtml">
-      <publishTime>08/21/2026 01:30:42</publishTime>
+      <publishTime>08/26/2026 10:18:49</publishTime>
     </File>
     <File Include="Views/Usuarios/Index.cshtml">
-      <publishTime>08/11/2026 14:44:21</publishTime>
+      <publishTime>08/26/2026 17:22:19</publishTime>
     </File>
     <File Include="Views/Utils/Modals.cshtml">
       <publishTime>08/21/2026 12:59:07</publishTime>
@@ -230,7 +233,7 @@
       <publishTime>04/02/2026 04:42:41</publishTime>
     </File>
     <File Include="Views/_ViewImports.cshtml">
-      <publishTime>07/27/2026 18:11:34</publishTime>
+      <publishTime>08/24/2026 11:08:59</publishTime>
     </File>
     <File Include="Views/_ViewStart.cshtml">
       <publishTime>07/27/2026 18:11:34</publishTime>
@@ -260,7 +263,7 @@
       <publishTime>01/01/0001 00:00:00</publishTime>
     </File>
     <File Include="wwwroot/css/ClientesEstablecimientos.css">
-      <publishTime>08/05/2026 22:00:46</publishTime>
+      <publishTime>01/01/0001 00:00:00</publishTime>
     </File>
     <File Include="wwwroot/css/ClientesGestion.css">
       <publishTime>01/01/0001 00:00:00</publishTime>
@@ -565,6 +568,9 @@
     <File Include="wwwroot/js/ClientesEstablecimientos.js">
       <publishTime>01/01/0001 00:00:00</publishTime>
     </File>
+    <File Include="wwwroot/js/ClientesEstablecimientosReclamo.js">
+      <publishTime>01/01/0001 00:00:00</publishTime>
+    </File>
     <File Include="wwwroot/js/ClientesGestion.js">
       <publishTime>01/01/0001 00:00:00</publishTime>
     </File>
@@ -725,7 +731,7 @@
       <publishTime>04/02/2026 04:25:47</publishTime>
     </File>
     <File Include="wwwroot/js/Usuarios.js">
-      <publishTime>11/08/2026 14:44:21</publishTime>
+      <publishTime>01/01/0001 00:00:00</publishTime>
     </File>
     <File Include="wwwroot/js/UsuariosConfiguracion.js">
       <publishTime>01/01/0001 00:00:00</publishTime>
@@ -918,6 +924,39 @@
     </File>
     <File Include="wwwroot/Uploads/Avatares/.gitkeep">
       <publishTime>08/11/2026 14:44:21</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/1/Certificado_2_Daniel_Perez.pdf">
+      <publishTime>01/01/0001 00:00:00</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/1/Certificado_4_Daniel_Perez.pdf">
+      <publishTime>01/01/0001 00:00:00</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/5/Certificado_1_Luciano_Escobar.pdf">
+      <publishTime>01/01/0001 00:00:00</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/5/Certificado_3_Luciano_Escobar.pdf">
+      <publishTime>01/01/0001 00:00:00</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/5/Certificado_5_Luciano_Escobar.pdf">
+      <publishTime>01/01/0001 00:00:00</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/8/Certificado_354657_PUTASIO_MARIA_LORENA_asdfsadfsadfsafdsad.pdf">
+      <publishTime>01/01/0001 00:00:00</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/8/Certificado_354658_PUTASIO_MARIA_LORENA_asdfsadfsadfsafdsad.pdf">
+      <publishTime>01/01/0001 00:00:00</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/8/Certificado_354659_PUTASIO_MARIA_LORENA_asdfsadfsadfsafdsad.pdf">
+      <publishTime>01/01/0001 00:00:00</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/8/Certificado_354660_PUTASIO_MARIA_LORENA_asdfsadfsadfsafdsad.pdf">
+      <publishTime>01/01/0001 00:00:00</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/8/Certificado_354661_PUTASIO_MARIA_LORENA_asdfsadfsadfsafdsad.pdf">
+      <publishTime>01/01/0001 00:00:00</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/8/Certificado_354662_PUTASIO_MARIA_LORENA_asdfsadfsadfsafdsad.pdf">
+      <publishTime>01/01/0001 00:00:00</publishTime>
     </File>
   </ItemGroup>
 </Project>

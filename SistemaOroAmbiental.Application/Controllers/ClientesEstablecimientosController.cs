@@ -14,15 +14,27 @@ namespace SistemaOroAmbiental.Application.Controllers
         private readonly IClientesEstablecimientosService _service;
         private readonly ILocalidadesService _localidadesService;
         private readonly IPartidosService _partidosService;
+        private readonly IClientesOperativoService _operativoService;
+        private readonly IClientesEstablecimientosContactosService _contactosEstService;
+        private readonly IClientesContactosService _contactosCliService;
+        private readonly IClientesService _clientesService;
 
         public ClientesEstablecimientosController(
             IClientesEstablecimientosService service,
             ILocalidadesService localidadesService,
-            IPartidosService partidosService)
+            IPartidosService partidosService,
+            IClientesOperativoService operativoService,
+            IClientesEstablecimientosContactosService contactosEstService,
+            IClientesContactosService contactosCliService,
+            IClientesService clientesService)
         {
             _service = service;
             _localidadesService = localidadesService;
             _partidosService = partidosService;
+            _operativoService = operativoService;
+            _contactosEstService = contactosEstService;
+            _contactosCliService = contactosCliService;
+            _clientesService = clientesService;
         }
 
         [AllowAnonymous]
@@ -68,6 +80,7 @@ namespace SistemaOroAmbiental.Application.Controllers
                 Numero = e.Numero,
                 PisoDepartamento = e.PisoDepartamento,
                 IdTipoGenerador = e.IdTipoGenerador,
+                IdActividad = e.IdActividad,
                 IdProvincia = e.IdProvincia,
                 IdPartido = e.IdPartido,
                 IdLocalidad = e.IdLocalidad,
@@ -94,6 +107,7 @@ namespace SistemaOroAmbiental.Application.Controllers
                 TipoGenerador = e.IdTipoGeneradorNavigation != null
                     ? e.IdTipoGeneradorNavigation.Codigo + " - " + e.IdTipoGeneradorNavigation.Nombre
                     : "",
+                Actividad = e.IdActividadNavigation?.Nombre ?? "",
                 DiaRecoleccion = e.IdDiaRecoleccionNavigation?.Nombre ?? "",
                 SemanaRecoleccion = e.IdSemanaRecoleccionNavigation?.Nombre ?? "",
                 ListaPrecio = e.IdListaPrecioNavigation?.Nombre ?? "",
@@ -128,6 +142,7 @@ namespace SistemaOroAmbiental.Application.Controllers
                 e.PisoDepartamento,
                 Domicilio = DomicilioHelper.Componer(e.Calle, e.Numero, e.PisoDepartamento, e.Domicilio),
                 e.IdTipoGenerador,
+                e.IdActividad,
                 e.IdProvincia,
                 e.IdPartido,
                 e.IdLocalidad,
@@ -151,6 +166,177 @@ namespace SistemaOroAmbiental.Application.Controllers
                 e.FechaUsuarioModifica,
                 UsuarioModifica = e.IdUsuarioModificaNavigation?.Usuario
             });
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> InformeDeuda(int id)
+        {
+            var e = await _service.Obtener(id);
+            if (e == null) return NotFound();
+
+            var cliente = await _clientesService.Obtener(e.IdCliente);
+            var contactosEst = await _contactosEstService.ObtenerPorEstablecimiento(id);
+            var contactosCli = await _contactosCliService.ObtenerPorCliente(e.IdCliente);
+
+            var anioHoy = DateTime.Now.Year;
+            var anios = new[] { anioHoy, anioHoy - 1, anioHoy - 2 };
+            var meses = Enumerable.Range(1, 12).ToList();
+            var cultura = new System.Globalization.CultureInfo("es-AR");
+
+            var control = await _operativoService.ObtenerControlMensualFiltrado(
+                e.IdCliente, anios, meses, new[] { id });
+
+            var filas = (control?.Filas ?? new List<ClienteControlMensualDto>())
+                .Where(TieneMovimientoReclamo)
+                .OrderBy(f => f.Anio)
+                .ThenBy(f => f.Mes)
+                .Select(f => MapearMesReclamo(f, cultura))
+                .ToList();
+
+            var contactos = new List<VMEstablecimientoReclamoContacto>();
+
+            if (cliente != null &&
+                (!string.IsNullOrWhiteSpace(cliente.Telefono)
+                 || !string.IsNullOrWhiteSpace(cliente.TelefonoAlt)
+                 || !string.IsNullOrWhiteSpace(cliente.Email)))
+            {
+                contactos.Add(new VMEstablecimientoReclamoContacto
+                {
+                    Id = 0,
+                    Origen = "Cliente",
+                    Nombre = cliente.Nombre,
+                    Telefono = cliente.Telefono,
+                    TelefonoAlt = cliente.TelefonoAlt,
+                    Email = cliente.Email
+                });
+            }
+
+            contactos.AddRange(contactosEst.Select(c => new VMEstablecimientoReclamoContacto
+            {
+                Id = c.Id,
+                Origen = "Establecimiento",
+                Nombre = c.Nombre,
+                Puesto = c.Puesto,
+                Telefono = c.Telefono,
+                TelefonoAlt = c.TelefonoAlt,
+                Email = c.Email
+            }));
+
+            contactos.AddRange(contactosCli.Select(c => new VMEstablecimientoReclamoContacto
+            {
+                Id = c.Id,
+                Origen = "Cliente",
+                Nombre = c.Nombre,
+                Puesto = c.Puesto,
+                Telefono = c.Telefono,
+                TelefonoAlt = c.TelefonoAlt,
+                Email = c.Email
+            }));
+
+            var calle = DomicilioHelper.Componer(e.Calle, e.Numero, e.PisoDepartamento, e.Domicilio);
+            var localidad = !string.IsNullOrWhiteSpace(e.Localidad)
+                ? e.Localidad.Trim()
+                : (e.IdLocalidadNavigation?.Nombre ?? "").Trim();
+            var partido = (e.IdPartidoNavigation?.Nombre ?? "").Trim();
+            var ubicacion = ArmarUbicacionEstablecimiento(calle, localidad, partido, e.CodPostal);
+
+            return Ok(new VMEstablecimientoReclamoDeuda
+            {
+                IdEstablecimiento = e.Id,
+                IdCliente = e.IdCliente,
+                Establecimiento = e.Nombre,
+                CodigoEstablecimiento = e.IdEstablecimientoCliente,
+                Direccion = string.IsNullOrWhiteSpace(ubicacion) ? calle : ubicacion,
+                Localidad = localidad,
+                Partido = partido,
+                Cliente = cliente?.Nombre ?? e.IdClienteNavigation?.Nombre ?? "",
+                SaldoEstablecimiento = filas.LastOrDefault()?.Saldo ?? 0,
+                SaldoCliente = control?.TotalSaldo ?? 0,
+                Meses = filas,
+                Contactos = contactos
+            });
+        }
+
+        private static string ArmarUbicacionEstablecimiento(
+            string? calle, string? localidad, string? partido, string? codPostal)
+        {
+            var partes = new List<string>();
+            if (!string.IsNullOrWhiteSpace(calle)) partes.Add(calle.Trim());
+            if (!string.IsNullOrWhiteSpace(localidad)) partes.Add(localidad.Trim());
+            if (!string.IsNullOrWhiteSpace(partido) &&
+                !string.Equals(partido.Trim(), localidad?.Trim(), StringComparison.OrdinalIgnoreCase))
+                partes.Add(partido.Trim());
+            if (!string.IsNullOrWhiteSpace(codPostal)) partes.Add("CP " + codPostal.Trim());
+            return string.Join(", ", partes);
+        }
+
+        private static bool TieneMovimientoReclamo(ClienteControlMensualDto f)
+        {
+            return f.Debe > 0.009m
+                || f.Haber > 0.009m
+                || f.TotalIntereses > 0.009m
+                || f.AbonoEfectivo > 0.009m
+                || f.AbonoTransferencia > 0.009m
+                || f.FechaVisita.HasValue
+                || Math.Abs(f.RestanteMes) > 0.009m;
+        }
+
+        private static VMEstablecimientoReclamoMes MapearMesReclamo(
+            ClienteControlMensualDto f,
+            System.Globalization.CultureInfo cultura)
+        {
+            var mesNombre = string.IsNullOrWhiteSpace(f.MesNombre)
+                ? new DateTime(f.Anio, f.Mes, 1).ToString("MMMM", cultura)
+                : f.MesNombre;
+            var periodo = new DateTime(f.Anio, f.Mes, 1)
+                .ToString("MMM-yy", cultura)
+                .Replace(".", "")
+                .Replace(" ", "")
+                .ToLowerInvariant();
+
+            var abonoEf = f.AbonoEfectivo;
+            var abonoTr = f.AbonoTransferencia;
+            if (abonoEf <= 0.009m && abonoTr <= 0.009m && f.Haber > 0.009m)
+                abonoTr = f.Haber;
+
+            var estado = f.RestanteMes > 0.009m
+                ? "deuda"
+                : (f.RestanteMes < -0.009m || f.Haber > f.TotalMes + 0.009m ? "afavor" : "cancelado");
+
+            string? nota = null;
+            if (f.Haber > f.TotalMes + 0.009m)
+            {
+                var excedente = f.Haber - f.TotalMes;
+                nota = $"El pago de este mes supera el cargo ({excedente.ToString("C2", cultura)} de más) y se imputó a deuda de períodos anteriores.";
+            }
+            else if (f.Haber > 0.009m && f.RestanteMes <= 0.009m && f.TotalMes > 0.009m)
+            {
+                nota = "Mes cancelado. Si el cliente cree que pagó 'este mes', el pago puede haber cubierto también deuda previa.";
+            }
+            else if (f.Haber > 0.009m && f.RestanteMes > 0.009m)
+            {
+                nota = "Quedó saldo en este período. El pago no alcanzó a cubrir el cargo + intereses.";
+            }
+
+            return new VMEstablecimientoReclamoMes
+            {
+                Anio = f.Anio,
+                Mes = f.Mes,
+                MesNombre = mesNombre,
+                Periodo = periodo,
+                FechaRecoleccion = f.FechaVisita,
+                Adeudado = f.Debe,
+                Intereses = f.TotalIntereses,
+                TotalMes = f.TotalMes,
+                AbonoEfectivo = abonoEf,
+                AbonoTransferencia = abonoTr,
+                FechaTransferencia = f.FechaTransferencia,
+                Haber = f.Haber,
+                Restante = f.RestanteMes,
+                Saldo = f.Saldo,
+                Estado = estado,
+                NotaImputacion = nota
+            };
         }
 
         [HttpGet]
@@ -240,6 +426,7 @@ namespace SistemaOroAmbiental.Application.Controllers
                 PisoDepartamento = piso,
                 Domicilio = DomicilioHelper.Componer(calle, numero, piso, model.Domicilio),
                 IdTipoGenerador = model.IdTipoGenerador,
+                IdActividad = model.IdActividad,
                 IdProvincia = model.IdProvincia,
                 IdPartido = model.IdPartido,
                 IdLocalidad = model.IdLocalidad,

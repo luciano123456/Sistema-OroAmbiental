@@ -71,16 +71,16 @@ public static class ArchivoIntercambioFormatter
         sb.Append(habitat);
         sb.Append(transp);
         sb.Append(opds);
-        sb.Append(Alfa(item.RazonSocial, 40));
-        sb.Append(Alfa("", 40));
-        sb.Append(Alfa(item.Calle, 40));
+        sb.Append(Alfa(item.RazonSocial, IntercambioTxtCampos.RazonSocial));
+        sb.Append(Alfa("", IntercambioTxtCampos.NombreFantasia));
+        sb.Append(Alfa(item.Calle, IntercambioTxtCampos.Calle));
         sb.Append(NumeroCalle(item.NumeroCalle));
-        sb.Append(Alfa(item.CodigoPostal, 8));
-        sb.Append(CodigoTabla(item.CodigoLocalidad, 4));
-        sb.Append(CodigoTabla(item.CodigoPartido, 4));
-        sb.Append(Alfa("", 40));
+        sb.Append(Alfa(item.CodigoPostal, IntercambioTxtCampos.CodigoPostal));
+        sb.Append(CodigoTabla(item.CodigoLocalidad, IntercambioTxtCampos.CodigoLocalidad));
+        sb.Append(CodigoTabla(item.CodigoPartido, IntercambioTxtCampos.CodigoPartido));
+        sb.Append(Alfa("", IntercambioTxtCampos.Adicional));
         sb.Append(CodigoProvincia(item.NombreProvincia));
-        sb.Append(Alfa("", 30));
+        sb.Append(Alfa("", IntercambioTxtCampos.Telefono));
         sb.Append(CuitTxt(item.Cuit));
         sb.Append(CodigoIva(item.NombreIva));
         sb.Append(TipoGenerador(item.CodigoTipoGenerador));
@@ -101,12 +101,12 @@ public static class ArchivoIntercambioFormatter
         sb.Append(transp);
         sb.Append(opds);
         sb.Append(CodigoDomicilioRetiro);
-        sb.Append(Alfa(item.Calle, 40));
+        sb.Append(Alfa(item.Calle, IntercambioTxtCampos.Calle));
         sb.Append(NumeroCalle(item.NumeroCalle));
-        sb.Append(Alfa(item.CodigoPostal, 8));
-        sb.Append(CodigoTabla(item.CodigoLocalidad, 4));
-        sb.Append(CodigoTabla(item.CodigoPartido, 4));
-        sb.Append(Alfa("", 40));
+        sb.Append(Alfa(item.CodigoPostal, IntercambioTxtCampos.CodigoPostal));
+        sb.Append(CodigoTabla(item.CodigoLocalidad, IntercambioTxtCampos.CodigoLocalidad));
+        sb.Append(CodigoTabla(item.CodigoPartido, IntercambioTxtCampos.CodigoPartido));
+        sb.Append(Alfa("", IntercambioTxtCampos.Adicional));
         sb.Append(CodigoProvincia(item.NombreProvincia));
         sb.Append(Alfa("", 157));
         return Ajustar(sb, AnchoCuerpo);
@@ -206,7 +206,7 @@ public static class ArchivoIntercambioFormatter
         var digits = SoloDigitos(cuit);
         if (digits.Length == 11)
             return $"{digits[..2]}-{digits[2..10]}-{digits[10]}";
-        return Alfa(cuit, 13);
+        return Alfa(cuit, IntercambioTxtCampos.Cuit);
     }
 
     private static string NumeroCalle(string? numero)
@@ -216,11 +216,11 @@ public static class ArchivoIntercambioFormatter
             return Entero(0, 5);
         if (txt.All(char.IsDigit))
         {
-            if (txt.Length > 5)
-                txt = txt[^5..];
-            return txt.PadLeft(5, '0');
+            if (txt.Length > IntercambioTxtCampos.Numero)
+                txt = txt[^IntercambioTxtCampos.Numero..];
+            return txt.PadLeft(IntercambioTxtCampos.Numero, '0');
         }
-        return Alfa(txt, 5);
+        return Alfa(txt, IntercambioTxtCampos.Numero);
     }
 
     private static string CodigoTabla(string? codigo, int ancho)

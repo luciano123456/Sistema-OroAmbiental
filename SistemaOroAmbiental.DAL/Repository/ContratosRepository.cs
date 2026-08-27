@@ -20,6 +20,9 @@ namespace SistemaOroAmbiental.DAL.Repository
                 .Include(x => x.IdClienteNavigation)
                     .ThenInclude(c => c.IdSucursalNavigation)
                 .Include(x => x.IdEstablecimientoNavigation)
+                    .ThenInclude(e => e!.IdTipoGeneradorNavigation)
+                .Include(x => x.IdEstablecimientoNavigation)
+                    .ThenInclude(e => e!.IdActividadNavigation)
                 .Include(x => x.IdTipoContratoNavigation)
                 .AsQueryable();
 

@@ -9,8 +9,8 @@
     <link href="~/css/Productora.css?v=7.2" rel="stylesheet" />
     <link href="~/css/disenopantallas.css?v=8.1" rel="stylesheet" />
     <link href="~/css/M_Generico.css?v=7.2" rel="stylesheet" />
-    <link href="~/css/Camiones.css?v=6.2" rel="stylesheet" />
-    <link href="~/css/Recorridos.css?v=9.4" rel="stylesheet" />
+    <link href="~/css/Camiones.css?v=6.3" rel="stylesheet" />
+    <link href="~/css/Recorridos.css?v=9.5" rel="stylesheet" />
 }
 
 <div class="rec-page rec-sin-unidad">
@@ -305,6 +305,38 @@
                         <label class="form-label" for="mfFechaIntercambio">Fecha de programación</label>
                         <input type="date" id="mfFechaIntercambio" class="form-control rec-input" />
                     </div>
+                    <div class="col-12">
+                        <label class="oa-check" for="mfGenerarCertificados">
+                            <input type="checkbox" id="mfGenerarCertificados" checked />
+                            <span class="oa-check-box" aria-hidden="true">
+                                <i class="fa fa-check"></i>
+                            </span>
+                            <span class="oa-check-text">
+                                <strong>También generar certificados de tratamiento</strong>
+                                <small>Se descargan el manifiesto y el certificado por separado</small>
+                            </span>
+                        </label>
+                    </div>
+                    <div id="mfCertificadosPanel" class="col-12">
+                        <div class="row g-3 mt-0 pt-2 oa-cert-panel">
+                            <div class="col-md-6">
+                                <label class="form-label" for="mfFechaEmisionCert">Fecha de emisión</label>
+                                <input type="date" id="mfFechaEmisionCert" class="form-control rec-input" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label" for="mfNumeroCertificado">Nro. certificado (inicial)</label>
+                                <input type="number" id="mfNumeroCertificado" class="form-control rec-input" min="1" step="1" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label" for="mfFechaTratamientoCert">Fecha de tratamiento</label>
+                                <input type="date" id="mfFechaTratamientoCert" class="form-control rec-input" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label" for="mfNumeroOrdenCert">N° orden operaciones (inicial)</label>
+                                <input type="number" id="mfNumeroOrdenCert" class="form-control rec-input" min="1" step="1" />
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
             <div class="modal-footer rec-modal-footer rec-modal-footer--actions">
@@ -322,7 +354,7 @@
 
 @section Scripts {
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-    <script src="~/js/CamionesManifiestos.js?v=6.5"></script>
+    <script src="~/js/CamionesManifiestos.js?v=6.7"></script>
     <script src="~/js/Entities/M_Camiones.js?v=8.2"></script>
-    <script src="~/js/Recorridos.js?v=10.8"></script>
+    <script src="~/js/Recorridos.js?v=11.0"></script>
 }

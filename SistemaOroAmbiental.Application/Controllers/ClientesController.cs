@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using SistemaOroAmbiental.Application.Helpers;
 using SistemaOroAmbiental.Application.Models.ViewModels;
 using SistemaOroAmbiental.BLL.Common;
 using SistemaOroAmbiental.BLL.Service;
@@ -16,17 +17,26 @@ namespace SistemaOroAmbiental.Application.Controllers
         private readonly IClientesEstablecimientosService _establecimientosService;
         private readonly IClientesEstablecimientosRepository _establecimientosRepo;
         private readonly IRecorridosService _recorridosService;
+        private readonly IClientesCertificadosTratamientoRepository _certRepo;
+        private readonly CertificadosTratamientoStorage _certStorage;
+        private readonly IWebHostEnvironment _env;
 
         public ClientesController(
             IClientesService service,
             IClientesEstablecimientosService establecimientosService,
             IClientesEstablecimientosRepository establecimientosRepo,
-            IRecorridosService recorridosService)
+            IRecorridosService recorridosService,
+            IClientesCertificadosTratamientoRepository certRepo,
+            CertificadosTratamientoStorage certStorage,
+            IWebHostEnvironment env)
         {
             _service = service;
             _establecimientosService = establecimientosService;
             _establecimientosRepo = establecimientosRepo;
             _recorridosService = recorridosService;
+            _certRepo = certRepo;
+            _certStorage = certStorage;
+            _env = env;
         }
 
         [AllowAnonymous]
@@ -532,6 +542,96 @@ namespace SistemaOroAmbiental.Application.Controllers
             }
 
             return entity;
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> ManifiestosDocumentos(int idCliente)
+        {
+            if (idCliente <= 0)
+                return BadRequest();
+
+            var data = await _certRepo.ListarDocumentosPorCliente(idCliente);
+            return Ok(data);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> DescargarCertificado(int id)
+        {
+            if (id <= 0)
+                return NotFound();
+
+            var row = await _certRepo.Obtener(id);
+            if (row == null)
+                return NotFound();
+
+            var abs = _certStorage.AbsPath(row.RutaPdf);
+            if (!System.IO.File.Exists(abs))
+                return NotFound();
+
+            var bytes = await System.IO.File.ReadAllBytesAsync(abs);
+            return File(bytes, "application/pdf", row.NombreArchivo);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> DescargarManifiestoHistorial(int idCamion, int id)
+        {
+            if (idCamion <= 0 || id <= 0)
+                return NotFound();
+
+            var model = await _recorridosService.ObtenerManifiestosHistorial(idCamion, new[] { id });
+            if (model == null)
+                return NotFound();
+
+            var header = Path.Combine(_env.WebRootPath, "Imagenes", "manifiesto-header.jpg");
+            var bytes = ManifiestoPdfGenerator.Generar(model, header);
+            return File(bytes, "application/pdf", ManifiestoPdfGenerator.NombreArchivo(model));
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> SiguienteNumeroCertificado()
+        {
+            var data = await _certRepo.ObtenerSiguienteNumero(0, 0);
+            return Ok(data);
+        }
+
+        [HttpDelete]
+        public async Task<IActionResult> EliminarCertificado(int id)
+        {
+            if (id <= 0)
+                return Ok(new { valor = false, mensaje = "Certificado inválido.", tipo = "validacion" });
+
+            var row = await _certRepo.Obtener(id);
+            if (row == null)
+                return Ok(new { valor = false, mensaje = "No se encontró el certificado.", tipo = "validacion" });
+
+            var abs = _certStorage.AbsPath(row.RutaPdf);
+            if (System.IO.File.Exists(abs))
+            {
+                try { System.IO.File.Delete(abs); } catch { /* ignore */ }
+            }
+
+            var ok = await _certRepo.Eliminar(id);
+            return Ok(new
+            {
+                valor = ok,
+                mensaje = ok ? "Certificado eliminado." : "No se pudo eliminar el certificado.",
+                tipo = ok ? "ok" : "error"
+            });
+        }
+
+        [HttpDelete]
+        public async Task<IActionResult> EliminarManifiestoHistorial(int idCamion, int id)
+        {
+            if (idCamion <= 0 || id <= 0)
+                return Ok(new { valor = false, mensaje = "Manifiesto inválido.", tipo = "validacion" });
+
+            var result = await _recorridosService.EliminarManifiestoHistorial(idCamion, id);
+            return Ok(new
+            {
+                valor = result.Ok,
+                mensaje = result.Mensaje,
+                tipo = result.Tipo
+            });
         }
     }
 }

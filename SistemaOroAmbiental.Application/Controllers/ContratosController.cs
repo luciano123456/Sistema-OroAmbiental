@@ -146,6 +146,9 @@ namespace SistemaOroAmbiental.Application.Controllers
                 IdTipoContrato = c.IdTipoContrato,
                 TipoContrato = c.IdTipoContratoNavigation?.Nombre,
                 Establecimiento = c.IdEstablecimientoNavigation?.Nombre ?? "",
+                Actividad = c.IdEstablecimientoNavigation?.IdActividadNavigation?.Nombre
+                    ?? c.IdEstablecimientoNavigation?.IdTipoGeneradorNavigation?.Nombre
+                    ?? "",
                 IdSucursal = c.IdClienteNavigation?.IdSucursal ?? 0,
                 Sucursal = c.IdClienteNavigation?.IdSucursalNavigation?.Nombre,
                 FechaContrato = c.FechaContrato,

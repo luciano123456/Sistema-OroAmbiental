@@ -5,6 +5,7 @@ using SistemaOroAmbiental.Application.Helpers;
 using SistemaOroAmbiental.Application.Models.ViewModels;
 using SistemaOroAmbiental.BLL.Common;
 using SistemaOroAmbiental.BLL.Service;
+using SistemaOroAmbiental.DAL.Repository;
 using SistemaOroAmbiental.Models;
 
 namespace SistemaOroAmbiental.Application.Controllers
@@ -16,17 +17,23 @@ namespace SistemaOroAmbiental.Application.Controllers
         private readonly ICamionesService _camionesService;
         private readonly IClientesEstablecimientosProductosService _productosEstService;
         private readonly IWebHostEnvironment _env;
+        private readonly CertificadosTratamientoStorage _certStorage;
+        private readonly IClientesCertificadosTratamientoRepository _certRepo;
 
         public RecorridosController(
             IRecorridosService service,
             ICamionesService camionesService,
             IClientesEstablecimientosProductosService productosEstService,
-            IWebHostEnvironment env)
+            IWebHostEnvironment env,
+            CertificadosTratamientoStorage certStorage,
+            IClientesCertificadosTratamientoRepository certRepo)
         {
             _service = service;
             _camionesService = camionesService;
             _productosEstService = productosEstService;
             _env = env;
+            _certStorage = certStorage;
+            _certRepo = certRepo;
         }
 
         [AllowAnonymous]
@@ -263,7 +270,13 @@ namespace SistemaOroAmbiental.Application.Controllers
             int? numeroInicial,
             int? idRecorrido,
             string? nombre,
-            DateTime? fecha)
+            DateTime? fecha,
+            bool generarCertificados = false,
+            DateTime? fechaEmision = null,
+            int? numeroCertificadoInicial = null,
+            DateTime? fechaTratamiento = null,
+            int? numeroOrdenInicial = null,
+            string? formato = null)
         {
             if (idCamion <= 0)
                 return NotFound();
@@ -297,13 +310,137 @@ namespace SistemaOroAmbiental.Application.Controllers
 
             var idClaim = User.FindFirst("Id")?.Value;
             int.TryParse(idClaim, out var idUsuario);
-            var ultimo = model.NumeroInicial + Math.Max(0, model.Items.Count - 1);
-            if (ultimo > 0)
-                await _service.RegistrarUltimoNumeroManifiesto(idCamion, lista, ultimo, idUsuario);
 
-            await _service.GuardarHistorialManifiestos(idCamion, model, nombreTxt, idUsuario);
+            var fmt = (formato ?? "").Trim().ToLowerInvariant();
+            var soloCertificados = fmt == "certificados";
 
-            return PdfManifiesto(model);
+            byte[]? mfBytes = null;
+            string mfNombre = ManifiestoPdfGenerator.NombreArchivo(model);
+            GuardarHistorialManifiestoResultDto historial = new();
+
+            if (!soloCertificados)
+            {
+                var ultimo = model.NumeroInicial + Math.Max(0, model.Items.Count - 1);
+                if (ultimo > 0)
+                    await _service.RegistrarUltimoNumeroManifiesto(idCamion, lista, ultimo, idUsuario);
+
+                historial = await _service.GuardarHistorialManifiestos(idCamion, model, nombreTxt, idUsuario);
+                mfBytes = GenerarBytesManifiesto(model);
+
+                if (!generarCertificados)
+                    return File(mfBytes, "application/pdf", mfNombre);
+            }
+            else if (!generarCertificados)
+            {
+                return NotFound();
+            }
+
+            try
+            {
+                var fe = (fechaEmision ?? DateTime.Today).Date;
+                var ft = (fechaTratamiento ?? DateTime.Today).Date;
+                var nCert = numeroCertificadoInicial ?? 0;
+                var nOrden = numeroOrdenInicial ?? 0;
+                if (nCert <= 0 || nOrden <= 0)
+                {
+                    var sug = await _certRepo.ObtenerSiguienteNumero(0, 0);
+                    if (nCert <= 0) nCert = sug.NumeroCertificado;
+                    if (nOrden <= 0) nOrden = sug.NumeroOrden;
+                }
+
+                List<CertificadoTratamientoItemDto> certItems;
+                if (soloCertificados)
+                {
+                    certItems = new List<CertificadoTratamientoItemDto>();
+                    for (var i = 0; i < model.Items.Count; i++)
+                    {
+                        certItems.Add(CertificadoTratamientoPdfGenerator.DesdeManifiestoItem(
+                            model.Items[i], fe, nCert + i, ft, nOrden + i));
+                    }
+                }
+                else
+                {
+                    certItems = await _certStorage.GenerarYGuardarLote(
+                        model, historial, fe, nCert, ft, nOrden, idCamion, idUsuario);
+                }
+
+                if (certItems.Count == 0)
+                {
+                    if (mfBytes != null)
+                        return File(mfBytes, "application/pdf", mfNombre);
+                    return NotFound();
+                }
+
+                var certBytes = CertificadoTratamientoPdfGenerator.Generar(certItems);
+                var certNombre = CertificadoTratamientoPdfGenerator.NombreArchivoLote(certItems);
+
+                if (soloCertificados || fmt == "certificados")
+                    return File(certBytes, "application/pdf", certNombre);
+
+                if (fmt == "zip" && mfBytes != null)
+                {
+                    var zip = PdfZipHelper.CrearZip((mfNombre, mfBytes), (certNombre, certBytes));
+                    return File(zip, "application/zip",
+                        model.Items.Count == 1 ? "Manifiesto_y_Certificado.zip" : "Manifiestos_y_Certificados.zip");
+                }
+
+                // Por defecto: solo el manifiesto (el front pide el certificado en otra descarga).
+                return File(mfBytes!, "application/pdf", mfNombre);
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine("[Certificados] " + ex);
+                if (mfBytes != null)
+                    return File(mfBytes, "application/pdf", mfNombre);
+                return StatusCode(500, "No se pudieron generar los certificados.");
+            }
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> CertificadoHistorial(
+            int idCamion,
+            int idManifiesto,
+            DateTime? fechaEmision,
+            int? numeroCertificado,
+            DateTime? fechaTratamiento,
+            int? numeroOrden)
+        {
+            if (idCamion <= 0 || idManifiesto <= 0)
+                return NotFound();
+
+            var model = await _service.ObtenerManifiestosHistorial(idCamion, new[] { idManifiesto });
+            if (model == null || model.Items.Count == 0)
+                return NotFound();
+
+            var idClaim = User.FindFirst("Id")?.Value;
+            int.TryParse(idClaim, out var idUsuario);
+
+            var fe = (fechaEmision ?? DateTime.Today).Date;
+            var ft = (fechaTratamiento ?? DateTime.Today).Date;
+            var nCert = numeroCertificado ?? 0;
+            var nOrden = numeroOrden ?? 0;
+            if (nCert <= 0 || nOrden <= 0)
+            {
+                var sug = await _certRepo.ObtenerSiguienteNumero(0, 0);
+                if (nCert <= 0) nCert = sug.NumeroCertificado;
+                if (nOrden <= 0) nOrden = sug.NumeroOrden;
+            }
+
+            var certItems = await _certStorage.GenerarDesdeHistorial(
+                model, idManifiesto, fe, nCert, ft, nOrden, idCamion, idUsuario);
+
+            if (certItems.Count == 0)
+                return NotFound();
+
+            var bytes = CertificadoTratamientoPdfGenerator.Generar(certItems);
+            return File(bytes, "application/pdf", CertificadoTratamientoPdfGenerator.NombreArchivo(certItems[0]));
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> SiguienteNumeroCertificado()
+        {
+            var data = await _certRepo.ObtenerSiguienteNumero(0, 0);
+            return Ok(data);
         }
 
         [HttpGet]
@@ -529,9 +666,14 @@ namespace SistemaOroAmbiental.Application.Controllers
 
         private FileContentResult PdfManifiesto(ManifiestosHojaDto model)
         {
-            var header = Path.Combine(_env.WebRootPath, "Imagenes", "manifiesto-header.jpg");
-            var bytes = ManifiestoPdfGenerator.Generar(model, header);
+            var bytes = GenerarBytesManifiesto(model);
             return File(bytes, "application/pdf", ManifiestoPdfGenerator.NombreArchivo(model));
+        }
+
+        private byte[] GenerarBytesManifiesto(ManifiestosHojaDto model)
+        {
+            var header = Path.Combine(_env.WebRootPath, "Imagenes", "manifiesto-header.jpg");
+            return ManifiestoPdfGenerator.Generar(model, header);
         }
 
         private static List<(int IdSemana, int IdDia)> ParseRecorridosHojaRuta(string? recorridos, int idSemana, int idDia)

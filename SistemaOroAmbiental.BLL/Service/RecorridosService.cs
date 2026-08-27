@@ -136,14 +136,14 @@ namespace SistemaOroAmbiental.BLL.Service
                     "error");
         }
 
-        public Task GuardarHistorialManifiestos(
+        public Task<GuardarHistorialManifiestoResultDto> GuardarHistorialManifiestos(
             int idCamion,
             ManifiestosHojaDto model,
             string nombre,
             int idUsuario)
         {
             if (idCamion <= 0 || model?.Items == null || model.Items.Count == 0)
-                return Task.CompletedTask;
+                return Task.FromResult(new GuardarHistorialManifiestoResultDto());
 
             return _repo.GuardarHistorialManifiestos(idCamion, model, nombre ?? "", idUsuario);
         }

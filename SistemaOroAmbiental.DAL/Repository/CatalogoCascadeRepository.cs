@@ -30,6 +30,7 @@ namespace SistemaOroAmbiental.DAL.Repository
                 nameof(ClientesMotivo) => ClienteMotivoDeps(id),
                 nameof(ClientesCalificacion) => ClienteCalificacionDeps(id),
                 nameof(ClientesProfesion) => ClienteProfesionDeps(id),
+                nameof(ClientesActividad) => ClienteActividadDeps(id),
                 nameof(ClientesTipoGenerador) => TipoGeneradorDeps(id),
                 nameof(TiposContrato) => TipoContratoDeps(id),
                 nameof(EntregasEstado) => EntregaEstadoDeps(id),
@@ -64,6 +65,7 @@ namespace SistemaOroAmbiental.DAL.Repository
                     case nameof(ClientesMotivo): await ClienteMotivoCascada(id); break;
                     case nameof(ClientesCalificacion): await ClienteCalificacionCascada(id); break;
                     case nameof(ClientesProfesion): await ClienteProfesionCascada(id); break;
+                    case nameof(ClientesActividad): await ClienteActividadCascada(id); break;
                     case nameof(ClientesTipoGenerador): await TipoGeneradorCascada(id); break;
                     case nameof(TiposContrato): await TipoContratoCascada(id); break;
                     case nameof(EntregasEstado): await EntregaEstadoCascada(id); break;
@@ -402,6 +404,19 @@ namespace SistemaOroAmbiental.DAL.Repository
                 await _db.FeriadosProfesiones.Where(x => x.IdProfesion == id).ToListAsync());
             await _db.SaveChangesAsync();
             await BorrarCatalogo(_db.ClientesProfesiones, id, "la profesión");
+        }
+
+        private async Task<DependenciasEliminacionInfo> ClienteActividadDeps(int id)
+            => await DepsSetNull("esta actividad",
+                await _db.ClientesEstablecimientos.CountAsync(x => x.IdActividad == id),
+                "Establecimientos", "Se quitará la actividad de cada establecimiento.");
+
+        private async Task ClienteActividadCascada(int id)
+        {
+            foreach (var e in await _db.ClientesEstablecimientos.Where(x => x.IdActividad == id).ToListAsync())
+                e.IdActividad = null;
+            await _db.SaveChangesAsync();
+            await BorrarCatalogo(_db.ClientesActividades, id, "la actividad");
         }
 
         private async Task<DependenciasEliminacionInfo> LocalidadDeps(int id)

@@ -289,6 +289,18 @@ function configurarPanelGeo() {
         }
     }
 
+    const txtCodigo = document.getElementById("txtCodigoConfiguracion");
+    if (txtCodigo) {
+        if (controllerConfiguracion === "Localidades")
+            txtCodigo.maxLength = 4;
+        else if (controllerConfiguracion === "Partidos")
+            txtCodigo.maxLength = 4;
+        else if (controllerConfiguracion === "ClientesTiposGenerador")
+            txtCodigo.maxLength = 2;
+        else
+            txtCodigo.maxLength = 10;
+    }
+
     configurarPanelCuentas();
 }
 

@@ -38,7 +38,7 @@ namespace SistemaOroAmbiental.DAL.Repository
             int ultimoNumero,
             int idUsuario);
 
-        Task GuardarHistorialManifiestos(
+        Task<GuardarHistorialManifiestoResultDto> GuardarHistorialManifiestos(
             int idCamion,
             ManifiestosHojaDto model,
             string nombre,

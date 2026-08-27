@@ -374,7 +374,9 @@
         if (!grid?.api?.columns) return;
         try {
             grid.api.columns.adjust();
-            grid.api.draw(false);
+            if (grid.api.fixedHeader?.adjust) {
+                grid.api.fixedHeader.adjust();
+            }
         } catch { /* noop */ }
     }
 

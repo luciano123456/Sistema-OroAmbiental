@@ -71,6 +71,8 @@
             this._el("cmfBtnGenerar")?.addEventListener("click", busyHandler(() => this._generar("manifiesto"), { label: "Generando..." }));
             this._el("cmfBtnTxt")?.addEventListener("click", busyHandler(() => this._generar("txt"), { label: "Generando..." }));
             this._el("cmfBuscar")?.addEventListener("input", () => this._pintarHistorial());
+            this._el("cmfGenerarCertificados")?.addEventListener("change", () => this._toggleCertPanel());
+            this._el("cmfBtnConfirmarCertificado")?.addEventListener("click", busyHandler(() => this._confirmarCertificadoHistorial(), { label: "Generando..." }));
 
             this._el("tabBtnManifiestosCamion")?.addEventListener("shown.bs.tab", () => {
                 if (this._idCamion > 0) this.cargar();
@@ -175,6 +177,7 @@
                 if (this._el("cmfFecha") && !this._el("cmfFecha").value) {
                     this._el("cmfFecha").value = hoyIso();
                 }
+                await this._cargarNumerosCertificado();
 
                 this._pintarRutas();
                 this._pintarHistorial();
@@ -334,6 +337,35 @@
             this._pintarClientes();
         }
 
+        _toggleCertPanel() {
+            const on = !!this._el("cmfGenerarCertificados")?.checked;
+            this._el("cmfCertificadosPanel")?.classList.toggle("d-none", !on);
+            if (on) this._cargarNumerosCertificado();
+        }
+
+        async _cargarNumerosCertificado() {
+            const iso = hoyIso();
+            if (this._el("cmfFechaEmision")) this._el("cmfFechaEmision").value = this._el("cmfFechaEmision").value || iso;
+            if (this._el("cmfFechaTratamiento")) this._el("cmfFechaTratamiento").value = this._el("cmfFechaTratamiento").value || iso;
+            const chk = this._el("cmfGenerarCertificados");
+            if (chk && !chk.dataset.initChecked) {
+                chk.checked = true;
+                chk.dataset.initChecked = "1";
+                this._toggleCertPanel();
+            }
+            try {
+                const data = await this._getJson("/Recorridos/SiguienteNumeroCertificado");
+                if (this._el("cmfNumeroCertificado") && !this._el("cmfNumeroCertificado").value) {
+                    this._el("cmfNumeroCertificado").value = String(Number(data?.numeroCertificado ?? data?.NumeroCertificado) || 1);
+                }
+                if (this._el("cmfNumeroOrden") && !this._el("cmfNumeroOrden").value) {
+                    this._el("cmfNumeroOrden").value = String(Number(data?.numeroOrden ?? data?.NumeroOrden) || 1);
+                }
+            } catch (e) {
+                console.warn(e);
+            }
+        }
+
         _pintarHistorial() {
             const wrap = this._el("cmfLista");
             if (!wrap) return;
@@ -386,6 +418,9 @@
                                 <i class="fa fa-print"></i>
                             </button>
                             ${this._soloLectura ? "" : `
+                            <button type="button" class="cmf-icon" data-cert="${id}" title="Generar certificado">
+                                <i class="fa fa-certificate"></i>
+                            </button>
                             <button type="button" class="cmf-icon cmf-icon--danger" data-del="${id}" title="Quitar del historial">
                                 <i class="fa fa-trash"></i>
                             </button>`}
@@ -398,6 +433,9 @@
                     () => this._verHistorial(Number(btn.getAttribute("data-ver"))),
                     { loadingHtml: false }
                 ));
+            });
+            wrap.querySelectorAll("[data-cert]").forEach(btn => {
+                btn.addEventListener("click", () => this._abrirModalCertificado(Number(btn.getAttribute("data-cert"))));
             });
             wrap.querySelectorAll("[data-del]").forEach(btn => {
                 btn.addEventListener("click", () => this._eliminar(Number(btn.getAttribute("data-del"))));
@@ -440,6 +478,18 @@
                 if (excluir.length) params.set("excluirIds", excluir.join(","));
             }
 
+            if (this._el("cmfGenerarCertificados")?.checked) {
+                params.set("generarCertificados", "true");
+                const fe = (this._el("cmfFechaEmision")?.value || "").trim();
+                const ft = (this._el("cmfFechaTratamiento")?.value || "").trim();
+                const nc = parseInt(this._el("cmfNumeroCertificado")?.value, 10);
+                const no = parseInt(this._el("cmfNumeroOrden")?.value, 10);
+                if (fe) params.set("fechaEmision", fe);
+                if (ft) params.set("fechaTratamiento", ft);
+                if (Number.isFinite(nc) && nc > 0) params.set("numeroCertificadoInicial", String(nc));
+                if (Number.isFinite(no) && no > 0) params.set("numeroOrdenInicial", String(no));
+            }
+
             return params;
         }
 
@@ -459,13 +509,76 @@
                 return;
             }
 
+            const conCert = !!this._el("cmfGenerarCertificados")?.checked;
+            params.set("formato", "manifiesto");
             await this._descargarPdf(
                 `/Recorridos/Manifiestos?${params.toString()}`,
                 "No hay clientes para armar el manifiesto en esta hoja.",
-                "Se descargó el manifiesto en PDF.",
-                "Generando manifiestos..."
+                conCert ? null : "Se descargó el manifiesto en PDF.",
+                conCert ? "Generando manifiestos y certificados..." : "Generando manifiestos..."
             );
+
+            if (conCert) {
+                await new Promise(r => setTimeout(r, 350));
+                params.set("formato", "certificados");
+                await this._descargarPdf(
+                    `/Recorridos/Manifiestos?${params.toString()}`,
+                    "No se pudo generar el certificado.",
+                    "Se descargaron el manifiesto y el certificado.",
+                    "Descargando certificado..."
+                );
+            }
+
             await this.cargar();
+        }
+
+        async _abrirModalCertificado(idManifiesto) {
+            if (!idManifiesto) return;
+            const modalEl = document.getElementById("modalCertificadoCamion");
+            if (!modalEl) return;
+            document.getElementById("cmfCertIdManifiesto").value = String(idManifiesto);
+            const iso = hoyIso();
+            document.getElementById("cmfCertFechaEmision").value = iso;
+            document.getElementById("cmfCertFechaTrat").value = iso;
+            try {
+                const data = await this._getJson("/Recorridos/SiguienteNumeroCertificado");
+                document.getElementById("cmfCertNumero").value = String(Number(data?.numeroCertificado ?? data?.NumeroCertificado) || 1);
+                document.getElementById("cmfCertOrden").value = String(Number(data?.numeroOrden ?? data?.NumeroOrden) || 1);
+            } catch (e) {
+                console.warn(e);
+            }
+            if (window.bootstrap?.Modal) {
+                window.bootstrap.Modal.getOrCreateInstance(modalEl).show();
+            }
+        }
+
+        async _confirmarCertificadoHistorial() {
+            const idManifiesto = parseInt(document.getElementById("cmfCertIdManifiesto")?.value, 10) || 0;
+            if (!idManifiesto || this._idCamion <= 0) return;
+
+            const params = new URLSearchParams();
+            params.set("idCamion", String(this._idCamion));
+            params.set("idManifiesto", String(idManifiesto));
+            const fe = (document.getElementById("cmfCertFechaEmision")?.value || "").trim();
+            const ft = (document.getElementById("cmfCertFechaTrat")?.value || "").trim();
+            const nc = parseInt(document.getElementById("cmfCertNumero")?.value, 10);
+            const no = parseInt(document.getElementById("cmfCertOrden")?.value, 10);
+            if (fe) params.set("fechaEmision", fe);
+            if (ft) params.set("fechaTratamiento", ft);
+            if (Number.isFinite(nc) && nc > 0) params.set("numeroCertificado", String(nc));
+            if (Number.isFinite(no) && no > 0) params.set("numeroOrden", String(no));
+
+            await this._descargarPdf(
+                `/Recorridos/CertificadoHistorial?${params.toString()}`,
+                "No se pudo generar el certificado.",
+                "Se descargó el certificado en PDF.",
+                "Generando certificado..."
+            );
+
+            const modalEl = document.getElementById("modalCertificadoCamion");
+            if (modalEl && window.bootstrap?.Modal) {
+                window.bootstrap.Modal.getInstance(modalEl)?.hide();
+            }
         }
 
         async _verHistorial(id) {
@@ -537,8 +650,8 @@
                 a.remove();
                 setTimeout(() => URL.revokeObjectURL(href), 1500);
 
-                if (typeof exitoModal === "function") {
-                    exitoModal(msgOk || "Se descargó el manifiesto en PDF.");
+                if (msgOk && typeof exitoModal === "function") {
+                    exitoModal(msgOk);
                 }
             } catch (e) {
                 console.error(e);

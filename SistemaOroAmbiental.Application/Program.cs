@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using SistemaOroAmbiental.Application.Configuration;
+using SistemaOroAmbiental.Application.Helpers;
 using SistemaOroAmbiental.BLL.Service;
 using SistemaOroAmbiental.DAL.DataContext;
 using SistemaOroAmbiental.DAL.Repository;
@@ -132,6 +133,8 @@ builder.Services.AddScoped<ICamionesService, CamionesService>();
 
 builder.Services.AddScoped<IRecorridosRepository, RecorridosRepository>();
 builder.Services.AddScoped<IRecorridosService, RecorridosService>();
+builder.Services.AddScoped<IClientesCertificadosTratamientoRepository, ClientesCertificadosTratamientoRepository>();
+builder.Services.AddScoped<CertificadosTratamientoStorage>();
 
 builder.Services.AddScoped<IProveedoresRepository, ProveedoresRepository>();
 builder.Services.AddScoped<IProveedoresService, ProveedoresService>();

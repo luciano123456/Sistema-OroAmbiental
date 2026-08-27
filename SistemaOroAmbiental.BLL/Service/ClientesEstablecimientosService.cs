@@ -115,6 +115,8 @@ namespace SistemaOroAmbiental.BLL.Service
 
         private static ServiceResult? Validar(ClientesEstablecimiento model)
         {
+            IntercambioTxtCampos.Aplicar(model);
+
             if (model.IdCliente <= 0)
                 return ServiceResult.Error("Debe seleccionar un cliente.", "validacion");
 

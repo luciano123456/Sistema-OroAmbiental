@@ -165,6 +165,38 @@
                                         </div>
                                     </div>
 
+                                    <div class="cmf-field mt-2">
+                                        <label class="oa-check" for="cmfGenerarCertificados">
+                                            <input type="checkbox" id="cmfGenerarCertificados" checked />
+                                            <span class="oa-check-box" aria-hidden="true">
+                                                <i class="fa fa-check"></i>
+                                            </span>
+                                            <span class="oa-check-text">
+                                                <strong>También generar certificados de tratamiento</strong>
+                                                <small>Se descargan el manifiesto y el certificado por separado</small>
+                                            </span>
+                                        </label>
+                                    </div>
+
+                                    <div id="cmfCertificadosPanel" class="row g-2 mt-1 oa-cert-panel">
+                                        <div class="col-md-3">
+                                            <label class="form-label" for="cmfFechaEmision">Fecha emisión</label>
+                                            <input id="cmfFechaEmision" class="form-control" type="date" />
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="form-label" for="cmfNumeroCertificado">Nro. certificado</label>
+                                            <input id="cmfNumeroCertificado" class="form-control" type="number" min="1" step="1" />
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="form-label" for="cmfFechaTratamiento">Fecha tratamiento</label>
+                                            <input id="cmfFechaTratamiento" class="form-control" type="date" />
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="form-label" for="cmfNumeroOrden">N° orden oper.</label>
+                                            <input id="cmfNumeroOrden" class="form-control" type="number" min="1" step="1" />
+                                        </div>
+                                    </div>
+
                                     <div class="cmf-actions" id="cmfAcciones">
                                         <button type="button" class="cmf-btn cmf-btn--primary" id="cmfBtnGenerar">
                                             <i class="fa fa-file-text-o"></i>
@@ -215,6 +247,44 @@
                 </button>
             </div>
 
+        </div>
+    </div>
+</div>
+
+<div class="modal fade rp-modal" id="modalCertificadoCamion" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rec-modal">
+            <div class="modal-header rec-modal-header">
+                <h5 class="modal-title m-0">Generar certificado de tratamiento</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body rec-modal-body">
+                <input type="hidden" id="cmfCertIdManifiesto" value="0" />
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label" for="cmfCertFechaEmision">Fecha de emisión</label>
+                        <input type="date" id="cmfCertFechaEmision" class="form-control" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="cmfCertNumero">Nro. certificado</label>
+                        <input type="number" id="cmfCertNumero" class="form-control" min="1" step="1" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="cmfCertFechaTrat">Fecha de tratamiento</label>
+                        <input type="date" id="cmfCertFechaTrat" class="form-control" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="cmfCertOrden">N° orden operaciones</label>
+                        <input type="number" id="cmfCertOrden" class="form-control" min="1" step="1" />
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer rec-modal-footer">
+                <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-success" id="cmfBtnConfirmarCertificado">
+                    <i class="fa fa-file-text-o"></i> Generar certificado
+                </button>
+            </div>
         </div>
     </div>
 </div>

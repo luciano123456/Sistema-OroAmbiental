@@ -1843,14 +1843,15 @@ namespace SistemaOroAmbiental.DAL.Repository
             };
         }
 
-        public async Task GuardarHistorialManifiestos(
+        public async Task<GuardarHistorialManifiestoResultDto> GuardarHistorialManifiestos(
             int idCamion,
             ManifiestosHojaDto model,
             string nombre,
             int idUsuario)
         {
+            var result = new GuardarHistorialManifiestoResultDto();
             if (idCamion <= 0 || model?.Items == null || model.Items.Count == 0)
-                return;
+                return result;
 
             try
             {
@@ -1875,6 +1876,7 @@ namespace SistemaOroAmbiental.DAL.Repository
 
                 var loteNombre = (nombre ?? "").Trim();
                 var ahora = DateTime.Now;
+                var entidades = new List<RecorridoManifiesto>();
 
                 foreach (var item in model.Items)
                 {
@@ -1885,7 +1887,7 @@ namespace SistemaOroAmbiental.DAL.Repository
                     if (nombreItem.Length > 120)
                         nombreItem = nombreItem[..120];
 
-                    _db.RecorridosManifiestos.Add(new RecorridoManifiesto
+                    var ent = new RecorridoManifiesto
                     {
                         IdCamion = idCamion,
                         IdSemana = item.IdSemana > 0 ? item.IdSemana : null,
@@ -1905,14 +1907,26 @@ namespace SistemaOroAmbiental.DAL.Repository
                         Zona = Truncar(zona, 120),
                         FechaGeneracion = ahora,
                         IdUsuario = idUsuario > 0 ? idUsuario : null
-                    });
+                    };
+                    entidades.Add(ent);
+                    _db.RecorridosManifiestos.Add(ent);
                 }
 
                 await _db.SaveChangesAsync();
+
+                result.Items = entidades.Select(e => new HistorialManifiestoGuardadoDto
+                {
+                    Id = e.Id,
+                    Numero = e.Numero,
+                    IdCliente = e.IdCliente,
+                    IdEstablecimientoDb = e.IdEstablecimiento
+                }).ToList();
             }
             catch (Exception ex) when (EsTablaManifiestoFaltante(ex))
             {
             }
+
+            return result;
         }
 
         public async Task<ManifiestosCamionDto> ListarManifiestosPorCamion(int idCamion)
@@ -1990,23 +2004,50 @@ namespace SistemaOroAmbiental.DAL.Repository
                 if (filas.Count == 0)
                     return null;
 
+                var idsClientes = filas.Where(x => x.IdCliente.HasValue).Select(x => x.IdCliente!.Value).Distinct().ToList();
+                var idsEst = filas.Where(x => x.IdEstablecimiento.HasValue).Select(x => x.IdEstablecimiento!.Value).Distinct().ToList();
+                var clientes = idsClientes.Count > 0
+                    ? await _db.Clientes.AsNoTracking().Where(c => idsClientes.Contains(c.Id)).ToDictionaryAsync(c => c.Id)
+                    : new Dictionary<int, Cliente>();
+                var ests = idsEst.Count > 0
+                    ? await _db.ClientesEstablecimientos.AsNoTracking()
+                        .Include(e => e.IdLocalidadNavigation)
+                        .Where(e => idsEst.Contains(e.Id))
+                        .ToDictionaryAsync(e => e.Id)
+                    : new Dictionary<int, ClientesEstablecimiento>();
+
                 var camion = await _db.Camiones.AsNoTracking().FirstOrDefaultAsync(c => c.Id == idCamion);
-                var items = filas.Select(x => new ManifiestoItemDto
+                var items = filas.Select(x =>
                 {
-                    IdRecorrido = x.IdClienteRecorrido ?? 0,
-                    IdCliente = x.IdCliente,
-                    IdEstablecimientoDb = x.IdEstablecimiento,
-                    IdSemana = x.IdSemana ?? 0,
-                    IdDia = x.IdDia ?? 0,
-                    Numero = x.Numero,
-                    IdEstablecimiento = x.IdEstablecimientoCliente ?? "",
-                    RazonSocial = x.RazonSocial ?? "",
-                    Cuit = x.Cuit ?? "",
-                    Direccion = x.Direccion ?? "",
-                    Localidad = x.Localidad ?? "",
-                    Telefono = x.Telefono ?? "",
-                    Domicilio = x.Direccion ?? "",
-                    Cantidad = x.Cantidad ?? ""
+                    clientes.TryGetValue(x.IdCliente ?? 0, out var cli);
+                    ClientesEstablecimiento? est = null;
+                    if (x.IdEstablecimiento.HasValue)
+                        ests.TryGetValue(x.IdEstablecimiento.Value, out est);
+
+                    var localidad = (x.Localidad ?? "").Trim();
+                    if (string.IsNullOrWhiteSpace(localidad))
+                        localidad = (est?.Localidad ?? est?.IdLocalidadNavigation?.Nombre ?? "").Trim();
+
+                    return new ManifiestoItemDto
+                    {
+                        IdRecorrido = x.IdClienteRecorrido ?? 0,
+                        IdCliente = x.IdCliente,
+                        IdEstablecimientoDb = x.IdEstablecimiento,
+                        IdSemana = x.IdSemana ?? 0,
+                        IdDia = x.IdDia ?? 0,
+                        Numero = x.Numero,
+                        IdEstablecimiento = x.IdEstablecimientoCliente ?? "",
+                        RazonSocial = x.RazonSocial ?? "",
+                        Cuit = x.Cuit ?? "",
+                        Direccion = x.Direccion ?? "",
+                        Localidad = localidad.ToUpperInvariant(),
+                        Telefono = x.Telefono ?? "",
+                        Domicilio = x.Direccion ?? "",
+                        Cantidad = x.Cantidad ?? "",
+                        Calle = (est?.Calle ?? cli?.Calle ?? "").Trim(),
+                        NumeroCalle = (est?.Numero ?? cli?.Numero ?? "").Trim(),
+                        Piso = (est?.PisoDepartamento ?? cli?.PisoDepartamento ?? "").Trim()
+                    };
                 }).ToList();
 
                 var nombre = filas.Count == 1
@@ -2249,7 +2290,10 @@ namespace SistemaOroAmbiental.DAL.Repository
                     est?.PisoDepartamento ?? cliente?.PisoDepartamento,
                     localidad,
                     est?.Domicilio ?? cliente?.Domicilio),
-                Cantidad = FormatearKilosManifiesto(est?.Kilos)
+                Cantidad = FormatearKilosManifiesto(est?.Kilos),
+                Calle = (est?.Calle ?? cliente?.Calle ?? "").Trim(),
+                NumeroCalle = (est?.Numero ?? cliente?.Numero ?? "").Trim(),
+                Piso = (est?.PisoDepartamento ?? cliente?.PisoDepartamento ?? "").Trim()
             };
         }
 

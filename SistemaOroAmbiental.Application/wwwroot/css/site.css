@@ -951,6 +951,15 @@ table.dt-dark thead tr.filters th.rp-col-id-h .rp-filter-id {
     background: rgba(96,165,250,0.15);
 }
 
+/* RECLAMO / WHATSAPP */
+.rp-act-msg i {
+    color: #25d366;
+}
+
+.rp-act-msg:hover {
+    background: rgba(37, 211, 102, 0.18);
+}
+
 /* click feel */
 .rp-act:active {
     transform: scale(0.92);

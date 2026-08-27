@@ -27,6 +27,8 @@ public partial class ClientesEstablecimiento
 
     public int? IdTipoGenerador { get; set; }
 
+    public int? IdActividad { get; set; }
+
     public int? IdProvincia { get; set; }
 
     public string? Localidad { get; set; }
@@ -82,6 +84,8 @@ public partial class ClientesEstablecimiento
     public virtual CondicionesIva? IdCondicionIvaNavigation { get; set; }
 
     public virtual ClientesTipoGenerador? IdTipoGeneradorNavigation { get; set; }
+
+    public virtual ClientesActividad? IdActividadNavigation { get; set; }
 
     public virtual Dia IdDiaRecoleccionNavigation { get; set; } = null!;
 

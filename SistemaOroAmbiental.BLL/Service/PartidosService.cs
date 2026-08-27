@@ -15,8 +15,17 @@ namespace SistemaOroAmbiental.BLL.Service
             _cascade = cascade;
         }
 
-        public Task<bool> Actualizar(Partido model) => _repo.Actualizar(model);
-        public Task<bool> Insertar(Partido model) => _repo.Insertar(model);
+        public Task<bool> Actualizar(Partido model)
+        {
+            IntercambioTxtCampos.Aplicar(model);
+            return _repo.Actualizar(model);
+        }
+
+        public Task<bool> Insertar(Partido model)
+        {
+            IntercambioTxtCampos.Aplicar(model);
+            return _repo.Insertar(model);
+        }
         public Task<Partido?> Obtener(int id) => _repo.Obtener(id);
         public Task<IQueryable<Partido>> ObtenerTodos() => _repo.ObtenerTodos();
         public Task<IQueryable<Partido>> ObtenerPorProvincia(int idProvincia) => _repo.ObtenerPorProvincia(idProvincia);

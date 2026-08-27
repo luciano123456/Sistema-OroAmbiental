@@ -17,6 +17,8 @@ namespace SistemaOroAmbiental.BLL.Service
 
         public async Task<ServiceResult> Insertar(Cliente model)
         {
+            IntercambioTxtCampos.Aplicar(model);
+
             if (string.IsNullOrWhiteSpace(model.Nombre) ||
                 string.IsNullOrWhiteSpace(model.Cuit) ||
                 model.IdSucursal <= 0)
@@ -45,6 +47,8 @@ namespace SistemaOroAmbiental.BLL.Service
 
         public async Task<ServiceResult> Actualizar(Cliente model)
         {
+            IntercambioTxtCampos.Aplicar(model);
+
             if (string.IsNullOrWhiteSpace(model.Nombre) ||
                 string.IsNullOrWhiteSpace(model.Cuit) ||
                 model.IdSucursal <= 0)

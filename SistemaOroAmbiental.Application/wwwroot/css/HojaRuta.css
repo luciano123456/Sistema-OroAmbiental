@@ -51,7 +51,7 @@ body.hr-page {
     width: 297mm;
     min-height: 210mm;
     margin: 1rem auto;
-    padding: 8mm;
+    padding: 5mm;
     background: #fff;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
 }
@@ -71,12 +71,12 @@ body.hr-page {
     grid-template-columns: 1.4fr 0.8fr 1fr;
     gap: 0;
     align-items: stretch;
-    margin-bottom: 0.75rem;
+    margin-bottom: 0.3rem;
     border: 1px solid var(--hr-border);
 }
 
 .hr-header-title {
-    padding: 0.6rem 0.8rem;
+    padding: 0.3rem 0.55rem;
     border-right: 1px solid var(--hr-border);
     display: flex;
     align-items: center;
@@ -84,11 +84,11 @@ body.hr-page {
 
 .hr-header-title h1 {
     margin: 0;
-    font-size: 1.35rem;
+    font-size: 1.1rem;
     font-weight: 800;
     letter-spacing: 0.02em;
     text-transform: uppercase;
-    line-height: 1.15;
+    line-height: 1.1;
 }
 
 .hr-header-meta {
@@ -98,12 +98,12 @@ body.hr-page {
 }
 
 .hr-meta-item {
-    padding: 0.45rem 0.65rem;
+    padding: 0.25rem 0.45rem;
     border-bottom: 1px solid var(--hr-border);
     display: flex;
     flex-direction: column;
     justify-content: center;
-    min-height: 2.4rem;
+    min-height: 1.75rem;
 }
 
 .hr-meta-item:last-child {
@@ -115,12 +115,12 @@ body.hr-page {
 }
 
 .hr-meta-salida {
-    font-size: 0.82rem;
+    font-size: 0.75rem;
     font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 0.02em;
     color: #111;
-    line-height: 1.25;
+    line-height: 1.15;
     white-space: nowrap;
 }
 
@@ -132,13 +132,13 @@ body.hr-page {
 }
 
 .hr-meta-value {
-    font-size: 1rem;
-    min-height: 1.2rem;
+    font-size: 0.88rem;
+    min-height: 0.95rem;
     font-weight: 700;
 }
 
 .hr-meta-value--blank {
-    min-height: 1.35rem;
+    min-height: 1rem;
 }
 
 .hr-header-precios {
@@ -147,7 +147,7 @@ body.hr-page {
 }
 
 .hr-precio-item {
-    padding: 0.45rem 0.65rem;
+    padding: 0.25rem 0.45rem;
     border-bottom: 1px solid var(--hr-border);
     display: flex;
     flex-direction: column;
@@ -167,7 +167,7 @@ body.hr-page {
 }
 
 .hr-precio-item strong {
-    font-size: 1rem;
+    font-size: 0.88rem;
     color: #111827;
     font-variant-numeric: tabular-nums;
 }
@@ -184,7 +184,7 @@ body.hr-page {
 .hr-stops {
     display: flex;
     flex-direction: column;
-    gap: 0.55rem;
+    gap: 0.15rem;
 }
 
 .hr-stop {
@@ -198,7 +198,7 @@ body.hr-page {
 
 .hr-stop-licencia {
     border-color: #d97706;
-    box-shadow: inset 3px 0 0 #f59e0b;
+    border-left: 3px solid #f59e0b;
 }
 
 .hr-badge-licencia {
@@ -216,7 +216,7 @@ body.hr-page {
 
 .hr-stop-reprogramado {
     border-color: #b91c1c;
-    box-shadow: inset 4px 0 0 #dc2626;
+    border-left: 4px solid #dc2626;
 }
 
 .hr-stop-reprogramado .hr-stop-head {
@@ -245,28 +245,28 @@ body.hr-page {
 /* Cabecera clara: N° + cliente en negro + abono */
 .hr-stop-head {
     display: grid;
-    grid-template-columns: 2.2rem 2.4fr 0.85fr 0.85fr 1.05fr 1.5fr 0.7fr;
+    grid-template-columns: 1.8rem 1.5fr 0.8fr 0.75fr 1fr 2.4fr 0.65fr;
     gap: 0;
     align-items: center;
     background: var(--hr-head-stop);
     color: var(--hr-head-stop-text);
-    padding: 0.35rem 0.35rem;
+    padding: 0.15rem 0.25rem;
     font-weight: 700;
     border-bottom: 1px solid var(--hr-border);
 }
 
 .hr-stop-num {
     text-align: center;
-    font-size: 0.95rem;
+    font-size: 0.82rem;
     grid-column: 1;
     color: #111827;
 }
 
 .hr-stop-cliente {
-    font-size: 0.92rem;
-    line-height: 1.2;
+    font-size: 0.82rem;
+    line-height: 1.1;
     grid-column: 2 / 5;
-    padding-right: 0.35rem;
+    padding-right: 0.2rem;
     text-transform: uppercase;
     color: #111827;
     font-weight: 800;
@@ -276,14 +276,14 @@ body.hr-page {
     grid-column: 5 / 8;
     display: flex;
     align-items: center;
-    gap: 0.35rem;
-    padding: 0.15rem 0.35rem 0.15rem 0.2rem;
-    min-height: 1.5rem;
+    gap: 0.25rem;
+    padding: 0.08rem 0.2rem 0.08rem 0.15rem;
+    min-height: 1.15rem;
     color: #111827;
 }
 
 .hr-abono-label {
-    font-size: 0.78rem;
+    font-size: 0.72rem;
     flex-shrink: 0;
     white-space: nowrap;
     color: #111827;
@@ -292,8 +292,8 @@ body.hr-page {
 .hr-abono-write {
     flex: 1;
     width: 100%;
-    min-width: 32mm;
-    min-height: 1.5rem;
+    min-width: 24mm;
+    min-height: 1.1rem;
     background: #fff;
     border: 1px solid #64748b;
     border-radius: 1px;
@@ -301,12 +301,12 @@ body.hr-page {
 
 .hr-stop-saldo {
     border-top: 1px solid var(--hr-border);
-    padding: 0.35rem 0.5rem;
-    font-size: 0.82rem;
+    padding: 0.12rem 0.35rem;
+    font-size: 0.74rem;
     font-weight: 800;
     letter-spacing: 0.01em;
     text-transform: uppercase;
-    line-height: 1.3;
+    line-height: 1.15;
     background: #fff;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
@@ -330,10 +330,10 @@ body.hr-page {
 .hr-stop-productos {
     display: flex;
     align-items: baseline;
-    gap: 0.5rem;
+    gap: 0.35rem;
     border-top: 1px solid var(--hr-border);
-    padding: 0.3rem 0.5rem;
-    min-height: 1.6rem;
+    padding: 0.12rem 0.35rem;
+    min-height: 1.05rem;
     background: #f8fafc;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
@@ -349,26 +349,26 @@ body.hr-page {
 }
 
 .hr-stop-productos-value {
-    font-size: 0.82rem;
+    font-size: 0.74rem;
     font-weight: 700;
-    line-height: 1.25;
+    line-height: 1.15;
     color: #0f172a;
 }
 
 /* Grilla de datos (6 columnas, misma proporción que la cabecera) */
 .hr-stop-grid {
     display: grid;
-    grid-template-columns: 2.4fr 0.85fr 0.85fr 1.05fr 1.5fr 0.7fr;
-    min-height: 4.8rem;
+    grid-template-columns: 1.5fr 0.8fr 0.75fr 1fr 2.4fr 0.65fr;
+    min-height: 2.85rem;
 }
 
 .hr-cell {
     border-right: 1px solid var(--hr-border);
     border-top: 1px solid var(--hr-border);
-    padding: 0.25rem 0.35rem;
+    padding: 0.12rem 0.22rem;
     display: flex;
     flex-direction: column;
-    min-height: 4.8rem;
+    min-height: 2.85rem;
     background: #fff;
 }
 
@@ -377,17 +377,17 @@ body.hr-page {
 }
 
 .hr-cell-label {
-    font-size: 0.62rem;
+    font-size: 0.58rem;
     text-transform: uppercase;
     color: var(--hr-muted);
     font-weight: 700;
-    line-height: 1.1;
-    margin-bottom: 0.15rem;
+    line-height: 1.05;
+    margin-bottom: 0.06rem;
 }
 
 .hr-cell-value {
-    font-size: 0.78rem;
-    line-height: 1.25;
+    font-size: 0.72rem;
+    line-height: 1.15;
     flex: 1;
     white-space: pre-wrap;
     word-break: break-word;
@@ -409,7 +409,7 @@ body.hr-page {
 }
 
 .hr-cell-label--stack {
-    margin-top: 0.35rem;
+    margin-top: 0.12rem;
 }
 
 .hr-tone-green {
@@ -429,7 +429,7 @@ body.hr-page {
 }
 
 .hr-cell-cajas {
-    gap: 0.35rem;
+    gap: 0.15rem;
     justify-content: space-between;
 }
 
@@ -447,7 +447,7 @@ body.hr-page {
 
 .hr-write-box--sm {
     flex: 1;
-    min-height: 1.35rem;
+    min-height: 0.95rem;
     border: 1px solid #94a3b8;
     background: #fff;
     border-radius: 1px;
@@ -457,21 +457,25 @@ body.hr-page {
     flex: 1;
     border: 1px solid #cbd5e1;
     background: #fff;
-    min-height: 2.5rem;
+    min-height: 1.65rem;
 }
 
 .hr-cell-hora .hr-write-box {
-    min-height: 3rem;
+    min-height: 1.85rem;
 }
 
 @media print {
     @page {
         size: A4 landscape;
-        margin: 6mm;
+        margin: 4mm 5mm 3mm 5mm;
     }
 
+    html,
     body.hr-page {
+        margin: 0 !important;
+        padding: 0 !important;
         background: #fff;
+        width: 100%;
     }
 
     .no-print {
@@ -479,11 +483,13 @@ body.hr-page {
     }
 
     .hr-sheet {
-        width: auto;
+        width: 100%;
+        max-width: 100%;
         min-height: auto;
         margin: 0;
         padding: 0;
         box-shadow: none;
+        overflow: visible;
     }
 
     .hr-sheet--break {
@@ -495,8 +501,146 @@ body.hr-page {
         margin-bottom: 0;
     }
 
+    /* Encabezado compacto pero título legible */
+    .hr-header {
+        margin-bottom: 0.12rem;
+        grid-template-columns: 1.25fr 1fr 1fr;
+    }
+
+    .hr-header-title {
+        padding: 0.18rem 0.45rem;
+        min-height: 7.5mm;
+        align-items: center;
+    }
+
+    .hr-header-title h1 {
+        font-size: 1.15rem;
+        line-height: 1.12;
+        letter-spacing: 0.03em;
+    }
+
+    .hr-header-meta {
+        grid-template-columns: 1fr 1fr;
+        grid-template-rows: 1fr;
+    }
+
+    .hr-header-precios {
+        grid-template-columns: 1fr 1fr;
+        grid-template-rows: 1fr;
+    }
+
+    .hr-meta-item,
+    .hr-precio-item {
+        min-height: auto;
+        padding: 0.12rem 0.32rem;
+        border-bottom: 0;
+        border-right: 1px solid var(--hr-border);
+    }
+
+    .hr-meta-item:last-child,
+    .hr-precio-item:last-child {
+        border-right: 0;
+    }
+
+    .hr-meta-salida {
+        font-size: 0.7rem;
+    }
+
+    .hr-meta-label,
+    .hr-precio-item span {
+        font-size: 0.58rem;
+        line-height: 1;
+    }
+
+    .hr-meta-value,
+    .hr-precio-item strong {
+        font-size: 0.72rem;
+    }
+
+    .hr-meta-value--blank {
+        min-height: 0.6rem;
+    }
+
+    .hr-stops {
+        gap: 0.06rem;
+    }
+
     .hr-stop {
         break-inside: avoid;
+        page-break-inside: avoid;
+        overflow: visible;
+    }
+
+    .hr-stop-licencia {
+        border-left-width: 3px;
+    }
+
+    .hr-stop-reprogramado {
+        border-left-width: 4px;
+    }
+
+    .hr-stop-head {
+        padding: 0.1rem 0.2rem;
+    }
+
+    .hr-stop-grid,
+    .hr-cell {
+        min-height: 2.2rem;
+    }
+
+    .hr-cell {
+        padding: 0.1rem 0.18rem;
+    }
+
+    .hr-cell-value {
+        font-size: 0.68rem;
+        line-height: 1.12;
+    }
+
+    .hr-cell-obs .hr-cell-value {
+        font-size: 0.66rem;
+        line-height: 1.1;
+    }
+
+    .hr-cell-hora .hr-write-box,
+    .hr-cell-box .hr-write-box {
+        min-height: 1.25rem;
+    }
+
+    .hr-write-box--sm {
+        min-height: 0.85rem;
+    }
+
+    .hr-stop-productos {
+        padding: 0.08rem 0.28rem;
+        min-height: auto;
+    }
+
+    .hr-stop-productos-value {
+        font-size: 0.68rem;
+        line-height: 1.1;
+    }
+
+    .hr-stop-saldo {
+        padding: 0.08rem 0.28rem;
+        font-size: 0.68rem;
+        line-height: 1.1;
+    }
+
+    .hr-badge-licencia,
+    .hr-badge-reprogramado {
+        font-size: 0.62rem;
+        padding: 0.06rem 0.3rem;
+    }
+
+    .hr-tone-green,
+    .hr-tone-blue,
+    .hr-tone-pink,
+    .hr-cell-obs--alert,
+    .hr-stop-head,
+    .hr-stop-productos {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
     }
 }
 

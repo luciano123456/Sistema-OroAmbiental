@@ -2,7 +2,7 @@
    CLIENTES GESTION - Hub unificado por cliente
    (cliente + establecimientos: lineas completas + importe tras cuenta)
 ========================================================= */
-window.__OA_CG_BUILD = "noret-sin-lista-v34-20260821";
+window.__OA_CG_BUILD = "contratos-ctr-v38-20260826";
 
 const CG = {
     id: 0,
@@ -15,6 +15,8 @@ const CG = {
     establecimientoSelId: 0,
     establecimientoSelIds: [],
     establecimientosLista: [],
+    contratosLista: [],
+    contratosEstSelIds: [],
     contratoModal: null,
     modalCobro: null,
     modalControlMensual: null,
@@ -36,6 +38,7 @@ const CG = {
     entregaHubExpandida: 0,
     wsLineas: [],
     wsCobros: [],
+    wsEntregasMes: [],
     wsSugeridos: [],
     wsProductosCatalogo: [],
     wsEstablecimientos: [],
@@ -62,6 +65,7 @@ function crearHubStateEstCg() {
         hubMesSel: null,
         wsLineas: [],
         wsCobros: [],
+        wsEntregasMes: [],
         idEstablecimiento: 0,
         entregasHub: []
     };
@@ -273,20 +277,29 @@ const API_CG = {
     productosCatalogo: "/Productos/Lista?soloActivos=true",
     preciosProducto: id => `/ProductosPrecios/ListaPorProducto?idProducto=${id}`,
     entregaInsertar: "/ClientesEntregas/Insertar",
+    entregaActualizar: "/ClientesEntregas/Actualizar",
+    entregaEliminar: id => `/ClientesEntregas/Eliminar?id=${id}`,
+    entregaCobros: id => `/ClientesEntregas/Cobros?id=${id}`,
     guardarControlMensual: "/ClientesOperativo/GuardarControlMensual",
     recoleccionPrincipal: id => `/Clientes/RecoleccionPrincipal?idCliente=${id}`,
     recoleccionPrincipalGuardar: "/Clientes/RecoleccionPrincipal",
     dias: "/Dias/Lista",
     semanas: "/Semanas/Lista",
     listasPrecios: "/ListasPrecios/Lista",
-    camiones: "/Camiones/Lista?soloActivos=true"
+    camiones: "/Camiones/Lista?soloActivos=true",
+    manifiestosDocumentos: id => `/Clientes/ManifiestosDocumentos?idCliente=${id}`,
+    descargarCertificado: id => `/Clientes/DescargarCertificado?id=${id}`,
+    descargarManifiestoHistorial: (idCamion, id) => `/Clientes/DescargarManifiestoHistorial?idCamion=${idCamion}&id=${id}`,
+    eliminarCertificado: id => `/Clientes/EliminarCertificado?id=${id}`,
+    eliminarManifiestoHistorial: (idCamion, id) => `/Clientes/EliminarManifiestoHistorial?idCamion=${idCamion}&id=${id}`
 };
 
 const CG_TAB_LABELS = {
     establecimientos: "Establecimientos",
     contratos: "Contratos",
     cuentaCorriente: "Cuenta corriente",
-    entregas: "Entregas"
+    entregas: "Entregas",
+    manifiestos: "Manifiestos"
 };
 
 const authCg = () => ({
@@ -399,6 +412,7 @@ function capturarEstadoRetornoCg() {
     let estTab = null;
     if ($("#tabBtnStockEst").hasClass("active")) estTab = "stock";
     else if ($("#tabBtnContactosEst").hasClass("active")) estTab = "contactos";
+    else if ($("#tabBtnContratosEst").hasClass("active")) estTab = "contratos";
     else if ($("#tabBtnProductosEst").hasClass("active")) estTab = "productos";
     else if ($("#tabBtnDatosEst").hasClass("active")) estTab = "datos";
 
@@ -492,6 +506,7 @@ async function restaurarEstadoRetornoCg() {
             const estTabMap = {
                 stock: "tabBtnStockEst",
                 contactos: "tabBtnContactosEst",
+                contratos: "tabBtnContratosEst",
                 productos: "tabBtnProductosEst",
                 datos: "tabBtnDatosEst"
             };
@@ -499,6 +514,10 @@ async function restaurarEstadoRetornoCg() {
             const estBtn = document.getElementById(estBtnId);
             if (estBtn && !estBtn.disabled && !estBtn.classList.contains("d-none")) {
                 bootstrap.Tab.getOrCreateInstance(estBtn).show();
+            }
+
+            if (st.estTab === "contratos") {
+                await cargarContratosEstablecimientoCg(idsEstablecimientoSeleccionadosCg()[0]);
             }
 
             if (st.estTab === "stock" || st.mesEst) {
@@ -732,6 +751,7 @@ function initModalesCg() {
             lockClienteId: CG.id,
             onSaved: async (data, modelo) => {
                 CG.tabsLoaded.establecimientos = false;
+                CG.tabsLoaded.contratos = false;
                 const idGuardado = Number(modelo?.Id || data?.id || 0);
                 await cargarTabEstablecimientos();
                 if (idGuardado > 0) {
@@ -741,7 +761,11 @@ function initModalesCg() {
                     setStockEstTabDisponibleCg(true);
                     CG.hubActivo = "est";
                     await cargarHubEstablecimientoCg(true);
+                    if ($("#tabBtnContratosEst").hasClass("active")) {
+                        await cargarContratosEstablecimientoCg(idGuardado);
+                    }
                 }
+                syncEstEditorFootCg();
             },
             onDeleted: async () => {
                 CG.establecimientoSelId = 0;
@@ -751,11 +775,13 @@ function initModalesCg() {
                 setStockEstTabDisponibleCg(false);
                 CG.tabsLoaded.establecimientos = false;
                 await cargarTabEstablecimientos();
+                syncEstEditorFootCg();
             },
             onClosed: () => {
                 CG.establecimientoSelId = 0;
                 resaltarListaEstablecimientoCg(0);
                 $("#btnEliminarEstTab").addClass("d-none");
+                syncEstEditorFootCg();
             },
             onOpen: async (modo, modalInst, modelo) => {
                 const idEst = Number(modelo?.Id || 0);
@@ -776,6 +802,7 @@ function initModalesCg() {
                     limpiarHubEstablecimientoCg();
                     setStockEstTabDisponibleCg(false);
                     $("#btnEliminarEstTab").addClass("d-none");
+                    syncEstEditorFootCg();
                 }
             }
         });
@@ -786,15 +813,11 @@ function initModalesCg() {
             token: token,
             onSaved: async () => {
                 CG.tabsLoaded.contratos = false;
-                if ($("#tabContratos").hasClass("active") || $("#tabContratos").hasClass("show")) {
-                    await cargarTabContratos();
-                }
+                await refrescarContratosCg();
             },
             onDeleted: async () => {
                 CG.tabsLoaded.contratos = false;
-                if ($("#tabContratos").hasClass("active") || $("#tabContratos").hasClass("show")) {
-                    await cargarTabContratos();
-                }
+                await refrescarContratosCg();
             }
         });
     }
@@ -872,13 +895,20 @@ function wireEventosCg() {
         await eliminarEstablecimientoCg(CG.establecimientoSelIds[0]);
     });
     $("#btnEstSelTodos").on("click", () => seleccionarTodosEstablecimientosCg());
+    $("#btnContratosEstSelTodos").on("click", () => seleccionarTodosContratosEstCg());
     $("#cgEstList").on("click", ".cg-est-pill", function (e) {
         e.preventDefault();
         const id = Number($(this).data("id")) || 0;
         if (!id) return;
         toggleEstablecimientoSelCg(id, { exclusive: e.shiftKey });
     });
-    $(document).on("click", "#tabBtnDatosEst.disabled, #tabBtnContactosEst.disabled, #tabBtnProductosEst.disabled", function (e) {
+    $("#cgContratosEstList").on("click", ".cg-est-pill", function (e) {
+        e.preventDefault();
+        const id = Number($(this).data("id")) || 0;
+        if (!id) return;
+        toggleContratosEstSelCg(id, { exclusive: e.shiftKey });
+    });
+    $(document).on("click", "#tabBtnDatosEst.disabled, #tabBtnContactosEst.disabled, #tabBtnContratosEst.disabled, #tabBtnProductosEst.disabled", function (e) {
         e.preventDefault();
         e.stopPropagation();
     });
@@ -895,9 +925,13 @@ function wireEventosCg() {
         e.preventDefault();
         e.stopPropagation();
     });
-    $(document).on("shown.bs.tab", "#tabBtnDatosEst, #tabBtnContactosEst, #tabBtnProductosEst", () => {
+    $(document).on("shown.bs.tab", "#tabBtnDatosEst, #tabBtnContactosEst, #tabBtnContratosEst, #tabBtnProductosEst", function () {
         CG.hubActivo = "cliente";
         syncEstEditorFootCg();
+        if (this.id === "tabBtnContratosEst") {
+            const idEst = idsEstablecimientoSeleccionadosCg()[0] || 0;
+            cargarContratosEstablecimientoCg(idEst);
+        }
     });
     $(document).on("shown.bs.tab", "#tabBtnEstablecimientos", () => {
         if (idsEstablecimientoSeleccionadosCg().length > 0) {
@@ -933,28 +967,38 @@ function wireEventosCg() {
     });
     // Legacy bindings replaced by delegated handlers above (hub-aware).
     $h("btnGuardarControlMensualCg").on("click", busyHandler(guardarVisitaUnificadaCg));
+    $h("btnGuardarDatosMesCg").on("click", busyHandler(() => guardarControlMensualCg({ silent: false })));
+    $h("btnWsNuevaEntregaMes").on("click", () => {
+        CG.hubActivo = "cliente";
+        agregarEntregaDraftMesCg();
+    });
     $h("cgControlMensualBody").on("click", "tr[data-mes]", function (e) {
-        if ($(e.target).closest(".cg-cm-int-eye, .cg-cm-obs-eye, .cg-cm-visita-cell").length) return;
+        if ($(e.target).closest(".cg-cm-int-eye, .cg-cm-obs-eye, .cg-cm-visita-editor").length) return;
         CG.hubActivo = "cliente";
         const anio = Number($(this).data("anio"));
         const mes = Number($(this).data("mes"));
         abrirWorkspaceMesCg(anio, mes);
     });
     $h("cgCards_controlMensual").on("click", "article[data-mes]", function (e) {
-        if ($(e.target).closest(".cg-cm-int-eye, .cg-cm-obs-eye, .cg-cm-visita-cell").length) return;
+        if ($(e.target).closest(".cg-cm-int-eye, .cg-cm-obs-eye, .cg-cm-visita-editor").length) return;
         CG.hubActivo = "cliente";
         const anio = Number($(this).data("anio"));
         const mes = Number($(this).data("mes"));
         abrirWorkspaceMesCg(anio, mes);
+    });
+    $(document).on("click", "#cgEstAtrasosLista .cg-atraso-chip-reclamar", function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        CG.hubActivo = "est";
+        reclamarDeudaEstablecimientoCg({
+            meses: [{ anio: Number($(this).data("anio")), mes: Number($(this).data("mes")) }]
+        });
     });
     $(document).on("click", "#cgAtrasosAlert .cg-atraso-chip, #cgEstAtrasosAlert .cg-atraso-chip", function () {
         syncHubActivoFromElCg(this);
         const anio = Number($(this).data("anio"));
         const mes = Number($(this).data("mes"));
         abrirWorkspaceMesCg(anio, mes);
-        const bodyId = mapHubDomIdCg("cgControlMensualBody");
-        const row = document.querySelector(`#${bodyId} tr[data-anio="${anio}"][data-mes="${mes}"]`);
-        row?.scrollIntoView({ behavior: "smooth", block: "center" });
     });
     $(document).on("click", "#btnAtrasosToggleLista, #btnEstAtrasosToggleLista", function () {
         syncHubActivoFromElCg(this);
@@ -970,6 +1014,7 @@ function wireEventosCg() {
         setHubPropCg("hubMesSel", null);
         setHubPropCg("wsLineas", []);
         setHubPropCg("wsCobros", []);
+        setHubPropCg("wsEntregasMes", []);
         $h("cgControlMensualBody").find("tr").removeClass("is-selected");
         $h("cgCards_controlMensual").find("article").removeClass("is-selected");
         actualizarChipsAtrasosSeleccionCg(-1, -1);
@@ -988,6 +1033,21 @@ function wireEventosCg() {
         CG.hubActivo = "cliente";
         CG.interesHubMode = "cliente";
         abrirModalInteresesHistCg(null, null);
+    });
+    $(document).on("click", "#cgHubOperativo #btnContactoHub, #cgEstHubMount #btnEstContactoHub, #cgHubOperativo #btnReclamoDeudaAtrasos, #cgEstHubMount #btnEstReclamoDeudaAtrasos", function (e) {
+        e.preventDefault();
+        syncHubActivoFromElCg(this);
+        contactarEstablecimientoCg({ modo: "junto" });
+    });
+    $(document).on("click", "#cgHubOperativo #btnReclamoMesHub, #cgEstHubMount #btnEstReclamoMesHub", function (e) {
+        e.preventDefault();
+        syncHubActivoFromElCg(this);
+        const sel = hubPropCg("hubMesSel");
+        if (!sel) {
+            errorModal("Elegí un mes para reclamar.");
+            return;
+        }
+        contactarEstablecimientoCg({ meses: [{ anio: sel.anio, mes: sel.mes }] });
     });
     $(document).on("click", ".cg-cm-int-eye", function (e) {
         e.preventDefault();
@@ -1098,21 +1158,123 @@ function wireEventosCg() {
         renderLineasWsCg();
         actualizarResumenCobrosWsCg();
     });
-    $(document).off("click.noretSign").on("click.noretSign", "#cgWsLineasBody .ws-noret-sign, #cgEstWsLineasBody .ws-noret-sign", function (e) {
+    $(document).off("click.noretSign").on("click.noretSign", ".cg-ws-lineas-list .ws-noret-sign, #cgWsLineasBody .ws-noret-sign, #cgEstWsLineasBody .ws-noret-sign", function (e) {
         e.preventDefault();
         e.stopPropagation();
         syncHubActivoFromElCg(this);
+        activarLineasHubDesdeAccCg(this);
         const $row = $(this).closest(".cg-ws-linea");
         const idx = Number($row.data("idx"));
-        const linea = hubPropCg("wsLineas")[idx];
+        const linea = lineasWsDeCg(this)[idx];
         if (!linea) return;
         leerCamposLineaWsDesdeDomCg($row, linea);
         aplicarSignoNoRetiradoWsCg($row, linea, Number($(this).data("sign")));
         $row.find(".ws-sub").text(fmtMoneyCg(subtotalLineaWsCg(linea)));
-        refrescarSaldosNoRetiradoWsCg();
-        actualizarResumenCobrosWsCg();
-        actualizarAlertaDuplicadosLineasWsCg();
+        refrescarSaldosNoRetiradoWsCg(this);
+        actualizarResumenCobrosWsCg(this);
+        actualizarAlertaDuplicadosLineasWsCg(this);
     });
+    $(document).off("change.wsAccLinea input.wsAccLinea").on("change.wsAccLinea input.wsAccLinea", ".cg-ws-acc .cg-ws-linea select, .cg-ws-acc .cg-ws-linea input", async function () {
+        syncHubActivoFromElCg(this);
+        activarLineasHubDesdeAccCg(this);
+        const idx = Number($(this).closest(".cg-ws-linea").data("idx"));
+        const linea = lineasWsDeCg(this)[idx];
+        if (!linea) return;
+        const $row = $(this).closest(".cg-ws-linea");
+        const campo = $(this).hasClass("ws-prod") ? "prod"
+            : $(this).hasClass("ws-lista") ? "lista"
+            : $(this).hasClass("ws-tipo") ? "tipo"
+            : "otro";
+        leerCamposLineaWsDesdeDomCg($row, linea);
+        sincronizarUiNoRetiradoWsCg($row, linea);
+        await sincronizarPrecioLineaWsCg($row, linea, campo);
+        $row.find(".ws-sub").text(fmtMoneyCg(subtotalLineaWsCg(linea)));
+        refrescarSaldosNoRetiradoWsCg(this);
+        actualizarResumenCobrosWsCg(this);
+        actualizarAlertaDuplicadosLineasWsCg(this);
+    });
+    $(document).off("click.wsAcc").on("click.wsAcc", ".cg-ws-acc-head", function (e) {
+        e.preventDefault();
+        syncHubActivoFromElCg(this);
+        toggleEntregaAccCg($(this).attr("data-uid") || $(this).closest(".cg-ws-acc").attr("data-uid"));
+    });
+    $(document).off("click.wsAccLineaAdd").on("click.wsAccLineaAdd", ".cg-ws-acc .btn-ws-acc-linea", function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        syncHubActivoFromElCg(this);
+        agregarLineaWsCg(null, this);
+    });
+    $(document).off("click.wsAccCobroAdd").on("click.wsAccCobroAdd", ".cg-ws-acc .btn-ws-acc-cobro", function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        syncHubActivoFromElCg(this);
+        agregarCobroWsCg(null, this);
+    });
+    $(document).off("click.wsAccChip").on("click.wsAccChip", ".cg-ws-acc .cg-ws-chip", function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        syncHubActivoFromElCg(this);
+        const idx = Number($(this).data("idx"));
+        const s = CG.wsSugeridos[idx];
+        if (s) agregarLineaWsCg({
+            IdProducto: s.IdProducto,
+            IdListaPrecio: s.IdListaPrecio || 0,
+            TipoMovimiento: 1,
+            Cantidad: s.Cantidad || 1,
+            PrecioVenta: Number(s.PrecioVenta) || 0
+        }, this);
+    });
+    $(document).off("click.wsAccQuitar").on("click.wsAccQuitar", ".cg-ws-acc .btn-ws-quitar", function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        syncHubActivoFromElCg(this);
+        activarLineasHubDesdeAccCg(this);
+        const idx = Number($(this).data("idx"));
+        if (Number.isNaN(idx)) return;
+        lineasWsDeCg(this).splice(idx, 1);
+        renderLineasWsCg(this);
+        actualizarResumenCobrosWsCg(this);
+    });
+    $(document).off("click.wsAccQuitarCobro").on("click.wsAccQuitarCobro", ".cg-ws-acc .btn-ws-quitar-cobro", function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        syncHubActivoFromElCg(this);
+        const key = Number($(this).data("key"));
+        const cobros = cobrosWsDeCg(this);
+        const i = cobros.findIndex(c => Number(c._key) === key);
+        if (i >= 0) cobros.splice(i, 1);
+        renderCobrosWsCg(this);
+    });
+    $(document).off("change.wsAccCobro input.wsAccCobro").on("change.wsAccCobro input.wsAccCobro", ".cg-ws-acc .cg-ws-cobro-row input, .cg-ws-acc .cg-ws-cobro-row select", function () {
+        syncHubActivoFromElCg(this);
+        const $row = $(this).closest(".cg-ws-cobro-row");
+        if ($(this).hasClass("ws-cobro-cuenta")) syncImporteHabilitadoCobroWsCg($row);
+        sincronizarCobrosWsDesdeDomCg(this);
+        actualizarResumenCobrosWsCg(this);
+    });
+    $(document).off("change.wsAccEst").on("change.wsAccEst", ".cg-ws-acc .ws-acc-est", async function () {
+        syncHubActivoFromElCg(this);
+        const $acc = $wsAccFromCg(this);
+        const ent = entregaByUidCg($acc.attr("data-uid"));
+        if (ent) ent.IdEstablecimiento = Number($(this).val()) || 0;
+        await cargarSugeridosEnAccCg($acc, Number($(this).val()) || 0);
+    });
+    $(document).off("change.wsAccFecha").on("change.wsAccFecha", ".cg-ws-acc .ws-acc-fecha", function () {
+        syncHubActivoFromElCg(this);
+        const $acc = $wsAccFromCg(this);
+        const ent = entregaByUidCg($acc.attr("data-uid"));
+        if (ent) ent.Fecha = $(this).val() || "";
+        $h("cgCmFechaVisita").val($(this).val() || "");
+        $h("cgWsFechaEntrega").val($(this).val() || "");
+    });
+    $(document).off("click.wsAccGuardar").on("click.wsAccGuardar", ".cg-ws-acc .btn-ws-acc-guardar", busyHandler(function () {
+        syncHubActivoFromElCg(this);
+        return guardarVisitaUnificadaCg(this);
+    }));
+    $(document).off("click.wsAccEliminar").on("click.wsAccEliminar", ".cg-ws-acc .btn-ws-acc-eliminar", busyHandler(function () {
+        syncHubActivoFromElCg(this);
+        return eliminarEntregaAccCg(this);
+    }));
     $h("cgWsLineasBody").on("change input", "select, input", async function () {
         const idx = Number($(this).closest(".cg-ws-linea").data("idx"));
         const linea = hubPropCg("wsLineas")[idx];
@@ -1168,6 +1330,7 @@ function wireEventosCg() {
         guardarEstadoRetornoCg();
     });
     $("#btnRefreshEntregasTab").on("click", () => cargarHubEntregasCg(true));
+    $("#btnRefreshManifiestosCg").on("click", () => cargarTabManifiestos(true));
 
     initFiltrosControlCg();
     initViewModeCg();
@@ -1626,7 +1789,7 @@ function actualizarEnlacesAccionCg() {
 }
 
 function habilitarTabsRelacionados(habilitar) {
-    const tabs = ["establecimientos", "contratos", "cuentaCorriente", "entregas"];
+    const tabs = ["establecimientos", "contratos", "cuentaCorriente", "entregas", "manifiestos"];
     tabs.forEach(t => {
         $(`button[data-cg-tab="${t}"]`).prop("disabled", !habilitar);
     });
@@ -1845,6 +2008,9 @@ async function cargarTabCg(tab) {
                 case "entregas":
                     await cargarHubEntregasCg(true);
                     break;
+                case "manifiestos":
+                    await cargarTabManifiestos(true);
+                    break;
             }
         } catch (e) {
             console.error(`Error cargando tab ${tab}:`, e);
@@ -2015,6 +2181,25 @@ async function cargarTabEstablecimientos() {
     CG.tabsLoaded.establecimientos = true;
 }
 
+function buildEstPillsHtmlCg(list) {
+    const palette = ["mint", "sky", "amber", "violet", "rose", "teal"];
+    return (list || []).map((e, idx) => {
+        const domicilio = [e.Calle || e.Domicilio, e.Numero].filter(Boolean).join(" ")
+            || e.Domicilio
+            || "Sin domicilio";
+        const tone = palette[idx % palette.length];
+        const inicial = String(e.Nombre || "?").trim().charAt(0).toUpperCase();
+        return `<button type="button" class="cg-est-pill tone-${tone}" data-id="${e.Id}" role="option" aria-selected="false">
+            <span class="cg-est-pill-check"><i class="fa fa-check"></i></span>
+            <span class="cg-est-pill-avatar">${escapeCg(inicial)}</span>
+            <span class="cg-est-pill-text">
+                <span class="cg-est-pill-name">${escapeCg(e.Nombre || "Sin nombre")}</span>
+                <span class="cg-est-pill-dom">${escapeCg(domicilio)}</span>
+            </span>
+        </button>`;
+    }).join("");
+}
+
 function renderListaEstablecimientosCg(items) {
     const cont = $("#cgEstList");
     if (!cont.length) return;
@@ -2033,22 +2218,7 @@ function renderListaEstablecimientosCg(items) {
         return;
     }
 
-    const palette = ["mint", "sky", "amber", "violet", "rose", "teal"];
-    cont.html(list.map((e, idx) => {
-        const domicilio = [e.Calle || e.Domicilio, e.Numero].filter(Boolean).join(" ")
-            || e.Domicilio
-            || "Sin domicilio";
-        const tone = palette[idx % palette.length];
-        const inicial = String(e.Nombre || "?").trim().charAt(0).toUpperCase();
-        return `<button type="button" class="cg-est-pill tone-${tone}" data-id="${e.Id}" role="option" aria-selected="false">
-            <span class="cg-est-pill-check"><i class="fa fa-check"></i></span>
-            <span class="cg-est-pill-avatar">${escapeCg(inicial)}</span>
-            <span class="cg-est-pill-text">
-                <span class="cg-est-pill-name">${escapeCg(e.Nombre || "Sin nombre")}</span>
-                <span class="cg-est-pill-dom">${escapeCg(domicilio)}</span>
-            </span>
-        </button>`;
-    }).join(""));
+    cont.html(buildEstPillsHtmlCg(list));
 }
 
 function syncEstablecimientoSelStateCg() {
@@ -2202,7 +2372,11 @@ function syncEstEditorFootCg() {
     const ids = idsEstablecimientoSeleccionadosCg();
     const multi = ids.length > 1;
     const enStock = $("#tabBtnStockEst").hasClass("active");
-    $("#cgEstEditorFoot").toggleClass("d-none", multi || ids.length === 0 || enStock);
+    // Alta: no hay pill seleccionado, pero el editor está abierto en borrador → hay que mostrar Guardar/Registrar
+    const editorVisible = !$("#cgEstEditor").hasClass("d-none");
+    const idEnEditor = Number(CG.establecimientoModal?.getId?.() || 0);
+    const borradorNuevo = editorVisible && ids.length === 0 && !idEnEditor;
+    $("#cgEstEditorFoot").toggleClass("d-none", multi || (ids.length === 0 && !borradorNuevo) || enStock);
 }
 
 function aplicarModoTabsEstCg(cantidad) {
@@ -2210,6 +2384,7 @@ function aplicarModoTabsEstCg(cantidad) {
     const map = [
         ["#tabBtnDatosEst", "#tabDatosEst"],
         ["#tabBtnContactosEst", "#tabContactosEst"],
+        ["#tabBtnContratosEst", "#tabContratosEst"],
         ["#tabBtnProductosEst", "#tabProductosEst"]
     ];
 
@@ -2232,9 +2407,10 @@ function aplicarModoTabsEstCg(cantidad) {
     if (multi) {
         $stockBtn.removeClass("d-none").addClass("active");
         $stockPane.addClass("show active");
-        $("#tabBtnDatosEst, #tabBtnContactosEst, #tabBtnProductosEst").removeClass("active");
+        $("#tabBtnDatosEst, #tabBtnContactosEst, #tabBtnContratosEst, #tabBtnProductosEst").removeClass("active");
     } else if (cantidad === 1 && !$stockBtn.hasClass("active") && !$("#tabBtnDatosEst").hasClass("active")
-        && !$("#tabBtnContactosEst").hasClass("active") && !$("#tabBtnProductosEst").hasClass("active")) {
+        && !$("#tabBtnContactosEst").hasClass("active") && !$("#tabBtnContratosEst").hasClass("active")
+        && !$("#tabBtnProductosEst").hasClass("active")) {
         $("#tabBtnDatosEst").addClass("active");
         $("#tabDatosEst").addClass("show active");
         $stockBtn.removeClass("active");
@@ -2260,6 +2436,116 @@ async function eliminarEstablecimientoCg(id) {
     if (CG.establecimientoModal) await CG.establecimientoModal.eliminar(id);
 }
 window.eliminarEstablecimientoCg = eliminarEstablecimientoCg;
+
+function reclamarDeudaEstablecimientoCg(opts) {
+    return contactarEstablecimientoCg(opts);
+}
+window.reclamarDeudaEstablecimientoCg = reclamarDeudaEstablecimientoCg;
+
+function mensajeWhatsappEstablecimientoCg() {
+    return contactarEstablecimientoCg({ libre: true });
+}
+window.mensajeWhatsappEstablecimientoCg = mensajeWhatsappEstablecimientoCg;
+
+function contactarEstablecimientoDirectoCg(idEstablecimiento, opts) {
+    return contactarEstablecimientoCg({ ...(opts || {}), idEstablecimiento });
+}
+window.contactarEstablecimientoDirectoCg = contactarEstablecimientoDirectoCg;
+
+async function asegurarListaEstablecimientosCg() {
+    if ((CG.establecimientosLista || []).length) return CG.establecimientosLista;
+    if (!CG.id) return [];
+    try {
+        const all = await fetchJsonCg(API_CG.establecimientosLista, { headers: authCg() }) || [];
+        CG.establecimientosLista = (Array.isArray(all) ? all : []).filter(e => Number(e.IdCliente || CG.id) === CG.id || !e.IdCliente);
+    } catch {
+        CG.establecimientosLista = [];
+    }
+    return CG.establecimientosLista;
+}
+
+function elegirEstablecimientoContactoCg(items) {
+    return new Promise((resolve) => {
+        const modalEl = document.getElementById("modalElegirEstContactoCg");
+        const listaEl = document.getElementById("cgEstContactoLista");
+        if (!modalEl || !listaEl) {
+            errorModal("Elegí un establecimiento en la solapa Establecimientos.");
+            resolve(0);
+            return;
+        }
+
+        listaEl.innerHTML = (items || []).map(e => {
+            const id = Number(e.Id) || 0;
+            const nom = escapeCg(e.Nombre || e.nombre || `Establecimiento #${id}`);
+            const dom = escapeCg(e.Domicilio || e.Calle || "");
+            return `<button type="button" class="cg-est-contacto-item" data-id="${id}">
+                <i class="fa fa-map-marker"></i>
+                <span><strong>${nom}</strong>${dom ? `<br><small class="text-muted">${dom}</small>` : ""}</span>
+            </button>`;
+        }).join("");
+
+        const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+        let settled = false;
+
+        const finish = (id) => {
+            if (settled) return;
+            settled = true;
+            $(listaEl).off("click.cgEstPick");
+            modalEl.removeEventListener("hidden.bs.modal", onHide);
+            modal.hide();
+            resolve(Number(id) || 0);
+        };
+
+        const onHide = () => finish(0);
+        modalEl.addEventListener("hidden.bs.modal", onHide, { once: true });
+
+        $(listaEl).off("click.cgEstPick").on("click.cgEstPick", ".cg-est-contacto-item", function () {
+            finish(Number($(this).data("id")) || 0);
+        });
+
+        modal.show();
+    });
+}
+
+async function resolverIdEstablecimientoContactoCg() {
+    const ids = idsEstablecimientoSeleccionadosCg();
+    let id = Number(
+        ids[0]
+        || document.getElementById("txtIdEst")?.value
+        || document.getElementById("cgEstId")?.value
+        || 0
+    );
+    if (id > 0) return id;
+
+    const items = (await asegurarListaEstablecimientosCg()).filter(e => Number(e.Id) > 0);
+    if (items.length === 1) return Number(items[0].Id);
+    if (!items.length) {
+        errorModal("No hay establecimientos cargados para este cliente.");
+        return 0;
+    }
+    return elegirEstablecimientoContactoCg(items);
+}
+
+async function contactarEstablecimientoCg(opts) {
+    const cfg = opts || {};
+    let id = Number(cfg.idEstablecimiento || 0);
+    if (!id) id = await resolverIdEstablecimientoContactoCg();
+    if (!id) return;
+
+    const payload = { ...cfg };
+    delete payload.idEstablecimiento;
+
+    if (typeof abrirReclamoDeudaEstablecimiento === "function") {
+        abrirReclamoDeudaEstablecimiento(id, payload);
+        return;
+    }
+    if (cfg.libre && typeof abrirMensajeWhatsappEstablecimiento === "function") {
+        abrirMensajeWhatsappEstablecimiento(id, payload);
+        return;
+    }
+    errorModal("No se pudo abrir WhatsApp / mail.");
+}
+window.contactarEstablecimientoCg = contactarEstablecimientoCg;
 
 async function abrirNuevoEstablecimientoCg() {
     if (!CG.establecimientoModal) return;
@@ -2389,9 +2675,8 @@ async function cargarHubEstablecimientoCg(force) {
 
             $h("cgHubMesDetail").find(".cg-mes-ws-panel--productos")
                 .toggleClass("d-none", multi);
-            $h("btnWsAgregarLinea").toggleClass("d-none", multi);
-            $h("btnWsAgregarCobro").toggleClass("d-none", multi);
-            $h("btnGuardarControlMensualCg").toggleClass("d-none", multi);
+            $h("btnWsNuevaEntregaMes").toggleClass("d-none", multi);
+            $h("cgWsEntregasAcc").toggleClass("d-none", multi);
         });
         if ($("#tabBtnStockEst").hasClass("active")) CG.hubActivo = "est";
     });
@@ -2442,11 +2727,14 @@ function ensureEstHubCloneCg() {
         const alertOk = document.getElementById("cgEstAtrasosTitulo")
             && document.getElementById("cgEstAtrasosLista")
             && document.getElementById("cgEstAtrasosAlert");
+        const reclamoOk = document.getElementById("btnEstContactoHub")
+            && document.getElementById("btnEstReclamoDeudaAtrasos")
+            && document.getElementById("btnEstReclamoMesHub");
         const visitaOk = document.getElementById("cgEstWsCobrosBody")
             && document.getElementById("cgEstWsCobrosMesBody")
             && document.getElementById("cgEstCmFechaVisita")
             && document.querySelector("#cgEstHubMesDetail .cg-ws-split");
-        if (alertOk && visitaOk) return true;
+        if (alertOk && visitaOk && reclamoOk) return true;
         mount.innerHTML = "";
     }
 
@@ -2529,12 +2817,12 @@ function bindEstHubEventsCg() {
         abrirWorkspaceMesCg(now.getFullYear(), now.getMonth() + 1);
     });
     $(root).on("click", "#cgEstControlMensualBody tr[data-mes]", function (e) {
-        if ($(e.target).closest(".cg-cm-int-eye, .cg-cm-obs-eye, .cg-cm-visita-cell").length) return;
+        if ($(e.target).closest(".cg-cm-int-eye, .cg-cm-obs-eye, .cg-cm-visita-editor").length) return;
         CG.hubActivo = "est";
         abrirWorkspaceMesCg(Number($(this).data("anio")), Number($(this).data("mes")));
     });
     $(root).on("click", "#cgEstCards_controlMensual article[data-mes]", function (e) {
-        if ($(e.target).closest(".cg-cm-int-eye, .cg-cm-obs-eye, .cg-cm-visita-cell").length) return;
+        if ($(e.target).closest(".cg-cm-int-eye, .cg-cm-obs-eye, .cg-cm-visita-editor").length) return;
         CG.hubActivo = "est";
         abrirWorkspaceMesCg(Number($(this).data("anio")), Number($(this).data("mes")));
     });
@@ -2544,6 +2832,7 @@ function bindEstHubEventsCg() {
         setHubPropCg("hubMesSel", null);
         setHubPropCg("wsLineas", []);
         setHubPropCg("wsCobros", []);
+        setHubPropCg("wsEntregasMes", []);
         $h("cgControlMensualBody").find("tr").removeClass("is-selected");
         actualizarChipsAtrasosSeleccionCg(-1, -1);
     });
@@ -2564,6 +2853,14 @@ function bindEstHubEventsCg() {
     $(root).on("change", "#cgEstCmFechaVisita", function () {
         CG.hubActivo = "est";
         $h("cgWsFechaEntrega").val($(this).val() || "");
+    });
+    $(root).on("click", "#btnEstGuardarDatosMesCg", busyHandler(() => {
+        CG.hubActivo = "est";
+        return guardarControlMensualCg({ silent: false });
+    }));
+    $(root).on("click", "#btnEstWsNuevaEntregaMes", () => {
+        CG.hubActivo = "est";
+        agregarEntregaDraftMesCg();
     });
     $(root).on("click", "#btnEstWsAgregarLinea", () => {
         CG.hubActivo = "est";
@@ -2707,19 +3004,336 @@ function renderStockEstablecimientoCg() {
 
 /* ---- Contratos ---- */
 
-async function cargarTabContratos() {
-    const data = await fetchJsonCg(API_CG.contratosLista(CG.id), { headers: authCg() }) || [];
-    configurarGrillaCg("contratos", "#grd_ContratosCg", data, [
-        columnaGridAcciones({ editar: "editarContratoCg" }, "Contratos"),
-        columnaGridId(),
-        { data: "Establecimiento" },
-        { data: "TipoContrato", defaultContent: "" },
-        { data: "FechaContrato", render: d => formatearFechaCortaCg(d) },
-        { data: "FechaInicio", render: d => formatearFechaCortaCg(d) },
-        { data: "FechaVencimiento", render: d => formatearFechaCortaCg(d) },
-        { data: "Vigente", render: v => v ? "Si" : "No" }
+function actividadEstablecimientoCg(e, contrato) {
+    const fromContrato = String(contrato?.Actividad || "").trim();
+    if (fromContrato) return fromContrato;
+    const act = String(e?.Actividad || "").trim();
+    if (act) return act;
+    const $selAct = $("#cmbActividadEst option:selected");
+    if ($selAct.length && Number($selAct.val()) > 0) {
+        return String($selAct.text() || "").trim();
+    }
+    const tg = String(e?.TipoGenerador || "").trim();
+    if (tg) {
+        const idx = tg.indexOf(" - ");
+        return idx >= 0 ? tg.slice(idx + 3).trim() : tg;
+    }
+    const $sel = $("#cmbTipoGeneradorEst option:selected");
+    if ($sel.length && Number($sel.val()) > 0) {
+        const text = String($sel.text() || "").trim();
+        const idx = text.indexOf(" - ");
+        return idx >= 0 ? text.slice(idx + 3).trim() : text;
+    }
+    return "";
+}
+
+function diasRestantesContratoCg(fechaVenc) {
+    if (!fechaVenc) return null;
+    const venc = new Date(fechaVenc);
+    if (Number.isNaN(venc.getTime())) return null;
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+    venc.setHours(0, 0, 0, 0);
+    return Math.ceil((venc - hoy) / 86400000);
+}
+
+function htmlContratosEmptyCg(opts = {}) {
+    const msg = opts.message || "Todavía no hay contratos.";
+    const btn = opts.showBtn !== false
+        ? `<button type="button" class="cg-btn cg-btn--success cg-btn--sm" onclick="${opts.btnFn || "abrirNuevoContratoEstCg()"}">
+                <i class="fa fa-plus"></i> ${escapeCg(opts.btnLabel || "Nuevo contrato")}
+           </button>`
+        : "";
+    return `<div class="cg-ctr-empty">
+        <div class="cg-ctr-empty-orb"></div>
+        <i class="fa fa-file-text-o"></i>
+        <p>${escapeCg(msg)}</p>
+        ${btn}
+    </div>`;
+}
+
+function syncContratosEstInlineMetaCg(est, contratos) {
+    const act = actividadEstablecimientoCg(est, contratos[0]);
+    const $chip = $("#contratoEstActChip");
+    if (act) {
+        $chip.removeClass("d-none").html(`<i class="fa fa-briefcase"></i> ${escapeCg(act)}`);
+    } else {
+        $chip.addClass("d-none").empty();
+    }
+    const vig = contratos.filter(c => c.Vigente).length;
+    const ven = contratos.length - vig;
+    $("#contratoEstCantidad").text(String(contratos.length));
+    $("#contratoEstVigentes").text(String(vig));
+    $("#contratoEstVencidos").text(String(ven));
+}
+
+function htmlContratoCardCg(c, actividad) {
+    const vigente = !!c.Vigente;
+    const tone = vigente ? "is-vigente" : "is-vencido";
+    const badge = vigente ? "Vigente" : "Vencido";
+    const dias = diasRestantesContratoCg(c.FechaVencimiento);
+    let plazoHtml = "";
+    if (dias !== null) {
+        if (vigente) {
+            plazoHtml = dias === 0
+                ? `<span class="cg-ctr-plazo cg-ctr-plazo--warn"><i class="fa fa-clock-o"></i> Vence hoy</span>`
+                : `<span class="cg-ctr-plazo cg-ctr-plazo--ok"><i class="fa fa-clock-o"></i> ${dias} día${dias === 1 ? "" : "s"} restantes</span>`;
+        } else {
+            plazoHtml = `<span class="cg-ctr-plazo cg-ctr-plazo--off"><i class="fa fa-history"></i> Venció hace ${Math.abs(dias)} día${Math.abs(dias) === 1 ? "" : "s"}</span>`;
+        }
+    }
+    const actHtml = actividad
+        ? `<div class="cg-ctr-act-pill"><i class="fa fa-briefcase"></i> ${escapeCg(actividad)}</div>`
+        : "";
+
+    return `<article class="cg-ctr-card ${tone}">
+        <div class="cg-ctr-card-accent"></div>
+        <div class="cg-ctr-card-body">
+            <header class="cg-ctr-card-head">
+                <div class="cg-ctr-card-icon"><i class="fa fa-file-text"></i></div>
+                <div class="cg-ctr-card-head-text">
+                    <span class="cg-ctr-card-id">Contrato #${c.Id}</span>
+                    <h6>${escapeCg(c.TipoContrato || "Sin tipo")}</h6>
+                </div>
+                <span class="cg-ctr-status">${escapeCg(badge)}</span>
+            </header>
+            ${actHtml}
+            ${plazoHtml}
+            <div class="cg-ctr-timeline">
+                <div class="cg-ctr-tl-item">
+                    <span class="cg-ctr-tl-label"><i class="fa fa-calendar-o"></i> Contrato</span>
+                    <strong>${escapeCg(formatearFechaCortaCg(c.FechaContrato))}</strong>
+                </div>
+                <div class="cg-ctr-tl-item">
+                    <span class="cg-ctr-tl-label"><i class="fa fa-play"></i> Inicio</span>
+                    <strong>${escapeCg(formatearFechaCortaCg(c.FechaInicio))}</strong>
+                </div>
+                <div class="cg-ctr-tl-item">
+                    <span class="cg-ctr-tl-label"><i class="fa fa-flag-checkered"></i> Vencimiento</span>
+                    <strong>${escapeCg(formatearFechaCortaCg(c.FechaVencimiento))}</strong>
+                </div>
+            </div>
+            <footer class="cg-ctr-card-foot">
+                <button type="button" class="cg-ctr-btn-edit" onclick="editarContratoCg(${c.Id})">
+                    <i class="fa fa-pencil"></i> Editar contrato
+                </button>
+            </footer>
+        </div>
+    </article>`;
+}
+
+async function cargarEstablecimientosClienteCg() {
+    if ((CG.establecimientosLista || []).length && CG.establecimientosLista[0]?.IdCliente === CG.id) {
+        return CG.establecimientosLista;
+    }
+    const all = await fetchJsonCg(API_CG.establecimientosLista, { headers: authCg() }) || [];
+    const data = (Array.isArray(all) ? all : []).filter(x => x.IdCliente === CG.id);
+    CG.establecimientosLista = data;
+    return data;
+}
+
+async function cargarTabContratos(force) {
+    if (CG.tabsLoaded.contratos && !force) return;
+
+    const [establecimientos, contratos] = await Promise.all([
+        cargarEstablecimientosClienteCg(),
+        fetchJsonCg(API_CG.contratosLista(CG.id), { headers: authCg() })
     ]);
+
+    CG.contratosLista = Array.isArray(contratos) ? contratos : [];
+    renderContratosEstPillsCg(establecimientos);
+
+    const valid = new Set((establecimientos || []).map(x => x.Id));
+    let sel = (CG.contratosEstSelIds || []).filter(id => valid.has(id));
+    if (!sel.length && valid.size) sel = [...valid];
+    CG.contratosEstSelIds = sel;
+
+    syncContratosEstSelStateCg();
+    renderContratosPanelsCg();
     CG.tabsLoaded.contratos = true;
+}
+
+function renderContratosEstPillsCg(items) {
+    const cont = $("#cgContratosEstList");
+    if (!cont.length) return;
+
+    const list = items || [];
+    if (!list.length) {
+        cont.html(`
+            <div class="cg-est-pills-empty">
+                <i class="fa fa-building-o"></i>
+                <span>Sin establecimientos — creá uno en la solapa Establecimientos</span>
+            </div>`);
+        return;
+    }
+
+    cont.html(buildEstPillsHtmlCg(list));
+}
+
+function syncContratosEstSelStateCg() {
+    const ids = [...new Set((CG.contratosEstSelIds || []).map(Number).filter(x => x > 0))];
+    CG.contratosEstSelIds = ids;
+
+    $("#cgContratosEstList .cg-est-pill").each(function () {
+        const id = Number($(this).data("id")) || 0;
+        const on = ids.includes(id);
+        $(this).toggleClass("is-active", on).attr("aria-selected", on ? "true" : "false");
+    });
+
+    const n = ids.length;
+    const total = (CG.establecimientosLista || []).length;
+    const $bar = $("#cgContratosSelBar");
+    if (n <= 0 || !total) {
+        $bar.addClass("d-none");
+        return;
+    }
+    $bar.removeClass("d-none");
+    if (n === total) {
+        $("#cgContratosSelLabel").html(`
+            <span class="cg-est-selbar-name">Todos los establecimientos</span>
+            <span class="cg-est-selbar-meta">${n} puntos de entrega</span>`);
+    } else if (n === 1) {
+        const e = (CG.establecimientosLista || []).find(x => x.Id === ids[0]) || {};
+        $("#cgContratosSelLabel").html(htmlResumenEstablecimientoSelCg(e, ids[0]));
+    } else {
+        const nombres = ids.map(id => {
+            const e = (CG.establecimientosLista || []).find(x => x.Id === id);
+            return e?.Nombre || `#${id}`;
+        });
+        $("#cgContratosSelLabel").html(`
+            <span class="cg-est-selbar-name">${n} seleccionados</span>
+            <span class="cg-est-selbar-meta">${escapeCg(nombres.join(" · "))}</span>`);
+    }
+    $("#cgContratosSelMode").text(n === total ? "Vista completa" : "Filtrado");
+}
+
+function toggleContratosEstSelCg(id, opts = {}) {
+    const idEst = Number(id) || 0;
+    if (!idEst) return;
+
+    let ids = [...(CG.contratosEstSelIds || [])];
+    if (opts.exclusive) {
+        ids = [idEst];
+    } else if (ids.includes(idEst)) {
+        if (ids.length <= 1) return;
+        ids = ids.filter(x => x !== idEst);
+    } else {
+        ids.push(idEst);
+    }
+
+    CG.contratosEstSelIds = ids;
+    syncContratosEstSelStateCg();
+    renderContratosPanelsCg();
+}
+
+function seleccionarTodosContratosEstCg() {
+    const all = (CG.establecimientosLista || []).map(x => x.Id).filter(x => x > 0);
+    if (!all.length) return;
+    const same = all.length === (CG.contratosEstSelIds || []).length
+        && all.every(id => CG.contratosEstSelIds.includes(id));
+    CG.contratosEstSelIds = same ? (all.length ? [all[0]] : []) : all;
+    syncContratosEstSelStateCg();
+    renderContratosPanelsCg();
+}
+
+function renderContratosPanelsCg() {
+    const $panels = $("#cgContratosPanels");
+    const $empty = $("#cgContratosEmpty");
+    if (!$panels.length) return;
+
+    const ids = [...(CG.contratosEstSelIds || [])];
+    if (!ids.length) {
+        $panels.empty();
+        $empty.removeClass("d-none");
+        return;
+    }
+    $empty.addClass("d-none");
+
+    const palette = ["mint", "sky", "amber", "violet", "rose", "teal"];
+    const html = ids.map((idEst, idx) => {
+        const est = (CG.establecimientosLista || []).find(x => x.Id === idEst) || {};
+        const contratos = (CG.contratosLista || []).filter(c => Number(c.IdEstablecimiento) === idEst);
+        const actividad = actividadEstablecimientoCg(est, contratos[0]);
+        const tone = palette[idx % palette.length];
+        const inicial = String(est.Nombre || "?").trim().charAt(0).toUpperCase();
+        const resumen = partesDomicilioEstablecimientoCg(est);
+        const cards = contratos.length
+            ? `<div class="cg-ctr-grid">${contratos.map(c => htmlContratoCardCg(c, actividadEstablecimientoCg(est, c))).join("")}</div>`
+            : htmlContratosEmptyCg({
+                message: "Sin contratos en este establecimiento",
+                btnFn: `abrirNuevoContratoCg(${idEst})`,
+                btnLabel: "Crear contrato"
+            });
+
+        return `<section class="cg-contratos-est-panel tone-${tone}">
+            <header class="cg-contratos-est-head">
+                <span class="cg-contratos-est-avatar">${escapeCg(inicial)}</span>
+                <div class="cg-contratos-est-info">
+                    <h6>${escapeCg(est.Nombre || `#${idEst}`)}</h6>
+                    ${actividad ? `<span class="cg-contratos-actividad"><i class="fa fa-briefcase"></i> ${escapeCg(actividad)}</span>` : ""}
+                    ${resumen.length ? `<span class="cg-contratos-dom">${resumen.map(escapeCg).join(" · ")}</span>` : ""}
+                </div>
+                <span class="cg-contratos-count">${contratos.length} contrato${contratos.length === 1 ? "" : "s"}</span>
+            </header>
+            ${cards}
+        </section>`;
+    }).join("");
+
+    $panels.html(html);
+}
+
+async function refrescarContratosCg() {
+    CG.tabsLoaded.contratos = false;
+    if ($("#tabContratos").hasClass("active") || $("#tabContratos").hasClass("show")) {
+        await cargarTabContratos(true);
+    }
+    if ($("#tabBtnContratosEst").hasClass("active")) {
+        await cargarContratosEstablecimientoCg(idsEstablecimientoSeleccionadosCg()[0]);
+    }
+}
+
+async function cargarContratosEstablecimientoCg(idEst) {
+    const id = Number(idEst) || idsEstablecimientoSeleccionadosCg()[0] || 0;
+    const $sec = $("#sectionContratosEst");
+    const $lista = $("#listaContratosEst");
+    if (!$lista.length) return;
+
+    if (id <= 0) {
+        $sec.addClass("rp-section-disabled");
+        $("#contratoEstNombre").text("Nuevo");
+        syncContratosEstInlineMetaCg({}, []);
+        $("#contratoEstHint").html(`<i class="fa fa-info-circle"></i> Guardá el establecimiento para ver sus contratos.`);
+        $lista.html(htmlContratosEmptyCg({
+            message: "Guardá el establecimiento para ver sus contratos.",
+            showBtn: false
+        }));
+        return;
+    }
+
+    $sec.removeClass("rp-section-disabled");
+    const est = (CG.establecimientosLista || []).find(x => x.Id === id) || {};
+    $("#contratoEstNombre").text(est.Nombre || `#${id}`);
+    const resumen = partesDomicilioEstablecimientoCg(est);
+    $("#contratoEstHint").html(resumen.length
+        ? `<i class="fa fa-map-marker"></i> ${resumen.map(escapeCg).join(" · ")}`
+        : `<i class="fa fa-building-o"></i> Punto de entrega`);
+
+    if (!CG.contratosLista?.length || !CG.tabsLoaded.contratos) {
+        const contratos = await fetchJsonCg(API_CG.contratosLista(CG.id), { headers: authCg() }) || [];
+        CG.contratosLista = Array.isArray(contratos) ? contratos : [];
+    }
+
+    const delEst = (CG.contratosLista || []).filter(c => Number(c.IdEstablecimiento) === id);
+    syncContratosEstInlineMetaCg(est, delEst);
+
+    if (!delEst.length) {
+        $lista.html(htmlContratosEmptyCg({ message: "Todavía no hay contratos para este establecimiento." }));
+        return;
+    }
+
+    $lista.html(`<div class="cg-ctr-grid cg-ctr-grid--inline">${delEst.map(c =>
+        htmlContratoCardCg(c, actividadEstablecimientoCg(est, c))
+    ).join("")}</div>`);
 }
 
 function editarContratoCg(id) {
@@ -2727,11 +3341,21 @@ function editarContratoCg(id) {
 }
 window.editarContratoCg = editarContratoCg;
 
-async function abrirNuevoContratoCg() {
+async function abrirNuevoContratoCg(idEstablecimiento) {
     if (!CG.contratoModal) return;
-    await CG.contratoModal.abrirNuevo();
-    window.jQuery("#cmbClienteContrato").val(String(CG.id)).trigger("change");
+    const idEst = Number(idEstablecimiento)
+        || (CG.contratosEstSelIds?.length === 1 ? CG.contratosEstSelIds[0] : 0)
+        || idsEstablecimientoSeleccionadosCg()[0]
+        || 0;
+    await CG.contratoModal.abrirNuevo(CG.id, idEst || undefined);
 }
+
+async function abrirNuevoContratoEstCg() {
+    const idEst = idsEstablecimientoSeleccionadosCg()[0] || Number(CG.establecimientoModal?.getId?.() || 0);
+    await abrirNuevoContratoCg(idEst);
+}
+window.abrirNuevoContratoEstCg = abrirNuevoContratoEstCg;
+window.abrirNuevoContratoCg = abrirNuevoContratoCg;
 
 /* ---- Entregas (hub) ---- */
 
@@ -2922,6 +3546,153 @@ function buildHubEntregaDetalleHtml(det, idEntregaFallback) {
 
 async function cargarTabEntregas() {
     await cargarHubEntregasCg(true);
+}
+
+async function cargarTabManifiestos(force) {
+    if (CG.id <= 0) return;
+    if (CG.tabsLoaded.manifiestos && !force) return;
+
+    const items = await fetchJsonCg(API_CG.manifiestosDocumentos(CG.id), { headers: authCg() }) || [];
+    renderManifiestosCg(items);
+    CG.tabsLoaded.manifiestos = true;
+}
+
+function renderManifiestosCg(items) {
+    const lista = Array.isArray(items) ? items : [];
+    const certs = lista.filter(x => String(x.Tipo || x.tipo || "").toLowerCase() === "certificado");
+    const manifs = lista.filter(x => String(x.Tipo || x.tipo || "").toLowerCase() !== "certificado");
+
+    $("#cgMfCertCount").text(String(certs.length));
+    $("#cgMfManifCount").text(String(manifs.length));
+
+    renderListaDocsMf("#cgTabCertificadosList", certs, true);
+    renderListaDocsMf("#cgTabManifiestosList", manifs, false);
+}
+
+function renderListaDocsMf(selector, items, esCert) {
+    const cont = $(selector);
+    if (!items.length) {
+        cont.html(`<div class="cg-hub-stock-empty">${esCert ? "Sin certificados registrados." : "Sin manifiestos registrados."}</div>`);
+        return;
+    }
+
+    cont.html(items.map(x => {
+        const id = x.Id ?? x.id;
+        const idCamion = x.IdCamion ?? x.idCamion;
+        const numero = x.Numero ?? x.numero;
+        const numManif = x.NumeroManifiesto ?? x.numeroManifiesto;
+        const numCert = x.NumeroCertificado ?? x.numeroCertificado;
+        const cantidad = x.Cantidad ?? x.cantidad ?? "";
+        const recorrido = x.Recorrido ?? x.recorrido ?? "";
+        const camion = x.Camion ?? x.camion ?? "";
+        const fecha = formatearFechaCg(x.Fecha ?? x.fecha);
+        const usuario = x.Usuario ?? x.usuario ?? "";
+        const titulo = x.RazonSocial ?? x.razonSocial ?? "";
+
+        const numLabel = esCert
+            ? `Cert. Nº ${escapeCg(numCert || numero)}${numManif ? ` · Manif. ${escapeCg(numManif)}` : ""}`
+            : `Manif. Nº ${escapeCg(numero)}`;
+
+        const dlUrl = esCert
+            ? API_CG.descargarCertificado(id)
+            : API_CG.descargarManifiestoHistorial(idCamion, id);
+
+        return `<article class="cg-mf-item" data-tipo="${esCert ? "certificado" : "manifiesto"}" data-id="${id}" data-id-camion="${idCamion || 0}">
+            <div class="cg-mf-item-head">
+                <strong class="cg-mf-item-num">${numLabel}</strong>
+            </div>
+            <div class="cg-mf-item-body">
+                <div class="cg-mf-item-title">${escapeCg(titulo)}</div>
+                <div class="cg-mf-item-meta">
+                    ${cantidad ? `<span><i class="fa fa-balance-scale"></i> ${escapeCg(cantidad)} kg</span>` : ""}
+                    ${camion ? `<span><i class="fa fa-truck"></i> ${escapeCg(camion)}</span>` : ""}
+                    ${recorrido ? `<span><i class="fa fa-map-marker"></i> ${escapeCg(recorrido)}</span>` : ""}
+                    <span><i class="fa fa-calendar"></i> ${escapeCg(fecha)}</span>
+                    ${usuario ? `<span><i class="fa fa-user"></i> ${escapeCg(usuario)}</span>` : ""}
+                </div>
+            </div>
+            <div class="cg-mf-item-actions">
+                <button type="button" class="cg-btn cg-btn--ghost cg-btn--sm cg-mf-dl" data-url="${escapeCg(dlUrl)}" title="Descargar PDF">
+                    <i class="fa fa-download"></i> PDF
+                </button>
+                <button type="button" class="cg-btn cg-btn--ghost cg-btn--sm cg-mf-del"
+                        data-tipo="${esCert ? "certificado" : "manifiesto"}"
+                        data-id="${id}"
+                        data-id-camion="${idCamion || 0}"
+                        title="${esCert ? "Eliminar certificado" : "Eliminar manifiesto"}">
+                    <i class="fa fa-trash"></i>
+                </button>
+            </div>
+        </article>`;
+    }).join(""));
+
+    cont.find(".cg-mf-dl").on("click", async function () {
+        const url = $(this).data("url");
+        if (!url) return;
+        try {
+            await withCgLoading("Descargando documento…", async () => {
+                const response = await fetch(url, { headers: { Authorization: "Bearer " + token } });
+                if (!response.ok) {
+                    if (typeof errorModal === "function") errorModal("No se pudo descargar el documento.");
+                    return;
+                }
+                const blob = await response.blob();
+                const disp = response.headers.get("Content-Disposition") || "";
+                const basic = /filename="?([^";]+)"?/i.exec(disp);
+                let archivo = "Documento.pdf";
+                if (basic && basic[1]) archivo = basic[1];
+                const href = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = href;
+                a.download = archivo;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                setTimeout(() => URL.revokeObjectURL(href), 1500);
+            });
+        } catch (e) {
+            console.error(e);
+            if (typeof errorModal === "function") errorModal("Error al descargar el documento.");
+        }
+    });
+
+    cont.find(".cg-mf-del").on("click", async function () {
+        const id = Number($(this).data("id")) || 0;
+        const idCamion = Number($(this).data("idCamion")) || 0;
+        const tipo = String($(this).data("tipo") || "");
+        if (!id) return;
+
+        const esCertDel = tipo === "certificado";
+        const ok = typeof confirmarModal === "function"
+            ? await confirmarModal(esCertDel
+                ? "¿Eliminar este certificado del historial?"
+                : "¿Eliminar este manifiesto del historial?")
+            : window.confirm(esCertDel
+                ? "¿Eliminar este certificado del historial?"
+                : "¿Eliminar este manifiesto del historial?");
+        if (!ok) return;
+
+        try {
+            const url = esCertDel
+                ? API_CG.eliminarCertificado(id)
+                : API_CG.eliminarManifiestoHistorial(idCamion, id);
+            const data = await fetchJsonCg(url, { method: "DELETE", headers: authCg() });
+            if (!data?.valor) {
+                if (typeof errorModal === "function") errorModal(data?.mensaje || "No se pudo eliminar.");
+                return;
+            }
+            CG.tabsLoaded.manifiestos = false;
+            await cargarTabManifiestos(true);
+            if (typeof exitoModal === "function") {
+                exitoModal(data.mensaje || (esCertDel ? "Certificado eliminado." : "Manifiesto eliminado."));
+            }
+        } catch (e) {
+            console.error(e);
+            if (typeof errorModal === "function") {
+                errorModal(esCertDel ? "No se pudo eliminar el certificado." : "No se pudo eliminar el manifiesto.");
+            }
+        }
+    });
 }
 
 /* ---- Recorridos (inline en recoleccion) ---- */
@@ -3526,22 +4297,492 @@ async function abrirWorkspaceMesCg(anio, mes, keepScroll) {
     $h("btnWsAbrirModuloEntregas").attr("href", API_CG.entregaIndex(CG.id));
 
     await prepararComposerWsCg();
+    await cargarYRenderEntregasMesCg(anio, mes);
     await cargarCobrosMesWsCg(anio, mes);
 
     $h("cgHubMesDetail").prop("hidden", false);
     actualizarBotonInteresMesHub(m, anio, mes);
     actualizarChipsAtrasosSeleccionCg(anio, mes);
     if (!keepScroll) {
-        const detailId = mapHubDomIdCg("cgHubMesDetail");
-        const rowEl = document.querySelector(
-            `#${mapHubDomIdCg("cgControlMensualBody")} tr[data-anio="${anio}"][data-mes="${mes}"]`
-        );
-        rowEl?.scrollIntoView({ behavior: "smooth", block: "center" });
-        // Luego el detalle del mes, como en la vista cliente.
-        setTimeout(() => {
-            document.getElementById(detailId)?.scrollIntoView({ behavior: "smooth", block: "nearest" });
-        }, 80);
+        window.setTimeout(() => enfocarMesSeleccionadoCg(anio, mes), 50);
+        window.setTimeout(() => enfocarMesSeleccionadoCg(anio, mes), 280);
     }
+}
+
+function fechaIsoLocalCg(f) {
+    if (!f) return "";
+    const s = String(f);
+    const m = s.match(/^(\d{4}-\d{2}-\d{2})/);
+    if (m) return m[1];
+    try {
+        const d = new Date(f);
+        if (Number.isNaN(d.getTime())) return "";
+        const y = d.getFullYear();
+        const mo = String(d.getMonth() + 1).padStart(2, "0");
+        const da = String(d.getDate()).padStart(2, "0");
+        return `${y}-${mo}-${da}`;
+    } catch { return ""; }
+}
+
+function fechaPerteneceYmCg(f, anio, mes) {
+    const iso = fechaIsoLocalCg(f);
+    if (!iso) return false;
+    return iso.slice(0, 4) === String(anio) && Number(iso.slice(5, 7)) === Number(mes);
+}
+
+function scrollParentOverflowCg(el) {
+    let p = el && el.parentElement;
+    while (p && p !== document.body && p !== document.documentElement) {
+        const st = window.getComputedStyle(p);
+        const oy = st.overflowY || st.overflow;
+        if (/(auto|scroll|overlay)/.test(oy) && p.scrollHeight > p.clientHeight + 8) return p;
+        p = p.parentElement;
+    }
+    return null;
+}
+
+function scrollNodoAVistaCg(el, pad) {
+    if (!el) return;
+    const padding = pad == null ? 12 : pad;
+    const parent = scrollParentOverflowCg(el);
+    if (parent) {
+        const pRect = parent.getBoundingClientRect();
+        const eRect = el.getBoundingClientRect();
+        parent.scrollTop += (eRect.top - pRect.top) - padding;
+        return;
+    }
+    const rect = el.getBoundingClientRect();
+    const y = (window.pageYOffset || document.documentElement.scrollTop || 0) + rect.top - 72;
+    const top = Math.max(0, y);
+    try {
+        window.scrollTo(0, top);
+    } catch { /* noop */ }
+    document.documentElement.scrollTop = top;
+    document.body.scrollTop = top;
+}
+
+function enfocarMesSeleccionadoCg(anio, mes) {
+    const row = document.querySelector(
+        `#${mapHubDomIdCg("cgControlMensualBody")} tr[data-anio="${anio}"][data-mes="${mes}"]`
+    );
+    const card = document.querySelector(
+        `#${mapHubDomIdCg("cgCards_controlMensual")} article[data-anio="${anio}"][data-mes="${mes}"]`
+    );
+    const detail = document.getElementById(mapHubDomIdCg("cgHubMesDetail"));
+    if (row) scrollNodoAVistaCg(row, 8);
+    else if (card) scrollNodoAVistaCg(card, 8);
+    if (detail && !detail.hidden) scrollNodoAVistaCg(detail, 16);
+}
+
+function entregasMesListaCg() {
+    return hubPropCg("wsEntregasMes") || [];
+}
+
+function entregaByUidCg(uid) {
+    return entregasMesListaCg().find(x => String(x.uid) === String(uid)) || null;
+}
+
+function $wsAccFromCg(el) {
+    return $(el).closest(".cg-ws-acc");
+}
+
+function $wsLineasBodyCg(el) {
+    const $acc = $wsAccFromCg(el);
+    if ($acc.length) return $acc.find(".cg-ws-lineas-list");
+    return $h("cgWsLineasBody");
+}
+
+function $wsCobrosBodyCg(el) {
+    const $acc = $wsAccFromCg(el);
+    if ($acc.length) return $acc.find(".cg-ws-cobros-list");
+    return $h("cgWsCobrosBody");
+}
+
+function lineasWsDeCg(el) {
+    const $acc = $wsAccFromCg(el);
+    if ($acc.length) {
+        const ent = entregaByUidCg($acc.attr("data-uid"));
+        if (ent) return ent.Lineas;
+    }
+    return hubPropCg("wsLineas") || [];
+}
+
+function cobrosWsDeCg(el) {
+    const $acc = $wsAccFromCg(el);
+    if ($acc.length) {
+        const ent = entregaByUidCg($acc.attr("data-uid"));
+        if (ent) return ent.Cobros;
+    }
+    return hubPropCg("wsCobros") || [];
+}
+
+function activarLineasHubDesdeAccCg(el) {
+    const $acc = $wsAccFromCg(el);
+    const ent = $acc.length ? entregaByUidCg($acc.attr("data-uid")) : null;
+    if (ent) {
+        setHubPropCg("wsLineas", ent.Lineas);
+        setHubPropCg("wsCobros", ent.Cobros);
+        if (ent.Fecha) {
+            $h("cgCmFechaVisita").val(ent.Fecha);
+            $h("cgWsFechaEntrega").val(ent.Fecha);
+        }
+        if (ent.IdEstablecimiento) $h("cgWsEstablecimiento").val(String(ent.IdEstablecimiento));
+    }
+    return ent;
+}
+
+function nuevoUidEntregaMesCg() {
+    return "n-" + Date.now().toString(36) + "-" + Math.floor(Math.random() * 1000);
+}
+
+function lineaDesdeDetalleCg(l) {
+    const cant = Number(l.Cantidad) || 0;
+    const noret = !!l.NoRetirado || (Number(l.TipoMovimiento) === 2 && cant < 0);
+    return {
+        Id: Number(l.Id) || 0,
+        IdProducto: Number(l.IdProducto) || 0,
+        IdListaPrecio: Number(l.IdListaPrecio) || 0,
+        TipoMovimiento: Number(l.TipoMovimiento) || 1,
+        NoRetirado: noret,
+        NoRetiradoSigno: noret && cant < 0 ? -1 : 1,
+        Cantidad: Math.abs(cant) || 0,
+        PrecioVenta: Number(l.PrecioVenta) || 0,
+        PorcDescuento: Number(l.PorcDescuento) || 0,
+        PorcIva: Number(l.PorcIva) || 0
+    };
+}
+
+function cobroDesdeDetalleCg(c) {
+    return {
+        _key: CG.wsNextCobroKey++,
+        IdCobro: Number(c.IdCobro || c.idCobro) || 0,
+        IdMovimientoCc: Number(c.IdMovimientoCc || c.idMovimientoCc) || 0,
+        Fecha: fechaIsoLocalCg(c.Fecha || c.fecha),
+        IdCuenta: Number(c.IdCuenta || c.idCuenta) || 0,
+        Concepto: c.Concepto || c.concepto || "Cobro visita",
+        Importe: Number(c.Importe || c.importe) || 0
+    };
+}
+
+function crearEntregaDraftMesCg(anio, mes, expanded) {
+    const lim = limitesMesIsoCg(anio, mes);
+    let fecha = $h("cgCmFechaVisita").val() || fechaIsoLocalCg(new Date());
+    if (!fechaPerteneceYmCg(fecha, anio, mes)) fecha = lim.max;
+    const idEst = Number($h("cgWsEstablecimiento").val()) || hubIdEstablecimientoCg() || 0;
+    return {
+        uid: nuevoUidEntregaMesCg(),
+        Id: 0,
+        Fecha: fecha,
+        IdEstablecimiento: idEst,
+        IdContrato: null,
+        IdEstado: null,
+        IdCamion: null,
+        NotaInterna: "",
+        NotaCliente: "",
+        EstablecimientoNombre: "",
+        Lineas: [],
+        LineasRecuperadas: [],
+        Cobros: [],
+        expanded: !!expanded,
+        esNueva: true
+    };
+}
+
+async function cargarYRenderEntregasMesCg(anio, mes) {
+    const prevOpen = new Set(
+        entregasMesListaCg().filter(x => x.expanded && Number(x.Id) > 0).map(x => Number(x.Id))
+    );
+    const desde = `${anio}-${String(mes).padStart(2, "0")}-01`;
+    const lastDay = new Date(anio, mes, 0).getDate();
+    const hasta = `${anio}-${String(mes).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+    let lista = [];
+    try {
+        lista = await fetchJsonCg(API_CG.entregasLista, {
+            method: "POST",
+            headers: authCg(),
+            body: JSON.stringify({
+                FechaDesde: desde,
+                FechaHasta: hasta,
+                IdCliente: CG.id
+            })
+        }) || [];
+    } catch (e) {
+        console.warn(e);
+        lista = [];
+    }
+    if (!Array.isArray(lista)) lista = [];
+
+    const idEstLock = hubIdEstablecimientoCg();
+    lista = lista.filter(e => {
+        if (!fechaPerteneceYmCg(e.Fecha || e.fecha, anio, mes)) return false;
+        if (idEstLock > 0) {
+            const idEst = Number(e.IdEstablecimiento || e.idEstablecimiento) || 0;
+            if (idEst && idEst !== idEstLock) return false;
+        }
+        return true;
+    }).sort((a, b) => {
+        const fa = fechaIsoLocalCg(a.Fecha || a.fecha);
+        const fb = fechaIsoLocalCg(b.Fecha || b.fecha);
+        if (fa !== fb) return fa < fb ? -1 : 1;
+        return (Number(a.Id) || 0) - (Number(b.Id) || 0);
+    });
+
+    const loaded = [];
+    for (const item of lista) {
+        const id = Number(item.Id || item.id) || 0;
+        if (id <= 0) continue;
+        let det = null;
+        let cobros = [];
+        try {
+            det = await fetchJsonCg(API_CG.entregaEditarInfo(id), { headers: authCg() });
+        } catch (e) {
+            console.warn(e);
+        }
+        try {
+            const r = await fetchJsonCg(API_CG.entregaCobros(id), { headers: authCg() });
+            cobros = Array.isArray(r?.Cobros) ? r.Cobros : (Array.isArray(r?.cobros) ? r.cobros : []);
+        } catch (e) {
+            console.warn(e);
+        }
+        if (!det) continue;
+        loaded.push({
+            uid: "e-" + id,
+            Id: id,
+            Fecha: fechaIsoLocalCg(det.Fecha || item.Fecha),
+            IdEstablecimiento: Number(det.IdEstablecimiento || item.IdEstablecimiento) || 0,
+            IdContrato: det.IdContrato || null,
+            IdEstado: det.IdEstado || null,
+            IdCamion: det.IdCamion || null,
+            NotaInterna: det.NotaInterna || "",
+            NotaCliente: det.NotaCliente || "",
+            EstablecimientoNombre: det.Establecimiento || item.Establecimiento || "",
+            Lineas: (det.Lineas || []).map(lineaDesdeDetalleCg),
+            LineasRecuperadas: det.LineasRecuperadas || [],
+            Cobros: cobros.map(cobroDesdeDetalleCg),
+            expanded: false,
+            esNueva: false
+        });
+    }
+
+    if (loaded.length) {
+        if (prevOpen.size) {
+            loaded.forEach(x => { x.expanded = prevOpen.has(Number(x.Id)); });
+            if (!loaded.some(x => x.expanded)) loaded[loaded.length - 1].expanded = true;
+        } else {
+            loaded[loaded.length - 1].expanded = true;
+        }
+    } else {
+        loaded.push(crearEntregaDraftMesCg(anio, mes, true));
+    }
+
+    setHubPropCg("wsEntregasMes", loaded);
+    const lastEnt = loaded[loaded.length - 1];
+    if (lastEnt) {
+        setHubPropCg("wsLineas", lastEnt.Lineas);
+        setHubPropCg("wsCobros", lastEnt.Cobros);
+        if (lastEnt.Fecha) {
+            $h("cgCmFechaVisita").val(lastEnt.Fecha);
+            $h("cgWsFechaEntrega").val(lastEnt.Fecha);
+        }
+        if (lastEnt.IdEstablecimiento) $h("cgWsEstablecimiento").val(String(lastEnt.IdEstablecimiento));
+    }
+    renderEntregasMesAccCg();
+}
+
+function agregarEntregaDraftMesCg() {
+    const sel = hubPropCg("hubMesSel");
+    if (!sel) return;
+    const list = entregasMesListaCg().slice();
+    list.forEach(x => { x.expanded = false; });
+    const draft = crearEntregaDraftMesCg(sel.anio, sel.mes, true);
+    list.push(draft);
+    setHubPropCg("wsEntregasMes", list);
+    setHubPropCg("wsLineas", draft.Lineas);
+    setHubPropCg("wsCobros", draft.Cobros);
+    renderEntregasMesAccCg();
+    const $acc = $h("cgWsEntregasAcc").find(`.cg-ws-acc[data-uid="${draft.uid}"]`);
+    if ($acc.length) scrollNodoAVistaCg($acc.get(0), 12);
+}
+
+function toggleEntregaAccCg(uid, forceOpen) {
+    const list = entregasMesListaCg();
+    const ent = list.find(x => String(x.uid) === String(uid));
+    if (!ent) return;
+    const $acc = $h("cgWsEntregasAcc").find(`.cg-ws-acc[data-uid="${uid}"]`);
+    if ($acc.length && $acc.hasClass("is-open")) {
+        $acc.find(".cg-ws-linea").each(function () {
+            const idx = Number($(this).data("idx"));
+            const linea = ent.Lineas[idx];
+            if (linea) leerCamposLineaWsDesdeDomCg($(this), linea);
+        });
+        sincronizarCobrosWsDesdeDomCg($acc);
+        ent.Fecha = $acc.find(".ws-acc-fecha").val() || ent.Fecha;
+        ent.IdEstablecimiento = Number($acc.find(".ws-acc-est").val()) || ent.IdEstablecimiento;
+    }
+    const next = forceOpen == null ? !ent.expanded : !!forceOpen;
+    ent.expanded = next;
+    $acc.toggleClass("is-open", next);
+    $acc.find(".cg-ws-acc-chev i").attr("class", next ? "fa fa-chevron-down" : "fa fa-chevron-right");
+    if (next) {
+        activarLineasHubDesdeAccCg($acc);
+        cargarSugeridosEnAccCg($acc, Number($acc.find(".ws-acc-est").val()) || ent.IdEstablecimiento);
+        renderLineasWsCg($acc);
+        renderCobrosWsCg($acc);
+    }
+}
+
+function htmlOptsEstablecimientoWsCg(selectedId) {
+    const opts = [`<option value="">Seleccionar</option>`];
+    (CG.wsEstablecimientos || []).forEach(e => {
+        const id = e.Id || e.id;
+        const nom = e.Nombre || e.nombre || `Est. #${id}`;
+        const sel = Number(selectedId) === Number(id) ? " selected" : "";
+        opts.push(`<option value="${id}"${sel}>${escapeCg(nom)}</option>`);
+    });
+    return opts.join("");
+}
+
+function resumenEntregaAccCg(ent) {
+    const lineas = (ent.Lineas || []).filter(lineaConCantidadWsCg);
+    const cobros = (ent.Cobros || []).filter(c => Number(c.Importe) > 0);
+    const totEnt = totalPorTipoWsCg(lineas, 1);
+    const totRet = totalPorTipoWsCg(lineas, 2);
+    const totPag = cobros.reduce((s, c) => s + (Number(c.Importe) || 0), 0);
+    return {
+        nLineas: lineas.length,
+        totEnt,
+        totRet,
+        totPag,
+        saldo: (totEnt + totRet) - totPag
+    };
+}
+
+function renderEntregasMesAccCg() {
+    const list = entregasMesListaCg();
+    const $box = $h("cgWsEntregasAcc");
+    $h("cgWsEntregasCount").text(String(list.filter(x => Number(x.Id) > 0 || (x.Lineas || []).length).length || list.length));
+    if (!$box.length) return;
+    const lastUid = list.length ? list[list.length - 1].uid : "";
+    $box.html(list.map((ent, i) => htmlEntregaAccCg(ent, i, lastUid)).join(""));
+    list.forEach(ent => {
+        const $acc = $box.find(`.cg-ws-acc[data-uid="${ent.uid}"]`);
+        if (!$acc.length) return;
+        if (ent.IdEstablecimiento) $acc.find(".ws-acc-est").val(String(ent.IdEstablecimiento));
+        const idEstLock = hubIdEstablecimientoCg();
+        if (idEstLock > 0) $acc.find(".ws-acc-est").prop("disabled", true);
+        if (ent.expanded) {
+            renderLineasWsCg($acc);
+            renderCobrosWsCg($acc);
+            cargarSugeridosEnAccCg($acc, Number($acc.find(".ws-acc-est").val()) || ent.IdEstablecimiento);
+        }
+    });
+}
+
+function htmlEntregaAccCg(ent, idx, lastUid) {
+    const n = idx + 1;
+    const res = resumenEntregaAccCg(ent);
+    const open = !!ent.expanded;
+    const esLast = String(ent.uid) === String(lastUid);
+    const fechaTxt = formatearFechaCortaCg(ent.Fecha) || ent.Fecha || "Sin fecha";
+    const estNom = ent.EstablecimientoNombre
+        || (CG.wsEstablecimientos || []).find(e => Number(e.Id || e.id) === Number(ent.IdEstablecimiento))?.Nombre
+        || (ent.IdEstablecimiento ? `Est. #${ent.IdEstablecimiento}` : "Sin establecimiento");
+    const pill = ent.esNueva || !(Number(ent.Id) > 0)
+        ? `<span class="cg-ws-acc-pill cg-ws-acc-pill--new">Nueva</span>`
+        : (esLast ? `<span class="cg-ws-acc-pill cg-ws-acc-pill--last">Última</span>` : "");
+    const titulo = Number(ent.Id) > 0 ? `Entrega #${ent.Id}` : `Entrega nueva`;
+    return `
+    <article class="cg-ws-acc${open ? " is-open" : ""}${ent.esNueva ? " is-draft" : ""}" data-uid="${escapeCg(ent.uid)}" data-id="${ent.Id || 0}">
+        <button type="button" class="cg-ws-acc-head" data-uid="${escapeCg(ent.uid)}">
+            <span class="cg-ws-acc-chev"><i class="fa fa-chevron-${open ? "down" : "right"}"></i></span>
+            <span class="cg-ws-acc-head-main">
+                <span class="cg-ws-acc-head-title">
+                    ${escapeCg(titulo)} ${pill}
+                    <span>· ${escapeCg(fechaTxt)}</span>
+                </span>
+                <span class="cg-ws-acc-head-meta">${escapeCg(estNom)} · ${res.nLineas} producto(s)</span>
+            </span>
+            <span class="cg-ws-acc-head-money">
+                <strong>${fmtMoneyCg(res.totEnt + res.totRet)}</strong>
+                <small>Cobrado ${fmtMoneyCg(res.totPag)}</small>
+            </span>
+        </button>
+        <div class="cg-ws-acc-body">
+            <div class="cg-ws-meta-bar">
+                <div class="cg-ws-meta-field">
+                    <label class="form-label cg-ws-label">Fecha</label>
+                    <input type="date" class="form-control ws-acc-fecha" value="${escapeCg(ent.Fecha || "")}" />
+                </div>
+                <div class="cg-ws-meta-field cg-ws-meta-field--grow">
+                    <label class="form-label cg-ws-label">Establecimiento</label>
+                    <select class="form-control ws-acc-est">${htmlOptsEstablecimientoWsCg(ent.IdEstablecimiento)}</select>
+                </div>
+            </div>
+            <div class="cg-ws-split">
+                <section class="cg-ws-col">
+                    <div class="cg-ws-col-head">
+                        <span>Productos</span>
+                        <button type="button" class="cg-btn cg-btn--ghost cg-btn--xs btn-ws-acc-linea">
+                            <i class="fa fa-plus"></i> Línea
+                        </button>
+                    </div>
+                    <div class="cg-ws-sugeridos ws-acc-sugeridos"></div>
+                    <div class="cg-ws-lineas-wrap">
+                        <div class="cg-ws-lineas-list"></div>
+                    </div>
+                    <div class="cg-ws-dup-alert d-none ws-acc-dup" role="alert">
+                        <i class="fa fa-exclamation-triangle"></i>
+                        <div>
+                            <strong>Líneas repetidas</strong>
+                            <span>No podés cargar dos líneas 100% iguales. Si cambia algún dato, sí se permite.</span>
+                        </div>
+                    </div>
+                </section>
+                <section class="cg-ws-col">
+                    <div class="cg-ws-col-head">
+                        <span>Cobros de esta entrega</span>
+                        <button type="button" class="cg-btn cg-btn--ghost cg-btn--xs btn-ws-acc-cobro">
+                            <i class="fa fa-plus"></i> Cobro
+                        </button>
+                    </div>
+                    <div class="cg-ws-cobros-kpis">
+                        <div class="cg-ws-cobro-kpi"><span>Entregado</span><strong class="ws-acc-tot-ent">$ 0,00</strong></div>
+                        <div class="cg-ws-cobro-kpi"><span>Retirado</span><strong class="ws-acc-tot-ret">$ 0,00</strong></div>
+                        <div class="cg-ws-cobro-kpi"><span>Cobrado</span><strong class="ws-acc-tot-pag">$ 0,00</strong></div>
+                        <div class="cg-ws-cobro-kpi"><span>Saldo</span><strong class="ws-acc-saldo">$ 0,00</strong></div>
+                    </div>
+                    <div class="cg-ws-cobros-list"></div>
+                </section>
+            </div>
+            <div class="cg-ws-acc-actions">
+                ${Number(ent.Id) > 0 ? `<button type="button" class="cg-btn cg-btn--ghost cg-btn--sm btn-ws-acc-eliminar"><i class="fa fa-trash"></i> Eliminar</button>` : ""}
+                <button type="button" class="cg-btn cg-btn--success cg-btn--sm btn-ws-acc-guardar">
+                    <i class="fa fa-check"></i> Guardar esta entrega
+                </button>
+            </div>
+        </div>
+    </article>`;
+}
+
+async function cargarSugeridosEnAccCg($acc, idEstablecimiento) {
+    const $box = $acc.find(".ws-acc-sugeridos");
+    if (!$box.length) return;
+    try {
+        CG.wsSugeridos = await fetchJsonCg(API_CG.productosSugeridos(CG.id, idEstablecimiento), { headers: authCg() }) || [];
+    } catch (e) {
+        CG.wsSugeridos = [];
+    }
+    if (!CG.wsSugeridos.length) {
+        $box.html(`<span class="text-muted small">Sin productos del establecimiento. Agregá líneas a mano.</span>`);
+        return;
+    }
+    $box.html(CG.wsSugeridos.map((s, i) => {
+        const label = (s.Abreviatura || s.Producto || "").trim();
+        const lista = s.ListaPrecio ? ` · ${s.ListaPrecio}` : "";
+        return `<button type="button" class="cg-ws-chip" data-idx="${i}" title="${escapeCg(s.Producto)}${lista}">
+            <i class="fa fa-plus"></i> ${escapeCg(label)} × ${fmtQtyCg(s.Cantidad)} · ${fmtMoneyCg(s.PrecioVenta)}
+        </button>`;
+    }).join(""));
 }
 
 function leerNumeroWsCg(valor) {
@@ -3607,9 +4848,6 @@ async function prepararComposerWsCg() {
     }
 
     await cargarSugeridosWsCg(Number($sel.val()) || null);
-    if (!hubPropCg("wsLineas").length) agregarLineaWsCg();
-    else renderLineasWsCg();
-    renderCobrosWsCg();
 }
 
 async function obtenerPreciosProductoWsCg(idProducto) {
@@ -3731,7 +4969,8 @@ async function cargarSugeridosWsCg(idEstablecimiento) {
     }).join(""));
 }
 
-function agregarLineaWsCg(pref) {
+function agregarLineaWsCg(pref, el) {
+    activarLineasHubDesdeAccCg(el);
     const idProducto = pref?.IdProducto || 0;
     const idLista = pref?.IdListaPrecio || 0;
     const tipo = Number(pref?.TipoMovimiento || 1) || 1;
@@ -3740,7 +4979,8 @@ function agregarLineaWsCg(pref) {
         const desdeSug = precioDesdeSugeridosWsCg(idProducto, idLista);
         if (desdeSug != null && Number(desdeSug) > 0) precio = Number(desdeSug);
     }
-    hubPropCg("wsLineas").push({
+    lineasWsDeCg(el).push({
+        Id: 0,
         IdProducto: idProducto,
         IdListaPrecio: idLista,
         TipoMovimiento: tipo,
@@ -3749,8 +4989,8 @@ function agregarLineaWsCg(pref) {
         Cantidad: magnitudCantidadWsCg(pref?.Cantidad || 1) || 1,
         PrecioVenta: precio
     });
-    renderLineasWsCg();
-    actualizarResumenCobrosWsCg();
+    renderLineasWsCg(el);
+    actualizarResumenCobrosWsCg(el);
 }
 
 function normNumClaveWsCg(n) {
@@ -3798,23 +5038,24 @@ function hayLineasDuplicadasWsCg(lineas) {
     return indicesLineasDuplicadasWsCg(lineas).size > 0;
 }
 
-function actualizarAlertaDuplicadosLineasWsCg() {
-    const lineas = hubPropCg("wsLineas") || [];
+function actualizarAlertaDuplicadosLineasWsCg(el) {
+    const lineas = lineasWsDeCg(el);
     const dups = indicesLineasDuplicadasWsCg(lineas);
     const hayDup = dups.size > 0;
-
-    $h("cgWsLineasBody").find(".cg-ws-linea").each(function () {
+    const $body = $wsLineasBodyCg(el);
+    $body.find(".cg-ws-linea").each(function () {
         const idx = Number($(this).data("idx"));
         $(this).toggleClass("cg-ws-linea--dup", dups.has(idx));
     });
-
-    const $alert = $h("cgWsLineasDupAlert");
+    const $acc = $wsAccFromCg(el);
+    const $alert = $acc.length ? $acc.find(".ws-acc-dup") : $h("cgWsLineasDupAlert");
     if ($alert.length) $alert.toggleClass("d-none", !hayDup);
-
     return !hayDup;
 }
 
-function renderLineasWsCg() {
+function renderLineasWsCg(el) {
+    const lineas = lineasWsDeCg(el);
+    const $body = $wsLineasBodyCg(el);
     const optsProd = (CG.wsProductosCatalogo || []).map(p => {
         const id = p.Id || p.id;
         const nom = p.Nombre || p.nombre || `#${id}`;
@@ -3827,13 +5068,13 @@ function renderLineasWsCg() {
         return `<option value="${id}">${escapeCg(nom)}</option>`;
     }).join("");
 
-    if (!hubPropCg("wsLineas").length) {
-        $h("cgWsLineasBody").html(`<div class="cg-ws-lineas-empty">Sin líneas. Agregá un producto o usá un sugerido arriba.</div>`);
-        actualizarAlertaDuplicadosLineasWsCg();
+    if (!lineas.length) {
+        $body.html(`<div class="cg-ws-lineas-empty">Sin líneas. Agregá un producto o usá un sugerido arriba.</div>`);
+        actualizarAlertaDuplicadosLineasWsCg(el);
         return;
     }
 
-    $h("cgWsLineasBody").html(hubPropCg("wsLineas").map((l, i) => {
+    $body.html(lineas.map((l, i) => {
         const esRetiro = Number(l.TipoMovimiento || 1) === 2;
         const noretOn = esRetiro && !!l.NoRetirado;
         const noretSign = noretOn ? signoNoRetiradoWsCg(l) : 0;
@@ -3900,14 +5141,14 @@ function renderLineasWsCg() {
         </div>`;
     }).join(""));
 
-    hubPropCg("wsLineas").forEach((l, i) => {
-        const $row = $h("cgWsLineasBody").find(`.cg-ws-linea[data-idx="${i}"]`);
+    lineas.forEach((l, i) => {
+        const $row = $body.find(`.cg-ws-linea[data-idx="${i}"]`);
         if (l.IdProducto) $row.find(".ws-prod").val(String(l.IdProducto));
         if (l.IdListaPrecio) $row.find(".ws-lista").val(String(l.IdListaPrecio));
         $row.find(".ws-tipo").val(String(l.TipoMovimiento || 1));
         sincronizarUiNoRetiradoWsCg($row, l);
     });
-    actualizarAlertaDuplicadosLineasWsCg();
+    actualizarAlertaDuplicadosLineasWsCg(el);
 }
 
 function magnitudCantidadWsCg(n) {
@@ -4036,10 +5277,12 @@ function sincronizarUiNoRetiradoWsCg($row, linea) {
     }
 }
 
-function refrescarSaldosNoRetiradoWsCg() {
-    $h("cgWsLineasBody").find(".cg-ws-linea").each(function () {
+function refrescarSaldosNoRetiradoWsCg(el) {
+    const $body = $wsLineasBodyCg(el);
+    const lineas = lineasWsDeCg(el);
+    $body.find(".cg-ws-linea").each(function () {
         const i = Number($(this).data("idx"));
-        const ln = hubPropCg("wsLineas")[i];
+        const ln = lineas[i];
         if (ln) sincronizarUiNoRetiradoWsCg($(this), ln);
     });
 }
@@ -4048,9 +5291,11 @@ function sincronizarCheckNoRetiradoWsCg($row, linea) {
     sincronizarUiNoRetiradoWsCg($row, linea);
 }
 
-function agregarCobroWsCg(preset) {
-    const hoy = $h("cgCmFechaVisita").val() || $h("cgWsFechaEntrega").val() || new Date().toISOString().slice(0, 10);
-    const cobros = hubPropCg("wsCobros") || [];
+function agregarCobroWsCg(preset, el) {
+    activarLineasHubDesdeAccCg(el);
+    const $acc = $wsAccFromCg(el);
+    const hoy = ($acc.find(".ws-acc-fecha").val() || $h("cgCmFechaVisita").val() || $h("cgWsFechaEntrega").val() || new Date().toISOString().slice(0, 10));
+    const cobros = cobrosWsDeCg(el);
     const cobro = preset || {
         _key: CG.wsNextCobroKey++,
         Fecha: hoy,
@@ -4063,14 +5308,14 @@ function agregarCobroWsCg(preset) {
         cobro.IdCuenta = Number(CG.cuentas[0].Id) || 0;
     }
     cobros.push(cobro);
-    setHubPropCg("wsCobros", cobros);
-    renderCobrosWsCg();
+    renderCobrosWsCg(el);
 }
 
-function sincronizarCobrosWsDesdeDomCg() {
-    $h("cgWsCobrosBody").find(".cg-ws-cobro-row").each(function () {
+function sincronizarCobrosWsDesdeDomCg(el) {
+    const cobros = cobrosWsDeCg(el);
+    $wsCobrosBodyCg(el).find(".cg-ws-cobro-row").each(function () {
         const key = Number($(this).data("key"));
-        const cobro = (hubPropCg("wsCobros") || []).find(c => Number(c._key) === key);
+        const cobro = cobros.find(c => Number(c._key) === key);
         if (!cobro) return;
         cobro.Fecha = $(this).find(".ws-cobro-fecha").val() || "";
         cobro.IdCuenta = Number($(this).find(".ws-cobro-cuenta").val()) || 0;
@@ -4092,7 +5337,7 @@ function syncImporteHabilitadoCobroWsCg($row) {
     if (!habilitar) {
         $imp.val("");
         const key = Number($row.data("key"));
-        const cobro = (hubPropCg("wsCobros") || []).find(c => Number(c._key) === key);
+        const cobro = cobrosWsDeCg($row).find(c => Number(c._key) === key);
         if (cobro) cobro.Importe = 0;
     }
     $imp.attr("placeholder", habilitar ? "" : "Elegí cuenta");
@@ -4159,9 +5404,9 @@ function instalarBloqueoImporteSinCuentaCg() {
     }, true);
 }
 
-function cobrosWsParaGuardarCg() {
-    sincronizarCobrosWsDesdeDomCg();
-    return (hubPropCg("wsCobros") || []).filter(c => Number(c.Importe) > 0 && Number(c.IdCuenta) > 0);
+function cobrosWsParaGuardarCg(el) {
+    sincronizarCobrosWsDesdeDomCg(el);
+    return cobrosWsDeCg(el).filter(c => Number(c.Importe) > 0 && Number(c.IdCuenta) > 0);
 }
 
 function totalPorTipoWsCg(lineas, tipo) {
@@ -4176,13 +5421,23 @@ function totalCobrableWsCg(lineas) {
     return totalPorTipoWsCg(lineas, 1) + totalPorTipoWsCg(lineas, 2);
 }
 
-function actualizarResumenCobrosWsCg() {
-    const lineas = (hubPropCg("wsLineas") || []).filter(lineaConCantidadWsCg);
-    const cobros = cobrosWsParaGuardarCg();
+function actualizarResumenCobrosWsCg(el) {
+    const lineas = (lineasWsDeCg(el) || []).filter(lineaConCantidadWsCg);
+    const cobros = cobrosWsParaGuardarCg(el);
     const totalEnt = totalPorTipoWsCg(lineas, 1);
     const totalRet = totalPorTipoWsCg(lineas, 2);
     const totalPag = cobros.reduce((s, c) => s + Number(c.Importe || 0), 0);
     const saldo = (totalEnt + totalRet) - totalPag;
+    const $acc = $wsAccFromCg(el);
+    if ($acc.length) {
+        $acc.find(".ws-acc-tot-ent").text(fmtMoneyCg(totalEnt));
+        $acc.find(".ws-acc-tot-ret").text(fmtMoneyCg(totalRet));
+        $acc.find(".ws-acc-tot-pag").text(fmtMoneyCg(totalPag));
+        $acc.find(".ws-acc-saldo").text(fmtMoneyCg(saldo))
+            .toggleClass("text-danger", saldo > 0.009)
+            .toggleClass("text-success", saldo < -0.009);
+        return;
+    }
     $h("cgWsCobroTotEntrega").text(fmtMoneyCg(totalEnt));
     $h("cgWsCobroTotRetiro").text(fmtMoneyCg(totalRet));
     $h("cgWsCobroTotPagado").text(fmtMoneyCg(totalPag));
@@ -4191,14 +5446,14 @@ function actualizarResumenCobrosWsCg() {
         .toggleClass("text-success", saldo < -0.009);
 }
 
-function renderCobrosWsCg() {
-    const cobros = hubPropCg("wsCobros") || [];
-    const $body = $h("cgWsCobrosBody");
+function renderCobrosWsCg(el) {
+    const cobros = cobrosWsDeCg(el);
+    const $body = $wsCobrosBodyCg(el);
     if (!$body.length) return;
 
     if (!cobros.length) {
-        $body.html(`<div class="cg-ws-lineas-empty">Sin cobros de entrega. Usá Agregar cobro si cobrás junto con la visita.</div>`);
-        actualizarResumenCobrosWsCg();
+        $body.html(`<div class="cg-ws-lineas-empty">Sin cobros de esta entrega. Usá + Cobro si cobrás junto con la visita.</div>`);
+        actualizarResumenCobrosWsCg(el);
         return;
     }
 
@@ -4249,7 +5504,7 @@ function renderCobrosWsCg() {
         // Reafirmar por si prepararInputMiles toca el input
         syncImporteHabilitadoCobroWsCg($row);
     });
-    actualizarResumenCobrosWsCg();
+    actualizarResumenCobrosWsCg(el);
 }
 
 async function cargarCobrosMesWsCg(anio, mes) {
@@ -4264,16 +5519,21 @@ async function cargarCobrosMesWsCg(anio, mes) {
         const cobrosMes = (Array.isArray(movs) ? movs : []).filter(m => {
             const f = m.Fecha || m.fecha;
             if (!f) return false;
-            const d = new Date(f);
-            if (Number.isNaN(d.getTime())) return false;
             const esCobro = String(m.TipoMovimiento || m.Origen || "").toLowerCase().includes("cobro");
-            return esCobro && d.getFullYear() === Number(anio) && (d.getMonth() + 1) === Number(mes);
+            return esCobro && fechaPerteneceYmCg(f, anio, mes);
         });
-        if (!cobrosMes.length) {
-            $body.html(`<div class="cg-ws-lineas-empty">Sin cobros cargados en este mes.</div>`);
+        const idsMovEntrega = new Set();
+        entregasMesListaCg().forEach(ent => {
+            (ent.Cobros || []).forEach(c => {
+                if (Number(c.IdMovimientoCc) > 0) idsMovEntrega.add(Number(c.IdMovimientoCc));
+            });
+        });
+        const sueltos = cobrosMes.filter(m => !idsMovEntrega.has(Number(m.Id || m.id) || 0));
+        if (!sueltos.length) {
+            $body.html(`<div class="cg-ws-lineas-empty">Sin cobros sueltos en este mes (los de cada entrega están arriba).</div>`);
             return;
         }
-        $body.html(cobrosMes.map(m => `
+        $body.html(sueltos.map(m => `
             <div class="cg-ws-cobro-mes-item">
                 <div>
                     <div>${escapeCg(formatearFechaCortaCg(m.Fecha))}</div>
@@ -4301,66 +5561,78 @@ function clasificarAbonosDesdeCobrosWsCg(cobros) {
     return { efectivo, transferencia };
 }
 
-async function guardarVisitaUnificadaCg() {
+async function guardarVisitaUnificadaCg(el) {
     if (!CG.id) return;
+    let $acc = $wsAccFromCg(el);
+    if (!$acc.length) $acc = $h("cgWsEntregasAcc").find(".cg-ws-acc.is-open").last();
+    const ent = $acc.length ? (activarLineasHubDesdeAccCg($acc) || entregaByUidCg($acc.attr("data-uid"))) : null;
+    const ctx = $acc.length ? $acc : el;
 
-    // Sync líneas
-    $h("cgWsLineasBody").find(".cg-ws-linea").each(function () {
+    $wsLineasBodyCg(ctx).find(".cg-ws-linea").each(function () {
         const idx = Number($(this).data("idx"));
-        const linea = hubPropCg("wsLineas")[idx];
+        const linea = lineasWsDeCg(ctx)[idx];
         if (!linea) return;
         leerCamposLineaWsDesdeDomCg($(this), linea);
     });
+    if ($acc.length) {
+        if (ent) {
+            ent.Fecha = $acc.find(".ws-acc-fecha").val() || ent.Fecha;
+            ent.IdEstablecimiento = Number($acc.find(".ws-acc-est").val()) || 0;
+        }
+        $h("cgCmFechaVisita").val($acc.find(".ws-acc-fecha").val() || "");
+        $h("cgWsFechaEntrega").val($acc.find(".ws-acc-fecha").val() || "");
+        $h("cgWsEstablecimiento").val($acc.find(".ws-acc-est").val() || "");
+    }
 
-    const lineas = (hubPropCg("wsLineas") || []).filter(lineaConCantidadWsCg);
-    const cobros = cobrosWsParaGuardarCg();
+    const lineas = (lineasWsDeCg(ctx) || []).filter(lineaConCantidadWsCg);
+    const cobros = cobrosWsParaGuardarCg(ctx);
     const hayProductos = lineas.length > 0;
+    const idEntrega = Number(ent?.Id) || 0;
 
     if (lineas.some(l => Number(l.TipoMovimiento) === 2 && !l.NoRetirado && !(Number(l.IdListaPrecio) > 0))) {
         errorModal("Seleccioná la lista / tipo de pago en las líneas de retiro.");
         return;
     }
 
-    if (!actualizarAlertaDuplicadosLineasWsCg() || hayLineasDuplicadasWsCg(lineas)) {
+    if (!actualizarAlertaDuplicadosLineasWsCg(ctx) || hayLineasDuplicadasWsCg(lineas)) {
         errorModal("No podés repetir una línea 100% igual (producto, tipo, lista, cantidad y precio). Si cambia algún dato, sí se permite.");
-        const $a = $h("cgWsLineasDupAlert");
+        const $a = $acc.length ? $acc.find(".ws-acc-dup") : $h("cgWsLineasDupAlert");
         if ($a.length && $a.offset()) {
             $("html, body").animate({ scrollTop: $a.offset().top - 100 }, 200);
         }
         return;
     }
 
-    if (cobros.length && (hubPropCg("wsCobros") || []).some(c => Number(c.Importe) > 0 && !(Number(c.IdCuenta) > 0))) {
+    if (cobros.length && cobrosWsDeCg(ctx).some(c => Number(c.Importe) > 0 && !(Number(c.IdCuenta) > 0))) {
         errorModal("Cada cobro con importe debe tener una cuenta de caja.");
         return;
     }
 
     if (hayProductos) {
-        const fecha = $h("cgCmFechaVisita").val() || $h("cgWsFechaEntrega").val();
+        const fecha = ($acc.find(".ws-acc-fecha").val() || $h("cgCmFechaVisita").val() || $h("cgWsFechaEntrega").val());
         if (!fecha) {
-            errorModal("Indicá la fecha de la visita.");
+            errorModal("Indicá la fecha de la entrega.");
             return;
         }
         $h("cgWsFechaEntrega").val(fecha);
-        const idEstWs = Number($h("cgWsEstablecimiento").val()) || hubIdEstablecimientoCg() || 0;
+        const idEstWs = Number($acc.find(".ws-acc-est").val() || $h("cgWsEstablecimiento").val()) || hubIdEstablecimientoCg() || 0;
         if (idEstWs <= 0) {
             errorModal("Seleccioná el establecimiento de la entrega.");
             return;
         }
 
-        // Se permite cobrar de más: el exceso queda como saldo a favor en CC.
         const payload = {
-            Id: 0,
+            Id: idEntrega,
             Fecha: fecha,
             IdCliente: CG.id,
             IdEstablecimiento: idEstWs,
-            IdContrato: null,
-            IdEstado: null,
-            IdCamion: null,
-            NotaInterna: `Desde control mensual${hubPropCg("hubMesSel") ? ` (${hubPropCg("hubMesSel").mes}/${hubPropCg("hubMesSel").anio})` : ""} · est ${idEstWs}`,
-            NotaCliente: null,
+            IdContrato: ent?.IdContrato || null,
+            IdEstado: ent?.IdEstado || null,
+            IdCamion: ent?.IdCamion || null,
+            NotaInterna: ent?.NotaInterna || `Desde control mensual${hubPropCg("hubMesSel") ? ` (${hubPropCg("hubMesSel").mes}/${hubPropCg("hubMesSel").anio})` : ""} · est ${idEstWs}`,
+            NotaCliente: ent?.NotaCliente || null,
             Lineas: lineas.map(l => ({
-                Id: 0,
+                Id: Number(l.Id) || 0,
                 IdProducto: l.IdProducto,
                 IdListaPrecio: l.IdListaPrecio > 0 ? l.IdListaPrecio : null,
                 TipoMovimiento: l.TipoMovimiento,
@@ -4368,13 +5640,23 @@ async function guardarVisitaUnificadaCg() {
                 Cantidad: cantidadEfectivaWsCg(l),
                 PrecioVenta: l.PrecioVenta,
                 CostoUnitario: 0,
-                PorcDescuento: 0,
-                PorcIva: 0
+                PorcDescuento: Number(l.PorcDescuento) || 0,
+                PorcIva: Number(l.PorcIva) || 0
             })),
-            LineasRecuperadas: [],
+            LineasRecuperadas: (ent?.LineasRecuperadas || []).map(l => ({
+                Id: Number(l.Id) || 0,
+                IdProducto: l.IdProducto,
+                IdListaPrecio: l.IdListaPrecio > 0 ? l.IdListaPrecio : null,
+                TipoMovimiento: 3,
+                Cantidad: l.Cantidad,
+                PrecioVenta: l.PrecioVenta,
+                CostoUnitario: l.CostoUnitario || 0,
+                PorcDescuento: l.PorcDescuento || 0,
+                PorcIva: l.PorcIva || 0
+            })),
             Cobros: cobros.map(c => ({
-                IdCobro: 0,
-                IdMovimientoCc: 0,
+                IdCobro: Number(c.IdCobro) || 0,
+                IdMovimientoCc: Number(c.IdMovimientoCc) || 0,
                 IdCuenta: c.IdCuenta,
                 Fecha: c.Fecha,
                 Concepto: c.Concepto || "Cobro visita",
@@ -4384,27 +5666,31 @@ async function guardarVisitaUnificadaCg() {
 
         let dataEnt;
         try {
-            dataEnt = await fetchJsonCg(API_CG.entregaInsertar, {
-                method: "POST",
+            const url = idEntrega > 0 ? API_CG.entregaActualizar : API_CG.entregaInsertar;
+            const method = idEntrega > 0 ? "PUT" : "POST";
+            dataEnt = await fetchJsonCg(url, {
+                method,
                 headers: authCg(),
                 body: JSON.stringify(payload)
             });
         } catch (e) {
             console.error(e);
-            errorModal("Error al registrar la entrega.");
+            errorModal(idEntrega > 0 ? "Error al actualizar la entrega." : "Error al registrar la entrega.");
             return;
         }
         if (!dataEnt?.valor) {
-            errorModal(dataEnt?.mensaje || "No se pudo registrar la entrega.");
+            errorModal(dataEnt?.mensaje || "No se pudo guardar la entrega.");
             return;
         }
     } else if (cobros.length) {
         errorModal("Los cobros de esta entrega necesitan al menos un producto. Para un cobro suelto usá «Cobro sin entrega».");
         return;
+    } else if (idEntrega > 0) {
+        errorModal("La entrega tiene que tener al menos un producto.");
+        return;
     }
 
-    // Sync abonos planilla (hoja de ruta) con cobros de esta visita
-    if (cobros.length) {
+    if (cobros.length && idEntrega <= 0) {
         const { efectivo, transferencia } = clasificarAbonosDesdeCobrosWsCg(cobros);
         const prevEf = leerImporteInputCg("#" + mapHubDomIdCg("cgCmAbonoEfectivo"));
         const prevTr = leerImporteInputCg("#" + mapHubDomIdCg("cgCmAbonoTransferencia"));
@@ -4422,12 +5708,10 @@ async function guardarVisitaUnificadaCg() {
         return;
     }
 
-    exitoModal(hayProductos
-        ? "Visita y entrega registradas correctamente."
-        : "Visita guardada correctamente.");
+    exitoModal(idEntrega > 0
+        ? "Entrega actualizada."
+        : (hayProductos ? "Entrega registrada." : "Visita guardada."));
 
-    setHubPropCg("wsLineas", []);
-    setHubPropCg("wsCobros", []);
     CG.tabsLoaded.cuentaCorriente = false;
     CG.tabsLoaded.cobros = false;
 
@@ -4441,6 +5725,48 @@ async function guardarVisitaUnificadaCg() {
 
 async function registrarEntregaDesdeWsCg() {
     return guardarVisitaUnificadaCg();
+}
+
+async function eliminarEntregaAccCg(el) {
+    const $acc = $wsAccFromCg(el);
+    const ent = entregaByUidCg($acc.attr("data-uid"));
+    if (!ent) return;
+    const id = Number(ent.Id) || 0;
+    if (id > 0) {
+        const ok = typeof confirmarModal === "function"
+            ? await confirmarModal(`¿Eliminar la entrega #${id}? Se revierten stock y cuenta corriente.`)
+            : window.confirm(`¿Eliminar la entrega #${id}?`);
+        if (!ok) return;
+        try {
+            const data = await fetchJsonCg(API_CG.entregaEliminar(id), {
+                method: "DELETE",
+                headers: authCg()
+            });
+            if (!data?.valor) {
+                errorModal(data?.mensaje || "No se pudo eliminar la entrega.");
+                return;
+            }
+        } catch (e) {
+            console.error(e);
+            errorModal("No se pudo eliminar la entrega.");
+            return;
+        }
+    } else {
+        setHubPropCg("wsEntregasMes", entregasMesListaCg().filter(x => x.uid !== ent.uid));
+        if (!entregasMesListaCg().length) {
+            const sel = hubPropCg("hubMesSel");
+            if (sel) setHubPropCg("wsEntregasMes", [crearEntregaDraftMesCg(sel.anio, sel.mes, true)]);
+        }
+        renderEntregasMesAccCg();
+        return;
+    }
+    exitoModal("Entrega eliminada.");
+    CG.tabsLoaded.cuentaCorriente = false;
+    if (isHubEstCg()) await cargarHubEstablecimientoCg(true);
+    else await cargarHubDatosCg(true);
+    if (hubPropCg("hubMesSel")) {
+        await abrirWorkspaceMesCg(hubPropCg("hubMesSel").anio, hubPropCg("hubMesSel").mes, true);
+    }
 }
 
 function mostrarDetalleMesHub(anio, mes, keepScroll) {
@@ -4528,7 +5854,9 @@ function renderAlertaAtrasosCg(filas) {
 
     $h("cgAtrasosTitulo").text(titulo);
     $h("cgAtrasosResumen").text(
-        `Deuda vencida (más de 1 mes): ${fmtMoneyCg(totalBase)}. Tocá un mes para abrir el detalle o cargar interés.`
+        isHubEstCg()
+            ? `Deuda vencida (más de 1 mes): ${fmtMoneyCg(totalBase)}. Tocá un mes para ver el detalle, o el ícono verde para reclamar ese período.`
+            : `Deuda vencida (más de 1 mes): ${fmtMoneyCg(totalBase)}. Tocá un mes para abrir el detalle o cargar interés.`
     );
     $h("cgControlAtrasosCount").text(String(n));
     $h("cgControlAtrasosMonto").text(fmtMoneyCg(totalBase));
@@ -4541,11 +5869,19 @@ function renderAlertaAtrasosCg(filas) {
         const intBadge = cantInt > 0
             ? `<span class="cg-atraso-chip-int" title="Ya tiene ${cantInt} interés(es)">${cantInt}× int.</span>`
             : `<span class="cg-atraso-chip-hint">Sin interés</span>`;
-        return `<button type="button" class="cg-atraso-chip${active}" data-anio="${x.anio}" data-mes="${x.mes}">
-            <span class="cg-atraso-chip-mes">${escapeCg(x.mesNombre)} ${x.anio}</span>
-            <span class="cg-atraso-chip-monto rp-money-out">${fmtMoneyCg(x.base)}</span>
-            ${intBadge}
-        </button>`;
+        const reclamar = isHubEstCg()
+            ? `<button type="button" class="cg-atraso-chip-reclamar" data-anio="${x.anio}" data-mes="${x.mes}" title="Reclamar ${escapeCg(x.mesNombre)} ${x.anio}">
+                <i class="fa fa-whatsapp"></i>
+            </button>`
+            : "";
+        return `<div class="cg-atraso-chip-wrap">
+            <button type="button" class="cg-atraso-chip${active}" data-anio="${x.anio}" data-mes="${x.mes}">
+                <span class="cg-atraso-chip-mes">${escapeCg(x.mesNombre)} ${x.anio}</span>
+                <span class="cg-atraso-chip-monto rp-money-out">${fmtMoneyCg(x.base)}</span>
+                ${intBadge}
+            </button>
+            ${reclamar}
+        </div>`;
     }).join(""));
 
     $alert.removeClass("d-none").prop("hidden", false);
@@ -4572,10 +5908,6 @@ function celdaFechaVisitaCg(m, anio, enCard) {
     return `<div class="${wrap}">
         ${label}
         <span class="cg-cm-visita-txt">${escapeCg(txt)}</span>
-        <button type="button" class="cg-cm-visita-edit" data-anio="${anio}" data-mes="${m.Mes}"
-                title="Cambiar fecha de visita">
-            <i class="fa fa-pencil" aria-hidden="true"></i>
-        </button>
     </div>`;
 }
 
@@ -4823,6 +6155,11 @@ function interesesDelMesCg(anio, mes) {
 }
 
 function actualizarBotonInteresMesHub(m, anio, mes) {
+    const $reclamo = $h("btnReclamoMesHub");
+    if ($reclamo.length) {
+        const rest = Number(m?.RestanteMes != null ? m.RestanteMes : ((Number(m?.Debe) || 0) - (Number(m?.Haber) || 0))) || 0;
+        $reclamo.toggleClass("d-none", !(isHubEstCg() && rest > 0.009));
+    }
     const $btn = $h("btnInteresMesHub");
     if (!$btn.length) return;
     const ok = puedeCargarInteresMesCg(m, anio, mes);
@@ -4953,9 +6290,6 @@ function abrirModalInteresesHistCg(anioFiltro, mesFiltro) {
         const mes = Number($(this).data("mes"));
         CG.modalInteresesHist?.hide();
         mostrarDetalleMesHub(anio, mes);
-        const bodyId = mapHubDomIdCg("cgControlMensualBody");
-        const row = document.querySelector(`#${bodyId} tr[data-anio="${anio}"][data-mes="${mes}"]`);
-        row?.scrollIntoView({ behavior: "smooth", block: "center" });
     });
 
     $("#cgInteresesHistBody")
@@ -5764,6 +7098,7 @@ const CG_CARD_SCHEMAS = {
         ],
         actions: r => `
             <button type="button" class="cg-card-btn" onclick="editarEstablecimientoCg(${r.Id})"><i class="fa fa-pencil"></i> Editar</button>
+            <button type="button" class="cg-card-btn" onclick="contactarEstablecimientoDirectoCg(${r.Id})"><i class="fa fa-whatsapp"></i> WhatsApp / mail</button>
             <button type="button" class="cg-card-btn cg-card-btn--danger" onclick="eliminarEstablecimientoCg(${r.Id})"><i class="fa fa-trash"></i> Eliminar</button>`
     },
     contratos: {

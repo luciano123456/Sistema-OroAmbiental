@@ -26,6 +26,11 @@
             </button>
         </li>
         <li class="nav-item">
+            <button class="nav-link" id="tabBtnContratosEst" data-bs-toggle="tab" data-bs-target="#tabContratosEst" type="button">
+                <i class="fa fa-file-text-o"></i><span>Contratos</span>
+            </button>
+        </li>
+        <li class="nav-item">
             <button class="nav-link" id="tabBtnProductosEst" data-bs-toggle="tab" data-bs-target="#tabProductosEst" type="button">
                 <i class="fa fa-cube"></i><span>Productos</span>
             </button>
@@ -70,12 +75,12 @@
 
             <div class="col-md-3">
                 <label class="form-label">Id establecimiento</label>
-                <input id="txtIdEstablecimientoClienteEst" class="form-control" maxlength="8" />
+                <input id="txtIdEstablecimientoClienteEst" class="form-control" maxlength="@IntercambioTxtCampos.CodigoOpds" />
             </div>
 
             <div class="col-md-4">
                 <label class="form-label">CUIT</label>
-                <input id="txtCuitEst" class="form-control" maxlength="20" />
+                <input id="txtCuitEst" class="form-control" maxlength="@IntercambioTxtCampos.Cuit" />
             </div>
 
             <div class="col-md-4">
@@ -151,30 +156,43 @@
 
             <div class="col-md-5">
                 <label class="form-label">Calle</label>
-                <input id="txtCalleEst" class="form-control" maxlength="40" />
+                <input id="txtCalleEst" class="form-control" maxlength="@IntercambioTxtCampos.Calle" />
             </div>
+
+            <div class="w-100"></div>
 
             <div class="col-md-2">
                 <label class="form-label">Numero</label>
-                <input id="txtNumeroEst" class="form-control" maxlength="13" />
+                <input id="txtNumeroEst" class="form-control" maxlength="@IntercambioTxtCampos.Numero" />
             </div>
 
             <div class="col-md-2">
                 <label class="form-label">Piso / Depto</label>
-                <input id="txtPisoDeptoEst" class="form-control" maxlength="50" />
+                <input id="txtPisoDeptoEst" class="form-control" maxlength="@IntercambioTxtCampos.Adicional" />
+            </div>
+
+            <div class="col-md-2">
+                <label class="form-label">Codigo postal</label>
+                <input id="txtCodPostalEst" class="form-control" maxlength="@IntercambioTxtCampos.CodigoPostal" />
             </div>
 
             <div class="col-md-3">
-                <label class="form-label">Codigo postal</label>
-                <input id="txtCodPostalEst" class="form-control" maxlength="10" />
-            </div>
-
-            <div class="col-md-4">
                 <label class="form-label">Tipo de generador</label>
                 <div class="rp-select-plus">
                     <select id="cmbTipoGeneradorEst" class="form-control"></select>
                     <button type="button" class="rp-btn-plus" title="Agregar tipo de generador"
                             data-config-nombre="Tipos de Generador" data-config-controller="ClientesTiposGenerador">
+                        <i class="fa fa-plus"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="col-md-3">
+                <label class="form-label" title="Ej. carpintero, odontólogo, tatuador">Actividad</label>
+                <div class="rp-select-plus">
+                    <select id="cmbActividadEst" class="form-control"></select>
+                    <button type="button" class="rp-btn-plus" title="Agregar actividad"
+                            data-config-nombre="Actividades de Establecimientos" data-config-controller="ClientesActividades">
                         <i class="fa fa-plus"></i>
                     </button>
                 </div>
@@ -310,6 +328,39 @@
                     </div>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <div class="tab-pane fade" id="tabContratosEst">
+        <div id="sectionContratosEst" class="rp-sub-page rp-section-disabled cg-contratos-tab-shell">
+            <div class="cg-ctr-inline-hero">
+                <div class="cg-ctr-inline-hero-main">
+                    <div class="cg-ctr-inline-kicker">Establecimiento</div>
+                    <div class="cg-ctr-inline-title" id="contratoEstNombre">Nuevo</div>
+                    <div class="cg-ctr-inline-meta" id="contratoEstHint">
+                        <i class="fa fa-info-circle"></i> Guardá el establecimiento para ver sus contratos.
+                    </div>
+                    <div id="contratoEstActChip" class="cg-ctr-act-chip d-none"></div>
+                </div>
+                <div class="cg-ctr-inline-stats">
+                    <div class="cg-ctr-stat">
+                        <span>Total</span>
+                        <strong id="contratoEstCantidad">0</strong>
+                    </div>
+                    <div class="cg-ctr-stat cg-ctr-stat--ok">
+                        <span>Vigentes</span>
+                        <strong id="contratoEstVigentes">0</strong>
+                    </div>
+                    <div class="cg-ctr-stat cg-ctr-stat--off">
+                        <span>Vencidos</span>
+                        <strong id="contratoEstVencidos">0</strong>
+                    </div>
+                    <button type="button" id="btnNuevoContratoEst" class="cg-btn cg-btn--success cg-btn--sm" onclick="abrirNuevoContratoEstCg()">
+                        <i class="fa fa-plus"></i> Nuevo
+                    </button>
+                </div>
+            </div>
+            <div id="listaContratosEst" class="cg-contratos-est-inline"></div>
         </div>
     </div>
 

@@ -44,6 +44,7 @@ namespace SistemaOroAmbiental.DAL.Repository
                 entity.PisoDepartamento = model.PisoDepartamento;
                 entity.Domicilio = model.Domicilio;
                 entity.IdTipoGenerador = model.IdTipoGenerador;
+                entity.IdActividad = model.IdActividad;
                 entity.IdProvincia = model.IdProvincia;
                 entity.IdPartido = model.IdPartido;
                 entity.IdLocalidad = model.IdLocalidad;
@@ -146,6 +147,7 @@ namespace SistemaOroAmbiental.DAL.Repository
                 .Include(x => x.IdProvinciaNavigation)
                 .Include(x => x.IdCondicionIvaNavigation)
                 .Include(x => x.IdTipoGeneradorNavigation)
+                .Include(x => x.IdActividadNavigation)
                 .Include(x => x.IdDiaRecoleccionNavigation)
                 .Include(x => x.IdSemanaRecoleccionNavigation)
                 .Include(x => x.IdListaPrecioNavigation)
@@ -165,6 +167,7 @@ namespace SistemaOroAmbiental.DAL.Repository
                 .Include(x => x.IdProvinciaNavigation)
                 .Include(x => x.IdCondicionIvaNavigation)
                 .Include(x => x.IdTipoGeneradorNavigation)
+                .Include(x => x.IdActividadNavigation)
                 .Include(x => x.IdDiaRecoleccionNavigation)
                 .Include(x => x.IdSemanaRecoleccionNavigation)
                 .Include(x => x.IdListaPrecioNavigation)

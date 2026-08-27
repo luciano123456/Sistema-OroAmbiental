@@ -14,6 +14,8 @@ namespace SistemaOroAmbiental.Application.Models.ViewModels
         public string? PisoDepartamento { get; set; }
         public int? IdTipoGenerador { get; set; }
         public string? TipoGenerador { get; set; }
+        public int? IdActividad { get; set; }
+        public string? Actividad { get; set; }
         public int? IdProvincia { get; set; }
         public int? IdPartido { get; set; }
         public int? IdLocalidad { get; set; }
