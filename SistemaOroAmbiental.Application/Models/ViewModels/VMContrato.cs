@@ -9,6 +9,8 @@ namespace SistemaOroAmbiental.Application.Models.ViewModels
         public int? IdTipoContrato { get; set; }
         public string? TipoContrato { get; set; }
         public string Establecimiento { get; set; } = "";
+        /// <summary>Actividad del generador (ej. odontólogo, tatuador) según el establecimiento.</summary>
+        public string Actividad { get; set; } = "";
         public int IdSucursal { get; set; }
         public string? Sucursal { get; set; }
         public DateTime FechaContrato { get; set; }

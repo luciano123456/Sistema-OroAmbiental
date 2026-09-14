@@ -49,6 +49,12 @@ namespace SistemaOroAmbiental.BLL.Service
             decimal importe,
             int idUsuario);
 
+        Task<ServiceResult> ActualizarInteres(
+            int idMovimiento,
+            string concepto,
+            decimal importe,
+            int idUsuario);
+
         Task<ServiceResult> Eliminar(int id);
     }
 }

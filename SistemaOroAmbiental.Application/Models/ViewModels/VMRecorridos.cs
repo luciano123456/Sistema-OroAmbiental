@@ -20,7 +20,9 @@ namespace SistemaOroAmbiental.Application.Models.ViewModels
         public int IdDia { get; set; }
         public int Posicion { get; set; }
         public bool Activo { get; set; } = true;
+        public bool Reprogramado { get; set; }
         public string? Observacion { get; set; }
+        public bool DesplazarSiOcupada { get; set; } = true;
     }
 
     public class VMClientesRecorridoBulk

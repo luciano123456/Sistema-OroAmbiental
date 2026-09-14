@@ -10,6 +10,8 @@ namespace SistemaOroAmbiental.DAL.Repository
 
         Task<T?> Obtener(int id);
 
+        Task<T?> BuscarDuplicadoPorNombre(int? idExcluir, string nombre);
+
         Task<IQueryable<T>> ObtenerTodos();
     }
 }

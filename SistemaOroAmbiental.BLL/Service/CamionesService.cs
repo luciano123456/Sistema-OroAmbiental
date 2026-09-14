@@ -7,12 +7,12 @@ namespace SistemaOroAmbiental.BLL.Service
     public class CamionesService : ICamionesService
     {
         private readonly ICamionesRepository _repo;
-        private readonly IDeleteConflictChecker _deleteChecker;
+        private readonly ICatalogoCascadeRepository _cascade;
 
-        public CamionesService(ICamionesRepository repo, IDeleteConflictChecker deleteChecker)
+        public CamionesService(ICamionesRepository repo, ICatalogoCascadeRepository cascade)
         {
             _repo = repo;
-            _deleteChecker = deleteChecker;
+            _cascade = cascade;
         }
 
         public async Task<ServiceResult> Insertar(Camion model)
@@ -39,13 +39,53 @@ namespace SistemaOroAmbiental.BLL.Service
                 : ServiceResult.Error("No se pudo guardar");
         }
 
-        public Task<ServiceResult> Eliminar(int id)
-            => DeleteOperationHelper.ExecuteAsync(
+        public Task<DependenciasEliminacionInfo> ObtenerDependenciasEliminar(int id)
+            => _cascade.ObtenerDependenciasAsync<Camion>(id);
+
+        public async Task<ServiceResult> Eliminar(int id, bool cascada = false)
+        {
+            var deps = await _cascade.ObtenerDependenciasAsync<Camion>(id);
+
+            if (deps.TieneDependencias && !cascada)
+            {
+                return new ServiceResult
+                {
+                    Ok = false,
+                    Mensaje = deps.MensajeResumen,
+                    Tipo = "dependencias",
+                    IdReferencia = id,
+                    Dependencias = deps,
+                    InstruccionesPasoAPaso = deps.InstruccionesPasoAPaso
+                };
+            }
+
+            if (deps.TieneDependencias && cascada)
+            {
+                if (!deps.PermiteCascada)
+                    return ServiceResult.Error(deps.MensajeResumen, "relacion", id);
+
+                try
+                {
+                    await _cascade.EliminarEnCascadaAsync<Camion>(id);
+                    return ServiceResult.Success(
+                        "Camión eliminado. Los registros asociados se desvincularon o se quitaron.");
+                }
+                catch (InvalidOperationException ex)
+                {
+                    return ServiceResult.Error(ex.Message, "relacion", id);
+                }
+                catch (Exception)
+                {
+                    return ServiceResult.Error("Error inesperado al eliminar el camión en cascada.", "error", id);
+                }
+            }
+
+            return await DeleteOperationHelper.ExecuteAsync(
                 () => _repo.Eliminar(id),
                 "el camión",
                 "Camión eliminado correctamente",
-                id,
-                () => _deleteChecker.CamionAsync(id));
+                id);
+        }
 
         public Task<Camion?> Obtener(int id)
             => _repo.Obtener(id);

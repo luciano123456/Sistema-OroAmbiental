@@ -9,5 +9,6 @@ namespace SistemaOroAmbiental.DAL.Repository
         Task<bool> Insertar(TiposPago model);
         Task<TiposPago?> Obtener(int id);
         Task<IQueryable<TiposPago>> ObtenerTodos();
+        Task<bool> ExisteCodigo(string codigo, int? idExcluir = null);
     }
 }

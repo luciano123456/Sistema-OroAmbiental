@@ -181,6 +181,15 @@ namespace SistemaOroAmbiental.DAL.Repository
             var ent = await _db.ClientesEntregas.CountAsync(x => x.IdCamion == id);
             if (ent > 0) partes.Add($"{ent} entrega(s)");
 
+            try
+            {
+                var mf = await _db.RecorridosManifiestos.CountAsync(x => x.IdCamion == id);
+                if (mf > 0) partes.Add($"{mf} manifiesto(s)");
+            }
+            catch
+            {
+            }
+
             return Mensaje("este camión", partes);
         }
 
@@ -198,6 +207,7 @@ namespace SistemaOroAmbiental.DAL.Repository
                 nameof(Semana) => await SemanaAsync(id),
                 nameof(EntregasEstado) => await EntregaEstadoAsync(id),
                 nameof(ClientesProfesion) => await ClienteProfesionAsync(id),
+                nameof(ClientesActividad) => await ClienteActividadAsync(id),
                 nameof(TiposContrato) => await TipoContratoAsync(id),
                 nameof(UsuariosEstado) => await UsuarioEstadoAsync(id),
                 nameof(UsuariosRol) => await UsuarioRolAsync(id),
@@ -206,6 +216,7 @@ namespace SistemaOroAmbiental.DAL.Repository
                 nameof(ClientesEstado) => await ClienteEstadoAsync(id),
                 nameof(ClientesMotivo) => await ClienteMotivoAsync(id),
                 nameof(ClientesCalificacion) => await ClienteCalificacionAsync(id),
+                nameof(ClientesTipoGenerador) => await TipoGeneradorAsync(id),
                 _ => null
             };
         }
@@ -310,6 +321,16 @@ namespace SistemaOroAmbiental.DAL.Repository
                 : null;
         }
 
+        private async Task<string?> TipoGeneradorAsync(int id)
+        {
+            var partes = new List<string>();
+            var cli = await _db.Clientes.CountAsync(x => x.IdTipoGenerador == id);
+            if (cli > 0) partes.Add($"{cli} cliente(s)");
+            var est = await _db.ClientesEstablecimientos.CountAsync(x => x.IdTipoGenerador == id);
+            if (est > 0) partes.Add($"{est} establecimiento(s)");
+            return Mensaje("este tipo de generador", partes);
+        }
+
         private async Task<string?> DiaAsync(int id)
         {
             var est = await _db.ClientesEstablecimientos.CountAsync(x => x.IdDiaRecoleccion == id);
@@ -350,6 +371,14 @@ namespace SistemaOroAmbiental.DAL.Repository
                 return $"No se pudo eliminar esta profesión porque tiene {fer} feriado(s) asociado(s).";
 
             return null;
+        }
+
+        private async Task<string?> ClienteActividadAsync(int id)
+        {
+            var est = await _db.ClientesEstablecimientos.CountAsync(x => x.IdActividad == id);
+            return est > 0
+                ? $"No se pudo eliminar esta actividad porque tiene {est} establecimiento(s) asociado(s)."
+                : null;
         }
 
         private async Task<string?> TipoContratoAsync(int id)

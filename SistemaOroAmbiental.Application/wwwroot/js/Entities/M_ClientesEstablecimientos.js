@@ -29,6 +29,7 @@
                     listasPrecios: "/ListasPrecios/Lista",
                     camiones: "/Camiones/Lista?soloActivos=true",
                     tiposGenerador: "/ClientesTiposGenerador/Lista",
+                    actividades: "/ClientesActividades/Lista",
                     contactosLista: "/ClientesEstablecimientosContactos/ListaPorEstablecimiento?idEstablecimiento={idEstablecimiento}",
                     contactosInsertar: "/ClientesEstablecimientosContactos/Insertar",
                     contactosActualizar: "/ClientesEstablecimientosContactos/Actualizar",
@@ -104,6 +105,7 @@
                 Semanas: { selectId: "cmbSemanaEst", url: this.options.endpoints.semanas },
                 ListasPrecios: { selectId: "cmbListaPrecioProdEst", url: this.options.endpoints.listasPrecios },
                 ClientesTiposGenerador: { selectId: "cmbTipoGeneradorEst", url: this.options.endpoints.tiposGenerador, textField: "Etiqueta" },
+                ClientesActividades: { selectId: "cmbActividadEst", url: this.options.endpoints.actividades },
                 Camiones: { selectId: "cmbCamionEst", url: this.options.endpoints.camiones }
             };
 
@@ -258,7 +260,7 @@
             };
             [
                 "cmbClienteEst", "cmbCondicionIvaEst", "cmbProvinciaEst", "cmbPartidoEst",
-                "cmbLocalidadEst", "cmbTipoGeneradorEst",
+                "cmbLocalidadEst", "cmbTipoGeneradorEst", "cmbActividadEst",
                 "cmbDiaEst", "cmbSemanaEst", "cmbCamionEst",
                 "cmbProductoEst", "cmbListaPrecioProdEst"
             ].forEach(id => {
@@ -1197,6 +1199,7 @@
             this._setFieldValue("txtIdEstablecimientoClienteEst", modelo.IdEstablecimientoCliente || "");
             this._setFieldValue("txtCuitEst", modelo.Cuit || "");
             this._setFieldValue("txtCalleEst", modelo.Calle || modelo.Domicilio || "");
+            this._setFieldValue("txtDescripcionEst", modelo.Descripcion || "");
             this._setFieldValue("txtNumeroEst", modelo.Numero || "");
             this._setFieldValue("txtPisoDeptoEst", modelo.PisoDepartamento || "");
             this._setFieldValue("txtCodPostalEst", modelo.CodPostal || "");
@@ -1216,6 +1219,7 @@
                 this._refreshSelect2Field("cmbLocalidadEst");
             }
             if (modelo.IdTipoGenerador) this._setFieldValue("cmbTipoGeneradorEst", modelo.IdTipoGenerador, true);
+            if (modelo.IdActividad) this._setFieldValue("cmbActividadEst", modelo.IdActividad, true);
             if (modelo.IdDiaRecoleccion) this._setFieldValue("cmbDiaEst", modelo.IdDiaRecoleccion, true);
             if (modelo.IdSemanaRecoleccion) this._setFieldValue("cmbSemanaEst", modelo.IdSemanaRecoleccion, true);
             if (modelo.IdCamion) this._setFieldValue("cmbCamionEst", modelo.IdCamion, true);
@@ -1243,6 +1247,7 @@
 
             this._mostrarUi();
             this.setModalSoloLectura(soloLectura);
+            this._verificarOrdenRecorrido();
 
             if (typeof this.options.onOpen === "function") {
                 await this.options.onOpen(soloLectura ? "ver" : "editar", this, modelo);
@@ -1395,6 +1400,7 @@
             this.resetSelect("cmbPartidoEst", "Seleccionar");
             this.resetSelect("cmbLocalidadEst", "Seleccionar");
             this.resetSelect("cmbTipoGeneradorEst", "Seleccionar");
+            this.resetSelect("cmbActividadEst", "Seleccionar");
             this.resetSelect("cmbDiaEst", "Seleccionar");
             this.resetSelect("cmbSemanaEst", "Seleccionar");
             this.resetSelect("cmbCamionEst", "Seleccionar");
@@ -1407,6 +1413,7 @@
                 this._llenarCombo("cmbCondicionIvaEst", this.options.endpoints.condicionesIva, seq),
                 this._llenarCombo("cmbProvinciaEst", this.options.endpoints.provincias, seq),
                 this._llenarComboTiposGenerador(seq),
+                this._llenarCombo("cmbActividadEst", this.options.endpoints.actividades, seq),
                 this._llenarCombo("cmbDiaEst", this.options.endpoints.dias, seq),
                 this._llenarCombo("cmbSemanaEst", this.options.endpoints.semanas, seq),
                 this._llenarCombo("cmbCamionEst", this.options.endpoints.camiones, seq),
@@ -1423,6 +1430,17 @@
             if (this.isSoloLectura()) return true;
             if (!this.validarCampos()) return false;
 
+            const avisoPendiente = this._id("avisoOrdenRecorridoEst");
+            if (avisoPendiente && !avisoPendiente.hidden
+                && typeof rpDecisionAvisoOrdenRecorrido === "function"
+                && rpDecisionAvisoOrdenRecorrido(avisoPendiente) === null) {
+                this.mostrarErrorCampos(
+                    "El Nº de recorrido ya está ocupado. Indicá si querés reemplazar y desplazar a los demás.",
+                    null,
+                    "validacion");
+                return false;
+            }
+
             const id = this._getFieldValue("txtIdEst");
 
             const modelo = {
@@ -1434,9 +1452,11 @@
                 IdCondicionIva: this._getIntOrNull("cmbCondicionIvaEst"),
                 ImpuestoIva: !!this._getFieldValue("chkImpuestoIvaEst"),
                 Calle: (this._getFieldValue("txtCalleEst") || "").trim() || null,
+                Descripcion: (this._getFieldValue("txtDescripcionEst") || "").trim() || null,
                 Numero: (this._getFieldValue("txtNumeroEst") || "").trim() || null,
                 PisoDepartamento: (this._getFieldValue("txtPisoDeptoEst") || "").trim() || null,
                 IdTipoGenerador: this._getIntOrNull("cmbTipoGeneradorEst"),
+                IdActividad: this._getIntOrNull("cmbActividadEst"),
                 IdProvincia: this._getIntOrNull("cmbProvinciaEst"),
                 IdPartido: this._getIntOrNull("cmbPartidoEst"),
                 IdLocalidad: this._getIntOrNull("cmbLocalidadEst"),
@@ -1451,6 +1471,11 @@
                 OrdenRecorrido: (() => {
                     const n = this._getIntOrNull("txtOrdenRecorridoEst");
                     return n && n > 0 ? n : null;
+                })(),
+                DesplazarOrdenRecorrido: (() => {
+                    const aviso = this._id("avisoOrdenRecorridoEst");
+                    return typeof rpDecisionAvisoOrdenRecorrido === "function"
+                        && rpDecisionAvisoOrdenRecorrido(aviso) === true;
                 })(),
                 Kilos: this._getDecimalOrNull("txtKilosEst"),
                 DiasHorarios: (this._getFieldValue("txtDiasHorariosEst") || "").trim() || null
@@ -1590,6 +1615,9 @@
             this.prepararContactosNuevo();
             this.prepararProductosNuevo();
             this._syncIvaCardUI();
+            if (typeof rpOcultarAvisoOrdenRecorrido === "function") {
+                rpOcultarAvisoOrdenRecorrido(this._id("avisoOrdenRecorridoEst"));
+            }
         }
 
         _valorCampoValido(el) {
@@ -1795,6 +1823,64 @@
                     this._localidadLegacy = null;
                     this._actualizarCodigosGeo();
                 });
+            }
+
+            this._bindAvisoOrdenRecorrido();
+        }
+
+        _bindAvisoOrdenRecorrido() {
+            const root = this._id("avisoOrdenRecorridoEst");
+            if (root && typeof rpBindAvisoOrdenRecorrido === "function") {
+                rpBindAvisoOrdenRecorrido(root);
+            }
+
+            const input = this._id("txtOrdenRecorridoEst");
+            if (input) {
+                input.addEventListener("input", () => this._verificarOrdenRecorrido());
+                input.addEventListener("change", () => this._verificarOrdenRecorrido());
+            }
+
+            ["cmbDiaEst", "cmbSemanaEst", "cmbCamionEst"].forEach(id => {
+                const el = this._id(id);
+                if (!el || !window.jQuery) return;
+                window.jQuery(el).off("change.ordenRec").on("change.ordenRec", () => this._verificarOrdenRecorrido());
+            });
+        }
+
+        _verificarOrdenRecorrido() {
+            clearTimeout(this._ordenRecorridoTimer);
+            this._ordenRecorridoTimer = setTimeout(() => this._verificarOrdenRecorridoNow(), 280);
+        }
+
+        async _verificarOrdenRecorridoNow() {
+            const root = this._id("avisoOrdenRecorridoEst");
+            const orden = this._getIntOrNull("txtOrdenRecorridoEst");
+            const idCamion = this._getIntOrNull("cmbCamionEst");
+            const idDia = this._getIntOrNull("cmbDiaEst");
+            const idSemana = this._getIntOrNull("cmbSemanaEst");
+            const idExcluir = this._getIntOrNull("txtIdEst") || 0;
+
+            if (!orden || orden <= 0 || !idCamion || !idDia || !idSemana) {
+                if (typeof rpOcultarAvisoOrdenRecorrido === "function")
+                    rpOcultarAvisoOrdenRecorrido(root);
+                return;
+            }
+
+            try {
+                const url = `/ClientesEstablecimientos/OcupanteOrdenRecorrido?idCamion=${idCamion}&idDia=${idDia}&idSemana=${idSemana}&orden=${orden}&idExcluir=${idExcluir}`;
+                const info = await this._fetchJson(url, { headers: this._headers(false) });
+                if (info?.Ocupado || info?.ocupado) {
+                    if (typeof rpMostrarAvisoOrdenRecorrido === "function") {
+                        rpMostrarAvisoOrdenRecorrido(root, {
+                            posicion: orden,
+                            nombre: typeof rpNombreOcupanteOrden === "function" ? rpNombreOcupanteOrden(info) : "otra persona"
+                        });
+                    }
+                } else if (typeof rpOcultarAvisoOrdenRecorrido === "function") {
+                    rpOcultarAvisoOrdenRecorrido(root);
+                }
+            } catch (e) {
+                console.warn(e);
             }
         }
 

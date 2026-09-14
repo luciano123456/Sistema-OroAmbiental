@@ -40,6 +40,7 @@ namespace SistemaOroAmbiental.BLL.Service
         Task<ClientesEntrega?> Obtener(int id);
 
         Task<Dictionary<int, decimal>> SumarCobrosPorEntregas(IEnumerable<int> idsEntrega);
+        Task<Dictionary<int, int>> ContarProductosPorEntregas(IEnumerable<int> idsEntrega);
 
         Task<ServiceResult> Insertar(
             ClientesEntrega entrega,

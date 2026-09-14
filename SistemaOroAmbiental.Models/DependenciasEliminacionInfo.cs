@@ -17,5 +17,13 @@ namespace SistemaOroAmbiental.Models
         public string MensajeResumen { get; set; } = "";
 
         public string InstruccionesPasoAPaso { get; set; } = "";
+
+        /// <summary>
+        /// "eliminar" borra los asociados (clientes/proveedores).
+        /// "desvincular" los mantiene y quita o reasigna el valor de catálogo.
+        /// </summary>
+        public string TipoCascada { get; set; } = "eliminar";
+
+        public bool PermiteCascada { get; set; } = true;
     }
 }

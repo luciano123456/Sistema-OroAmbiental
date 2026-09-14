@@ -29,7 +29,7 @@ namespace SistemaOroAmbiental.DAL.Repository
                 .AsNoTracking()
                 .Include(x => x.IdProveedorNavigation)
                 .Include(x => x.IdSucursalNavigation)
-                .Include(x => x.ComprasProductos)
+                .AsSplitQuery()
                 .AsQueryable();
 
             if (fechaDesde.HasValue)
@@ -568,56 +568,52 @@ namespace SistemaOroAmbiental.DAL.Repository
             }
         }
 
-        public async Task<bool> Eliminar(int id)
+        public Task<bool> Eliminar(int id)
+            => _db.ExecuteInTransactionAsync(async () =>
+            {
+                try
+                {
+                    return await EliminarSinTransaccion(id);
+                }
+                catch (DbUpdateException ex)
+                {
+                    throw new InvalidOperationException(
+                        DescribirErrorEliminacionCompra(ex), ex);
+                }
+                catch (Exception ex) when (ex is not InvalidOperationException)
+                {
+                    throw new InvalidOperationException(
+                        $"No se pudo eliminar la compra: {ex.InnerException?.Message ?? ex.Message}", ex);
+                }
+            });
+
+        public async Task<bool> EliminarSinTransaccion(int id)
         {
-            await using var trx = await _db.Database.BeginTransactionAsync();
+            var entity = await _db.Compras
+                .Include(x => x.ComprasProductos)
+                .FirstOrDefaultAsync(x => x.Id == id);
 
-            try
-            {
-                var entity = await _db.Compras
-                    .Include(x => x.ComprasProductos)
-                    .FirstOrDefaultAsync(x => x.Id == id);
+            if (entity == null)
+                return false;
 
-                if (entity == null)
-                    return false;
+            var ahora = DateTime.Now;
+            var idUsuario = entity.IdUsuarioModifica ?? entity.IdUsuarioRegistra;
 
-                var ahora = DateTime.Now;
-                var idUsuario = entity.IdUsuarioModifica ?? entity.IdUsuarioRegistra;
+            await EliminarPagosCompraSinTransaccion(entity.Id);
 
-                await EliminarPagosCompraSinTransaccion(entity.Id);
+            foreach (var linea in entity.ComprasProductos.ToList())
+                await RevertirStockLinea(linea, idUsuario, ahora);
 
-                foreach (var linea in entity.ComprasProductos.ToList())
-                    await RevertirStockLinea(linea, idUsuario, ahora);
+            await RevertirCostosCompra(entity.Id, idUsuario, ahora);
+            await RevertirMovimientoCuentaCorriente(entity);
 
-                await RevertirCostosCompra(entity.Id, idUsuario, ahora);
-                await RevertirMovimientoCuentaCorriente(entity);
+            await EliminarHistorialYPagosResidualesCompraAsync(entity.Id);
 
-                await EliminarHistorialYPagosResidualesCompraAsync(entity.Id);
+            _db.ComprasProductos.RemoveRange(entity.ComprasProductos);
+            _db.Compras.Remove(entity);
 
-                _db.ComprasProductos.RemoveRange(entity.ComprasProductos);
-                _db.Compras.Remove(entity);
-
-                await _db.SaveChangesAsync();
-                await trx.CommitAsync();
-                return true;
-            }
-            catch (InvalidOperationException)
-            {
-                await trx.RollbackAsync();
-                throw;
-            }
-            catch (DbUpdateException ex)
-            {
-                await trx.RollbackAsync();
-                throw new InvalidOperationException(
-                    DescribirErrorEliminacionCompra(ex), ex);
-            }
-            catch (Exception ex)
-            {
-                await trx.RollbackAsync();
-                throw new InvalidOperationException(
-                    $"No se pudo eliminar la compra: {ex.InnerException?.Message ?? ex.Message}", ex);
-            }
+            await _db.SaveChangesAsync();
+            return true;
         }
 
         private static string DescribirErrorEliminacionCompra(DbUpdateException ex)
@@ -758,6 +754,19 @@ namespace SistemaOroAmbiental.DAL.Repository
                 .GroupBy(x => x.IdCompra!.Value)
                 .Select(g => new { Id = g.Key, Total = g.Sum(p => p.Importe) })
                 .ToDictionaryAsync(x => x.Id, x => x.Total);
+        }
+
+        public async Task<Dictionary<int, int>> ContarProductosPorCompras(IReadOnlyList<int> idsCompra)
+        {
+            if (idsCompra == null || idsCompra.Count == 0)
+                return new Dictionary<int, int>();
+
+            return await _db.ComprasProductos
+                .AsNoTracking()
+                .Where(x => idsCompra.Contains(x.IdCompra))
+                .GroupBy(x => x.IdCompra)
+                .Select(g => new { Id = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.Id, x => x.Count);
         }
     }
 }

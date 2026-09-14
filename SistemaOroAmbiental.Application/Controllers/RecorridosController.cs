@@ -1,8 +1,11 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using SistemaOroAmbiental.Application.Helpers;
 using SistemaOroAmbiental.Application.Models.ViewModels;
 using SistemaOroAmbiental.BLL.Common;
 using SistemaOroAmbiental.BLL.Service;
+using SistemaOroAmbiental.DAL.Repository;
 using SistemaOroAmbiental.Models;
 
 namespace SistemaOroAmbiental.Application.Controllers
@@ -12,16 +15,31 @@ namespace SistemaOroAmbiental.Application.Controllers
     {
         private readonly IRecorridosService _service;
         private readonly ICamionesService _camionesService;
+        private readonly IChoferesService _choferesService;
+        private readonly ChoferesFirmaStorage _choferFirmas;
         private readonly IClientesEstablecimientosProductosService _productosEstService;
+        private readonly IWebHostEnvironment _env;
+        private readonly CertificadosTratamientoStorage _certStorage;
+        private readonly IClientesCertificadosTratamientoRepository _certRepo;
 
         public RecorridosController(
             IRecorridosService service,
             ICamionesService camionesService,
-            IClientesEstablecimientosProductosService productosEstService)
+            IChoferesService choferesService,
+            ChoferesFirmaStorage choferFirmas,
+            IClientesEstablecimientosProductosService productosEstService,
+            IWebHostEnvironment env,
+            CertificadosTratamientoStorage certStorage,
+            IClientesCertificadosTratamientoRepository certRepo)
         {
             _service = service;
             _camionesService = camionesService;
+            _choferesService = choferesService;
+            _choferFirmas = choferFirmas;
             _productosEstService = productosEstService;
+            _env = env;
+            _certStorage = certStorage;
+            _certRepo = certRepo;
         }
 
         [AllowAnonymous]
@@ -33,14 +51,17 @@ namespace SistemaOroAmbiental.Application.Controllers
         [HttpGet]
         public async Task<IActionResult> Camiones(bool soloActivos = true)
         {
-            var camiones = (await _camionesService.ObtenerTodos(soloActivos)).ToList();
+            var camiones = await (await _camionesService.ObtenerTodos(soloActivos))
+                .OrderBy(c => c.Nombre)
+                .Select(c => new
+                {
+                    c.Id,
+                    c.Nombre,
+                    c.Activo
+                })
+                .ToListAsync();
 
-            return Ok(camiones.Select(c => new
-            {
-                c.Id,
-                c.Nombre,
-                c.Activo
-            }));
+            return Ok(camiones);
         }
 
         [HttpGet]
@@ -182,6 +203,388 @@ namespace SistemaOroAmbiental.Application.Controllers
             return View("HojaRuta", model);
         }
 
+        [HttpGet]
+        public async Task<IActionResult> SiguienteNumeroManifiesto(
+            int idCamion,
+            int idSemana,
+            int idDia,
+            string? recorridos)
+        {
+            if (idCamion <= 0)
+                return Ok(new { numero = 1, ultimo = 0 });
+
+            var lista = ParseRecorridosHojaRuta(recorridos, idSemana, idDia);
+            if (lista.Count == 0)
+                return Ok(new { numero = 1, ultimo = 0 });
+
+            var numero = await _service.ObtenerSiguienteNumeroManifiesto(idCamion, lista);
+            return Ok(new
+            {
+                numero,
+                ultimo = Math.Max(0, numero - 1)
+            });
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> RegistrarNumeroManifiesto([FromBody] VMManifiestoNumeroRequest request)
+        {
+            if (request == null || request.IdCamion <= 0)
+            {
+                return Ok(new
+                {
+                    valor = false,
+                    mensaje = "Datos incompletos.",
+                    tipo = "validacion"
+                });
+            }
+
+            var lista = ParseRecorridosHojaRuta(request.Recorridos, request.IdSemana, request.IdDia);
+            if (lista.Count == 0)
+            {
+                return Ok(new
+                {
+                    valor = false,
+                    mensaje = "No se indicó la hoja de ruta.",
+                    tipo = "validacion"
+                });
+            }
+
+            var idClaim = User.FindFirst("Id")?.Value;
+            int.TryParse(idClaim, out var idUsuario);
+
+            var result = await _service.RegistrarUltimoNumeroManifiesto(
+                request.IdCamion,
+                lista,
+                request.UltimoNumero,
+                idUsuario);
+
+            return Ok(new
+            {
+                valor = result.Ok,
+                mensaje = result.Mensaje,
+                tipo = result.Tipo
+            });
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> Manifiestos(
+            int idCamion,
+            int idSemana,
+            int idDia,
+            string? recorridos,
+            string? excluirIds,
+            int? numeroInicial,
+            int? idRecorrido,
+            string? incluirIds,
+            string? copias,
+            string? nombre,
+            DateTime? fecha,
+            bool generarCertificados = false,
+            DateTime? fechaEmision = null,
+            int? numeroCertificadoInicial = null,
+            DateTime? fechaTratamiento = null,
+            int? numeroOrdenInicial = null,
+            string? formato = null,
+            int? idChofer = null,
+            string? choferNombre = null,
+            string? choferDni = null)
+        {
+            if (idCamion <= 0)
+                return NotFound();
+
+            var lista = ParseRecorridosHojaRuta(recorridos, idSemana, idDia);
+            if (lista.Count == 0)
+                return NotFound();
+
+            var numero = numeroInicial ?? 0;
+            if (numero <= 0)
+                numero = await _service.ObtenerSiguienteNumeroManifiesto(idCamion, lista);
+
+            var excluir = ParseIdsExcluirHoja(excluirIds);
+            var incluir = ParseIdsExcluirHoja(incluirIds);
+            var model = await _service.ObtenerManifiestos(
+                idCamion,
+                lista,
+                numero,
+                excluir,
+                incluir.Count > 0 ? null : idRecorrido,
+                incluir.Count > 0 ? incluir : null);
+
+            if (model == null)
+                return NotFound();
+
+            ManifiestoCopiasHelper.Expandir(model, ParseCopiasPorRecorrido(copias));
+            if (model.Items.Count == 0)
+                return NotFound();
+
+            var nombreTxt = (nombre ?? "").Trim();
+            if (string.IsNullOrWhiteSpace(nombreTxt) && model.Items.Count == 1)
+                nombreTxt = model.Items[0].RazonSocial;
+            model.Nombre = nombreTxt;
+            if (!string.IsNullOrWhiteSpace(nombreTxt))
+                model.Titulo = nombreTxt;
+            model.FechaProgramacion = (fecha ?? DateTime.Today).Date;
+
+            await AplicarChoferManifiesto(model, idChofer, choferNombre, choferDni);
+
+            var idClaim = User.FindFirst("Id")?.Value;
+            int.TryParse(idClaim, out var idUsuario);
+
+            var fmt = (formato ?? "").Trim().ToLowerInvariant();
+
+            // Certificados: siempre un PDF (una o más páginas). Nunca ZIP.
+            if (fmt == "certificados")
+            {
+                model.Items = ManifiestoCopiasHelper.UnicosPorRecorrido(model.Items);
+                if (model.Items.Count == 0)
+                    return NotFound();
+                return await PdfCertificadosLote(
+                    model, idCamion, idUsuario, fechaEmision, numeroCertificadoInicial, fechaTratamiento, numeroOrdenInicial);
+            }
+
+            var ultimo = model.Items.Max(x => x.Numero);
+            if (ultimo > 0)
+                await _service.RegistrarUltimoNumeroManifiesto(idCamion, lista, ultimo, idUsuario);
+
+            await _service.GuardarHistorialManifiestos(idCamion, model, nombreTxt, idUsuario);
+
+            // Un PDF con una página por manifiesto (lote seleccionable o hoja completa).
+            return PdfManifiesto(model);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> CertificadoHistorial(
+            int idCamion,
+            int idManifiesto,
+            DateTime? fechaEmision,
+            int? numeroCertificado,
+            DateTime? fechaTratamiento,
+            int? numeroOrden)
+        {
+            if (idCamion <= 0 || idManifiesto <= 0)
+                return NotFound();
+
+            var model = await _service.ObtenerManifiestosHistorial(idCamion, new[] { idManifiesto });
+            if (model == null || model.Items.Count == 0)
+                return NotFound();
+
+            var idClaim = User.FindFirst("Id")?.Value;
+            int.TryParse(idClaim, out var idUsuario);
+
+            var fe = (fechaEmision ?? DateTime.Today).Date;
+            var ft = (fechaTratamiento ?? DateTime.Today).Date;
+            var nCert = numeroCertificado ?? 0;
+            var nOrden = numeroOrden ?? 0;
+            if (nCert <= 0 || nOrden <= 0)
+            {
+                var sug = await _certRepo.ObtenerSiguienteNumero(0, 0);
+                if (nCert <= 0) nCert = sug.NumeroCertificado;
+                if (nOrden <= 0) nOrden = sug.NumeroOrden;
+            }
+
+            var certItems = await _certStorage.GenerarDesdeHistorial(
+                model, idManifiesto, fe, nCert, ft, nOrden, idCamion, idUsuario);
+
+            if (certItems.Count == 0)
+                return NotFound();
+
+            var bytes = CertificadoTratamientoPdfGenerator.Generar(certItems);
+            return File(bytes, "application/pdf", CertificadoTratamientoPdfGenerator.NombreArchivo(certItems[0]));
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> SiguienteNumeroCertificado()
+        {
+            var data = await _certRepo.ObtenerSiguienteNumero(0, 0);
+            return Ok(data);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> ManifiestosPorCamion(int idCamion)
+        {
+            if (idCamion <= 0)
+                return BadRequest();
+
+            var data = await _service.ListarManifiestosPorCamion(idCamion);
+            return Ok(data);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> RutasManifiestoCamion(int idCamion)
+        {
+            if (idCamion <= 0)
+                return BadRequest();
+
+            var data = await _service.ListarRutasManifiestoCamion(idCamion);
+            return Ok(data);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> ManifiestoHistorial(int idCamion, string? ids)
+        {
+            if (idCamion <= 0)
+                return NotFound();
+
+            var listaIds = (ids ?? "")
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Select(x => int.TryParse(x, out var n) ? n : 0)
+                .Where(n => n > 0)
+                .ToList();
+
+            if (listaIds.Count == 0)
+                return NotFound();
+
+            var model = await _service.ObtenerManifiestosHistorial(idCamion, listaIds);
+            if (model == null)
+                return NotFound();
+
+            if (model.FechaProgramacion == default)
+                model.FechaProgramacion = DateTime.Today;
+
+            return PdfManifiesto(model);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> SiguienteNumeroManifiestoCamion(int idCamion)
+        {
+            var numero = await _service.ObtenerSiguienteNumeroManifiestoCamion(idCamion);
+            return Ok(new
+            {
+                numero,
+                ultimo = Math.Max(0, numero - 1)
+            });
+        }
+
+        [HttpDelete]
+        public async Task<IActionResult> EliminarManifiestoHistorial(int idCamion, int id)
+        {
+            var result = await _service.EliminarManifiestoHistorial(idCamion, id);
+            return Ok(new
+            {
+                valor = result.Ok,
+                mensaje = result.Mensaje,
+                tipo = result.Tipo
+            });
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> ArchivoIntercambio(
+            int idCamion,
+            int idSemana,
+            int idDia,
+            string? recorridos,
+            string? excluirIds,
+            string? incluirIds,
+            DateTime? fecha,
+            int? numeroInicial,
+            int? idRecorrido,
+            string? nombre,
+            bool mesCompleto = false)
+        {
+            if (idCamion <= 0)
+                return NotFound();
+
+            var lista = ParseRecorridosHojaRuta(recorridos, idSemana, idDia);
+            if (!mesCompleto && lista.Count == 0)
+                return NotFound();
+
+            var incluir = ParseIdsExcluirHoja(incluirIds);
+            var excluir = incluir.Count > 0 ? new List<int>() : ParseIdsExcluirHoja(excluirIds);
+
+            var numero = numeroInicial ?? 0;
+            if (numero <= 0)
+            {
+                numero = mesCompleto
+                    ? await _service.ObtenerSiguienteNumeroManifiestoCamion(idCamion)
+                    : await _service.ObtenerSiguienteNumeroManifiesto(idCamion, lista);
+            }
+
+            var model = await _service.ObtenerArchivoIntercambio(
+                idCamion,
+                lista,
+                fecha?.Date ?? DateTime.Today,
+                numero,
+                excluir,
+                idRecorrido,
+                nombre,
+                mesCompleto,
+                incluir.Count > 0 ? incluir : null);
+
+            if (model == null || model.Items.Count == 0)
+                return NotFound();
+
+            var bytes = ArchivoIntercambioFormatter.Generar(model);
+
+            var idClaim = User.FindFirst("Id")?.Value;
+            int.TryParse(idClaim, out var idUsuario);
+            var ultimo = model.NumeroInicial + model.Items.Count - 1;
+            var listaRegistro = ParseRecorridosHojaRuta(model.RecorridosParam, 0, 0);
+            if (listaRegistro.Count == 0)
+                listaRegistro = lista;
+            if (ultimo > 0 && listaRegistro.Count > 0)
+                await _service.RegistrarUltimoNumeroManifiesto(idCamion, listaRegistro, ultimo, idUsuario);
+
+            return File(bytes, "text/plain; charset=windows-1252", model.NombreArchivo);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> ManifiestoLoteOpds(
+            int idCamion,
+            int idSemana,
+            int idDia,
+            string? recorridos,
+            string? excluirIds,
+            string? incluirIds,
+            int? numeroInicial,
+            int? idRecorrido,
+            string? nombre,
+            DateTime? fecha,
+            string? idTransportistaOpds,
+            string? copias)
+        {
+            if (idCamion <= 0)
+                return NotFound();
+
+            var lista = ParseRecorridosHojaRuta(recorridos, idSemana, idDia);
+            if (lista.Count == 0)
+                return NotFound();
+
+            var numero = numeroInicial ?? 0;
+            if (numero <= 0)
+                numero = await _service.ObtenerSiguienteNumeroManifiesto(idCamion, lista);
+
+            var excluir = ParseIdsExcluirHoja(excluirIds);
+            var incluir = ParseIdsExcluirHoja(incluirIds);
+            var model = await _service.ObtenerManifiestos(
+                idCamion,
+                lista,
+                numero,
+                excluir,
+                incluir.Count > 0 ? null : idRecorrido,
+                incluir.Count > 0 ? incluir : null);
+
+            if (model == null || model.Items.Count == 0)
+                return NotFound();
+
+            ManifiestoCopiasHelper.Expandir(model, ParseCopiasPorRecorrido(copias));
+            if (model.Items.Count == 0)
+                return NotFound();
+
+            var nombreTxt = (nombre ?? "").Trim();
+            if (!string.IsNullOrWhiteSpace(nombreTxt))
+                model.Nombre = nombreTxt;
+            model.FechaProgramacion = (fecha ?? DateTime.Today).Date;
+
+            var gen = ManifiestoLoteOpdsFormatter.Generar(model, idTransportistaOpds);
+            if (!gen.Ok)
+                return BadRequest(new { mensaje = gen.Error });
+
+            if (!string.IsNullOrWhiteSpace(gen.Error))
+                Response.Headers["X-OA-Warning"] = Uri.EscapeDataString(gen.Error);
+
+            return File(gen.Bytes, "text/plain; charset=us-ascii", gen.NombreArchivo);
+        }
+
         private async Task PersistirProductosHojaRuta(List<VMHojaRutaParadaOverride>? paradas, int idUsuario)
         {
             if (paradas == null) return;
@@ -271,9 +674,132 @@ namespace SistemaOroAmbiental.Application.Controllers
                 var cant = p.Cantidad % 1 == 0
                     ? ((int)p.Cantidad).ToString()
                     : p.Cantidad.ToString("0.####");
-                var lista = string.IsNullOrWhiteSpace(p.ListaPrecio) ? "" : $" ({p.ListaPrecio.Trim()})";
-                return $"{cant} {abrev}{lista} x $ {p.PrecioVenta:N0}";
+                return $"{cant} {abrev} x $ {p.PrecioVenta:N0}";
             }));
+        }
+
+        private async Task<IActionResult> PdfCertificadosLote(
+            ManifiestosHojaDto model,
+            int idCamion,
+            int idUsuario,
+            DateTime? fechaEmision,
+            int? numeroCertificadoInicial,
+            DateTime? fechaTratamiento,
+            int? numeroOrdenInicial)
+        {
+            try
+            {
+                var fe = (fechaEmision ?? DateTime.Today).Date;
+                var ft = (fechaTratamiento ?? DateTime.Today).Date;
+                var nCert = numeroCertificadoInicial ?? 0;
+                var nOrden = numeroOrdenInicial ?? 0;
+                if (nCert <= 0 || nOrden <= 0)
+                {
+                    var sug = await _certRepo.ObtenerSiguienteNumero(0, 0);
+                    if (nCert <= 0) nCert = sug.NumeroCertificado;
+                    if (nOrden <= 0) nOrden = sug.NumeroOrden;
+                }
+
+                var certItems = await _certStorage.GenerarYGuardarLote(
+                    model, new GuardarHistorialManifiestoResultDto(), fe, nCert, ft, nOrden, idCamion, idUsuario);
+
+                if (certItems.Count == 0)
+                    return NotFound();
+
+                var certBytes = CertificadoTratamientoPdfGenerator.Generar(certItems);
+                var certNombre = CertificadoTratamientoPdfGenerator.NombreArchivoLote(certItems);
+                return File(certBytes, "application/pdf", certNombre);
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine("[Certificados] " + ex);
+                return StatusCode(500, "No se pudieron generar los certificados.");
+            }
+        }
+
+        private IActionResult PdfManifiesto(ManifiestosHojaDto model)
+        {
+            try
+            {
+                var bytes = GenerarBytesManifiesto(model);
+                return File(bytes, "application/pdf", ManifiestoPdfGenerator.NombreArchivo(model));
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine("[Manifiesto PDF] " + ex);
+                return StatusCode(500, "No se pudo generar el PDF del manifiesto.");
+            }
+        }
+
+        private IActionResult ZipManifiestosPorCliente(ManifiestosHojaDto model)
+        {
+            try
+            {
+                var header = Path.Combine(_env.WebRootPath, "Imagenes", "manifiesto-header.jpg");
+                var carpeta = ManifiestoPdfGenerator.NombreCarpetaLote(model);
+                var fecha = model.FechaProgramacion == default ? DateTime.Today : model.FechaProgramacion.Date;
+                var copiasPorCliente = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+                var archivos = new List<(string Nombre, byte[] Contenido)>();
+
+                foreach (var item in model.Items)
+                {
+                    var key = (item.RazonSocial ?? "").Trim();
+                    if (string.IsNullOrWhiteSpace(key))
+                        key = $"Manifiesto_{item.Numero}";
+                    copiasPorCliente.TryGetValue(key, out var n);
+                    n++;
+                    copiasPorCliente[key] = n;
+
+                    var pdf = ManifiestoPdfGenerator.GenerarUno(model, item, header);
+                    var nombre = ManifiestoPdfGenerator.NombreArchivoCliente(item, fecha, n);
+                    archivos.Add((nombre, pdf));
+                }
+
+                if (archivos.Count == 1)
+                    return File(archivos[0].Contenido, "application/pdf", archivos[0].Nombre);
+
+                var zip = PdfZipHelper.CrearZip(archivos
+                    .Select(a => ($"{carpeta}/{a.Nombre}", a.Contenido))
+                    .ToArray());
+                return File(zip, "application/zip", $"{carpeta}.zip");
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine("[Manifiesto PDF] " + ex);
+                return StatusCode(500, "No se pudo generar el PDF del manifiesto.");
+            }
+        }
+
+        private async Task AplicarChoferManifiesto(
+            ManifiestosHojaDto model,
+            int? idChofer,
+            string? choferNombre,
+            string? choferDni)
+        {
+            var nombre = (choferNombre ?? "").Trim();
+            var dni = (choferDni ?? "").Trim();
+
+            if (idChofer is > 0)
+            {
+                var chofer = await _choferesService.Obtener(idChofer.Value);
+                if (chofer != null)
+                {
+                    if (string.IsNullOrWhiteSpace(nombre))
+                        nombre = (chofer.Nombre ?? "").Trim();
+                    if (string.IsNullOrWhiteSpace(dni))
+                        dni = (chofer.Dni ?? "").Trim();
+                    model.ChoferFirmaPng = _choferFirmas.LeerBytes(chofer.Id);
+                }
+            }
+
+            model.ChoferNombre = string.IsNullOrWhiteSpace(nombre) ? null : nombre;
+            model.ChoferDni = string.IsNullOrWhiteSpace(dni) ? null : dni;
+        }
+
+        private byte[] GenerarBytesManifiesto(ManifiestosHojaDto model)
+        {
+            var header = Path.Combine(_env.WebRootPath, "Imagenes", "manifiesto-header.jpg");
+            return ManifiestoPdfGenerator.Generar(model, header);
         }
 
         private static List<(int IdSemana, int IdDia)> ParseRecorridosHojaRuta(string? recorridos, int idSemana, int idDia)
@@ -322,6 +848,29 @@ namespace SistemaOroAmbiental.Application.Controllers
             }
 
             return lista.Distinct().ToList();
+        }
+
+        private static Dictionary<int, int> ParseCopiasPorRecorrido(string? copias)
+        {
+            var mapa = new Dictionary<int, int>();
+            if (string.IsNullOrWhiteSpace(copias))
+                return mapa;
+
+            foreach (var part in copias.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            {
+                var sep = part.IndexOf(':');
+                if (sep <= 0)
+                    continue;
+                if (!int.TryParse(part[..sep], out var id) || id <= 0)
+                    continue;
+                if (!int.TryParse(part[(sep + 1)..], out var n))
+                    continue;
+                if (n < 0) n = 0;
+                if (n > ManifiestoCopiasHelper.MaxCopias) n = ManifiestoCopiasHelper.MaxCopias;
+                mapa[id] = n;
+            }
+
+            return mapa;
         }
 
         [HttpGet]
@@ -395,7 +944,7 @@ namespace SistemaOroAmbiental.Application.Controllers
             int idUsuario = int.Parse(User.FindFirst("Id")!.Value);
 
             var entity = MapEntidad(model, idUsuario, esNuevo: true);
-            ServiceResult result = await _service.InsertarClientesRecorrido(entity);
+            ServiceResult result = await _service.InsertarClientesRecorrido(entity, model.DesplazarSiOcupada);
 
             return Ok(new
             {
@@ -412,7 +961,7 @@ namespace SistemaOroAmbiental.Application.Controllers
             int idUsuario = int.Parse(User.FindFirst("Id")!.Value);
 
             var entity = MapEntidad(model, idUsuario, esNuevo: false);
-            ServiceResult result = await _service.ActualizarClientesRecorrido(entity);
+            ServiceResult result = await _service.ActualizarClientesRecorrido(entity, model.DesplazarSiOcupada);
 
             return Ok(new
             {
@@ -458,6 +1007,7 @@ namespace SistemaOroAmbiental.Application.Controllers
                 Dia = r.IdDiaNavigation?.Nombre,
                 r.Posicion,
                 r.Activo,
+                r.Reprogramado,
                 r.Observacion,
                 r.FechaUsuarioRegistra,
                 UsuarioRegistra = r.IdUsuarioRegistraNavigation?.Usuario,
@@ -478,6 +1028,7 @@ namespace SistemaOroAmbiental.Application.Controllers
                 IdDia = model.IdDia,
                 Posicion = model.Posicion,
                 Activo = model.Activo,
+                Reprogramado = model.Reprogramado,
                 Observacion = string.IsNullOrWhiteSpace(model.Observacion) ? null : model.Observacion.Trim()
             };
 

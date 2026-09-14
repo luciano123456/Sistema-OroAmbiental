@@ -147,7 +147,10 @@ namespace SistemaOroAmbiental.DAL.Repository
                 .OrderBy(x => x.Posicion)
                 .ToListAsync();
 
-            await CompletarEnLicenciaClientesRecorrido(list, DateTime.Today);
+            var hoy = DateTime.Today;
+            foreach (var item in list)
+                item.EnLicencia = EstaEnLicencia(item.FechaLicenciaDesde, item.FechaLicenciaHasta, item.EstadoNombre, hoy);
+
             await CargarProductosEnClientesRecorrido(list);
             return list;
         }
@@ -181,11 +184,12 @@ namespace SistemaOroAmbiental.DAL.Repository
             }
 
             return await query
-                .OrderBy(x => x.IdCamion)
-                .ThenBy(x => x.IdSemana)
-                .ThenBy(x => x.IdDia)
-                .ThenBy(x => x.Posicion)
-                .ToListAsync();
+                    .OrderBy(x => x.IdCamion)
+                    .ThenBy(x => x.IdSemana)
+                    .ThenBy(x => x.IdDia)
+                    .ThenBy(x => x.Posicion)
+                    .Take(40)
+                    .ToListAsync();
         }
 
         public async Task<List<ClientesRecorridoDto>> ListarPorCliente(int idCliente)
@@ -199,13 +203,16 @@ namespace SistemaOroAmbiental.DAL.Repository
                 .ToListAsync();
         }
 
-        public async Task<bool> InsertarClientesRecorrido(ClientesRecorrido model)
+        public async Task<bool> InsertarClientesRecorrido(ClientesRecorrido model, bool desplazarSiOcupada = true)
         {
             try
             {
                 await AsegurarPosicionClientesRecorrido(model);
                 if (model.Posicion <= 0)
                     return false;
+
+                if (desplazarSiOcupada)
+                    await DesplazarPosicionesSiOcupada(model, idExcluir: null);
 
                 _db.ClientesRecorridos.Add(model);
                 await _db.SaveChangesAsync();
@@ -217,13 +224,21 @@ namespace SistemaOroAmbiental.DAL.Repository
             }
         }
 
-        public async Task<bool> ActualizarClientesRecorrido(ClientesRecorrido model)
+        public async Task<bool> ActualizarClientesRecorrido(ClientesRecorrido model, bool desplazarSiOcupada = true)
         {
             try
             {
                 var entity = await _db.ClientesRecorridos.FirstOrDefaultAsync(x => x.Id == model.Id);
                 if (entity == null)
                     return false;
+
+                var cambiaSlot = entity.IdCamion != model.IdCamion
+                    || entity.IdSemana != model.IdSemana
+                    || entity.IdDia != model.IdDia
+                    || entity.Posicion != model.Posicion;
+
+                if (cambiaSlot && desplazarSiOcupada)
+                    await DesplazarPosicionesSiOcupada(model, idExcluir: entity.Id);
 
                 entity.IdCliente = model.IdCliente;
                 entity.IdEstablecimiento = model.IdEstablecimiento;
@@ -232,6 +247,7 @@ namespace SistemaOroAmbiental.DAL.Repository
                 entity.IdDia = model.IdDia;
                 entity.Posicion = model.Posicion;
                 entity.Activo = model.Activo;
+                entity.Reprogramado = model.Reprogramado;
                 entity.Observacion = string.IsNullOrWhiteSpace(model.Observacion)
                     ? null
                     : model.Observacion.Trim();
@@ -299,7 +315,7 @@ namespace SistemaOroAmbiental.DAL.Repository
                 return null;
 
             var semanasOrden = await _db.Semanas.AsNoTracking().OrderBy(s => s.Id).Select(s => s.Id).ToListAsync();
-            var diasOrden = await _db.Dias.AsNoTracking().OrderBy(d => d.Id).Select(d => d.Id).ToListAsync();
+            var diasOrden = await ObtenerIdsDiasOrdenSemana();
 
             var recorridosOrdenados = recorridos
                 .Distinct()
@@ -371,6 +387,7 @@ namespace SistemaOroAmbiental.DAL.Repository
             var salida = matriz?.HorarioSalida?.Trim();
 
             var items = await _db.ClientesRecorridos.AsNoTracking()
+                .AsSplitQuery()
                 .Include(r => r.IdClienteNavigation)
                     .ThenInclude(c => c!.IdEstadoNavigation)
                 .Include(r => r.IdEstablecimientoNavigation)
@@ -461,37 +478,40 @@ namespace SistemaOroAmbiental.DAL.Repository
             var dias = secciones
                 .Select(s =>
                 {
+                    var zona = (s.Zona ?? "").Trim();
+                    if (!string.IsNullOrWhiteSpace(zona))
+                        return zona;
+
                     var partes = new List<string>();
                     if (!string.IsNullOrWhiteSpace(s.Semana))
                         partes.Add(s.Semana.Trim());
                     if (!string.IsNullOrWhiteSpace(s.Dia))
                         partes.Add(s.Dia.Trim());
+                    if (!string.IsNullOrWhiteSpace(camion))
+                        partes.Add(camion.Trim());
                     return string.Join(" ", partes.Where(p => !string.IsNullOrWhiteSpace(p)));
                 })
                 .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToList();
 
-            var camionTxt = camion.Trim();
             var titulo = dias.Count > 0 ? string.Join(" · ", dias) : "HOJA DE RUTA";
-
-            if (!string.IsNullOrWhiteSpace(camionTxt))
-                titulo = $"{camionTxt} — {titulo}";
-
             return titulo.ToUpperInvariant();
         }
 
         private static string ConstruirTituloHojaRuta(string semana, string dia, string camion, string zona)
         {
-            var partes = new List<string> { semana.Trim(), dia.Trim() };
-            var camionTxt = camion.Trim();
+            // Si hay zona/barrio cargada, esa es el título de la hoja; si no, semana + día + unidad.
+            var zonaTxt = (zona ?? "").Trim();
+            if (!string.IsNullOrWhiteSpace(zonaTxt))
+                return zonaTxt.ToUpperInvariant();
+
+            var partes = new List<string> { (semana ?? "").Trim(), (dia ?? "").Trim() };
+            var camionTxt = (camion ?? "").Trim();
             if (!string.IsNullOrWhiteSpace(camionTxt))
                 partes.Add(camionTxt);
 
             var titulo = string.Join(" ", partes.Where(p => !string.IsNullOrWhiteSpace(p)));
-            var zonaTxt = zona.Trim();
-            if (!string.IsNullOrWhiteSpace(zonaTxt))
-                titulo += " - " + zonaTxt;
-
             return titulo.ToUpperInvariant();
         }
 
@@ -588,14 +608,8 @@ namespace SistemaOroAmbiental.DAL.Repository
                 establecimiento?.Calle ?? cliente.Calle,
                 establecimiento?.Numero ?? cliente.Numero,
                 establecimiento?.PisoDepartamento ?? cliente.PisoDepartamento,
-                establecimiento?.Domicilio ?? cliente.Domicilio);
-            if (!string.IsNullOrWhiteSpace(establecimiento?.Nombre) &&
-                !string.Equals(establecimiento.Nombre.Trim(), cliente.Nombre.Trim(), StringComparison.OrdinalIgnoreCase))
-            {
-                domicilio = string.IsNullOrWhiteSpace(domicilio)
-                    ? establecimiento.Nombre.Trim()
-                    : establecimiento.Nombre.Trim() + " — " + domicilio;
-            }
+                establecimiento?.Domicilio ?? cliente.Domicilio,
+                establecimiento?.Descripcion);
 
             var localidad = (establecimiento?.Localidad ?? "").Trim();
             var telefono = ObtenerTelefonoParada(cliente, establecimiento);
@@ -617,8 +631,16 @@ namespace SistemaOroAmbiental.DAL.Repository
             if (enLicencia)
             {
                 observacion = string.IsNullOrWhiteSpace(observacion)
-                    ? "⚠ DE LICENCIA"
-                    : "⚠ DE LICENCIA. " + observacion;
+                    ? "\u26A0 DE LICENCIA"
+                    : "\u26A0 DE LICENCIA. " + observacion;
+                alertaTipo = "alerta";
+            }
+
+            if (recorrido.Reprogramado)
+            {
+                observacion = string.IsNullOrWhiteSpace(observacion)
+                    ? "REPROGRAMADO"
+                    : "REPROGRAMADO. " + observacion;
                 alertaTipo = "alerta";
             }
 
@@ -642,6 +664,7 @@ namespace SistemaOroAmbiental.DAL.Repository
                 AlertaTipo = alertaTipo,
                 Activo = recorrido.Activo,
                 EnLicencia = enLicencia,
+                Reprogramado = recorrido.Reprogramado,
                 Productos = productos,
                 ProductosResumen = FormatearProductosResumen(productos)
             };
@@ -767,21 +790,22 @@ namespace SistemaOroAmbiental.DAL.Repository
         /// Misma regla que ClientesOperativoRepository: fechas ganan; si no hay fechas, estado "Licencia".
         /// </summary>
         private static bool EstaEnLicencia(Cliente cliente, DateTime fecha)
+            => EstaEnLicencia(cliente.FechaLicenciaDesde, cliente.FechaLicenciaHasta, cliente.IdEstadoNavigation?.Nombre, fecha);
+
+        private static bool EstaEnLicencia(DateTime? desde, DateTime? hasta, string? estadoNombre, DateTime fecha)
         {
-            var estado = cliente.IdEstadoNavigation?.Nombre ?? "";
-            var porEstado = estado.Contains("Licencia", StringComparison.OrdinalIgnoreCase);
+            var porEstado = (estadoNombre ?? "").Contains("Licencia", StringComparison.OrdinalIgnoreCase);
+            var d = desde?.Date;
+            var h = hasta?.Date;
 
-            var desde = cliente.FechaLicenciaDesde?.Date;
-            var hasta = cliente.FechaLicenciaHasta?.Date;
+            if (d.HasValue && h.HasValue)
+                return fecha >= d.Value && fecha <= h.Value;
 
-            if (desde.HasValue && hasta.HasValue)
-                return fecha >= desde.Value && fecha <= hasta.Value;
+            if (d.HasValue && !h.HasValue)
+                return fecha >= d.Value;
 
-            if (desde.HasValue && !hasta.HasValue)
-                return fecha >= desde.Value;
-
-            if (!desde.HasValue && hasta.HasValue)
-                return fecha <= hasta.Value;
+            if (!d.HasValue && h.HasValue)
+                return fecha <= h.Value;
 
             return porEstado;
         }
@@ -810,8 +834,7 @@ namespace SistemaOroAmbiental.DAL.Repository
                 var cant = p.Cantidad % 1 == 0
                     ? ((int)p.Cantidad).ToString()
                     : p.Cantidad.ToString("0.####");
-                var lista = string.IsNullOrWhiteSpace(p.ListaPrecio) ? "" : $" ({p.ListaPrecio.Trim()})";
-                return $"{cant} {abrev}{lista} x $ {p.PrecioVenta:N0}";
+                return $"{cant} {abrev} x $ {p.PrecioVenta:N0}";
             });
 
             return string.Join(" · ", partes);
@@ -942,38 +965,36 @@ namespace SistemaOroAmbiental.DAL.Repository
 
         private async Task<(decimal grande, decimal chico)> ObtenerPreciosDescartadoresReferencia()
         {
-            const decimal defaultGrande = 6000m;
-            const decimal defaultChico = 3000m;
-
             try
             {
-                var precios = await (
-                    from pp in _db.ProductosPrecios.AsNoTracking()
-                    join p in _db.Productos.AsNoTracking() on pp.IdProducto equals p.Id
-                    where p.Activo
-                    select new
-                    {
-                        p.Nombre,
-                        pp.PrecioVenta
-                    }).ToListAsync();
+                var marcados = await _db.Productos.AsNoTracking()
+                    .Where(p => p.Activo && (p.EsDescartadorChicoHojaRuta || p.EsDescartadorGrandeHojaRuta))
+                    .Select(p => new { p.Id, p.EsDescartadorChicoHojaRuta, p.EsDescartadorGrandeHojaRuta })
+                    .ToListAsync();
 
-                decimal? grande = precios
-                    .Where(p => p.Nombre.Contains("Grande", StringComparison.OrdinalIgnoreCase))
-                    .Select(p => (decimal?)p.PrecioVenta)
-                    .FirstOrDefault();
+                var idChico = marcados.FirstOrDefault(p => p.EsDescartadorChicoHojaRuta)?.Id;
+                var idGrande = marcados.FirstOrDefault(p => p.EsDescartadorGrandeHojaRuta)?.Id;
+                var ids = new[] { idChico, idGrande }.Where(x => x.HasValue).Select(x => x!.Value).Distinct().ToList();
 
-                decimal? chico = precios
-                    .Where(p => p.Nombre.Contains("Chico", StringComparison.OrdinalIgnoreCase))
-                    .Select(p => (decimal?)p.PrecioVenta)
-                    .FirstOrDefault();
+                if (ids.Count == 0)
+                    return (0, 0);
 
-                return (
-                    grande.GetValueOrDefault(defaultGrande),
-                    chico.GetValueOrDefault(defaultChico));
+                var precios = await _db.ProductosPrecios.AsNoTracking()
+                    .Where(pp => ids.Contains(pp.IdProducto) && pp.PrecioVenta > 0)
+                    .GroupBy(pp => pp.IdProducto)
+                    .Select(g => new { IdProducto = g.Key, Precio = g.Max(x => x.PrecioVenta) })
+                    .ToListAsync();
+
+                decimal Resolver(int? id) =>
+                    id.HasValue
+                        ? (precios.FirstOrDefault(p => p.IdProducto == id.Value)?.Precio ?? 0)
+                        : 0;
+
+                return (Resolver(idGrande), Resolver(idChico));
             }
             catch
             {
-                return (defaultGrande, defaultChico);
+                return (0, 0);
             }
         }
 
@@ -984,8 +1005,15 @@ namespace SistemaOroAmbiental.DAL.Repository
                 .Select(r => new { r.IdCliente, r.IdEstablecimiento })
                 .ToListAsync();
 
-            var enRutaPairs = enRuta
-                .Select(r => (r.IdCliente, r.IdEstablecimiento))
+            var enRutaEstIds = enRuta
+                .Where(r => r.IdEstablecimiento is > 0)
+                .Select(r => r.IdEstablecimiento!.Value)
+                .Distinct()
+                .ToList();
+            var enRutaCliSinEst = enRuta
+                .Where(r => r.IdEstablecimiento == null || r.IdEstablecimiento <= 0)
+                .Select(r => r.IdCliente)
+                .Distinct()
                 .ToList();
 
             var raw = await (
@@ -995,6 +1023,8 @@ namespace SistemaOroAmbiental.DAL.Repository
                    && e.IdDiaRecoleccion == idDia
                    && (e.IdCamion == null || e.IdCamion == idCamion)
                    && c.Activo
+                   && !enRutaEstIds.Contains(e.Id)
+                   && !enRutaCliSinEst.Contains(e.IdCliente)
                 orderby e.HorarioRecoleccionDesde, c.Nombre, e.Nombre
                 select new
                 {
@@ -1003,6 +1033,7 @@ namespace SistemaOroAmbiental.DAL.Repository
                     Cliente = c.Nombre,
                     Establecimiento = e.Nombre,
                     e.Calle,
+                    e.Descripcion,
                     e.Numero,
                     e.PisoDepartamento,
                     DomicilioEst = e.Domicilio,
@@ -1019,14 +1050,14 @@ namespace SistemaOroAmbiental.DAL.Repository
                 IdCliente = x.IdCliente,
                 Cliente = x.Cliente,
                 Establecimiento = x.Establecimiento,
-                Domicilio = ComponerDomicilio(x.Calle, x.Numero, x.PisoDepartamento, x.DomicilioEst ?? x.DomicilioCli),
+                Domicilio = ComponerDomicilio(x.Calle, x.Numero, x.PisoDepartamento, x.DomicilioEst ?? x.DomicilioCli, x.Descripcion),
                 Localidad = x.Localidad,
                 Horario = !string.IsNullOrWhiteSpace(x.DiasHorarios)
                     ? x.DiasHorarios.Trim()
                     : (x.HorarioRecoleccionDesde == default && x.HorarioRecoleccionHasta == default
                         ? ""
                         : $"{x.HorarioRecoleccionDesde:hh\\:mm} a {x.HorarioRecoleccionHasta:hh\\:mm}"),
-                YaEnRecorrido = EstaEnRecorrido(x.IdCliente, x.Id, enRutaPairs)
+                YaEnRecorrido = false
             }).ToList();
         }
 
@@ -1177,6 +1208,8 @@ namespace SistemaOroAmbiental.DAL.Repository
                    from m in mj.DefaultIfEmpty()
                    join e in _db.ClientesEstablecimientos on r.IdEstablecimiento equals e.Id into ej
                    from e in ej.DefaultIfEmpty()
+                   join est in _db.ClientesEstados on cl.IdEstado equals est.Id into estj
+                   from est in estj.DefaultIfEmpty()
                    select new ClientesRecorridoDto
                    {
                        Id = r.Id,
@@ -1184,6 +1217,7 @@ namespace SistemaOroAmbiental.DAL.Repository
                        Cliente = cl.Nombre,
                        IdEstablecimiento = r.IdEstablecimiento,
                        Establecimiento = e != null ? e.Nombre : null,
+                       CodigoOpds = e != null ? e.IdEstablecimientoCliente : null,
                        Domicilio = (e != null ? e.Domicilio : null) ?? cl.Domicilio,
                        Localidad = e != null ? e.Localidad : null,
                        IdCamion = r.IdCamion,
@@ -1195,35 +1229,14 @@ namespace SistemaOroAmbiental.DAL.Repository
                        Zona = m != null ? m.Zona : "",
                        Posicion = r.Posicion,
                        Activo = r.Activo,
+                       Reprogramado = r.Reprogramado,
                        FechaLicenciaDesde = cl.FechaLicenciaDesde,
                        FechaLicenciaHasta = cl.FechaLicenciaHasta,
                        Observacion = r.Observacion,
                        RecorridoTexto = s.Nombre + " " + d.Nombre,
-                       EnLicencia = false
+                       EnLicencia = false,
+                       EstadoNombre = est != null ? est.Nombre : null
                    };
-        }
-
-        private async Task CompletarEnLicenciaClientesRecorrido(List<ClientesRecorridoDto> list, DateTime fecha)
-        {
-            if (list == null || list.Count == 0) return;
-
-            var ids = list.Select(x => x.IdCliente).Distinct().ToList();
-            var clientes = await _db.Clientes.AsNoTracking()
-                .Include(c => c.IdEstadoNavigation)
-                .Where(c => ids.Contains(c.Id))
-                .ToDictionaryAsync(c => c.Id);
-
-            foreach (var item in list)
-            {
-                if (!clientes.TryGetValue(item.IdCliente, out var cli))
-                {
-                    item.EnLicencia = false;
-                    continue;
-                }
-                item.FechaLicenciaDesde = cli.FechaLicenciaDesde;
-                item.FechaLicenciaHasta = cli.FechaLicenciaHasta;
-                item.EnLicencia = EstaEnLicencia(cli, fecha.Date);
-            }
         }
 
         public async Task<(bool Ok, string Error)> SyncEstablecimientoEnRecorridos(int idEstablecimiento, int idUsuario)
@@ -1404,6 +1417,35 @@ namespace SistemaOroAmbiental.DAL.Repository
                 model.Id > 0 ? model.Id : null);
         }
 
+        /// <summary>
+        /// Si la posición destino ya está ocupada, corre +1 a ese cliente y a todos los de ahí para abajo.
+        /// </summary>
+        private async Task DesplazarPosicionesSiOcupada(ClientesRecorrido model, int? idExcluir)
+        {
+            if (model.Posicion <= 0 || model.IdCamion <= 0 || model.IdSemana <= 0 || model.IdDia <= 0)
+                return;
+
+            var query = _db.ClientesRecorridos
+                .Where(r => r.IdCamion == model.IdCamion
+                    && r.IdSemana == model.IdSemana
+                    && r.IdDia == model.IdDia
+                    && r.Posicion >= model.Posicion);
+
+            if (idExcluir is > 0)
+                query = query.Where(r => r.Id != idExcluir.Value);
+
+            var ocupada = await query.AnyAsync(r => r.Posicion == model.Posicion);
+            if (!ocupada)
+                return;
+
+            var aMover = await query
+                .OrderByDescending(r => r.Posicion)
+                .ToListAsync();
+
+            foreach (var row in aMover)
+                row.Posicion += 1;
+        }
+
         private async Task<int> ResolverPosicionRecorridoAsync(
             int idCamion,
             int idSemana,
@@ -1441,9 +1483,19 @@ namespace SistemaOroAmbiental.DAL.Repository
                 return;
 
             var productos = await _db.ClientesEstablecimientosProductos.AsNoTracking()
-                .Include(p => p.IdProductoNavigation)
-                .Include(p => p.IdListaPrecioNavigation)
                 .Where(p => idsEst.Contains(p.IdEstablecimiento))
+                .Select(p => new
+                {
+                    p.Id,
+                    p.IdEstablecimiento,
+                    p.IdProducto,
+                    Producto = p.IdProductoNavigation != null ? p.IdProductoNavigation.Nombre : null,
+                    Abreviatura = p.IdProductoNavigation != null ? p.IdProductoNavigation.Abreviatura : null,
+                    p.Cantidad,
+                    p.IdListaPrecio,
+                    ListaPrecio = p.IdListaPrecioNavigation != null ? p.IdListaPrecioNavigation.Nombre : null,
+                    p.PrecioVenta
+                })
                 .ToListAsync();
 
             var idsProducto = productos.Select(p => p.IdProducto).Distinct().ToList();
@@ -1455,8 +1507,8 @@ namespace SistemaOroAmbiental.DAL.Repository
             var byEst = productos
                 .GroupBy(p => p.IdEstablecimiento)
                 .ToDictionary(g => g.Key, g => g
-                    .OrderBy(x => x.IdProductoNavigation?.Nombre ?? "")
-                    .ThenBy(x => x.IdListaPrecioNavigation?.Nombre ?? "")
+                    .OrderBy(x => x.Producto ?? "")
+                    .ThenBy(x => x.ListaPrecio ?? "")
                     .ThenBy(x => x.Id)
                     .ToList());
 
@@ -1472,36 +1524,912 @@ namespace SistemaOroAmbiental.DAL.Repository
                 {
                     var precioEf = ResolverPrecioLista(p.IdProducto, idEf, precios, p.PrecioVenta);
                     var precioTr = ResolverPrecioLista(p.IdProducto, idTr, precios, p.PrecioVenta);
+                    var precioLista = ResolverPrecioLista(p.IdProducto, p.IdListaPrecio, precios, p.PrecioVenta);
                     return new HojaRutaParadaProductoDto
                     {
                         Id = p.Id,
                         IdProducto = p.IdProducto,
-                        Producto = p.IdProductoNavigation?.Nombre ?? $"Producto #{p.IdProducto}",
-                        Abreviatura = string.IsNullOrWhiteSpace(p.IdProductoNavigation?.Abreviatura)
+                        Producto = p.Producto ?? $"Producto #{p.IdProducto}",
+                        Abreviatura = string.IsNullOrWhiteSpace(p.Abreviatura)
                             ? null
-                            : p.IdProductoNavigation!.Abreviatura!.Trim(),
+                            : p.Abreviatura.Trim(),
                         Cantidad = p.Cantidad,
                         IdListaPrecio = p.IdListaPrecio,
-                        ListaPrecio = p.IdListaPrecioNavigation?.Nombre,
+                        ListaPrecio = p.ListaPrecio,
                         PrecioVenta = p.PrecioVenta,
                         PrecioEfectivo = precioEf,
-                        PrecioTransferencia = precioTr
+                        PrecioTransferencia = precioTr,
+                        PrecioLista = precioLista
                     };
                 }).ToList();
             }
         }
 
-        private static string ComponerDomicilio(string? calle, string? numero, string? pisoDepartamento, string? legacy)
+        public async Task<int> ObtenerSiguienteNumeroManifiesto(
+            int idCamion,
+            IReadOnlyList<(int IdSemana, int IdDia)> recorridos)
+        {
+            if (recorridos == null || recorridos.Count == 0)
+                return 1;
+
+            try
+            {
+                var semanas = recorridos.Select(r => r.IdSemana).Distinct().ToList();
+                var dias = recorridos.Select(r => r.IdDia).Distinct().ToList();
+                var pares = recorridos.ToHashSet();
+
+                var ultimos = await _db.RecorridosManifiestosContador.AsNoTracking()
+                    .Where(x => x.IdCamion == idCamion && semanas.Contains(x.IdSemana) && dias.Contains(x.IdDia))
+                    .Select(x => new { x.IdSemana, x.IdDia, x.UltimoNumero })
+                    .ToListAsync();
+
+                var max = ultimos
+                    .Where(x => pares.Contains((x.IdSemana, x.IdDia)))
+                    .Select(x => (int?)x.UltimoNumero)
+                    .DefaultIfEmpty()
+                    .Max();
+
+                return (max ?? 0) + 1;
+            }
+            catch (Exception ex) when (EsTablaManifiestoFaltante(ex))
+            {
+                return 1;
+            }
+        }
+
+        public async Task<(bool Ok, string Error)> RegistrarUltimoNumeroManifiesto(
+            int idCamion,
+            IReadOnlyList<(int IdSemana, int IdDia)> recorridos,
+            int ultimoNumero,
+            int idUsuario)
+        {
+            if (recorridos == null || recorridos.Count == 0)
+                return (false, "Recorrido inválido.");
+
+            try
+            {
+                foreach (var (idSemana, idDia) in recorridos.Distinct())
+                {
+                    var row = await _db.RecorridosManifiestosContador
+                        .FirstOrDefaultAsync(x =>
+                            x.IdCamion == idCamion &&
+                            x.IdSemana == idSemana &&
+                            x.IdDia == idDia);
+
+                    if (row == null)
+                    {
+                        _db.RecorridosManifiestosContador.Add(new RecorridosManifiestoContador
+                        {
+                            IdCamion = idCamion,
+                            IdSemana = idSemana,
+                            IdDia = idDia,
+                            UltimoNumero = ultimoNumero,
+                            IdUsuarioModifica = idUsuario > 0 ? idUsuario : null,
+                            FechaUsuarioModifica = DateTime.Now
+                        });
+                    }
+                    else
+                    {
+                        row.UltimoNumero = Math.Max(row.UltimoNumero, ultimoNumero);
+                        row.IdUsuarioModifica = idUsuario > 0 ? idUsuario : row.IdUsuarioModifica;
+                        row.FechaUsuarioModifica = DateTime.Now;
+                    }
+                }
+
+                await _db.SaveChangesAsync();
+                return (true, "");
+            }
+            catch (Exception ex) when (EsTablaManifiestoFaltante(ex))
+            {
+                return (false, "Falta la tabla RecorridosManifiestosContador. Ejecute el script 023 en la base de datos.");
+            }
+            catch (Exception ex)
+            {
+                return (false, "No se pudo guardar el número de manifiesto. " + (ex.InnerException?.Message ?? ex.Message));
+            }
+        }
+
+        public async Task<ManifiestosHojaDto?> ObtenerManifiestos(
+            int idCamion,
+            IReadOnlyList<(int IdSemana, int IdDia)> recorridos,
+            int numeroInicial,
+            IReadOnlyCollection<int>? idsRecorridoExcluir = null,
+            int? idRecorrido = null,
+            IReadOnlyCollection<int>? idsRecorridoIncluir = null)
+        {
+            if (recorridos == null || recorridos.Count == 0)
+                return null;
+
+            var camion = await _db.Camiones.AsNoTracking().FirstOrDefaultAsync(c => c.Id == idCamion);
+            if (camion == null)
+                return null;
+
+            var semanasOrden = await _db.Semanas.AsNoTracking().OrderBy(s => s.Id).Select(s => s.Id).ToListAsync();
+            var diasOrden = await ObtenerIdsDiasOrdenSemana();
+
+            var recorridosOrdenados = recorridos
+                .Distinct()
+                .OrderBy(r => semanasOrden.IndexOf(r.IdSemana))
+                .ThenBy(r => diasOrden.IndexOf(r.IdDia))
+                .ToList();
+
+            var excluir = idsRecorridoExcluir is { Count: > 0 }
+                ? new HashSet<int>(idsRecorridoExcluir)
+                : null;
+
+            var items = new List<ManifiestoItemDto>();
+
+            foreach (var (idSemana, idDia) in recorridosOrdenados)
+            {
+                var filas = await _db.ClientesRecorridos.AsNoTracking()
+                    .Include(r => r.IdClienteNavigation)
+                    .Include(r => r.IdEstablecimientoNavigation)
+                        .ThenInclude(e => e!.IdLocalidadNavigation)
+                    .Include(r => r.IdEstablecimientoNavigation)
+                        .ThenInclude(e => e!.ClientesEstablecimientosContactos)
+                    .Where(r =>
+                        r.IdCamion == idCamion &&
+                        r.IdSemana == idSemana &&
+                        r.IdDia == idDia)
+                    .OrderBy(r => r.Posicion)
+                    .ToListAsync();
+
+                if (excluir != null)
+                    filas = filas.Where(r => !excluir.Contains(r.Id)).ToList();
+
+                if (idsRecorridoIncluir is { Count: > 0 })
+                {
+                    var incluir = idsRecorridoIncluir as HashSet<int> ?? new HashSet<int>(idsRecorridoIncluir);
+                    filas = filas.Where(r => incluir.Contains(r.Id)).ToList();
+                }
+                else if (idRecorrido is > 0)
+                    filas = filas.Where(r => r.Id == idRecorrido.Value).ToList();
+
+                foreach (var r in filas)
+                    items.Add(MapearItemManifiesto(r));
+            }
+
+            if (items.Count == 0)
+                return null;
+
+            if (idsRecorridoIncluir is { Count: > 0 })
+            {
+                var orden = new Dictionary<int, int>();
+                var i = 0;
+                foreach (var id in idsRecorridoIncluir)
+                {
+                    if (id > 0 && !orden.ContainsKey(id))
+                        orden[id] = i++;
+                }
+                items = items
+                    .OrderBy(x => orden.TryGetValue(x.IdRecorrido, out var idx) ? idx : int.MaxValue)
+                    .ThenBy(x => x.Posicion)
+                    .ToList();
+            }
+
+            var numero = numeroInicial > 0 ? numeroInicial : 1;
+            foreach (var item in items)
+            {
+                item.Numero = numero;
+                numero++;
+            }
+
+            var unico = recorridosOrdenados.Count == 1 ? recorridosOrdenados[0] : (0, 0);
+
+            return new ManifiestosHojaDto
+            {
+                IdCamion = idCamion,
+                IdSemana = unico.Item1,
+                IdDia = unico.Item2,
+                RecorridosParam = string.Join(",", recorridosOrdenados.Select(r => $"{r.IdSemana}_{r.IdDia}")),
+                Titulo = camion.Nombre,
+                NumeroInicial = numeroInicial > 0 ? numeroInicial : 1,
+                Items = items
+            };
+        }
+
+        public async Task<ArchivoIntercambioDto?> ObtenerArchivoIntercambio(
+            int idCamion,
+            IReadOnlyList<(int IdSemana, int IdDia)> recorridos,
+            DateTime fecha,
+            int numeroInicial,
+            IReadOnlyCollection<int>? idsRecorridoExcluir = null,
+            int? idRecorrido = null,
+            string? nombre = null,
+            bool mesCompleto = false,
+            IReadOnlyCollection<int>? idsRecorridoIncluir = null)
+        {
+            var camion = await _db.Camiones.AsNoTracking().FirstOrDefaultAsync(c => c.Id == idCamion);
+            if (camion == null)
+                return null;
+
+            var semanasOrden = await _db.Semanas.AsNoTracking().OrderBy(s => s.Id).Select(s => s.Id).ToListAsync();
+            var diasOrden = await ObtenerIdsDiasOrdenSemana();
+
+            List<(int IdSemana, int IdDia)> recorridosOrdenados;
+            if (mesCompleto)
+            {
+                var pares = await _db.ClientesRecorridos.AsNoTracking()
+                    .Where(r => r.IdCamion == idCamion)
+                    .Select(r => new { r.IdSemana, r.IdDia })
+                    .Distinct()
+                    .ToListAsync();
+
+                recorridosOrdenados = pares
+                    .Select(p => (p.IdSemana, p.IdDia))
+                    .Distinct()
+                    .OrderBy(r => semanasOrden.IndexOf(r.IdSemana))
+                    .ThenBy(r => diasOrden.IndexOf(r.IdDia))
+                    .ToList();
+            }
+            else
+            {
+                if (recorridos == null || recorridos.Count == 0)
+                    return null;
+
+                recorridosOrdenados = recorridos
+                    .Distinct()
+                    .OrderBy(r => semanasOrden.IndexOf(r.IdSemana))
+                    .ThenBy(r => diasOrden.IndexOf(r.IdDia))
+                    .ToList();
+            }
+
+            if (recorridosOrdenados.Count == 0)
+                return null;
+
+            var incluir = idsRecorridoIncluir is { Count: > 0 }
+                ? new HashSet<int>(idsRecorridoIncluir)
+                : null;
+            var excluir = incluir == null && idsRecorridoExcluir is { Count: > 0 }
+                ? new HashSet<int>(idsRecorridoExcluir)
+                : null;
+
+            var items = new List<ArchivoIntercambioItemDto>();
+
+            foreach (var (idSemana, idDia) in recorridosOrdenados)
+            {
+                var filas = await _db.ClientesRecorridos.AsNoTracking()
+                    .Include(r => r.IdClienteNavigation)
+                        .ThenInclude(c => c!.IdTipoGeneradorNavigation)
+                    .Include(r => r.IdClienteNavigation)
+                        .ThenInclude(c => c!.IdCondicionIvaNavigation)
+                    .Include(r => r.IdClienteNavigation)
+                        .ThenInclude(c => c!.IdProvinciaNavigation)
+                    .Include(r => r.IdEstablecimientoNavigation)
+                        .ThenInclude(e => e!.IdLocalidadNavigation)
+                            .ThenInclude(l => l!.IdProvinciaNavigation)
+                    .Include(r => r.IdEstablecimientoNavigation)
+                        .ThenInclude(e => e!.IdLocalidadNavigation)
+                            .ThenInclude(l => l!.IdPartidoNavigation)
+                    .Include(r => r.IdEstablecimientoNavigation)
+                        .ThenInclude(e => e!.IdPartidoNavigation)
+                    .Include(r => r.IdEstablecimientoNavigation)
+                        .ThenInclude(e => e!.IdProvinciaNavigation)
+                    .Include(r => r.IdEstablecimientoNavigation)
+                        .ThenInclude(e => e!.IdTipoGeneradorNavigation)
+                    .Include(r => r.IdEstablecimientoNavigation)
+                        .ThenInclude(e => e!.IdCondicionIvaNavigation)
+                    .Where(r =>
+                        r.IdCamion == idCamion &&
+                        r.IdSemana == idSemana &&
+                        r.IdDia == idDia)
+                    .OrderBy(r => r.Posicion)
+                    .ToListAsync();
+
+                if (incluir != null)
+                    filas = filas.Where(r => incluir.Contains(r.Id)).ToList();
+                else
+                {
+                    if (excluir != null)
+                        filas = filas.Where(r => !excluir.Contains(r.Id)).ToList();
+
+                    if (idRecorrido is > 0)
+                        filas = filas.Where(r => r.Id == idRecorrido.Value).ToList();
+                }
+
+                foreach (var r in filas)
+                    items.Add(MapearItemIntercambio(r));
+            }
+
+            if (items.Count == 0)
+                return null;
+
+            var numero = numeroInicial > 0 ? numeroInicial : 1;
+            foreach (var item in items)
+            {
+                item.NumeroManifiesto = numero;
+                numero++;
+            }
+
+            var fechaTxt = fecha.Date == default ? DateTime.Today : fecha.Date;
+
+            var nombreArchivo = !string.IsNullOrWhiteSpace(nombre)
+                ? ArchivoIntercambioNombre(nombre, fechaTxt)
+                : mesCompleto
+                    ? ArchivoIntercambioNombre($"MES_{camion.Nombre}", fechaTxt)
+                    : items.Count == 1
+                        ? ArchivoIntercambioNombre(items[0].RazonSocial, fechaTxt)
+                        : ArchivoIntercambioNombre(camion.Nombre, fechaTxt);
+
+            return new ArchivoIntercambioDto
+            {
+                NombreArchivo = nombreArchivo,
+                Fecha = fechaTxt,
+                NumeroInicial = numeroInicial > 0 ? numeroInicial : 1,
+                RecorridosParam = string.Join(",", recorridosOrdenados.Select(r => $"{r.IdSemana}_{r.IdDia}")),
+                Items = items
+            };
+        }
+
+        public async Task<GuardarHistorialManifiestoResultDto> GuardarHistorialManifiestos(
+            int idCamion,
+            ManifiestosHojaDto model,
+            string nombre,
+            int idUsuario)
+        {
+            var result = new GuardarHistorialManifiestoResultDto();
+            if (idCamion <= 0 || model?.Items == null || model.Items.Count == 0)
+                return result;
+
+            try
+            {
+                var pares = model.Items
+                    .Select(x => (x.IdSemana, x.IdDia))
+                    .Where(x => x.IdSemana > 0 && x.IdDia > 0)
+                    .Distinct()
+                    .ToList();
+
+                var zonas = new Dictionary<(int, int), string>();
+                if (pares.Count > 0)
+                {
+                    var semanas = pares.Select(p => p.IdSemana).Distinct().ToList();
+                    var dias = pares.Select(p => p.IdDia).Distinct().ToList();
+                    var filasZona = await _db.RecorridosMatriz.AsNoTracking()
+                        .Where(z => z.IdCamion == idCamion && semanas.Contains(z.IdSemana) && dias.Contains(z.IdDia))
+                        .Select(z => new { z.IdSemana, z.IdDia, z.Zona })
+                        .ToListAsync();
+                    foreach (var z in filasZona)
+                        zonas[(z.IdSemana, z.IdDia)] = (z.Zona ?? "").Trim();
+                }
+
+                var loteNombre = (nombre ?? "").Trim();
+                var ahora = DateTime.Now;
+                var entidades = new List<RecorridoManifiesto>();
+
+                foreach (var item in model.Items
+                    .GroupBy(x => x.IdRecorrido > 0 ? x.IdRecorrido : x.Numero)
+                    .Select(g => g.First()))
+                {
+                    zonas.TryGetValue((item.IdSemana, item.IdDia), out var zona);
+                    var nombreItem = loteNombre;
+                    if (string.IsNullOrWhiteSpace(nombreItem))
+                        nombreItem = (item.RazonSocial ?? "").Trim();
+                    if (nombreItem.Length > 120)
+                        nombreItem = nombreItem[..120];
+
+                    var ent = new RecorridoManifiesto
+                    {
+                        IdCamion = idCamion,
+                        IdSemana = item.IdSemana > 0 ? item.IdSemana : null,
+                        IdDia = item.IdDia > 0 ? item.IdDia : null,
+                        IdClienteRecorrido = item.IdRecorrido > 0 ? item.IdRecorrido : null,
+                        IdCliente = item.IdCliente,
+                        IdEstablecimiento = item.IdEstablecimientoDb,
+                        Numero = item.Numero,
+                        Nombre = nombreItem,
+                        RazonSocial = Truncar(item.RazonSocial, 200),
+                        Cuit = Truncar(item.Cuit, 30),
+                        IdEstablecimientoCliente = Truncar(item.IdEstablecimiento, 40),
+                        Direccion = Truncar(item.Direccion, 250),
+                        Localidad = Truncar(item.Localidad, 120),
+                        Telefono = Truncar(item.Telefono, 40),
+                        Cantidad = Truncar(item.Cantidad, 40),
+                        Zona = Truncar(zona, 120),
+                        FechaGeneracion = ahora,
+                        IdUsuario = idUsuario > 0 ? idUsuario : null
+                    };
+                    entidades.Add(ent);
+                    _db.RecorridosManifiestos.Add(ent);
+                }
+
+                await _db.SaveChangesAsync();
+
+                result.Items = entidades.Select(e => new HistorialManifiestoGuardadoDto
+                {
+                    Id = e.Id,
+                    Numero = e.Numero,
+                    IdCliente = e.IdCliente,
+                    IdEstablecimientoDb = e.IdEstablecimiento
+                }).ToList();
+            }
+            catch (Exception ex) when (EsTablaManifiestoFaltante(ex))
+            {
+            }
+
+            return result;
+        }
+
+        public async Task<ManifiestosCamionDto> ListarManifiestosPorCamion(int idCamion)
+        {
+            var camion = await _db.Camiones.AsNoTracking().FirstOrDefaultAsync(c => c.Id == idCamion);
+            var dto = new ManifiestosCamionDto
+            {
+                IdCamion = idCamion,
+                Camion = camion?.Nombre ?? "",
+                SiguienteNumero = 1
+            };
+
+            if (idCamion <= 0)
+                return dto;
+
+            try
+            {
+                var filas = await _db.RecorridosManifiestos.AsNoTracking()
+                    .Include(x => x.IdSemanaNavigation)
+                    .Include(x => x.IdDiaNavigation)
+                    .Include(x => x.IdUsuarioNavigation)
+                    .Where(x => x.IdCamion == idCamion)
+                    .OrderByDescending(x => x.FechaGeneracion)
+                    .ThenByDescending(x => x.Numero)
+                    .ToListAsync();
+
+                dto.Items = filas.Select(x => new ManifiestoHistorialDto
+                {
+                    Id = x.Id,
+                    IdCamion = x.IdCamion,
+                    Numero = x.Numero,
+                    Nombre = x.Nombre ?? "",
+                    RazonSocial = x.RazonSocial ?? "",
+                    Zona = x.Zona ?? "",
+                    Localidad = x.Localidad ?? "",
+                    Recorrido = ArmarRecorridoLabel(x.IdSemanaNavigation?.Nombre, x.IdDiaNavigation?.Nombre, x.Zona),
+                    Cuit = x.Cuit ?? "",
+                    Cantidad = x.Cantidad ?? "",
+                    FechaGeneracion = x.FechaGeneracion,
+                    Usuario = x.IdUsuarioNavigation?.Usuario ?? ""
+                }).ToList();
+
+                dto.Total = dto.Items.Count;
+                dto.UltimaFecha = dto.Items.Count > 0 ? dto.Items[0].FechaGeneracion : null;
+                var maxHist = dto.Items.Count > 0 ? dto.Items.Max(x => x.Numero) : 0;
+                var maxContador = await _db.RecorridosManifiestosContador.AsNoTracking()
+                    .Where(x => x.IdCamion == idCamion)
+                    .Select(x => (int?)x.UltimoNumero)
+                    .MaxAsync() ?? 0;
+                dto.UltimoNumero = Math.Max(maxHist, maxContador);
+                dto.SiguienteNumero = dto.UltimoNumero + 1;
+            }
+            catch (Exception ex) when (EsTablaManifiestoFaltante(ex))
+            {
+                dto.SiguienteNumero = await ObtenerSiguienteNumeroManifiestoCamion(idCamion);
+            }
+
+            return dto;
+        }
+
+        public async Task<ManifiestosHojaDto?> ObtenerManifiestosHistorial(int idCamion, IReadOnlyList<int> ids)
+        {
+            if (idCamion <= 0 || ids == null || ids.Count == 0)
+                return null;
+
+            try
+            {
+                var idSet = ids.Where(x => x > 0).Distinct().ToList();
+                var filas = await _db.RecorridosManifiestos.AsNoTracking()
+                    .Where(x => x.IdCamion == idCamion && idSet.Contains(x.Id))
+                    .OrderBy(x => x.Numero)
+                    .ThenBy(x => x.Id)
+                    .ToListAsync();
+
+                if (filas.Count == 0)
+                    return null;
+
+                var idsClientes = filas.Where(x => x.IdCliente.HasValue).Select(x => x.IdCliente!.Value).Distinct().ToList();
+                var idsEst = filas.Where(x => x.IdEstablecimiento.HasValue).Select(x => x.IdEstablecimiento!.Value).Distinct().ToList();
+                var clientes = idsClientes.Count > 0
+                    ? await _db.Clientes.AsNoTracking().Where(c => idsClientes.Contains(c.Id)).ToDictionaryAsync(c => c.Id)
+                    : new Dictionary<int, Cliente>();
+                var ests = idsEst.Count > 0
+                    ? await _db.ClientesEstablecimientos.AsNoTracking()
+                        .Include(e => e.IdLocalidadNavigation)
+                        .Where(e => idsEst.Contains(e.Id))
+                        .ToDictionaryAsync(e => e.Id)
+                    : new Dictionary<int, ClientesEstablecimiento>();
+
+                var camion = await _db.Camiones.AsNoTracking().FirstOrDefaultAsync(c => c.Id == idCamion);
+                var items = filas.Select(x =>
+                {
+                    clientes.TryGetValue(x.IdCliente ?? 0, out var cli);
+                    ClientesEstablecimiento? est = null;
+                    if (x.IdEstablecimiento.HasValue)
+                        ests.TryGetValue(x.IdEstablecimiento.Value, out est);
+
+                    var localidad = (x.Localidad ?? "").Trim();
+                    if (string.IsNullOrWhiteSpace(localidad))
+                        localidad = (est?.Localidad ?? est?.IdLocalidadNavigation?.Nombre ?? "").Trim();
+
+                    return new ManifiestoItemDto
+                    {
+                        IdRecorrido = x.IdClienteRecorrido ?? 0,
+                        IdCliente = x.IdCliente,
+                        IdEstablecimientoDb = x.IdEstablecimiento,
+                        IdSemana = x.IdSemana ?? 0,
+                        IdDia = x.IdDia ?? 0,
+                        Numero = x.Numero,
+                        IdEstablecimiento = x.IdEstablecimientoCliente ?? "",
+                        RazonSocial = x.RazonSocial ?? "",
+                        Cuit = x.Cuit ?? "",
+                        Direccion = x.Direccion ?? "",
+                        Localidad = localidad.ToUpperInvariant(),
+                        Telefono = x.Telefono ?? "",
+                        Domicilio = x.Direccion ?? "",
+                        Cantidad = x.Cantidad ?? "",
+                        Calle = (est?.Calle ?? cli?.Calle ?? "").Trim(),
+                        NumeroCalle = (est?.Numero ?? cli?.Numero ?? "").Trim(),
+                        Piso = (est?.PisoDepartamento ?? cli?.PisoDepartamento ?? "").Trim()
+                    };
+                }).ToList();
+
+                var nombre = filas.Count == 1
+                    ? (filas[0].RazonSocial ?? filas[0].Nombre)
+                    : (filas[0].Nombre ?? camion?.Nombre ?? "Manifiestos");
+
+                return new ManifiestosHojaDto
+                {
+                    IdCamion = idCamion,
+                    IdSemana = filas[0].IdSemana ?? 0,
+                    IdDia = filas[0].IdDia ?? 0,
+                    Titulo = nombre ?? "",
+                    Nombre = nombre ?? "",
+                    FechaProgramacion = filas[0].FechaGeneracion == default
+                        ? DateTime.Today
+                        : filas[0].FechaGeneracion.Date,
+                    NumeroInicial = items[0].Numero,
+                    Items = items
+                };
+            }
+            catch (Exception ex) when (EsTablaManifiestoFaltante(ex))
+            {
+                return null;
+            }
+        }
+
+        public async Task<List<RecorridoOpcionManifiestoDto>> ListarRutasManifiestoCamion(int idCamion)
+        {
+            if (idCamion <= 0)
+                return new List<RecorridoOpcionManifiestoDto>();
+
+            var semanas = await _db.Semanas.AsNoTracking().OrderBy(s => s.Id).ToListAsync();
+            var dias = await ObtenerDiasOrdenSemana();
+            var semanaNom = semanas.ToDictionary(s => s.Id, s => s.Nombre ?? "");
+            var diaNom = dias.ToDictionary(d => d.Id, d => d.Nombre ?? "");
+
+            var conteos = await _db.ClientesRecorridos.AsNoTracking()
+                .Where(r => r.IdCamion == idCamion)
+                .GroupBy(r => new { r.IdSemana, r.IdDia })
+                .Select(g => new { g.Key.IdSemana, g.Key.IdDia, Cantidad = g.Count() })
+                .ToListAsync();
+
+            if (conteos.Count == 0)
+                return new List<RecorridoOpcionManifiestoDto>();
+
+            var semanasIds = conteos.Select(c => c.IdSemana).Distinct().ToList();
+            var diasIds = conteos.Select(c => c.IdDia).Distinct().ToList();
+            var zonas = await _db.RecorridosMatriz.AsNoTracking()
+                .Where(z => z.IdCamion == idCamion && semanasIds.Contains(z.IdSemana) && diasIds.Contains(z.IdDia))
+                .Select(z => new { z.IdSemana, z.IdDia, z.Zona })
+                .ToListAsync();
+            var zonaMap = zonas.ToDictionary(z => (z.IdSemana, z.IdDia), z => (z.Zona ?? "").Trim());
+
+            return conteos
+                .OrderBy(c => semanas.FindIndex(s => s.Id == c.IdSemana))
+                .ThenBy(c => dias.FindIndex(d => d.Id == c.IdDia))
+                .Select(c =>
+                {
+                    zonaMap.TryGetValue((c.IdSemana, c.IdDia), out var zona);
+                    var semana = semanaNom.GetValueOrDefault(c.IdSemana, "");
+                    var dia = diaNom.GetValueOrDefault(c.IdDia, "");
+                    var label = string.IsNullOrWhiteSpace(zona)
+                        ? $"{semana} · {dia}".Trim(' ', '·')
+                        : $"{zona} · {semana} {dia}".Trim();
+                    return new RecorridoOpcionManifiestoDto
+                    {
+                        IdSemana = c.IdSemana,
+                        IdDia = c.IdDia,
+                        Semana = semana,
+                        Dia = dia,
+                        Zona = zona ?? "",
+                        Label = $"{label} ({c.Cantidad})",
+                        CantidadClientes = c.Cantidad
+                    };
+                })
+                .ToList();
+        }
+
+        public async Task<int> ObtenerSiguienteNumeroManifiestoCamion(int idCamion)
+        {
+            if (idCamion <= 0)
+                return 1;
+
+            try
+            {
+                var maxContador = await _db.RecorridosManifiestosContador.AsNoTracking()
+                    .Where(x => x.IdCamion == idCamion)
+                    .Select(x => (int?)x.UltimoNumero)
+                    .MaxAsync() ?? 0;
+                var maxHist = 0;
+                try
+                {
+                    maxHist = await _db.RecorridosManifiestos.AsNoTracking()
+                        .Where(x => x.IdCamion == idCamion)
+                        .Select(x => (int?)x.Numero)
+                        .MaxAsync() ?? 0;
+                }
+                catch (Exception ex) when (EsTablaManifiestoFaltante(ex))
+                {
+                }
+
+                return Math.Max(maxContador, maxHist) + 1;
+            }
+            catch (Exception ex) when (EsTablaManifiestoFaltante(ex))
+            {
+                return 1;
+            }
+        }
+
+        public async Task<(bool Ok, string Error)> EliminarManifiestoHistorial(int idCamion, int id)
+        {
+            if (idCamion <= 0 || id <= 0)
+                return (false, "Manifiesto inválido.");
+
+            try
+            {
+                var row = await _db.RecorridosManifiestos
+                    .FirstOrDefaultAsync(x => x.Id == id && x.IdCamion == idCamion);
+
+                if (row == null)
+                    return (false, "No se encontró el manifiesto.");
+
+                _db.RecorridosManifiestos.Remove(row);
+                await _db.SaveChangesAsync();
+                return (true, "");
+            }
+            catch (Exception ex) when (EsTablaManifiestoFaltante(ex))
+            {
+                return (false, "Falta la tabla RecorridosManifiestos. Ejecute el script 025 en la base de datos.");
+            }
+            catch (Exception ex)
+            {
+                return (false, "No se pudo eliminar el manifiesto. " + (ex.InnerException?.Message ?? ex.Message));
+            }
+        }
+
+        private static string ArmarRecorridoLabel(string? semana, string? dia, string? zona)
+        {
+            var z = (zona ?? "").Trim();
+            var s = (semana ?? "").Trim();
+            var d = (dia ?? "").Trim();
+            if (!string.IsNullOrWhiteSpace(z))
+                return string.IsNullOrWhiteSpace($"{s} {d}".Trim()) ? z : $"{z} · {s} {d}".Trim();
+            return $"{s} {d}".Trim();
+        }
+
+        private static string? Truncar(string? valor, int max)
+        {
+            var txt = (valor ?? "").Trim();
+            if (txt.Length == 0) return null;
+            return txt.Length > max ? txt[..max] : txt;
+        }
+
+        private static string ArchivoIntercambioNombre(string? camion, DateTime fecha)
+        {
+            var unidad = (camion ?? "").Trim();
+            foreach (var c in Path.GetInvalidFileNameChars())
+                unidad = unidad.Replace(c, '_');
+            unidad = unidad.Replace(' ', '_');
+            if (unidad.Length == 0)
+                unidad = "UNIDAD";
+            if (unidad.Length > 40)
+                unidad = unidad[..40];
+            return $"INTERCAMBIO_{unidad}_{fecha:yyyyMMdd}.txt";
+        }
+
+        private static ArchivoIntercambioItemDto MapearItemIntercambio(ClientesRecorrido recorrido)
+        {
+            var cliente = recorrido.IdClienteNavigation;
+            var est = recorrido.IdEstablecimientoNavigation;
+            var cuit = PrimerValor(est?.Cuit, cliente?.Cuit);
+            var calle = PrimerValor(est?.Calle, cliente?.Calle, est?.Domicilio, cliente?.Domicilio);
+            var numero = PrimerValor(est?.Numero, cliente?.Numero);
+            var localidad = est?.IdLocalidadNavigation;
+            var partido = est?.IdPartidoNavigation ?? localidad?.IdPartidoNavigation;
+            var provincia = est?.IdProvinciaNavigation
+                ?? localidad?.IdProvinciaNavigation
+                ?? cliente?.IdProvinciaNavigation;
+            var tipoGen = est?.IdTipoGeneradorNavigation ?? cliente?.IdTipoGeneradorNavigation;
+            var iva = est?.IdCondicionIvaNavigation ?? cliente?.IdCondicionIvaNavigation;
+
+            return new ArchivoIntercambioItemDto
+            {
+                NumeroCliente = cliente?.NumeroCliente ?? 0,
+                CodigoOpds = (est?.IdEstablecimientoCliente ?? "").Trim(),
+                RazonSocial = (cliente?.Nombre ?? "").Trim(),
+                Calle = calle,
+                NumeroCalle = numero,
+                CodigoPostal = PrimerValor(est?.CodPostal, cliente?.CodPostal),
+                CodigoLocalidad = (localidad?.Codigo ?? "").Trim(),
+                CodigoPartido = (partido?.Codigo ?? "").Trim(),
+                NombreProvincia = (provincia?.Nombre ?? "").Trim(),
+                Cuit = cuit,
+                NombreIva = (iva?.Nombre ?? "").Trim(),
+                CodigoTipoGenerador = (tipoGen?.Codigo ?? "").Trim(),
+                Kilos = est?.Kilos ?? 0
+            };
+        }
+
+        private static string PrimerValor(params string?[] valores)
+        {
+            foreach (var v in valores)
+            {
+                if (!string.IsNullOrWhiteSpace(v))
+                    return v.Trim();
+            }
+            return "";
+        }
+
+        private static ManifiestoItemDto MapearItemManifiesto(ClientesRecorrido recorrido)
+        {
+            var cliente = recorrido.IdClienteNavigation;
+            var est = recorrido.IdEstablecimientoNavigation;
+            var cuit = !string.IsNullOrWhiteSpace(est?.Cuit) ? est!.Cuit : cliente?.Cuit;
+            var localidad = (est?.Localidad ?? "").Trim();
+            if (string.IsNullOrWhiteSpace(localidad))
+                localidad = (est?.IdLocalidadNavigation?.Nombre ?? "").Trim();
+
+            return new ManifiestoItemDto
+            {
+                IdRecorrido = recorrido.Id,
+                IdCliente = recorrido.IdCliente,
+                IdEstablecimientoDb = recorrido.IdEstablecimiento,
+                IdSemana = recorrido.IdSemana,
+                IdDia = recorrido.IdDia,
+                Posicion = recorrido.Posicion,
+                RazonSocial = (cliente?.Nombre ?? "").Trim(),
+                Cuit = FormatearCuitManifiesto(cuit),
+                IdEstablecimiento = (est?.IdEstablecimientoCliente ?? "").Trim(),
+                Direccion = FormatearDireccionManifiesto(
+                    est?.Calle ?? cliente?.Calle,
+                    est?.Numero ?? cliente?.Numero,
+                    est?.PisoDepartamento ?? cliente?.PisoDepartamento,
+                    est?.Domicilio ?? cliente?.Domicilio),
+                Localidad = localidad.ToUpperInvariant(),
+                Telefono = cliente == null ? "" : ObtenerTelefonoParada(cliente, est),
+                Domicilio = FormatearDomicilioManifiesto(
+                    est?.Calle ?? cliente?.Calle,
+                    est?.Numero ?? cliente?.Numero,
+                    est?.PisoDepartamento ?? cliente?.PisoDepartamento,
+                    localidad,
+                    est?.Domicilio ?? cliente?.Domicilio),
+                Cantidad = FormatearKilosManifiesto(est?.Kilos),
+                Calle = (est?.Calle ?? cliente?.Calle ?? "").Trim(),
+                NumeroCalle = (est?.Numero ?? cliente?.Numero ?? "").Trim(),
+                Piso = (est?.PisoDepartamento ?? cliente?.PisoDepartamento ?? "").Trim()
+            };
+        }
+
+        private static string FormatearDireccionManifiesto(
+            string? calle,
+            string? numero,
+            string? piso,
+            string? legacy)
+        {
+            var calleTxt = (calle ?? "").Trim();
+            var numeroTxt = (numero ?? "").Trim();
+            var pisoTxt = (piso ?? "").Trim();
+
+            if (!string.IsNullOrWhiteSpace(calleTxt) && !string.IsNullOrWhiteSpace(numeroTxt))
+            {
+                var dir = $"{calleTxt.ToUpperInvariant()} Nº : {numeroTxt}";
+                if (!string.IsNullOrWhiteSpace(pisoTxt))
+                    dir += $" Piso: {pisoTxt}";
+                return dir;
+            }
+
+            return ComponerDomicilio(calle, numero, piso, legacy).ToUpperInvariant();
+        }
+
+        private static string FormatearCuitManifiesto(string? cuit)
+        {
+            var raw = (cuit ?? "").Trim();
+            var digits = new string(raw.Where(char.IsDigit).ToArray());
+            if (digits.Length == 11)
+                return $"{digits[..2]}-{digits[2..10]}/{digits[10]}";
+            return raw;
+        }
+
+        private static string FormatearDomicilioManifiesto(
+            string? calle,
+            string? numero,
+            string? piso,
+            string? localidad,
+            string? legacy)
+        {
+            var loc = (localidad ?? "").Trim().ToUpperInvariant();
+            var calleTxt = (calle ?? "").Trim();
+            var numeroTxt = (numero ?? "").Trim();
+            var pisoTxt = (piso ?? "").Trim();
+
+            if (!string.IsNullOrWhiteSpace(calleTxt) && !string.IsNullOrWhiteSpace(numeroTxt))
+            {
+                var pisoPart = string.IsNullOrWhiteSpace(pisoTxt) ? "" : $" Piso: {pisoTxt}";
+                var dir = $"{calleTxt.ToUpperInvariant()} Nº: {numeroTxt}{pisoPart}";
+                return string.IsNullOrWhiteSpace(loc) ? dir + "." : $"{dir}, {loc}.";
+            }
+
+            var compuesto = ComponerDomicilio(calle, numero, piso, legacy);
+            if (string.IsNullOrWhiteSpace(compuesto))
+                return string.IsNullOrWhiteSpace(loc) ? "" : loc + ".";
+
+            var texto = compuesto.ToUpperInvariant();
+            return string.IsNullOrWhiteSpace(loc) ? texto + "." : $"{texto}, {loc}.";
+        }
+
+        private static string FormatearKilosManifiesto(decimal? kilos)
+        {
+            if (!kilos.HasValue || kilos.Value <= 0)
+                return "";
+
+            var valor = kilos.Value;
+            var numero = valor % 1 == 0
+                ? ((int)valor).ToString()
+                : valor.ToString("0.##");
+            return numero;
+        }
+
+        private static bool EsTablaManifiestoFaltante(Exception ex)
+        {
+            var msg = (ex.InnerException?.Message ?? ex.Message) ?? "";
+            if (!msg.Contains("Invalid object name", StringComparison.OrdinalIgnoreCase))
+                return false;
+            return msg.Contains("RecorridosManifiestosContador", StringComparison.OrdinalIgnoreCase)
+                || msg.Contains("RecorridosManifiestos", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private async Task<List<int>> ObtenerIdsDiasOrdenSemana()
+        {
+            var dias = await _db.Dias.AsNoTracking()
+                .Select(d => new { d.Id, d.Nombre })
+                .ToListAsync();
+            return OrdenDiasSemana.Ordenar(dias, d => d.Nombre).Select(d => d.Id).ToList();
+        }
+
+        private async Task<List<Dia>> ObtenerDiasOrdenSemana()
+        {
+            var dias = await _db.Dias.AsNoTracking().ToListAsync();
+            return OrdenDiasSemana.Ordenar(dias, d => d.Nombre);
+        }
+
+        private static string ComponerDomicilio(
+            string? calle,
+            string? numero,
+            string? pisoDepartamento,
+            string? legacy,
+            string? descripcion = null)
         {
             var partes = new List<string>();
             if (!string.IsNullOrWhiteSpace(calle)) partes.Add(calle.Trim());
             if (!string.IsNullOrWhiteSpace(numero)) partes.Add(numero.Trim());
             if (!string.IsNullOrWhiteSpace(pisoDepartamento)) partes.Add(pisoDepartamento.Trim());
 
-            if (partes.Count > 0)
-                return string.Join(" ", partes);
+            var domicilio = partes.Count > 0
+                ? string.Join(" ", partes)
+                : (string.IsNullOrWhiteSpace(legacy) ? "" : legacy.Trim());
 
-            return string.IsNullOrWhiteSpace(legacy) ? "" : legacy.Trim();
+            if (string.IsNullOrWhiteSpace(descripcion))
+                return domicilio;
+
+            var desc = descripcion.Trim();
+            return string.IsNullOrWhiteSpace(domicilio) ? desc : $"{domicilio} ({desc})";
         }
     }
 }

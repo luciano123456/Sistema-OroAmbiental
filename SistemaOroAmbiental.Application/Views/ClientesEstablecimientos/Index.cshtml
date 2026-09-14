@@ -11,7 +11,7 @@
     <link href="~/css/Productora.css?v=5.2" rel="stylesheet" />
     <link href="~/css/disenopantallas.css?v=8.1" rel="stylesheet" />
     <link href="~/css/M_Generico.css?v=5.2" rel="stylesheet" />
-    <link href="~/css/ClientesEstablecimientos.css?v=5.4" rel="stylesheet" />
+    <link href="~/css/ClientesEstablecimientos.css?v=6.7" rel="stylesheet" />
 }
 
 <div class="container-fluid mt-5">
@@ -73,10 +73,12 @@
 
 @await Html.PartialAsync("~/Views/Entities/M_Clientes.cshtml")
 @await Html.PartialAsync("~/Views/Entities/M_ClientesEstablecimientos.cshtml")
+<partial name="~/Views/ClientesEstablecimientos/_ModalReclamoDeuda.cshtml" />
 
 @section Scripts {
     <script src="~/js/Entities/M_Clientes.js?v=5.5"></script>
-    <script src="~/js/Entities/M_ClientesEstablecimientos.js?v=7.3"></script>
+    <script src="~/js/Entities/M_ClientesEstablecimientos.js?v=7.5"></script>
+    <script src="~/js/ClientesEstablecimientosReclamo.js?v=1.9" asp-append-version="true"></script>
     <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
@@ -86,5 +88,5 @@
     <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
     <script src="https://cdn.datatables.net/fixedheader/3.2.2/js/dataTables.fixedHeader.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-    <script src="~/js/ClientesEstablecimientos.js?v=5.5"></script>
+    <script src="~/js/ClientesEstablecimientos.js?v=5.7"></script>
 }

@@ -10,10 +10,13 @@ namespace SistemaOroAmbiental.Application.Models.ViewModels
         public int? IdCondicionIva { get; set; }
         public string? Domicilio { get; set; }
         public string? Calle { get; set; }
+        public string? Descripcion { get; set; }
         public string? Numero { get; set; }
         public string? PisoDepartamento { get; set; }
         public int? IdTipoGenerador { get; set; }
         public string? TipoGenerador { get; set; }
+        public int? IdActividad { get; set; }
+        public string? Actividad { get; set; }
         public int? IdProvincia { get; set; }
         public int? IdPartido { get; set; }
         public int? IdLocalidad { get; set; }
@@ -25,6 +28,7 @@ namespace SistemaOroAmbiental.Application.Models.ViewModels
         public int? IdListaPrecio { get; set; }
         public int? IdCamion { get; set; }
         public int? OrdenRecorrido { get; set; }
+        public bool DesplazarOrdenRecorrido { get; set; }
         public decimal? Kilos { get; set; }
         public string HorarioRecoleccionDesde { get; set; } = "";
         public string HorarioRecoleccionHasta { get; set; } = "";

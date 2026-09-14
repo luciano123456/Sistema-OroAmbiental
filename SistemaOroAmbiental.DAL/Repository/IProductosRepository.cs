@@ -20,6 +20,8 @@ namespace SistemaOroAmbiental.DAL.Repository
 
         Task<Producto?> BuscarDuplicado(int? idExcluir, string? nombre);
 
+        Task<Producto?> BuscarDescartadorHojaRuta(bool chico, bool grande, int? idExcluir);
+
         Task<List<ProductoHistorialCostoFila>> ObtenerHistorialCosto(int idProducto);
     }
 }

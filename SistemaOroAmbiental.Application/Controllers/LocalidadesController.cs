@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.ResponseCaching;
 using SistemaOroAmbiental.Application.Models.ViewModels;
 using SistemaOroAmbiental.BLL.Service;
 using SistemaOroAmbiental.Models;
@@ -18,6 +19,7 @@ namespace SistemaOroAmbiental.Application.Controllers
 
         [AllowAnonymous]
         [HttpGet]
+        [ResponseCache(Duration = 600, Location = ResponseCacheLocation.Any)]
         public async Task<IActionResult> Lista()
         {
             var items = (await _service.ObtenerTodos())
@@ -29,6 +31,7 @@ namespace SistemaOroAmbiental.Application.Controllers
 
         [AllowAnonymous]
         [HttpGet]
+        [ResponseCache(Duration = 600, Location = ResponseCacheLocation.Any, VaryByQueryKeys = new[] { "idProvincia" })]
         public async Task<IActionResult> ListaPorProvincia(int idProvincia)
         {
             var items = (await _service.ObtenerPorProvincia(idProvincia))
@@ -82,10 +85,17 @@ namespace SistemaOroAmbiental.Application.Controllers
             return Ok(new { valor = respuesta });
         }
 
-        [HttpDelete]
-        public async Task<IActionResult> Eliminar(int id)
+        [HttpGet]
+        public async Task<IActionResult> DependenciasEliminar(int id)
         {
-            var result = await _service.Eliminar(id);
+            var info = await _service.ObtenerDependenciasEliminar(id);
+            return Ok(info);
+        }
+
+        [HttpDelete]
+        public async Task<IActionResult> Eliminar(int id, bool cascada = false)
+        {
+            var result = await _service.Eliminar(id, cascada);
 
             return Ok(new
             {

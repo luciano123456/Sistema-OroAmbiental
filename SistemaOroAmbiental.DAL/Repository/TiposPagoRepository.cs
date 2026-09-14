@@ -41,5 +41,20 @@ namespace SistemaOroAmbiental.DAL.Repository
 
         public async Task<IQueryable<TiposPago>> ObtenerTodos()
             => await Task.FromResult(_db.TiposPagos.AsNoTracking().AsQueryable());
+
+        public async Task<bool> ExisteCodigo(string codigo, int? idExcluir = null)
+        {
+            var cod = (codigo ?? "").Trim();
+            if (string.IsNullOrEmpty(cod))
+                return false;
+
+            var query = _db.TiposPagos.AsNoTracking()
+                .Where(x => x.Codigo.ToLower() == cod.ToLower());
+
+            if (idExcluir.HasValue)
+                query = query.Where(x => x.Id != idExcluir.Value);
+
+            return await query.AnyAsync();
+        }
     }
 }

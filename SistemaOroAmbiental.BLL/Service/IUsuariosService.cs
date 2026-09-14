@@ -13,6 +13,10 @@ namespace SistemaOroAmbiental.BLL.Service
 
         Task<IQueryable<User>> ObtenerTodos(bool soloActivos = false);
 
+        Task<GrillaPaginadaResult<User>> ListarPaginado(GrillaPaginadaConsulta consulta);
+
+        Task<int> ObtenerIndiceEnLista(int id, GrillaPaginadaConsulta consulta);
+
         Task<bool> CambiarActivo(int id, bool activo);
     }
 

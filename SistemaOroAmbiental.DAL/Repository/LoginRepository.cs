@@ -1,12 +1,6 @@
-﻿using SistemaOroAmbiental.Models;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics.Contracts;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
+﻿using Microsoft.EntityFrameworkCore;
 using SistemaOroAmbiental.DAL.DataContext;
+using SistemaOroAmbiental.Models;
 
 namespace SistemaOroAmbiental.DAL.Repository
 {
@@ -21,16 +15,10 @@ namespace SistemaOroAmbiental.DAL.Repository
         }
 
         public async Task<User> Login(string username, string password)
-        { 
-            User user = _dbcontext.Usuarios.Where(x => x.Usuario == username).FirstOrDefault();
-
-            if (user != null)
-            {
-                return user;
-            } else
-            {
-                return null;
-            }
+        {
+            return await _dbcontext.Usuarios
+                .AsNoTracking()
+                .FirstOrDefaultAsync(x => x.Usuario == username);
         }
 
         public async Task<bool> Logout()

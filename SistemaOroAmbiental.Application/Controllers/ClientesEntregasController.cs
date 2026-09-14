@@ -49,10 +49,12 @@ namespace SistemaOroAmbiental.Application.Controllers
 
             var ids = lista.Select(x => x.Id).ToList();
             var cobrosPorEntrega = await _service.SumarCobrosPorEntregas(ids);
+            var productosPorEntrega = await _service.ContarProductosPorEntregas(ids);
 
             var vm = lista.Select(e =>
             {
                 cobrosPorEntrega.TryGetValue(e.Id, out var totalCobrado);
+                productosPorEntrega.TryGetValue(e.Id, out var cantidadProductos);
                 return new VMClienteEntregaLista
                 {
                     Id = e.Id,
@@ -74,8 +76,7 @@ namespace SistemaOroAmbiental.Application.Controllers
                     ImporteTotal = e.ImporteTotal,
                     ImporteAbonado = totalCobrado > 0 ? totalCobrado : e.ImporteAbonado,
                     Saldo = e.ImporteTotal - (totalCobrado > 0 ? totalCobrado : e.ImporteAbonado),
-                    CantidadProductos = (e.ClientesEntregasProductos?.Count ?? 0)
-                        + (e.ClientesEntregasProductosRecuperados?.Count ?? 0),
+                    CantidadProductos = cantidadProductos,
                     NotaInterna = e.NotaInterna,
                     TieneCobros = totalCobrado > 0
                 };
@@ -250,7 +251,7 @@ namespace SistemaOroAmbiental.Application.Controllers
 
             foreach (var x in model.Lineas ?? new List<VMClienteEntregaLineaGuardar>())
             {
-                if (x.IdProducto <= 0 || x.Cantidad <= 0)
+                if (x.IdProducto <= 0 || x.Cantidad == 0)
                     continue;
 
                 if (x.TipoMovimiento == ClientesEntregasRepository.TIPO_LINEA_RECUPERADO)

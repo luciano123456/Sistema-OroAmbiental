@@ -12,12 +12,12 @@ namespace SistemaOroAmbiental.Application.Controllers
     public class CuentasController : Controller
     {
         private readonly SistemaOroAmbientalContext _db;
-        private readonly IDeleteConflictChecker _deleteChecker;
+        private readonly ICatalogoCascadeRepository _cascade;
 
-        public CuentasController(SistemaOroAmbientalContext db, IDeleteConflictChecker deleteChecker)
+        public CuentasController(SistemaOroAmbientalContext db, ICatalogoCascadeRepository cascade)
         {
             _db = db;
-            _deleteChecker = deleteChecker;
+            _cascade = cascade;
         }
 
         [AllowAnonymous]
@@ -71,28 +71,56 @@ namespace SistemaOroAmbiental.Application.Controllers
             return Ok(new { valor = true });
         }
 
-        [HttpDelete]
-        public async Task<IActionResult> Eliminar(int id)
+        [HttpGet]
+        public async Task<IActionResult> DependenciasEliminar(int id)
         {
-            var bloqueo = await _deleteChecker.CuentaAsync(id);
-            if (!string.IsNullOrWhiteSpace(bloqueo))
-                return Ok(new { valor = false, mensaje = bloqueo, tipo = "relacion" });
+            var info = await _cascade.ObtenerDependenciasAsync<Cuenta>(id);
+            return Ok(info);
+        }
 
-            var entity = await _db.Cuentas.FirstOrDefaultAsync(x => x.Id == id);
-            if (entity == null)
-                return Ok(new { valor = false, mensaje = "No se encontró la cuenta.", tipo = "validacion" });
-
+        [HttpDelete]
+        public async Task<IActionResult> Eliminar(int id, bool cascada = false)
+        {
             try
             {
+                var deps = await _cascade.ObtenerDependenciasAsync<Cuenta>(id);
+                if (deps.TieneDependencias && !cascada)
+                    return Ok(new { valor = false, mensaje = deps.MensajeResumen, tipo = "dependencias" });
+
+                if (deps.TieneDependencias && cascada)
+                {
+                    if (!deps.PermiteCascada)
+                        return Ok(new { valor = false, mensaje = deps.MensajeResumen, tipo = "relacion" });
+
+                    await _cascade.EliminarEnCascadaAsync<Cuenta>(id);
+                    return Ok(new
+                    {
+                        valor = true,
+                        mensaje = "Cuenta eliminada. Los registros asociados se reasignaron.",
+                        tipo = "success"
+                    });
+                }
+
+                var entity = await _db.Cuentas.FirstOrDefaultAsync(x => x.Id == id);
+                if (entity == null)
+                    return Ok(new { valor = false, mensaje = "No se encontró la cuenta.", tipo = "validacion" });
+
                 _db.Cuentas.Remove(entity);
                 await _db.SaveChangesAsync();
                 return Ok(new { valor = true, mensaje = "Cuenta eliminada correctamente.", tipo = "success" });
             }
+            catch (InvalidOperationException ex)
+            {
+                return Ok(new { valor = false, mensaje = ex.Message, tipo = "relacion" });
+            }
             catch (DbUpdateException)
             {
-                var msg = await _deleteChecker.CuentaAsync(id)
-                    ?? "No se pudo eliminar la cuenta porque tiene registros relacionados.";
-                return Ok(new { valor = false, mensaje = msg, tipo = "relacion" });
+                return Ok(new
+                {
+                    valor = false,
+                    mensaje = "No se pudo eliminar la cuenta porque tiene registros relacionados.",
+                    tipo = "relacion"
+                });
             }
         }
 

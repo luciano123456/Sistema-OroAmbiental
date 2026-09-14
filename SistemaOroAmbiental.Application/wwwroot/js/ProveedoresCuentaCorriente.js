@@ -112,9 +112,9 @@ function wireEventos() {
         renderProveedores();
     });
 
-    $("#txtBuscarProveedor").on("input", function () {
-        renderProveedores();
-    });
+    $("#txtBuscarProveedor").on("input", typeof rpDebounce === "function"
+        ? rpDebounce(renderProveedores, 300)
+        : renderProveedores);
 
     $("#fProveedorSaldoActivo").on("change", function () {
         renderProveedores();

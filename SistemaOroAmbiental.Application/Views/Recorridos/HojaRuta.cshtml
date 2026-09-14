@@ -1,4 +1,4 @@
-@model SistemaOroAmbiental.Models.HojaRutaDto
+﻿@model SistemaOroAmbiental.Models.HojaRutaDto
 @{
     Layout = null;
 
@@ -40,10 +40,11 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Hoja de ruta - @Model.Titulo</title>
-    <link href="~/css/HojaRuta.css?v=4.0" rel="stylesheet" asp-append-version="true" />
+    <link href="~/css/HojaRuta.css?v=5.1" rel="stylesheet" asp-append-version="true" />
 </head>
 <body class="hr-page@(multiplesHojas ? " hr-page--multi" : "")">
     <div class="hr-toolbar no-print">
@@ -57,8 +58,6 @@
         var esUltima = i == secciones.Count - 1;
         var tituloHoja = multiplesHojas ? seccion.Titulo : Model.Titulo;
         var salidaHoja = seccion.Salida ?? Model.Salida ?? "";
-        var totalEfSeccion = seccion.Paradas?.Sum(p => p.AbonoEfectivo) ?? 0m;
-        var totalTrSeccion = seccion.Paradas?.Sum(p => p.AbonoTransferencia) ?? 0m;
 
         <div class="hr-sheet@(multiplesHojas ? " hr-sheet--dia" : "")@(!esUltima ? " hr-sheet--break" : "")">
             <header class="hr-header">
@@ -74,6 +73,16 @@
                         <span class="hr-meta-value hr-meta-value--blank">&nbsp;</span>
                     </div>
                 </div>
+                <div class="hr-header-precios">
+                    <div class="hr-precio-item">
+                        <span>Descartador Grande</span>
+                        <strong>@(Model.PrecioDescartadorGrande > 0 ? $"$ {FmtMoney(Model.PrecioDescartadorGrande)}" : "Sin Precio")</strong>
+                    </div>
+                    <div class="hr-precio-item">
+                        <span>Descartador Chico</span>
+                        <strong>@(Model.PrecioDescartadorChico > 0 ? $"$ {FmtMoney(Model.PrecioDescartadorChico)}" : "Sin Precio")</strong>
+                    </div>
+                </div>
             </header>
 
             @if (seccion.Paradas.Count == 0)
@@ -87,14 +96,25 @@
                     {
                         var obsClass = p.AlertaTipo == "alerta" ? " hr-cell-obs--alert" : "";
 
-                        <section class="hr-stop @(p.Activo ? "" : "hr-stop-inactivo")@(p.EnLicencia ? " hr-stop-licencia" : "")">
+                        <section class="hr-stop @(p.Activo ? "" : "hr-stop-inactivo")@(p.EnLicencia ? " hr-stop-licencia" : "")@(p.Reprogramado ? " hr-stop-reprogramado" : "")">
                             <div class="hr-stop-head">
                                 <span class="hr-stop-num">@p.Posicion</span>
                                 <span class="hr-stop-cliente">
                                     @p.Cliente
                                     @if (p.EnLicencia)
                                     {
-                                        <span class="hr-badge-licencia">⚠ DE LICENCIA</span>
+                                        <span class="hr-badge-licencia">&#9888; DE LICENCIA</span>
+                                    }
+                                    @if (p.Reprogramado)
+                                    {
+                                        <span class="hr-badge-reprogramado">REPROGRAMADO</span>
+                                    }
+                                    @if (p.IdCliente > 0)
+                                    {
+                                        var hrefStock = p.IdEstablecimiento > 0
+                                            ? $"/Clientes/Gestion?id={p.IdCliente}&est={p.IdEstablecimiento}&tab=stock"
+                                            : $"/Clientes/Gestion?id={p.IdCliente}&tab=pagos";
+                                        <a class="hr-link-stock no-print" href="@hrefStock" target="_blank" rel="noopener">Pagos y stock</a>
                                     }
                                 </span>
                                 <div class="hr-stop-abono">
@@ -106,40 +126,37 @@
                             <div class="hr-stop-grid">
                                 <div class="hr-cell hr-cell-domicilio @ToneClass(p.Posicion)">
                                     <div class="hr-cell-label">Domicilio</div>
-                                    <div class="hr-cell-value">@p.Domicilio</div>
-                                    <div class="hr-pagos">
-                                        <span>Transf: $ @FmtMoney(p.AbonoTransferencia)</span>
-                                        <span>Efect: $ @FmtMoney(p.AbonoEfectivo)</span>
-                                    </div>
+                                    <div class="hr-cell-value hr-cell-value--domicilio">@p.Domicilio</div>
                                 </div>
 
-                                <div class="hr-cell">
+                                <div class="hr-cell hr-cell-localidad">
                                     <div class="hr-cell-label">Localidad</div>
                                     <div class="hr-cell-value">@p.Localidad</div>
                                 </div>
 
-                                <div class="hr-cell">
-                                    <div class="hr-cell-label">Telefono</div>
-                                    <div class="hr-cell-value">@p.Telefono</div>
+                                <div class="hr-cell hr-cell-telefono">
+                                    <div class="hr-cell-label">Tel&#233;fono</div>
+                                    <div class="hr-cell-value hr-cell-value--tel">@p.Telefono</div>
                                 </div>
 
-                                <div class="hr-cell">
+                                <div class="hr-cell hr-cell-horario">
                                     <div class="hr-cell-label">Horario</div>
                                     <div class="hr-cell-value">@p.Horario</div>
                                 </div>
 
-                                <div class="hr-cell hr-cell-box">
-                                    <div class="hr-cell-label">Cajas: Recibo del Cliente</div>
-                                    <div class="hr-write-box"></div>
-                                </div>
-
-                                <div class="hr-cell hr-cell-box">
-                                    <div class="hr-cell-label">Cajas: Entrego al Cliente</div>
-                                    <div class="hr-write-box"></div>
+                                <div class="hr-cell hr-cell-cajas">
+                                    <div class="hr-caja-row">
+                                        <span class="hr-cell-label">Cajas entregadas</span>
+                                        <span class="hr-write-box hr-write-box--sm"></span>
+                                    </div>
+                                    <div class="hr-caja-row">
+                                        <span class="hr-cell-label">Cajas recibidas</span>
+                                        <span class="hr-write-box hr-write-box--sm"></span>
+                                    </div>
                                 </div>
 
                                 <div class="hr-cell hr-cell-obs hr-tone-green@obsClass">
-                                    <div class="hr-cell-label">Observacion</div>
+                                    <div class="hr-cell-label">Observaci&#243;n</div>
                                     <div class="hr-cell-value">@p.Observacion</div>
                                 </div>
 
@@ -168,23 +185,6 @@
                     }
                 </div>
 
-                <footer class="hr-totales-pago">
-                    <div class="hr-totales-pago-title">Totales por tipo de pago</div>
-                    <div class="hr-totales-pago-grid">
-                        <div class="hr-total-pago hr-total-pago--efect">
-                            <span>Efectivo</span>
-                            <strong>$ @totalEfSeccion.ToString("N0")</strong>
-                        </div>
-                        <div class="hr-total-pago hr-total-pago--transf">
-                            <span>Transferencia</span>
-                            <strong>$ @totalTrSeccion.ToString("N0")</strong>
-                        </div>
-                        <div class="hr-total-pago hr-total-pago--suma">
-                            <span>Total</span>
-                            <strong>$ @((totalEfSeccion + totalTrSeccion).ToString("N0"))</strong>
-                        </div>
-                    </div>
-                </footer>
             }
         </div>
     }

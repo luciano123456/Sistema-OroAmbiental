@@ -2,7 +2,6 @@ let semanas = [];
 let dias = [];
 let camiones = [];
 let rutasData = [];
-let clientesCatalogo = [];
 let establecimientosClienteCache = [];
 let recorridosSeleccionados = [];
 let clientesRecorridoActual = [];
@@ -10,7 +9,13 @@ let sugeridosRecorridoActual = [];
 let sugeridosPanelVisible = false;
 let semanaTabActiva = null;
 let modalClienteRecorrido = null;
+let modalManifiestoRecorrido = null;
 let busquedaTimer = null;
+let recClientesAbort = null;
+let txtSeleccionActiva = false;
+let txtSeleccionIds = new Set();
+let mfSeleccionActiva = false;
+let mfSeleccionIds = new Set();
 
 const getTokenRec = () => window.token || localStorage.getItem("JwtToken") || "";
 
@@ -23,6 +28,8 @@ const select2Opts = { width: "100%", allowClear: true, placeholder: "Seleccionar
 
 $(document).ready(async () => {
     modalClienteRecorrido = new bootstrap.Modal(document.getElementById("modalClienteRecorrido"));
+    const elModalManifiesto = document.getElementById("modalManifiestoRecorrido");
+    if (elModalManifiesto) modalManifiestoRecorrido = new bootstrap.Modal(elModalManifiesto);
 
     if (typeof initCamionModal === "function") {
         initCamionModal({ token: token, onSaved: async () => { await recargarCamionesSelect(); } });
@@ -145,9 +152,26 @@ $(document).ready(async () => {
         );
     });
 
+    $("#listaClientesRecorrido").on("show.bs.collapse", ".rec-prod-collapse", function () {
+        asegurarCuerpoProductosRec(this);
+    });
     $("#listaClientesRecorrido").on("blur", ".rec-obs-input", function () {
         const id = parseInt($(this).data("id"), 10);
         guardarObservacionClienteRecorrido(id, $(this).val());
+    });
+    $("#listaClientesRecorrido").on("change", ".rec-txt-check", function () {
+        const id = parseInt($(this).data("id"), 10);
+        if (mfSeleccionActiva) setMfSeleccionCliente(id, this.checked);
+        else setTxtSeleccionCliente(id, this.checked);
+    });
+    $("#listaClientesRecorrido").on("click", ".rec-cliente-item", function (e) {
+        if (!txtSeleccionActiva && !mfSeleccionActiva) return;
+        if ($(e.target).closest("button, a, textarea, input, select, label, .rec-cliente-obs, .rec-cliente-productos").length)
+            return;
+        const id = parseInt($(this).data("id"), 10);
+        if (!id) return;
+        if (mfSeleccionActiva) setMfSeleccionCliente(id, !mfSeleccionIds.has(id));
+        else setTxtSeleccionCliente(id, !txtSeleccionIds.has(id));
     });
     $("#listaClientesRecorrido").on("change", ".rec-prod-lista", async function () {
         await onCambioListaProductoRec($(this));
@@ -177,12 +201,43 @@ $(document).ready(async () => {
     });
 
     $("#btnNuevoClienteRecorrido").on("click", () => abrirModalClienteRecorrido());
-    $("#btnHojaRutaRecorrido").on("click", () => abrirHojaRutaRecorrido());
-    $("#btnTraerProgramadosRec").on("click", () => {
-        sugeridosPanelVisible = true;
-        renderPanelSugeridos();
-        document.getElementById("panelSugeridosRecorrido")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    $("#btnHojaRutaRecorrido").on("click", busyHandler(abrirHojaRutaRecorrido, { label: "Generando..." }));
+    $("#btnTxtMesRecorrido").on("click", () => abrirModalManifiestoRecorrido(0, "txt-mes"));
+    $("#btnTxtSeleccionarRecorrido").on("click", () => activarTxtSeleccionRecorrido());
+    $("#btnTxtSelTodosRecorrido").on("click", () => seleccionarTodosTxtRecorrido());
+    $("#btnTxtSelExportarRecorrido").on("click", () => abrirModalManifiestoRecorrido(0, "txt-sel"));
+    $("#btnTxtSelCancelarRecorrido").on("click", () => cancelarTxtSeleccionRecorrido());
+    $("#btnMfSeleccionarRecorrido").on("click", () => activarMfSeleccionRecorrido());
+    $("#btnMfSelTodosRecorrido").on("click", () => seleccionarTodosMfRecorrido());
+    $("#btnMfSelGenerarRecorrido").on("click", () => abrirModalManifiestoRecorrido(0, "manifiesto-sel"));
+    $("#btnMfSelCancelarRecorrido").on("click", () => cancelarMfSeleccionRecorrido());
+    $("#btnManifiestosRecorrido").on("click", () => abrirModalManifiestoRecorrido(0, "manifiesto"));
+    $("#btnConfirmarManifiestoRecorrido").on("click", busyHandler(confirmarManifiestoRecorrido, { label: "Generando..." }));
+    $("#btnExportarTxtIntercambioRecorrido").on("click", busyHandler(exportarArchivoIntercambioRecorrido, { label: "Generando..." }));
+    $("#mfGenerarCertificados").on("change", function () {
+        const on = $(this).is(":checked");
+        $("#mfCertificadosPanel").toggleClass("d-none", !on);
     });
+    $("#mfNumeroManifiesto").on("input", function () {
+        if (!$("#mfLotePreviewWrap").hasClass("d-none")) pintarPreviewLoteManifiesto();
+    });
+    $(document).on("input", "#mfLotePreviewBody [data-copias-id]", function () {
+        pintarPreviewLoteManifiesto();
+    });
+    $(document).on("input", "#mfCopiasTodas", function () {
+        aplicarCopiasTodasLotePreview($(this).val());
+    });
+    $(document).on("change", "#mfIdChofer", aplicarChoferSeleccionadoManifiesto);
+    $("#mfNumeroManifiesto, #mfNombreManifiesto").on("keydown", function (e) {
+        if (e.key === "Enter") {
+            e.preventDefault();
+            if (($("#mfModoExport").val() || "").startsWith("txt"))
+                $("#btnExportarTxtIntercambioRecorrido").trigger("click");
+            else
+                $("#btnConfirmarManifiestoRecorrido").trigger("click");
+        }
+    });
+    $("#btnTraerProgramadosRec").on("click", () => traerProgramadosRecorrido());
     $("#btnToggleSugeridosRec").on("click", () => {
         sugeridosPanelVisible = !sugeridosPanelVisible;
         renderPanelSugeridos();
@@ -196,6 +251,12 @@ $(document).ready(async () => {
     });
     $("#btnGuardarClienteRecorrido").on("click", busyHandler(guardarClienteRecorrido));
 
+    const avisoCr = document.getElementById("avisoOrdenRecorridoCr");
+    if (typeof rpBindAvisoOrdenRecorrido === "function") {
+        rpBindAvisoOrdenRecorrido(avisoCr);
+    }
+    $("#crPosicion").on("input change", actualizarAvisoPosicionRecorrido);
+
     $("#crCliente").on("change", async function () {
         await cargarEstablecimientosCliente(parseInt($(this).val(), 10));
     });
@@ -204,6 +265,10 @@ $(document).ready(async () => {
 
     $("#crActivo").on("change", function () {
         $("#lblCrActivo").text($(this).is(":checked") ? "Activo" : "Inactivo");
+    });
+
+    $("#crReprogramado").on("change", function () {
+        actualizarLabelReprogramado($(this).is(":checked"));
     });
 
     document.addEventListener("configuracionActualizada", async (e) => {
@@ -224,9 +289,7 @@ async function inicializarPagina() {
     try {
         await Promise.all([
             cargarCatalogos(),
-            recargarCamionesSelect(null, { silent: true }),
-            cargarClientesCatalogo(),
-            ensureListasPreciosRec()
+            recargarCamionesSelect(null, { silent: true })
         ]);
         llenarFiltrosCatalogos();
         initSelect2Recorridos();
@@ -244,7 +307,22 @@ function initSelect2Recorridos() {
     });
     ensureSelect2($("#crCliente"), Object.assign({}, select2Opts, {
         dropdownParent: $("#modalClienteRecorrido"),
-        placeholder: "Buscar cliente..."
+        placeholder: "Buscar cliente...",
+        minimumInputLength: 0,
+        ajax: {
+            delay: 220,
+            transport: function (params, success, failure) {
+                const q = (params.data.term || "").trim();
+                fetchJson(`/Clientes/Combo?q=${encodeURIComponent(q)}&take=40`)
+                    .then(data => {
+                        const rows = Array.isArray(data) ? data : [];
+                        success({
+                            results: rows.map(c => ({ id: c.Id, text: c.Nombre || "" }))
+                        });
+                    })
+                    .catch(failure);
+            }
+        }
     }));
     ensureSelect2($("#crEstablecimiento"), Object.assign({}, select2Opts, {
         dropdownParent: $("#modalClienteRecorrido"),
@@ -273,7 +351,32 @@ async function cargarCatalogos() {
         fetchJson("/Dias/Lista")
     ]);
     semanas = Array.isArray(rSemanas) ? rSemanas : [];
-    dias = Array.isArray(rDias) ? rDias : [];
+    dias = ordenarDiasSemana(Array.isArray(rDias) ? rDias : []);
+}
+
+function ordenIndiceDiaSemana(nombre) {
+    const n = String(nombre || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .trim();
+    if (n.startsWith("lun")) return 1;
+    if (n.startsWith("mar")) return 2;
+    if (n.startsWith("mie")) return 3;
+    if (n.startsWith("jue")) return 4;
+    if (n.startsWith("vie")) return 5;
+    if (n.startsWith("sab")) return 6;
+    if (n.startsWith("dom")) return 7;
+    return 100;
+}
+
+function ordenarDiasSemana(lista) {
+    return [...(lista || [])].sort((a, b) => {
+        const ia = ordenIndiceDiaSemana(a.Nombre);
+        const ib = ordenIndiceDiaSemana(b.Nombre);
+        if (ia !== ib) return ia - ib;
+        return String(a.Nombre || "").localeCompare(String(b.Nombre || ""), "es");
+    });
 }
 
 function llenarFiltrosCatalogos() {
@@ -310,11 +413,6 @@ async function recargarCamionesSelect(selectedId, options = {}) {
     else if (sel.data("select2")) sel.trigger("change.select2");
 }
 
-async function cargarClientesCatalogo() {
-    const data = await fetchJson("/Clientes/Lista?soloActivos=true");
-    clientesCatalogo = Array.isArray(data) ? data : [];
-}
-
 async function cargarEstablecimientosCliente(idCliente, selectedId) {
     const sel = $("#crEstablecimiento");
     sel.empty().append(new Option("Sin establecimiento", ""));
@@ -347,6 +445,7 @@ function aplicarOrdenRecorridoDesdeEstablecimiento() {
     } else {
         $("#crPosicion").val(getSiguientePosicionRecorrido());
     }
+    actualizarAvisoPosicionRecorrido();
 }
 
 async function cargarRutasUnidad() {
@@ -393,7 +492,9 @@ function setEstadoUnidadSeleccionada(seleccionada) {
         $("#lblRutasHint").html(
             '<span class="rec-hint-pendiente"><i class="fa fa-arrow-circle-up"></i> Elegi una unidad arriba para continuar</span>'
         );
+        cancelarSeleccionesHojaRecorrido(false);
     }
+    syncBotonesTxtPlanta();
 }
 
 function enfocarSelectorUnidad() {
@@ -517,7 +618,7 @@ function renderListaRutas() {
             const key = `${s.Id}_${d.Id}`;
             const ruta = mapa[key];
             const zona = (ruta?.Zona || "").trim();
-            const label = `${s.Nombre} · ${d.Nombre}${zona ? " - " + zona : ""}`;
+            const label = zona || `${s.Nombre} · ${d.Nombre}`;
             items.push({ s, d, zona, label, key });
             opcionesRapidas.push({ key, label });
         });
@@ -611,14 +712,21 @@ function syncSeleccionRecorridosUI(recargarClientes) {
     const activo = getRecorridoActivo();
     if (!activo) {
         $("#lblRecorridoSeleccionado").text("Elegi un recorrido de la lista");
-        $("#btnNuevoClienteRecorrido, #btnHojaRutaRecorrido, #btnTraerProgramadosRec").prop("disabled", true);
+        $("#btnNuevoClienteRecorrido, #btnHojaRutaRecorrido, #btnManifiestosRecorrido, #btnMfSeleccionarRecorrido, #btnTraerProgramadosRec").prop("disabled", true);
         $("#btnTraerProgramadosRec").addClass("d-none");
         ocultarPanelSugeridos();
+        cancelarSeleccionesHojaRecorrido(false);
+        syncBotonesTxtPlanta();
         if (recargarClientes) renderClientesRecorrido([]);
         return;
     }
 
-    $("#btnNuevoClienteRecorrido, #btnHojaRutaRecorrido").prop("disabled", false);
+    $("#btnNuevoClienteRecorrido, #btnHojaRutaRecorrido, #btnManifiestosRecorrido, #btnMfSeleccionarRecorrido").prop("disabled", false);
+    if (recorridosSeleccionados.length === 1) {
+        $("#btnTraerProgramadosRec").removeClass("d-none").prop("disabled", false);
+    }
+    if (recargarClientes) cancelarSeleccionesHojaRecorrido(false);
+    syncBotonesTxtPlanta();
     actualizarLabelRecorridoSeleccionado();
 
     if (recorridosSeleccionados.length === 1) {
@@ -679,7 +787,10 @@ function getRecorridoLabelText(extra) {
     const semana = semanas.find(s => s.Id === idSemana)?.Nombre || "";
     const dia = dias.find(d => d.Id === idDia)?.Nombre || "";
     const salida = getHorarioSalidaRecorrido(idSemana, idDia);
-    let base = `${camion} · ${semana} · ${dia}${zona ? " · " + zona : ""}`;
+    const zonaTxt = (zona || "").trim();
+    let base = zonaTxt
+        ? zonaTxt
+        : [camion, semana, dia].filter(Boolean).join(" · ");
     if (salida) base += ` · Salida ${salida}`;
     return extra ? `${base} · ${extra}` : base;
 }
@@ -696,8 +807,9 @@ function limpiarSeleccionRecorrido() {
     recorridosSeleccionados = [];
     $(".rec-ruta-item").removeClass("selected");
     $("#lblRecorridoSeleccionado").text("Elegi un recorrido de la lista");
-    $("#btnNuevoClienteRecorrido, #btnHojaRutaRecorrido, #btnTraerProgramadosRec").prop("disabled", true);
+    $("#btnNuevoClienteRecorrido, #btnHojaRutaRecorrido, #btnManifiestosRecorrido, #btnMfSeleccionarRecorrido, #btnTraerProgramadosRec").prop("disabled", true);
     $("#btnTraerProgramadosRec").addClass("d-none");
+    cancelarSeleccionesHojaRecorrido(false);
     ocultarPanelSugeridos();
     renderClientesRecorrido([]);
 }
@@ -791,18 +903,29 @@ async function cargarClientesRecorrido() {
     if (!activo) return;
 
     const { idCamion, idSemana, idDia } = activo;
+    recClientesAbort?.abort();
+    recClientesAbort = new AbortController();
+    const signal = recClientesAbort.signal;
+
+    $("#listaClientesRecorrido").html(
+        `<div class="rec-empty"><i class="fa fa-spinner fa-spin"></i> Cargando clientes...</div>`
+    );
+    sugeridosRecorridoActual = [];
+    sugeridosPanelVisible = false;
+    $("#panelSugeridosRecorrido, #listaSugeridosRecorrido").addClass("d-none");
 
     try {
         const data = await fetchJson(
-            `/Recorridos/ClientesPorRecorrido?idCamion=${idCamion}&idSemana=${idSemana}&idDia=${idDia}`
+            `/Recorridos/ClientesPorRecorrido?idCamion=${idCamion}&idSemana=${idSemana}&idDia=${idDia}`,
+            { signal }
         );
         const excluidos = leerExcluidosLicenciaRec(idCamion, idSemana, idDia);
         (data || []).forEach(item => {
             item.NoExportarHoja = excluidos.has(Number(item.Id));
         });
         renderClientesRecorrido(data);
-        await cargarSugeridosRecorrido();
     } catch (e) {
+        if (e?.name === "AbortError") return;
         console.error(e);
         errorModal("No se pudieron cargar los clientes del recorrido.");
     }
@@ -840,6 +963,17 @@ function idsNoExportarLicenciaActuales() {
         .filter(id => id > 0);
 }
 
+function idsClientesManifiestoDesde(idDesde) {
+    const inicio = Number(idDesde) || 0;
+    const excluidos = new Set(idsNoExportarLicenciaActuales());
+    const ids = (clientesRecorridoActual || [])
+        .map(x => Number(x.Id))
+        .filter(id => id > 0 && !excluidos.has(id));
+    const idx = ids.indexOf(inicio);
+    if (idx < 0) return inicio > 0 ? [inicio] : [];
+    return ids.slice(idx);
+}
+
 function toggleNoExportarLicenciaRec(idRecorridoCliente) {
     const id = Number(idRecorridoCliente) || 0;
     const item = (clientesRecorridoActual || []).find(x => Number(x.Id) === id);
@@ -858,6 +992,154 @@ function toggleNoExportarLicenciaRec(idRecorridoCliente) {
     renderClientesRecorrido(clientesRecorridoActual);
 }
 
+function idCamionActualRec() {
+    return parseInt($("#selCamion").val(), 10) || 0;
+}
+
+function haySeleccionHojaRecorrido() {
+    return txtSeleccionActiva || mfSeleccionActiva;
+}
+
+function cancelarSeleccionesHojaRecorrido(repintar) {
+    const estaba = haySeleccionHojaRecorrido();
+    txtSeleccionActiva = false;
+    txtSeleccionIds = new Set();
+    mfSeleccionActiva = false;
+    mfSeleccionIds = new Set();
+    $("#panelClientes").removeClass("rec-txt-sel rec-mf-sel");
+    $("#barTxtSeleccionRecorrido, #barMfSeleccionRecorrido").addClass("d-none");
+    $("#btnTxtMesRecorrido, #btnTxtSeleccionarRecorrido, #btnMfSeleccionarRecorrido, #btnManifiestosRecorrido").removeClass("d-none");
+    if (estaba && repintar !== false) renderClientesRecorrido(clientesRecorridoActual);
+    syncBotonesTxtPlanta();
+}
+
+function syncBotonesTxtPlanta() {
+    const hayUnidad = idCamionActualRec() > 0;
+    const hayRuta = !!getRecorridoActivo();
+    const hayClientes = (clientesRecorridoActual || []).length > 0;
+    const sel = haySeleccionHojaRecorrido();
+
+    $("#btnTxtMesRecorrido").prop("disabled", !hayUnidad || sel);
+    $("#btnTxtSeleccionarRecorrido").prop("disabled", !hayRuta || !hayClientes || sel);
+    $("#btnMfSeleccionarRecorrido").prop("disabled", !hayRuta || !hayClientes || sel);
+    $("#btnTxtMesRecorrido, #btnTxtSeleccionarRecorrido").toggleClass("d-none", sel);
+    $("#btnMfSeleccionarRecorrido, #btnManifiestosRecorrido").toggleClass("d-none", sel);
+    $("#barTxtSeleccionRecorrido").toggleClass("d-none", !txtSeleccionActiva);
+    $("#barMfSeleccionRecorrido").toggleClass("d-none", !mfSeleccionActiva);
+    $("#panelClientes").toggleClass("rec-txt-sel", txtSeleccionActiva);
+    $("#panelClientes").toggleClass("rec-mf-sel", mfSeleccionActiva);
+    actualizarBarraTxtSeleccion();
+    actualizarBarraMfSeleccion();
+}
+
+function activarTxtSeleccionRecorrido() {
+    if (!getRecorridoActivo()) {
+        errorModal("Selecciona un recorrido para elegir clientes.");
+        return;
+    }
+    if (!(clientesRecorridoActual || []).length) {
+        errorModal("Este recorrido no tiene clientes para exportar.");
+        return;
+    }
+    cancelarMfSeleccionRecorrido(false);
+    txtSeleccionActiva = true;
+    txtSeleccionIds = new Set();
+    renderClientesRecorrido(clientesRecorridoActual);
+    syncBotonesTxtPlanta();
+}
+
+function cancelarTxtSeleccionRecorrido(repintar) {
+    const estaba = txtSeleccionActiva;
+    txtSeleccionActiva = false;
+    txtSeleccionIds = new Set();
+    $("#panelClientes").removeClass("rec-txt-sel");
+    $("#barTxtSeleccionRecorrido").addClass("d-none");
+    if (estaba && repintar !== false) renderClientesRecorrido(clientesRecorridoActual);
+    syncBotonesTxtPlanta();
+}
+
+function setTxtSeleccionCliente(id, marcado) {
+    const n = Number(id) || 0;
+    if (n <= 0 || !txtSeleccionActiva) return;
+    if (marcado) txtSeleccionIds.add(n);
+    else txtSeleccionIds.delete(n);
+
+    const $item = $(`#listaClientesRecorrido .rec-cliente-item[data-id="${n}"]`);
+    $item.toggleClass("is-txt-checked", marcado);
+    $item.find(".rec-txt-check").prop("checked", marcado);
+    actualizarBarraTxtSeleccion();
+}
+
+function seleccionarTodosTxtRecorrido() {
+    const ids = (clientesRecorridoActual || []).map(x => Number(x.Id)).filter(n => n > 0);
+    const todos = ids.length > 0 && ids.every(id => txtSeleccionIds.has(id));
+    txtSeleccionIds = todos ? new Set() : new Set(ids);
+    renderClientesRecorrido(clientesRecorridoActual);
+    syncBotonesTxtPlanta();
+}
+
+function actualizarBarraTxtSeleccion() {
+    const n = txtSeleccionIds.size;
+    $("#lblTxtSeleccionRecorrido").text(
+        n === 1 ? "1 seleccionado" : `${n} seleccionados`
+    );
+    $("#btnTxtSelExportarRecorrido").prop("disabled", n === 0);
+}
+
+function activarMfSeleccionRecorrido() {
+    if (!getRecorridoActivo()) {
+        errorModal("Selecciona un recorrido para elegir clientes.");
+        return;
+    }
+    if (!(clientesRecorridoActual || []).length) {
+        errorModal("Este recorrido no tiene clientes para armar manifiestos.");
+        return;
+    }
+    cancelarTxtSeleccionRecorrido(false);
+    mfSeleccionActiva = true;
+    mfSeleccionIds = new Set();
+    renderClientesRecorrido(clientesRecorridoActual);
+    syncBotonesTxtPlanta();
+}
+
+function cancelarMfSeleccionRecorrido(repintar) {
+    const estaba = mfSeleccionActiva;
+    mfSeleccionActiva = false;
+    mfSeleccionIds = new Set();
+    $("#panelClientes").removeClass("rec-mf-sel");
+    $("#barMfSeleccionRecorrido").addClass("d-none");
+    if (estaba && repintar !== false) renderClientesRecorrido(clientesRecorridoActual);
+    syncBotonesTxtPlanta();
+}
+
+function setMfSeleccionCliente(id, marcado) {
+    const n = Number(id) || 0;
+    if (n <= 0 || !mfSeleccionActiva) return;
+    if (marcado) mfSeleccionIds.add(n);
+    else mfSeleccionIds.delete(n);
+
+    const $item = $(`#listaClientesRecorrido .rec-cliente-item[data-id="${n}"]`);
+    $item.toggleClass("is-mf-checked", marcado);
+    $item.find(".rec-txt-check").prop("checked", marcado);
+    actualizarBarraMfSeleccion();
+}
+
+function seleccionarTodosMfRecorrido() {
+    const ids = (clientesRecorridoActual || []).map(x => Number(x.Id)).filter(n => n > 0);
+    const todos = ids.length > 0 && ids.every(id => mfSeleccionIds.has(id));
+    mfSeleccionIds = todos ? new Set() : new Set(ids);
+    renderClientesRecorrido(clientesRecorridoActual);
+    syncBotonesTxtPlanta();
+}
+
+function actualizarBarraMfSeleccion() {
+    const n = mfSeleccionIds.size;
+    $("#lblMfSeleccionRecorrido").text(
+        n === 1 ? "1 seleccionado" : `${n} seleccionados`
+    );
+    $("#btnMfSelGenerarRecorrido").prop("disabled", n === 0);
+}
+
 function getSiguientePosicionRecorrido() {
     if (!clientesRecorridoActual.length) return 1;
 
@@ -867,6 +1149,51 @@ function getSiguientePosicionRecorrido() {
     }, 0);
 
     return maxPos + 1;
+}
+
+function actualizarLabelReprogramado(marcado) {
+    $("#lblCrReprogramado").text(marcado ? "Reprogramado" : "Normal");
+}
+
+function getClienteEnPosicion(posicion, idExcluir) {
+    const pos = parseInt(posicion, 10);
+    if (!Number.isFinite(pos) || pos <= 0) return null;
+    const excluir = Number(idExcluir) || 0;
+    return (clientesRecorridoActual || []).find(x =>
+        parseInt(x.Posicion, 10) === pos && Number(x.Id) !== excluir
+    ) || null;
+}
+
+function actualizarAvisoPosicionRecorrido() {
+    const root = document.getElementById("avisoOrdenRecorridoCr");
+    const pos = parseInt($("#crPosicion").val(), 10);
+    const id = parseInt($("#crId").val(), 10) || 0;
+    const ocupante = getClienteEnPosicion(pos, id);
+    if (ocupante && typeof rpMostrarAvisoOrdenRecorrido === "function") {
+        rpMostrarAvisoOrdenRecorrido(root, {
+            posicion: pos,
+            nombre: ocupante.Cliente || ocupante.Establecimiento || "otro cliente"
+        });
+    } else if (typeof rpOcultarAvisoOrdenRecorrido === "function") {
+        rpOcultarAvisoOrdenRecorrido(root);
+    }
+}
+
+function payloadClienteRecorrido(item, extra) {
+    const activo = getRecorridoActivo();
+    const base = {
+        Id: item?.Id || 0,
+        IdCliente: item?.IdCliente,
+        IdEstablecimiento: item?.IdEstablecimiento > 0 ? item.IdEstablecimiento : null,
+        IdCamion: activo?.idCamion,
+        IdSemana: activo?.idSemana,
+        IdDia: activo?.idDia,
+        Posicion: parseInt(item?.Posicion, 10) || 0,
+        Activo: item?.Activo !== false,
+        Reprogramado: !!item?.Reprogramado,
+        Observacion: (item?.Observacion || "").trim() || null
+    };
+    return extra ? { ...base, ...extra } : base;
 }
 
 function renderClientesRecorrido(data) {
@@ -880,6 +1207,7 @@ function renderClientesRecorrido(data) {
                 <i class="fa fa-hand-pointer-o"></i>
                 Elegi un recorrido y toca <strong>Clientes</strong> para ver la lista
             </div>`);
+        syncBotonesTxtPlanta();
         return;
     }
 
@@ -890,12 +1218,14 @@ function renderClientesRecorrido(data) {
                 Sin clientes en este recorrido.<br>
                 <span class="text-muted-cc">Usa <strong>Traer programados</strong> para cargar los del dia/semana del establecimiento, o <strong>+ Agregar cliente</strong>.</span>
             </div>`);
+        syncBotonesTxtPlanta();
         return;
     }
 
     const html = data.map(item => {
         const enLicencia = !!item.EnLicencia;
         const noExportar = !!item.NoExportarHoja;
+        const reprogramado = !!item.Reprogramado;
         let badge = "";
         if (!enLicencia) {
             if (item.Activo) {
@@ -935,17 +1265,33 @@ function renderClientesRecorrido(data) {
                </button>`
             : "";
 
+        const modoSel = mfSeleccionActiva ? "mf" : (txtSeleccionActiva ? "txt" : "");
+        const marcadoSel = modoSel === "mf"
+            ? mfSeleccionIds.has(Number(item.Id))
+            : (modoSel === "txt" && txtSeleccionIds.has(Number(item.Id)));
+        const checkSel = modoSel
+            ? `<label class="rec-cliente-txtcheck" title="${modoSel === "mf" ? "Incluir en el manifiesto" : "Incluir en el TXT de planta"}">
+                    <input type="checkbox" class="rec-txt-check" data-id="${item.Id}" ${marcadoSel ? "checked" : ""}>
+                    <span></span>
+               </label>`
+            : "";
+
         const clasesItem = [
             "rec-cliente-item",
             item.Activo ? "" : "rec-cliente-item--inactive",
             enLicencia ? "rec-cliente-item--licencia" : "",
-            noExportar ? "rec-cliente-item--noexport" : ""
+            reprogramado ? "rec-cliente-item--reprogramado" : "",
+            noExportar ? "rec-cliente-item--noexport" : "",
+            modoSel ? "rec-cliente-item--txtsel" : "",
+            modoSel === "txt" && marcadoSel ? "is-txt-checked" : "",
+            modoSel === "mf" && marcadoSel ? "is-mf-checked" : ""
         ].filter(Boolean).join(" ");
 
         return `
             <article class="${clasesItem}" data-id="${item.Id}"
                      data-cliente="${item.IdCliente}" data-establecimiento="${item.IdEstablecimiento || 0}"
                      data-licencia="${enLicencia ? "1" : "0"}">
+                ${checkSel}
                 <div class="rec-cliente-pos" title="Posicion en la ruta">
                     <span>${item.Posicion}</span>
                 </div>
@@ -953,6 +1299,7 @@ function renderClientesRecorrido(data) {
                     <div class="rec-cliente-name">
                         ${escapeHtml(item.Cliente)}
                         ${enLicencia ? `<span class="rec-badge-activo rec-badge-activo--licencia" title="Cliente de licencia"><i class="fa fa-pause-circle" aria-hidden="true"></i> De licencia</span>` : ""}
+                        ${reprogramado ? `<span class="rec-badge-activo rec-badge-activo--reprog"><i class="fa fa-refresh" aria-hidden="true"></i> Reprogramado</span>` : ""}
                     </div>
                     <div class="rec-cliente-ubicacion">
                         <div class="rec-cliente-domicilio">
@@ -974,6 +1321,21 @@ function renderClientesRecorrido(data) {
                     ${enLicencia ? "" : `<div class="rec-cliente-status">${badge}</div>`}
                     <div class="rec-cliente-actions">
                         ${btnNoExport}
+                        <button type="button"
+                                class="rec-cliente-btn rec-cliente-btn--reprog${reprogramado ? " is-on" : ""}"
+                                onclick="toggleReprogramadoClienteRecorrido(${item.Id})"
+                                title="${reprogramado ? "Quitar reprogramado" : "Marcar como reprogramado"}">
+                            <i class="fa fa-refresh"></i>
+                        </button>
+                        <button type="button" class="rec-cliente-btn rec-cliente-btn--manifiesto" onclick="abrirModalManifiestoRecorrido(${item.Id})" title="Armar manifiesto">
+                            <i class="fa fa-file-text-o"></i>
+                        </button>
+                        <button type="button" class="rec-cliente-btn rec-cliente-btn--txt" onclick="abrirModalManifiestoRecorrido(${item.Id}, 'txt')" title="Exportar TXT a planta">
+                            <i class="fa fa-download"></i>
+                        </button>
+                        <button type="button" class="rec-cliente-btn rec-cliente-btn--stock" onclick="abrirPagosStockRecorrido(${item.IdCliente}, ${item.IdEstablecimiento || 0}, ${item.Id})" title="Cargar stock, pagos y visita">
+                            <i class="fa fa-cubes"></i>
+                        </button>
                         <button type="button" class="rec-cliente-btn rec-cliente-btn--edit" onclick="editarClienteRecorrido(${item.Id})" title="Editar">
                             <i class="fa fa-pencil"></i>
                         </button>
@@ -992,15 +1354,11 @@ function renderClientesRecorrido(data) {
     }).join("");
 
     $lista.html(html);
-    $lista.find(".Inputmiles").each(function () {
-        if (typeof formatearMilesInput === "function") formatearMilesInput(this);
-    });
 
     const activos = data.filter(x => x.Activo).length;
     const suffix = `${data.length} cliente${data.length === 1 ? "" : "s"}${activos !== data.length ? ` (${activos} activos)` : ""}`;
     actualizarLabelRecorridoSeleccionado(suffix);
-
-    verificarPreciosProductosRec($lista);
+    syncBotonesTxtPlanta();
 }
 
 let listasPreciosRec = [];
@@ -1042,83 +1400,83 @@ function resumenProductosRec(productos) {
     if (!productos?.length) return "Sin productos";
     return productos.map(p => {
         const abrev = (p.Abreviatura || p.Producto || "PROD").trim();
-        const lista = (p.ListaPrecio || "").trim();
-        const listaTxt = lista ? ` (${lista})` : "";
-        return `${fmtCantRec(p.Cantidad)} ${abrev}${listaTxt} x $ ${fmtMoneyRec(p.PrecioVenta)}`;
+        return `${fmtCantRec(p.Cantidad)} ${abrev} x $ ${fmtMoneyRec(p.PrecioVenta)}`;
     }).join(" · ");
+}
+
+function htmlCuerpoProductosRec(item) {
+    const productos = Array.isArray(item.Productos) ? item.Productos : [];
+    const tieneEst = item.IdEstablecimiento > 0;
+
+    if (!tieneEst) {
+        return `<div class="rec-prod-empty">Asigná un establecimiento al cliente en la ruta para ver productos.</div>`;
+    }
+    if (!productos.length) {
+        return `<div class="rec-prod-empty">Sin productos en el establecimiento. Cargalos con el ícono verde de stock en esta misma tarjeta.</div>`;
+    }
+
+    const rows = productos.map(p => {
+        const opts = (listasPreciosRec || []).map(l =>
+            `<option value="${l.Id}" ${Number(l.Id) === Number(p.IdListaPrecio) ? "selected" : ""}>${escapeHtml(l.Nombre)}</option>`
+        ).join("");
+        const abrev = (p.Abreviatura || "").trim();
+        const listaNombre = (p.ListaPrecio || "").trim();
+        const metaLine = [abrev || "Sin abreviatura", listaNombre].filter(Boolean).join(" · ");
+        const precioLista = p.PrecioLista != null ? Number(p.PrecioLista) : "";
+        return `
+            <div class="rec-prod-row" data-cep-id="${p.Id}"
+                 data-id-producto="${p.IdProducto}"
+                 data-id-establecimiento="${item.IdEstablecimiento}"
+                 data-precio-ef="${p.PrecioEfectivo ?? 0}"
+                 data-precio-tr="${p.PrecioTransferencia ?? 0}"
+                 data-precio-lista="${precioLista}">
+                <div class="rec-prod-identity">
+                    <span class="rec-prod-avatar"><i class="fa fa-cube"></i></span>
+                    <div class="rec-prod-identity-text">
+                        <span class="rec-prod-name">${escapeHtml(p.Producto || "")}</span>
+                        <span class="rec-prod-abrev">${escapeHtml(metaLine)}</span>
+                    </div>
+                </div>
+                <div class="rec-prod-fields">
+                    <label class="rec-prod-field">
+                        <span>Cant.</span>
+                        <input type="text" class="form-control form-control-sm Inputmiles rec-prod-cant"
+                               value="${fmtCantRec(p.Cantidad)}" inputmode="decimal" />
+                    </label>
+                    <label class="rec-prod-field rec-prod-field--lista">
+                        <span>Lista</span>
+                        <select class="form-control form-control-sm rec-prod-lista">
+                            <option value="">Seleccionar</option>
+                            ${opts}
+                        </select>
+                    </label>
+                    <label class="rec-prod-field rec-prod-field--precio">
+                        <span>Precio</span>
+                        <div class="rec-prod-precio-wrap">
+                            <span class="rec-prod-precio-prefix">$</span>
+                            <input type="text" class="form-control form-control-sm Inputmiles rec-prod-precio"
+                                   value="${fmtMoneyRec(p.PrecioVenta)}" inputmode="decimal" />
+                            <span class="rec-prod-precio-warn" title="El precio no coincide con la lista" hidden>
+                                <i class="fa fa-exclamation-triangle"></i>
+                            </span>
+                        </div>
+                    </label>
+                </div>
+            </div>`;
+    }).join("");
+
+    return `
+        <div class="rec-prod-list">${rows}</div>
+        <div class="rec-prod-hint">
+            <i class="fa fa-print"></i>
+            <span>Estos valores salen en la hoja de ruta y se guardan al editar.</span>
+        </div>`;
 }
 
 function renderProductosPlegableRec(item) {
     const productos = Array.isArray(item.Productos) ? item.Productos : [];
     const collapseId = `recProdCollapse_${item.Id}`;
     const resumen = resumenProductosRec(productos);
-    const tieneEst = item.IdEstablecimiento > 0;
-
-    let body;
-    if (!tieneEst) {
-        body = `<div class="rec-prod-empty">Asigná un establecimiento al cliente en la ruta para ver productos.</div>`;
-    } else if (!productos.length) {
-        body = `<div class="rec-prod-empty">Sin productos en el establecimiento. Cargalos desde Clientes → Establecimientos → Productos.</div>`;
-    } else {
-        const optsLista = (listasPreciosRec || []).map(l =>
-            `<option value="${l.Id}">${escapeHtml(l.Nombre)}</option>`
-        ).join("");
-
-        const rows = productos.map(p => {
-            const opts = (listasPreciosRec || []).map(l =>
-                `<option value="${l.Id}" ${Number(l.Id) === Number(p.IdListaPrecio) ? "selected" : ""}>${escapeHtml(l.Nombre)}</option>`
-            ).join("");
-            const abrev = (p.Abreviatura || "").trim();
-            const listaNombre = (p.ListaPrecio || "").trim();
-            const metaLine = [abrev || "Sin abreviatura", listaNombre].filter(Boolean).join(" · ");
-            return `
-                <div class="rec-prod-row" data-cep-id="${p.Id}"
-                     data-id-producto="${p.IdProducto}"
-                     data-id-establecimiento="${item.IdEstablecimiento}"
-                     data-precio-ef="${p.PrecioEfectivo ?? 0}"
-                     data-precio-tr="${p.PrecioTransferencia ?? 0}">
-                    <div class="rec-prod-identity">
-                        <span class="rec-prod-avatar"><i class="fa fa-cube"></i></span>
-                        <div class="rec-prod-identity-text">
-                            <span class="rec-prod-name">${escapeHtml(p.Producto || "")}</span>
-                            <span class="rec-prod-abrev">${escapeHtml(metaLine)}</span>
-                        </div>
-                    </div>
-                    <div class="rec-prod-fields">
-                        <label class="rec-prod-field">
-                            <span>Cant.</span>
-                            <input type="text" class="form-control form-control-sm Inputmiles rec-prod-cant"
-                                   value="${fmtCantRec(p.Cantidad)}" inputmode="decimal" />
-                        </label>
-                        <label class="rec-prod-field rec-prod-field--lista">
-                            <span>Lista</span>
-                            <select class="form-control form-control-sm rec-prod-lista">
-                                <option value="">Seleccionar</option>
-                                ${opts || optsLista}
-                            </select>
-                        </label>
-                        <label class="rec-prod-field rec-prod-field--precio">
-                            <span>Precio</span>
-                            <div class="rec-prod-precio-wrap">
-                                <span class="rec-prod-precio-prefix">$</span>
-                                <input type="text" class="form-control form-control-sm Inputmiles rec-prod-precio"
-                                       value="${fmtMoneyRec(p.PrecioVenta)}" inputmode="decimal" />
-                                <span class="rec-prod-precio-warn" title="El precio no coincide con la lista" hidden>
-                                    <i class="fa fa-exclamation-triangle"></i>
-                                </span>
-                            </div>
-                        </label>
-                    </div>
-                </div>`;
-        }).join("");
-
-        body = `
-            <div class="rec-prod-list">${rows}</div>
-            <div class="rec-prod-hint">
-                <i class="fa fa-print"></i>
-                <span>Estos valores salen en la hoja de ruta y se guardan al editar.</span>
-            </div>`;
-    }
 
     return `
         <div class="rec-cliente-productos">
@@ -1135,10 +1493,28 @@ function renderProductosPlegableRec(item) {
                 </span>
                 <span class="rec-prod-toggle-chevron"><i class="fa fa-chevron-down"></i></span>
             </button>
-            <div id="${collapseId}" class="collapse">
-                <div class="rec-prod-body">${body}</div>
+            <div id="${collapseId}" class="collapse rec-prod-collapse" data-rec-id="${item.Id}">
+                <div class="rec-prod-body"></div>
             </div>
         </div>`;
+}
+
+async function asegurarCuerpoProductosRec(collapseEl) {
+    if (!collapseEl || collapseEl.dataset.filled === "1") return;
+    const id = Number(collapseEl.dataset.recId);
+    const item = (clientesRecorridoActual || []).find(x => Number(x.Id) === id);
+    if (!item) return;
+
+    await ensureListasPreciosRec();
+    const body = collapseEl.querySelector(".rec-prod-body");
+    if (body) body.innerHTML = htmlCuerpoProductosRec(item);
+    collapseEl.dataset.filled = "1";
+
+    const $wrap = $(collapseEl);
+    $wrap.find(".Inputmiles").each(function () {
+        if (typeof formatearMilesInput === "function") formatearMilesInput(this);
+    });
+    marcarPreciosLocalesProductosRec($wrap);
 }
 
 async function onCambioListaProductoRec($select) {
@@ -1206,35 +1582,20 @@ function marcarPrecioVsListaRec($row, precioGuardado, precioLista, { alertar = f
     }
 }
 
-async function verificarPreciosProductosRec($scope) {
+function marcarPreciosLocalesProductosRec($scope) {
     const $rows = ($scope && $scope.length ? $scope : $("#listaClientesRecorrido"))
         .find(".rec-prod-row[data-cep-id]");
-    if (!$rows.length) return;
-
-    const cache = {};
-    for (const el of $rows.toArray()) {
-        const $row = $(el);
-        const idProducto = parseInt($row.data("id-producto"), 10);
-        const idLista = parseInt($row.find(".rec-prod-lista").val() || "0", 10);
-        if (!idProducto || !idLista) continue;
-
-        if (!Object.prototype.hasOwnProperty.call(cache, idProducto)) {
-            try {
-                cache[idProducto] = await fetchJson(`/ProductosPrecios/ListaPorProducto?idProducto=${idProducto}`);
-            } catch (e) {
-                console.warn(e);
-                cache[idProducto] = [];
-            }
-        }
-
-        const rows = Array.isArray(cache[idProducto]) ? cache[idProducto] : [];
-        const match = rows.find(r => Number(r.IdListaPrecio) === idLista);
-        const precioLista = match && match.PrecioVenta != null ? Number(match.PrecioVenta) : null;
-        if (precioLista != null) $row.attr("data-precio-lista", precioLista);
-
+    $rows.each(function () {
+        const $row = $(this);
+        const raw = $row.attr("data-precio-lista");
+        const precioLista = raw === undefined || raw === "" ? null : Number(raw);
         const precio = leerNumeroRec($row.find(".rec-prod-precio").val());
-        marcarPrecioVsListaRec($row, precio, precioLista, { alertar: false });
-    }
+        marcarPrecioVsListaRec($row, precio, Number.isNaN(precioLista) ? null : precioLista, { alertar: false });
+    });
+}
+
+async function verificarPreciosProductosRec($scope) {
+    marcarPreciosLocalesProductosRec($scope);
 }
 
 async function guardarProductoClienteRecorrido($row, { alertar = false } = {}) {
@@ -1348,29 +1709,766 @@ async function abrirHojaRutaRecorrido() {
     const url = `/Recorridos/HojaRuta?${params.toString()}`;
 
     try {
-        const response = await fetch(url, {
-            headers: { Authorization: "Bearer " + getTokenRec() }
+        await conProceso("Generando hoja de ruta...", async () => {
+            const response = await fetch(url, {
+                headers: { Authorization: "Bearer " + getTokenRec() }
+            });
+
+            if (!response.ok) {
+                errorModal("No se pudo generar la hoja de ruta.");
+                return;
+            }
+
+            const html = await response.text();
+            const ventana = window.open("", "_blank");
+            if (!ventana) {
+                errorModal("El navegador bloqueo la ventana emergente. Permiti pop-ups e intenta de nuevo.");
+                return;
+            }
+
+            ventana.document.open();
+            ventana.document.write(html);
+            ventana.document.close();
         });
-
-        if (!response.ok) {
-            errorModal("No se pudo generar la hoja de ruta.");
-            return;
-        }
-
-        const html = await response.text();
-        const ventana = window.open("", "_blank");
-        if (!ventana) {
-            errorModal("El navegador bloqueo la ventana emergente. Permiti pop-ups e intenta de nuevo.");
-            return;
-        }
-
-        ventana.document.open();
-        ventana.document.write(html);
-        ventana.document.close();
     } catch (e) {
         console.error(e);
         errorModal("Error al abrir la hoja de ruta.");
     }
+}
+
+function paramsRecorridosManifiesto() {
+    if (!recorridosSeleccionados.length) return null;
+
+    const idCamion = recorridosSeleccionados[0].idCamion;
+    const recorridosParam = recorridosSeleccionados
+        .map(r => recorridoKey(r.idSemana, r.idDia))
+        .join(",");
+
+    const params = new URLSearchParams({
+        idCamion: String(idCamion),
+        recorridos: recorridosParam
+    });
+
+    if (recorridosSeleccionados.length === 1) {
+        const unico = recorridosSeleccionados[0];
+        params.set("idSemana", String(unico.idSemana));
+        params.set("idDia", String(unico.idDia));
+    }
+
+    const excluir = idsNoExportarLicenciaActuales();
+    if (excluir.length) params.set("excluirIds", excluir.join(","));
+
+    return params;
+}
+
+async function abrirModalManifiestoRecorrido(idRecorrido, modo) {
+    const modoNorm = modo || "manifiesto";
+    const esTxt = modoNorm.startsWith("txt");
+    const esMes = modoNorm === "txt-mes";
+    const esSel = modoNorm === "txt-sel";
+    const esMfSel = modoNorm === "manifiesto-sel";
+    const id = Number(idRecorrido) || 0;
+
+    if (esMes) {
+        if (!idCamionActualRec()) {
+            errorModal("Elegí una unidad para exportar el TXT del mes.");
+            return;
+        }
+    } else if (!recorridosSeleccionados.length) {
+        errorModal("Selecciona al menos un recorrido.");
+        return;
+    }
+
+    if (esSel && txtSeleccionIds.size === 0) {
+        errorModal("Seleccioná al menos un cliente para exportar.");
+        return;
+    }
+    if (esMfSel && mfSeleccionIds.size === 0) {
+        errorModal("Seleccioná al menos un cliente para armar el manifiesto.");
+        return;
+    }
+
+    $("#mfIdRecorrido").val(id > 0 ? String(id) : "0");
+    $("#mfModoExport").val(esTxt ? modoNorm : (esMfSel ? "manifiesto-sel" : "manifiesto"));
+
+    const item = id > 0
+        ? (clientesRecorridoActual || []).find(x => Number(x.Id) === id)
+        : null;
+
+    const camionNombre = camiones.find(c => c.Id === idCamionActualRec())?.Nombre || "Unidad";
+
+    if (esMes) {
+        $("#modalManifiestoRecorridoTitulo").text("Exportar TXT del mes");
+        $("#btnConfirmarManifiestoRecorrido").addClass("d-none");
+        $("#btnExportarTxtIntercambioRecorrido").removeClass("d-none");
+        $("#mfNombreManifiesto").val(`MES ${camionNombre}`);
+        $("#mfGenerarCertificados").closest(".col-12").addClass("d-none");
+        $("#mfCertificadosPanel").addClass("d-none");
+        $("#mfLoteOpdsWrap").addClass("d-none");
+        $("#mfLotePreviewWrap").addClass("d-none");
+        $("#mfModalDialog").removeClass("modal-xl");
+    } else if (esSel) {
+        $("#modalManifiestoRecorridoTitulo").text(`Exportar TXT (${txtSeleccionIds.size} cliente${txtSeleccionIds.size === 1 ? "" : "s"})`);
+        $("#btnConfirmarManifiestoRecorrido").addClass("d-none");
+        $("#btnExportarTxtIntercambioRecorrido").removeClass("d-none");
+        $("#mfNombreManifiesto").val(nombreRecorridoParaManifiesto());
+        $("#mfGenerarCertificados").closest(".col-12").addClass("d-none");
+        $("#mfCertificadosPanel").addClass("d-none");
+        $("#mfLoteOpdsWrap").addClass("d-none");
+        $("#mfLotePreviewWrap").addClass("d-none");
+        $("#mfModalDialog").removeClass("modal-xl");
+    } else if (esTxt) {
+        $("#modalManifiestoRecorridoTitulo").text(id > 0 ? "Exportar TXT a planta" : "Exportar TXT de intercambio");
+        $("#btnConfirmarManifiestoRecorrido").addClass("d-none");
+        $("#btnExportarTxtIntercambioRecorrido").removeClass("d-none");
+        $("#mfNombreManifiesto").val(id > 0
+            ? (item?.Cliente || nombreRecorridoParaManifiesto())
+            : nombreRecorridoParaManifiesto());
+        $("#mfGenerarCertificados").closest(".col-12").addClass("d-none");
+        $("#mfCertificadosPanel").addClass("d-none");
+        $("#mfLoteOpdsWrap").addClass("d-none");
+        $("#mfLotePreviewWrap").addClass("d-none");
+        $("#mfModalDialog").removeClass("modal-xl");
+    } else if (esMfSel) {
+        $("#modalManifiestoRecorridoTitulo").text(`Manifiestos (${mfSeleccionIds.size} cliente${mfSeleccionIds.size === 1 ? "" : "s"})`);
+        $("#btnConfirmarManifiestoRecorrido").removeClass("d-none");
+        $("#btnExportarTxtIntercambioRecorrido").removeClass("d-none");
+        $("#mfNombreManifiesto").val(nombreRecorridoParaManifiesto());
+        $("#mfGenerarCertificados").closest(".col-12").removeClass("d-none");
+        $("#mfLoteOpdsWrap").removeClass("d-none");
+        $("#mfLotePreviewWrap").removeClass("d-none");
+        $("#mfModalDialog").addClass("modal-xl");
+        $("#mfGenerarLoteOpds").prop("checked", true);
+        const idOpdsSel = leerIdTransportistaOpds();
+        if (idOpdsSel) $("#mfIdTransportistaOpds").val(idOpdsSel);
+    } else if (id > 0) {
+        $("#modalManifiestoRecorridoTitulo").text("Armar manifiesto");
+        $("#btnConfirmarManifiestoRecorrido").removeClass("d-none");
+        $("#btnExportarTxtIntercambioRecorrido").addClass("d-none");
+        $("#mfNombreManifiesto").val(item?.Cliente || nombreRecorridoParaManifiesto());
+        $("#mfGenerarCertificados").closest(".col-12").removeClass("d-none");
+        $("#mfLoteOpdsWrap").addClass("d-none");
+        $("#mfLotePreviewWrap").addClass("d-none");
+        $("#mfGenerarLoteOpds").prop("checked", false);
+        $("#mfModalDialog").removeClass("modal-xl");
+    } else {
+        $("#modalManifiestoRecorridoTitulo").text("Manifiestos por lote");
+        $("#btnConfirmarManifiestoRecorrido").removeClass("d-none");
+        $("#btnExportarTxtIntercambioRecorrido").removeClass("d-none");
+        $("#mfNombreManifiesto").val(nombreRecorridoParaManifiesto());
+        $("#mfGenerarCertificados").closest(".col-12").removeClass("d-none");
+        $("#mfLoteOpdsWrap").removeClass("d-none");
+        $("#mfLotePreviewWrap").removeClass("d-none");
+        $("#mfModalDialog").addClass("modal-xl");
+        $("#mfGenerarLoteOpds").prop("checked", true);
+        const idOpds = leerIdTransportistaOpds();
+        if (idOpds) $("#mfIdTransportistaOpds").val(idOpds);
+    }
+
+    const hoy = new Date();
+    const yyyy = hoy.getFullYear();
+    const mm = String(hoy.getMonth() + 1).padStart(2, "0");
+    const dd = String(hoy.getDate()).padStart(2, "0");
+    $("#mfFechaIntercambio").val(`${yyyy}-${mm}-${dd}`);
+    $("#mfGenerarCertificados").prop("checked", true);
+    $("#mfCertificadosPanel").removeClass("d-none");
+    $("#mfFechaEmisionCert").val(`${yyyy}-${mm}-${dd}`);
+    $("#mfFechaTratamientoCert").val(`${yyyy}-${mm}-${dd}`);
+
+    try {
+        const certData = await fetchJson("/Recorridos/SiguienteNumeroCertificado");
+        $("#mfNumeroCertificado").val(String(Number(certData?.numeroCertificado ?? certData?.NumeroCertificado) || 1));
+        $("#mfNumeroOrdenCert").val(String(Number(certData?.numeroOrden ?? certData?.NumeroOrden) || 1));
+    } catch (e) {
+        console.warn(e);
+        $("#mfNumeroCertificado").val("1");
+        $("#mfNumeroOrdenCert").val("1");
+    }
+
+    $("#mfNumeroManifiesto").val("");
+    try {
+        let urlNumero;
+        if (esMes) {
+            urlNumero = `/Recorridos/SiguienteNumeroManifiestoCamion?idCamion=${idCamionActualRec()}`;
+        } else {
+            const params = paramsRecorridosManifiesto();
+            if (!params) {
+                $("#mfNumeroManifiesto").val("1");
+            } else {
+                urlNumero = `/Recorridos/SiguienteNumeroManifiesto?${params.toString()}`;
+            }
+        }
+        if (urlNumero) {
+            const data = await fetchJson(urlNumero);
+            $("#mfNumeroManifiesto").val(String(Number(data?.numero) || 1));
+        }
+    } catch (e) {
+        console.warn(e);
+        $("#mfNumeroManifiesto").val("1");
+    }
+
+    if (!$("#mfLotePreviewWrap").hasClass("d-none")) pintarPreviewLoteManifiesto();
+
+    await cargarChoferesManifiestoRec();
+
+    if (modalManifiestoRecorrido) modalManifiestoRecorrido.show();
+    else errorModal("No se pudo abrir el diálogo.");
+}
+
+let choferesManifiestoCache = [];
+
+async function cargarChoferesManifiestoRec() {
+    try {
+        const data = await fetchJson("/Choferes/Lista?soloActivos=true");
+        choferesManifiestoCache = Array.isArray(data) ? data : [];
+    } catch {
+        choferesManifiestoCache = [];
+    }
+
+    const $sel = $("#mfIdChofer");
+    const prev = $sel.val();
+    $sel.empty().append(`<option value="0">Sin chofer (líneas en blanco)</option>`);
+    choferesManifiestoCache.forEach(c => {
+        const id = Number(c.Id || c.id);
+        const nom = c.Nombre || c.nombre || "";
+        $sel.append(`<option value="${id}">${escapeHtml(nom)}</option>`);
+    });
+    if (prev && $sel.find(`option[value="${prev}"]`).length) $sel.val(prev);
+    else if (choferesManifiestoCache.length === 1) $sel.val(String(choferesManifiestoCache[0].Id || choferesManifiestoCache[0].id));
+    aplicarChoferSeleccionadoManifiesto();
+}
+
+function aplicarChoferSeleccionadoManifiesto() {
+    const id = parseInt($("#mfIdChofer").val(), 10) || 0;
+    const c = choferesManifiestoCache.find(x => Number(x.Id || x.id) === id);
+    $("#mfChoferAclaracion").val(c ? (c.Nombre || "") : "");
+    $("#mfChoferDni").val(c ? (c.Dni || c.dni || "") : "");
+}
+
+function aplicarChoferManifiestoAParams(params) {
+    const id = parseInt($("#mfIdChofer").val(), 10) || 0;
+    const nom = ($("#mfChoferAclaracion").val() || "").trim();
+    const dni = ($("#mfChoferDni").val() || "").trim();
+    if (id > 0) params.set("idChofer", String(id));
+    if (nom) params.set("choferNombre", nom);
+    if (dni) params.set("choferDni", dni);
+}
+
+function abrirPagosStockRecorrido(idCliente, idEstablecimiento, idRecorridoCliente) {
+    if (typeof abrirPanelStockRecorrido === "function") {
+        abrirPanelStockRecorrido(idCliente, idEstablecimiento, idRecorridoCliente);
+        return;
+    }
+    const id = Number(idCliente) || 0;
+    if (!(id > 0)) {
+        errorModal("Este cliente no tiene ficha para abrir pagos y stock.");
+        return;
+    }
+    const est = Number(idEstablecimiento) || 0;
+    const qs = est > 0
+        ? `id=${id}&est=${est}&tab=stock`
+        : `id=${id}&tab=pagos`;
+    window.open(`/Clientes/Gestion?${qs}`, "_blank");
+}
+
+function nombreRecorridoParaManifiesto() {
+    const activo = getRecorridoActivo();
+    if (!activo) return "";
+
+    if (recorridosSeleccionados.length > 1) {
+        return recorridosSeleccionados
+            .map(r => {
+                const zona = (r.zona || "").trim();
+                if (zona) return zona;
+                const semana = semanas.find(s => s.Id === r.idSemana)?.Nombre || "";
+                const dia = dias.find(d => d.Id === r.idDia)?.Nombre || "";
+                return `${semana} ${dia}`.trim();
+            })
+            .filter(Boolean)
+            .join(" · ");
+    }
+
+    const zona = (activo.zona || "").trim();
+    if (zona) return zona;
+
+    const semana = semanas.find(s => s.Id === activo.idSemana)?.Nombre || "";
+    const dia = dias.find(d => d.Id === activo.idDia)?.Nombre || "";
+    return `${semana} ${dia}`.trim();
+}
+
+function clientesParaLotePreview() {
+    const excluidos = new Set(idsNoExportarLicenciaActuales());
+    const modo = ($("#mfModoExport").val() || "").trim();
+    const soloSel = modo === "manifiesto-sel";
+    return (clientesRecorridoActual || []).filter(x => {
+        const id = Number(x.Id);
+        if (id <= 0 || excluidos.has(id)) return false;
+        if (soloSel && !mfSeleccionIds.has(id)) return false;
+        return true;
+    });
+}
+
+function leerCopiasLotePreview() {
+    const map = new Map();
+    $("#mfLotePreviewBody [data-copias-id]").each(function () {
+        const id = Number($(this).attr("data-copias-id"));
+        let n = parseInt($(this).val(), 10);
+        if (!Number.isFinite(n) || n < 0) n = 0;
+        if (n > 50) n = 50;
+        map.set(id, n);
+    });
+    return map;
+}
+
+function idsIncluirLotePreview() {
+    const copias = leerCopiasLotePreview();
+    return clientesParaLotePreview()
+        .map(x => Number(x.Id))
+        .filter(id => (copias.get(id) || 0) > 0);
+}
+
+function aplicarCopiasLoteAParams(params) {
+    const copias = leerCopiasLotePreview();
+    const partes = [];
+    const incluir = [];
+    clientesParaLotePreview().forEach(x => {
+        const id = Number(x.Id);
+        const n = copias.has(id) ? copias.get(id) : 1;
+        partes.push(`${id}:${n}`);
+        if (n > 0) incluir.push(id);
+    });
+    if (incluir.length) params.set("incluirIds", incluir.join(","));
+    if (partes.length) params.set("copias", partes.join(","));
+}
+
+function pintarPreviewLoteManifiesto() {
+    const $body = $("#mfLotePreviewBody");
+    const $total = $("#mfLotePreviewTotal");
+    if (!$body.length) return;
+
+    const clientes = clientesParaLotePreview();
+    const copiasPrev = leerCopiasLotePreview();
+
+    if (!clientes.length) {
+        $body.html(`<tr><td colspan="4" class="text-muted">No hay clientes en esta hoja para el lote.</td></tr>`);
+        $total.text("");
+        return;
+    }
+
+    const idsActuales = $body.find("[data-copias-id]").map(function () { return Number($(this).attr("data-copias-id")); }).get();
+    const idsNuevos = clientes.map(x => Number(x.Id));
+    const mismaGrilla = idsActuales.length === idsNuevos.length && idsActuales.every((id, i) => id === idsNuevos[i]);
+
+    if (!mismaGrilla) {
+        $body.html(clientes.map(item => {
+            const id = Number(item.Id);
+            const n = copiasPrev.has(id) ? copiasPrev.get(id) : 1;
+            const nombre = escapeHtml(item.Cliente || item.Establecimiento || "");
+            const nroCli = escapeHtml((item.CodigoOpds || item.codigoOpds || "").trim() || "—");
+            return `<tr>
+                <td>${nombre}</td>
+                <td><input type="number" class="form-control rec-input mf-lote-copias" data-copias-id="${id}" min="0" max="50" step="1" value="${n}" /></td>
+                <td>${nroCli}</td>
+                <td class="mf-lote-num">—</td>
+            </tr>`;
+        }).join(""));
+    }
+
+    actualizarNumerosLotePreview();
+}
+
+function aplicarCopiasTodasLotePreview(valor) {
+    const raw = String(valor ?? "").trim();
+    if (raw === "") return;
+    let n = parseInt(raw, 10);
+    if (!Number.isFinite(n) || n < 0) return;
+    if (n > 50) n = 50;
+    $("#mfLotePreviewBody [data-copias-id]").each(function () {
+        $(this).val(n);
+    });
+    actualizarNumerosLotePreview();
+}
+
+function actualizarNumerosLotePreview() {
+    let numero = parseInt($("#mfNumeroManifiesto").val(), 10);
+    if (!Number.isFinite(numero) || numero < 1) numero = 1;
+    let impresos = 0;
+    let manifiestos = 0;
+    let primero = null;
+    let ultimo = null;
+
+    $("#mfLotePreviewBody tr").each(function () {
+        const $inp = $(this).find("[data-copias-id]");
+        if (!$inp.length) return;
+        let n = parseInt($inp.val(), 10);
+        if (!Number.isFinite(n) || n < 0) n = 0;
+        if (n > 50) n = 50;
+        const $num = $(this).find(".mf-lote-num");
+        $(this).toggleClass("mf-lote-row--off", n <= 0);
+        if (n <= 0) {
+            $num.text("—");
+            return;
+        }
+        const nro = numero;
+        numero++;
+        if (primero == null) primero = nro;
+        ultimo = nro;
+        manifiestos++;
+        impresos += n;
+        $num.text(n === 1 ? String(nro) : `${nro} ×${n}`);
+    });
+
+    const $total = $("#mfLotePreviewTotal");
+    if (manifiestos <= 0) {
+        $total.text("Ningún manifiesto a imprimir. Poné copias en los clientes que correspondan.");
+    } else if (impresos === 1) {
+        $total.text(`Se va a imprimir 1 manifiesto (Nº ${primero}).`);
+    } else if (impresos === manifiestos) {
+        $total.text(`Se van a imprimir ${manifiestos} manifiestos (Nº ${primero} al ${ultimo}).`);
+    } else {
+        $total.text(`Se van a imprimir ${impresos} copias de ${manifiestos} manifiestos (Nº ${primero} al ${ultimo}). Las copias de un mismo cliente llevan el mismo número.`);
+    }
+}
+
+async function confirmarManifiestoRecorrido() {
+    const params = paramsRecorridosManifiesto();
+    if (!params) {
+        errorModal("Selecciona al menos un recorrido.");
+        return;
+    }
+
+    const numero = parseInt($("#mfNumeroManifiesto").val(), 10);
+    if (!Number.isFinite(numero) || numero < 1) {
+        errorModal("Ingresá un número de manifiesto válido.");
+        return;
+    }
+
+    const lotePreview = !$("#mfLotePreviewWrap").hasClass("d-none");
+    if (lotePreview) {
+        const idsConCopia = idsIncluirLotePreview();
+        if (!idsConCopia.length) {
+            errorModal("Poné al menos 1 copia en algún cliente para armar el lote.");
+            return;
+        }
+    }
+
+    const nombre = ($("#mfNombreManifiesto").val() || "").trim();
+    const fecha = ($("#mfFechaIntercambio").val() || "").trim();
+    params.set("numeroInicial", String(numero));
+    if (nombre) params.set("nombre", nombre);
+    if (fecha) params.set("fecha", fecha);
+    aplicarChoferManifiestoAParams(params);
+    const idRecorrido = parseInt($("#mfIdRecorrido").val(), 10) || 0;
+    if (idRecorrido > 0) {
+        const idsDesde = idsClientesManifiestoDesde(idRecorrido);
+        const haySiguientes = idsDesde.length > 1;
+        if (haySiguientes) {
+            const hastaNro = numero + idsDesde.length - 1;
+            const aplicarAbajo = typeof confirmarModal === "function"
+                ? await confirmarModal(
+                    `¿Deseás aplicar esta fecha de programación también a los ${idsDesde.length - 1} cliente(s) que siguen en la hoja (desde este inclusive)? Los manifiestos se van a numerar en secuencia del ${numero} al ${hastaNro}.`,
+                    {
+                        titulo: "Fecha de programación",
+                        aceptar: "Sí, a todos",
+                        cancelar: "Solo este"
+                    }
+                )
+                : window.confirm("¿Aplicar la fecha y numerar los manifiestos de los clientes que siguen?");
+            if (aplicarAbajo) {
+                params.set("incluirIds", idsDesde.join(","));
+            } else {
+                params.set("idRecorrido", String(idRecorrido));
+            }
+        } else {
+            params.set("idRecorrido", String(idRecorrido));
+        }
+    } else if (lotePreview) {
+        aplicarCopiasLoteAParams(params);
+    }
+
+    const conCert = $("#mfGenerarCertificados").is(":checked");
+    if (conCert) {
+        params.set("generarCertificados", "true");
+        const fe = ($("#mfFechaEmisionCert").val() || "").trim();
+        const ft = ($("#mfFechaTratamientoCert").val() || "").trim();
+        const nc = parseInt($("#mfNumeroCertificado").val(), 10);
+        const no = parseInt($("#mfNumeroOrdenCert").val(), 10);
+        if (fe) params.set("fechaEmision", fe);
+        if (ft) params.set("fechaTratamiento", ft);
+        if (Number.isFinite(nc) && nc > 0) params.set("numeroCertificadoInicial", String(nc));
+        if (Number.isFinite(no) && no > 0) params.set("numeroOrdenInicial", String(no));
+    }
+
+    if ($("#mfLoteOpdsWrap").is(":visible") && $("#mfGenerarLoteOpds").is(":checked")) {
+        const idOpds = ($("#mfIdTransportistaOpds").val() || "").trim() || leerIdTransportistaOpds();
+        if (!idOpds) {
+            errorModal("Ingresá el N° de establecimiento OPDS del transportista para armar el archivo por lote.");
+            $("#mfIdTransportistaOpds").trigger("focus");
+            return;
+        }
+        $("#mfIdTransportistaOpds").val(idOpds);
+    }
+
+    try {
+        await conProceso(conCert ? "Generando manifiestos y certificados..." : "Generando manifiestos...", async () => {
+            params.set("formato", "manifiesto");
+            const responseMf = await fetch(`/Recorridos/Manifiestos?${params.toString()}`, {
+                headers: { Authorization: "Bearer " + getTokenRec() }
+            });
+
+            if (responseMf.status === 404) {
+                errorModal("No hay clientes para armar el manifiesto en esta hoja.");
+                return;
+            }
+
+            if (!responseMf.ok) {
+                errorModal("No se pudieron generar los manifiestos.");
+                return;
+            }
+
+            let responseCert = null;
+            if (conCert) {
+                const certParams = new URLSearchParams(params.toString());
+                certParams.set("formato", "certificados");
+                certParams.set("generarCertificados", "true");
+                responseCert = await fetch(`/Recorridos/Manifiestos?${certParams.toString()}`, {
+                    headers: { Authorization: "Bearer " + getTokenRec() }
+                });
+                if (!responseCert.ok) {
+                    await descargarRespuestaArchivo(responseMf, "Manifiesto.pdf");
+                    errorModal("El manifiesto se descargó, pero no se pudo generar el certificado.");
+                    return;
+                }
+                await descargarRespuestaArchivo(responseCert, "Certificado.pdf", true);
+                await new Promise(r => setTimeout(r, 400));
+            }
+
+            await descargarRespuestaArchivo(responseMf, "Manifiesto.pdf");
+
+            const esLoteVisible = $("#mfLoteOpdsWrap").is(":visible");
+            const quiereLoteOpds = esLoteVisible && $("#mfGenerarLoteOpds").is(":checked");
+            if (quiereLoteOpds) {
+                const lote = await descargarManifiestoLoteOpds(params);
+                if (modalManifiestoRecorrido) modalManifiestoRecorrido.hide();
+                if (($("#mfModoExport").val() || "") === "manifiesto-sel") cancelarMfSeleccionRecorrido();
+                if (lote.ok) {
+                    if (lote.warning && typeof advertenciaModal === "function") advertenciaModal(lote.warning);
+                    else if (typeof exitoModal === "function") exitoModal(mensajeExitoManifiesto(conCert, true));
+                } else if (typeof advertenciaModal === "function") {
+                    advertenciaModal("El manifiesto se descargó, pero el lote OPDS no: " + (lote.mensaje || "revisá los Ids del ministerio."));
+                } else if (typeof exitoModal === "function") {
+                    exitoModal(mensajeExitoManifiesto(conCert, false));
+                }
+                return;
+            }
+
+            if (modalManifiestoRecorrido) modalManifiestoRecorrido.hide();
+            if (($("#mfModoExport").val() || "") === "manifiesto-sel") cancelarMfSeleccionRecorrido();
+            if (typeof exitoModal === "function") {
+                exitoModal(mensajeExitoManifiesto(conCert, quiereLoteOpds));
+            }
+        });
+    } catch (e) {
+        console.error(e);
+        errorModal("Error al generar el PDF del manifiesto.");
+    }
+}
+
+async function exportarArchivoIntercambioRecorrido() {
+    const modo = ($("#mfModoExport").val() || "txt").trim();
+    const esMes = modo === "txt-mes";
+    const esSel = modo === "txt-sel" || modo === "manifiesto-sel";
+    const idCamion = idCamionActualRec();
+    if (!idCamion) {
+        errorModal("Elegí una unidad.");
+        return;
+    }
+
+    let params;
+    if (esMes) {
+        params = new URLSearchParams({
+            idCamion: String(idCamion),
+            mesCompleto: "true"
+        });
+    } else {
+        params = paramsRecorridosManifiesto();
+        if (!params) {
+            errorModal("Selecciona al menos un recorrido.");
+            return;
+        }
+    }
+
+    const numero = parseInt($("#mfNumeroManifiesto").val(), 10);
+    if (!Number.isFinite(numero) || numero < 1) {
+        errorModal("Ingresá un número de manifiesto válido.");
+        return;
+    }
+
+    const fecha = ($("#mfFechaIntercambio").val() || "").trim();
+    if (!fecha) {
+        errorModal("Ingresá la fecha del manifiesto.");
+        return;
+    }
+
+    const nombre = ($("#mfNombreManifiesto").val() || "").trim();
+    params.set("numeroInicial", String(numero));
+    params.set("fecha", fecha);
+    if (nombre) params.set("nombre", nombre);
+
+    if (esSel) {
+        const ids = [...(modo === "manifiesto-sel" ? mfSeleccionIds : txtSeleccionIds)].filter(n => n > 0);
+        if (!ids.length) {
+            errorModal("Seleccioná al menos un cliente para exportar.");
+            return;
+        }
+        params.set("incluirIds", ids.join(","));
+    } else {
+        const idRecorrido = parseInt($("#mfIdRecorrido").val(), 10) || 0;
+        if (idRecorrido > 0) params.set("idRecorrido", String(idRecorrido));
+    }
+
+    try {
+        await conProceso("Generando TXT...", async () => {
+            const response = await fetch(`/Recorridos/ArchivoIntercambio?${params.toString()}`, {
+                headers: { Authorization: "Bearer " + getTokenRec() }
+            });
+
+            if (response.status === 404) {
+                errorModal("No hay clientes para armar el archivo de intercambio.");
+                return;
+            }
+
+            if (!response.ok) {
+                errorModal("No se pudo generar el archivo TXT de intercambio.");
+                return;
+            }
+
+            const blob = await response.blob();
+            const archivo = nombreDescargaIntercambio(response) || `INTERCAMBIO_${fecha.replaceAll("-", "")}.txt`;
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = archivo;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 1500);
+
+            if (modalManifiestoRecorrido) modalManifiestoRecorrido.hide();
+            if (modo === "manifiesto-sel") cancelarMfSeleccionRecorrido();
+            else if (esSel) cancelarTxtSeleccionRecorrido();
+            if (typeof exitoModal === "function") {
+                exitoModal("Se descargó el archivo TXT de intercambio para la planta.");
+            }
+        });
+    } catch (e) {
+        console.error(e);
+        errorModal("Error al exportar el archivo TXT de intercambio.");
+    }
+}
+
+function nombreDescargaIntercambio(response) {
+    const cd = response.headers.get("Content-Disposition") || "";
+    const utf = /filename\*=UTF-8''([^;]+)/i.exec(cd);
+    if (utf && utf[1]) {
+        try { return decodeURIComponent(utf[1]); } catch { return utf[1]; }
+    }
+    const basic = /filename="?([^";]+)"?/i.exec(cd);
+    return basic && basic[1] ? basic[1] : "";
+}
+
+async function descargarRespuestaArchivo(response, fallback, exigirPdf) {
+    const raw = await response.blob();
+    const ct = (response.headers.get("Content-Type") || "").split(";")[0].trim().toLowerCase();
+    let archivo = nombreDescargaIntercambio(response) || fallback || "archivo";
+    const esZip = ct === "application/zip" || ct === "application/x-zip-compressed" || /\.zip$/i.test(archivo);
+    if (exigirPdf && esZip) {
+        if (typeof errorModal === "function") {
+            errorModal("El certificado no se pudo descargar como PDF.");
+        }
+        return;
+    }
+    const esPdf = !esZip && (exigirPdf || ct === "application/pdf" || /\.pdf$/i.test(fallback || ""));
+    if (esPdf) {
+        if (!/\.pdf$/i.test(archivo) || /\.zip$/i.test(archivo)) {
+            archivo = fallback && /\.pdf$/i.test(fallback) ? fallback : archivo.replace(/\.zip$/i, ".pdf");
+            if (!/\.pdf$/i.test(archivo)) archivo = "Certificado.pdf";
+        }
+    }
+    const blob = esPdf
+        ? new Blob([raw], { type: "application/pdf" })
+        : raw;
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = archivo;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
+}
+
+function leerIdTransportistaOpds() {
+    try { return (localStorage.getItem("mfIdTransportistaOpds") || "").trim(); } catch { return ""; }
+}
+
+function guardarIdTransportistaOpds(valor) {
+    const v = (valor || "").trim();
+    try {
+        if (v) localStorage.setItem("mfIdTransportistaOpds", v);
+        else localStorage.removeItem("mfIdTransportistaOpds");
+    } catch { /* ignore */ }
+}
+
+function esManifiestoLoteParams(params) {
+    const id = parseInt(params.get("idRecorrido") || "0", 10) || 0;
+    return id <= 0;
+}
+
+function mensajeExitoManifiesto(conCert, conLote) {
+    if (conLote && conCert) return "Se descargaron el PDF, el certificado y el archivo de lote OPDS.";
+    if (conLote) return "Se descargaron el PDF de impresión y el archivo de lote OPDS.";
+    if (conCert) return "Se descargaron el manifiesto y el certificado.";
+    return "Se descargó el manifiesto en PDF.";
+}
+
+async function descargarManifiestoLoteOpds(params) {
+    const idOpds = ($("#mfIdTransportistaOpds").val() || "").trim() || leerIdTransportistaOpds();
+    if (!idOpds) {
+        return { ok: false, mensaje: "Falta el N° OPDS del transportista." };
+    }
+    guardarIdTransportistaOpds(idOpds);
+
+    const loteParams = new URLSearchParams(params.toString());
+    loteParams.delete("formato");
+    loteParams.delete("generarCertificados");
+    loteParams.set("idTransportistaOpds", idOpds);
+
+    await new Promise(r => setTimeout(r, 350));
+    const response = await fetch(`/Recorridos/ManifiestoLoteOpds?${loteParams.toString()}`, {
+        headers: { Authorization: "Bearer " + getTokenRec() }
+    });
+
+    if (response.status === 404) {
+        return { ok: false, mensaje: "No hay clientes para armar el archivo de lote." };
+    }
+
+    if (!response.ok) {
+        let msg = "No se pudo generar el archivo de lote OPDS.";
+        try {
+            const data = await response.json();
+            if (data?.mensaje) msg = data.mensaje;
+        } catch { /* ignore */ }
+        return { ok: false, mensaje: msg };
+    }
+
+    await descargarRespuestaArchivo(response, "LOTE_PATOGENICOS.txt");
+    let warning = "";
+    try {
+        const raw = response.headers.get("X-OA-Warning") || "";
+        if (raw) warning = decodeURIComponent(raw);
+    } catch { /* ignore */ }
+    return { ok: true, warning };
 }
 
 async function buscarRecorridos(texto) {
@@ -1437,16 +2535,14 @@ async function abrirModalClienteRecorrido(modelo) {
     if (!getRecorridoActivo() && !modelo) return;
 
     const esEdicion = !!modelo;
-
-    if (!esEdicion && getRecorridoActivo()) {
-        await cargarClientesRecorrido();
-    }
-
     const sel = $("#crCliente");
-    sel.empty();
-    clientesCatalogo.forEach(c => sel.append(new Option(c.Nombre, c.Id)));
+    const idCliente = modelo?.IdCliente || "";
+    const nombreCliente = modelo?.Cliente || (idCliente ? `Cliente #${idCliente}` : "");
 
-    const idCliente = modelo?.IdCliente || clientesCatalogo[0]?.Id || "";
+    sel.empty();
+    if (idCliente) {
+        sel.append(new Option(nombreCliente, idCliente, true, true));
+    }
 
     $("#crId").val(modelo?.Id || 0);
     sel.val(idCliente ? String(idCliente) : "").trigger("change");
@@ -1454,22 +2550,33 @@ async function abrirModalClienteRecorrido(modelo) {
     $("#crObservacion").val(modelo?.Observacion || "");
     $("#crActivo").prop("checked", modelo?.Activo !== false);
     $("#lblCrActivo").text(modelo?.Activo === false ? "Inactivo" : "Activo");
+    $("#crReprogramado").prop("checked", !!modelo?.Reprogramado);
+    actualizarLabelReprogramado(!!modelo?.Reprogramado);
     $("#modalClienteRecorridoTitulo").text(esEdicion ? "Editar cliente en recorrido" : "Agregar cliente al recorrido");
     $("#modalClienteRecorridoSub").text($("#lblRecorridoSeleccionado").text());
 
     await cargarEstablecimientosCliente(parseInt(idCliente, 10), modelo?.IdEstablecimiento || null);
+    actualizarAvisoPosicionRecorrido();
     modalClienteRecorrido.show();
 }
 
 async function editarClienteRecorrido(id) {
+    const local = (clientesRecorridoActual || []).find(x => Number(x.Id) === Number(id));
+    if (local) {
+        abrirModalClienteRecorrido(local);
+        return;
+    }
+
     try {
         const data = await fetchJson(`/Recorridos/EditarInfoClienteRecorrido?id=${id}`);
         abrirModalClienteRecorrido({
             Id: data.Id,
             IdCliente: data.IdCliente,
+            Cliente: data.Cliente,
             IdEstablecimiento: data.IdEstablecimiento,
             Posicion: data.Posicion,
             Activo: data.Activo,
+            Reprogramado: data.Reprogramado,
             Observacion: data.Observacion
         });
     } catch (e) {
@@ -1494,6 +2601,7 @@ async function guardarClienteRecorrido() {
         IdDia: activo.idDia,
         Posicion: parseInt($("#crPosicion").val(), 10) || 0,
         Activo: $("#crActivo").is(":checked"),
+        Reprogramado: $("#crReprogramado").is(":checked"),
         Observacion: ($("#crObservacion").val() || "").trim() || null
     };
 
@@ -1501,6 +2609,22 @@ async function guardarClienteRecorrido() {
         errorModal("Selecciona un cliente.");
         return;
     }
+
+    const ocupante = getClienteEnPosicion(payload.Posicion, payload.Id);
+    const aviso = document.getElementById("avisoOrdenRecorridoCr");
+    let desplazar = true;
+    if (ocupante) {
+        const decision = typeof rpDecisionAvisoOrdenRecorrido === "function"
+            ? rpDecisionAvisoOrdenRecorrido(aviso)
+            : null;
+        if (decision === null) {
+            actualizarAvisoPosicionRecorrido();
+            errorModal("Esa posición ya está ocupada. Indicá si querés reemplazar y desplazar a los demás.");
+            return;
+        }
+        desplazar = decision === true;
+    }
+    payload.DesplazarSiOcupada = desplazar;
 
     const url = id > 0 ? "/Recorridos/ActualizarClienteRecorrido" : "/Recorridos/InsertarClienteRecorrido";
     const method = id > 0 ? "PUT" : "POST";
@@ -1556,17 +2680,7 @@ async function guardarObservacionClienteRecorrido(id, observacion) {
     const anterior = (item.Observacion || "").trim();
     if (valor === anterior) return;
 
-    const payload = {
-        Id: item.Id,
-        IdCliente: item.IdCliente,
-        IdEstablecimiento: item.IdEstablecimiento,
-        IdCamion: activo.idCamion,
-        IdSemana: activo.idSemana,
-        IdDia: activo.idDia,
-        Posicion: item.Posicion,
-        Activo: item.Activo,
-        Observacion: valor || null
-    };
+    const payload = payloadClienteRecorrido(item, { Observacion: valor || null });
 
     try {
         const data = await fetchJson("/Recorridos/ActualizarClienteRecorrido", {
@@ -1586,6 +2700,34 @@ async function guardarObservacionClienteRecorrido(id, observacion) {
     }
 }
 
+async function toggleReprogramadoClienteRecorrido(id) {
+    const item = clientesRecorridoActual.find(x => Number(x.Id) === Number(id));
+    if (!item) return;
+
+    const activo = getRecorridoActivo();
+    if (!activo) return;
+
+    const payload = payloadClienteRecorrido(item, { Reprogramado: !item.Reprogramado });
+
+    try {
+        const data = await fetchJson("/Recorridos/ActualizarClienteRecorrido", {
+            method: "PUT",
+            body: JSON.stringify(payload)
+        });
+
+        if (!(data?.valor ?? data?.Valor)) {
+            errorModal(data?.mensaje ?? data?.Mensaje ?? "No se pudo actualizar.");
+            return;
+        }
+
+        item.Reprogramado = !item.Reprogramado;
+        renderClientesRecorrido(clientesRecorridoActual);
+    } catch (e) {
+        console.error(e);
+        errorModal("Error al marcar reprogramado.");
+    }
+}
+
 function escapeHtml(text) {
     if (text == null) return "";
     return String(text)
@@ -1600,6 +2742,12 @@ function ocultarPanelSugeridos() {
     sugeridosPanelVisible = false;
     $("#panelSugeridosRecorrido, #listaSugeridosRecorrido").addClass("d-none");
     $("#btnTraerProgramadosRec").addClass("d-none").prop("disabled", true);
+}
+
+async function traerProgramadosRecorrido() {
+    sugeridosPanelVisible = true;
+    await cargarSugeridosRecorrido();
+    document.getElementById("panelSugeridosRecorrido")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
 }
 
 async function cargarSugeridosRecorrido() {
@@ -1618,9 +2766,10 @@ async function cargarSugeridosRecorrido() {
         if (!Array.isArray(sugeridosRecorridoActual)) sugeridosRecorridoActual = [];
 
         const pendientes = sugeridosRecorridoActual.filter(x => !x.YaEnRecorrido);
-        if (pendientes.length && !clientesRecorridoActual.length) sugeridosPanelVisible = true;
-
         renderPanelSugeridos();
+        if (!pendientes.length && typeof advertenciaModal === "function") {
+            advertenciaModal("No hay clientes programados pendientes para este día y semana.");
+        }
     } catch (e) {
         console.warn("No se pudieron cargar sugeridos:", e);
         ocultarPanelSugeridos();
@@ -1635,7 +2784,8 @@ function renderPanelSugeridos() {
     const $btnTraer = $("#btnTraerProgramadosRec");
 
     if (!pendientes.length && !enRuta.length) {
-        ocultarPanelSugeridos();
+        $panel.addClass("d-none");
+        $lista.addClass("d-none");
         return;
     }
 

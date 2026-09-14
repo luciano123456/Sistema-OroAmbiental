@@ -40,6 +40,8 @@ namespace SistemaOroAmbiental.Application.Controllers
                     Activo = p.Activo,
                     Nombre = p.Nombre,
                     Abreviatura = p.Abreviatura,
+                    EsDescartadorChicoHojaRuta = p.EsDescartadorChicoHojaRuta,
+                    EsDescartadorGrandeHojaRuta = p.EsDescartadorGrandeHojaRuta,
                     IdCategoria = p.IdCategoria,
                     IdMedida = p.IdMedida,
                     CostoUnitario = p.CostoUnitario,
@@ -84,6 +86,8 @@ namespace SistemaOroAmbiental.Application.Controllers
             {
                 Nombre = model.Nombre,
                 Abreviatura = string.IsNullOrWhiteSpace(model.Abreviatura) ? null : model.Abreviatura.Trim(),
+                EsDescartadorChicoHojaRuta = model.EsDescartadorChicoHojaRuta,
+                EsDescartadorGrandeHojaRuta = model.EsDescartadorGrandeHojaRuta,
                 IdCategoria = model.IdCategoria,
                 IdMedida = model.IdMedida,
                 CostoUnitario = model.CostoUnitario,
@@ -93,7 +97,7 @@ namespace SistemaOroAmbiental.Application.Controllers
                 FechaUsuarioRegistra = DateTime.Now
             };
 
-            ServiceResult result = await _service.Insertar(producto);
+            ServiceResult result = await _service.Insertar(producto, model.ReemplazarDescartadorHojaRuta);
 
             return Ok(new
             {
@@ -115,6 +119,8 @@ namespace SistemaOroAmbiental.Application.Controllers
                 Id = model.Id,
                 Nombre = model.Nombre,
                 Abreviatura = string.IsNullOrWhiteSpace(model.Abreviatura) ? null : model.Abreviatura.Trim(),
+                EsDescartadorChicoHojaRuta = model.EsDescartadorChicoHojaRuta,
+                EsDescartadorGrandeHojaRuta = model.EsDescartadorGrandeHojaRuta,
                 IdCategoria = model.IdCategoria,
                 IdMedida = model.IdMedida,
                 CostoUnitario = model.CostoUnitario,
@@ -124,7 +130,7 @@ namespace SistemaOroAmbiental.Application.Controllers
                 FechaUsuarioModifica = DateTime.Now
             };
 
-            ServiceResult result = await _service.Actualizar(producto);
+            ServiceResult result = await _service.Actualizar(producto, model.ReemplazarDescartadorHojaRuta);
 
             return Ok(new
             {
@@ -208,6 +214,30 @@ namespace SistemaOroAmbiental.Application.Controllers
         }
 
         [HttpGet]
+        public async Task<IActionResult> VerificarDescartadorHojaRuta(bool esChico, bool esGrande, int? idExcluir = null)
+        {
+            var result = await _service.VerificarDescartadorHojaRuta(esChico, esGrande, idExcluir);
+            if (result == null)
+                return Ok(new { valor = true, tipo = "ok" });
+
+            string? productoOcupante = null;
+            if (result.IdReferencia is int idRef && idRef > 0)
+            {
+                var otro = await _service.Obtener(idRef);
+                productoOcupante = otro?.Nombre;
+            }
+
+            return Ok(new
+            {
+                valor = false,
+                mensaje = result.Mensaje,
+                tipo = result.Tipo,
+                idReferencia = result.IdReferencia,
+                productoOcupante
+            });
+        }
+
+        [HttpGet]
         public async Task<IActionResult> EditarInfo(int id)
         {
             var p = await _service.Obtener(id);
@@ -220,6 +250,8 @@ namespace SistemaOroAmbiental.Application.Controllers
                 p.Id,
                 p.Nombre,
                 p.Abreviatura,
+                p.EsDescartadorChicoHojaRuta,
+                p.EsDescartadorGrandeHojaRuta,
                 p.IdCategoria,
                 p.IdMedida,
                 p.CostoUnitario,

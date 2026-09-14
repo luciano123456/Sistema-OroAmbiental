@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using SistemaOroAmbiental.Application.Helpers;
 using SistemaOroAmbiental.Application.Models;
 using SistemaOroAmbiental.Application.Models.ViewModels;
 using SistemaOroAmbiental.BLL.Service;
@@ -276,31 +277,58 @@ namespace SistemaOroAmbiental.Application.Controllers
         public async Task<IActionResult> Lista(bool soloActivos = false)
         {
             var Usuarios = (await _Usuarioservice.ObtenerTodos(soloActivos)).ToList();
-
-            var lista = Usuarios.Select(c => new VMUser
-            {
-                Id = c.Id,
-                Activo = c.Activo,
-                Usuario = c.Usuario,
-                Nombre = c.Nombre,
-                Apellido = c.Apellido,
-                Dni = c.Dni,
-                Telefono = c.Telefono,
-                Direccion = c.Direccion,
-                IdRol = c.IdRol,
-                UsuariosRol = c.IdRolNavigation.Nombre,
-                IdEstado = c.IdEstado,
-                Estado = c.IdEstadoNavigation.Nombre,
-                FechaUltimaActividad = c.FechaUltimaActividad,
-                EnLinea = _conexiones.EstaEnLinea(c.FechaUltimaActividad),
-                UltimoModulo = c.UltimoModulo,
-                AvatarColor = c.AvatarColor,
-                AvatarIcono = c.AvatarIcono,
-                AvatarFoto = c.AvatarFoto
-            }).ToList();
-
-            return Ok(lista);
+            return Ok(Usuarios.Select(MapUsuarioVm).ToList());
         }
+
+        [HttpPost]
+        public async Task<IActionResult> ListaPaginada([FromBody] GrillaServerRequest req)
+        {
+            var consulta = GrillaServerHelper.ToConsulta(req);
+            var result = await _Usuarioservice.ListarPaginado(consulta);
+            var data = result.Items.Select(c => MapUsuarioVm(c)).ToList();
+            return Ok(GrillaServerHelper.Respuesta(req, result.Total, result.Filtered, data));
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> PaginaDeId([FromBody] GrillaServerRequest req, int id)
+        {
+            if (id <= 0)
+                return NotFound();
+
+            var consulta = GrillaServerHelper.ToConsulta(req);
+            var indice = await _Usuarioservice.ObtenerIndiceEnLista(id, consulta);
+            if (indice < 0)
+                return NotFound();
+
+            var pageSize = Math.Clamp(consulta.Length, 1, 200);
+            return Ok(new GrillaPaginaDeIdResponse
+            {
+                Page = GrillaServerHelper.CalcularPagina(indice, pageSize),
+                Start = GrillaServerHelper.CalcularPagina(indice, pageSize) * pageSize
+            });
+        }
+
+        private VMUser MapUsuarioVm(User c) => new()
+        {
+            Id = c.Id,
+            Activo = c.Activo,
+            Usuario = c.Usuario,
+            Nombre = c.Nombre,
+            Apellido = c.Apellido,
+            Dni = c.Dni,
+            Telefono = c.Telefono,
+            Direccion = c.Direccion,
+            IdRol = c.IdRol,
+            UsuariosRol = c.IdRolNavigation.Nombre,
+            IdEstado = c.IdEstado,
+            Estado = c.IdEstadoNavigation.Nombre,
+            FechaUltimaActividad = c.FechaUltimaActividad,
+            EnLinea = _conexiones.EstaEnLinea(c.FechaUltimaActividad),
+            UltimoModulo = c.UltimoModulo,
+            AvatarColor = c.AvatarColor,
+            AvatarIcono = c.AvatarIcono,
+            AvatarFoto = c.AvatarFoto
+        };
 
         /// <summary>Endpoint liviano: presencia + módulo + avatar (para refrescar grilla sin reload).</summary>
         [HttpGet]

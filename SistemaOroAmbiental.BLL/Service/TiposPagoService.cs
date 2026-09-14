@@ -17,5 +17,6 @@ namespace SistemaOroAmbiental.BLL.Service
         public Task<bool> Insertar(TiposPago model) => _repo.Insertar(model);
         public Task<TiposPago?> Obtener(int id) => _repo.Obtener(id);
         public Task<IQueryable<TiposPago>> ObtenerTodos() => _repo.ObtenerTodos();
+        public Task<bool> ExisteCodigo(string codigo, int? idExcluir = null) => _repo.ExisteCodigo(codigo, idExcluir);
     }
 }

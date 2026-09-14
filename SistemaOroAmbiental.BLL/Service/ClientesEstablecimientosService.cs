@@ -20,7 +20,7 @@ namespace SistemaOroAmbiental.BLL.Service
             _recorridosRepo = recorridosRepo;
         }
 
-        public async Task<ServiceResult> Insertar(ClientesEstablecimiento model)
+        public async Task<ServiceResult> Insertar(ClientesEstablecimiento model, bool desplazarOrdenRecorrido = false)
         {
             var validacion = Validar(model);
             if (validacion != null) return validacion;
@@ -34,6 +34,9 @@ namespace SistemaOroAmbiental.BLL.Service
                     dup.Id);
             }
 
+            if (desplazarOrdenRecorrido)
+                await DesplazarSiCorresponde(model, null);
+
             var ok = await _repo.Insertar(model);
             if (!ok)
                 return ServiceResult.Error("No se pudo guardar");
@@ -42,7 +45,7 @@ namespace SistemaOroAmbiental.BLL.Service
             return ServiceResult.Success("Establecimiento registrado correctamente");
         }
 
-        public async Task<ServiceResult> Actualizar(ClientesEstablecimiento model)
+        public async Task<ServiceResult> Actualizar(ClientesEstablecimiento model, bool desplazarOrdenRecorrido = false)
         {
             var validacion = Validar(model);
             if (validacion != null) return validacion;
@@ -55,6 +58,9 @@ namespace SistemaOroAmbiental.BLL.Service
                     "duplicado",
                     dup.Id);
             }
+
+            if (desplazarOrdenRecorrido)
+                await DesplazarSiCorresponde(model, model.Id);
 
             var ok = await _repo.Actualizar(model);
             if (!ok)
@@ -77,6 +83,31 @@ namespace SistemaOroAmbiental.BLL.Service
 
         public Task<IQueryable<ClientesEstablecimiento>> ObtenerTodos() => _repo.ObtenerTodos();
 
+        public Task<List<ClientesEstablecimiento>> ListarPorCliente(int idCliente) => _repo.ListarPorCliente(idCliente);
+
+        public Task<GrillaPaginadaResult<ClientesEstablecimiento>> ListarPaginado(GrillaPaginadaConsulta consulta)
+            => _repo.ListarPaginado(consulta);
+
+        public Task<int> ObtenerIndiceEnLista(int id, GrillaPaginadaConsulta consulta)
+            => _repo.ObtenerIndiceEnLista(id, consulta);
+
+        public Task<OrdenRecorridoOcupanteDto> ObtenerOcupanteOrdenRecorrido(
+            int idCamion, int idDia, int idSemana, int orden, int? idExcluirEstablecimiento)
+            => _repo.ObtenerOcupanteOrdenRecorrido(idCamion, idDia, idSemana, orden, idExcluirEstablecimiento);
+
+        private Task DesplazarSiCorresponde(ClientesEstablecimiento model, int? idExcluir)
+        {
+            if (model.OrdenRecorrido is not > 0 || model.IdCamion is not > 0)
+                return Task.CompletedTask;
+
+            return _repo.DesplazarOrdenRecorridoSiOcupado(
+                model.IdCamion.Value,
+                model.IdDiaRecoleccion,
+                model.IdSemanaRecoleccion,
+                model.OrdenRecorrido.Value,
+                idExcluir);
+        }
+
         private async Task SyncRecorridosSafe(int idEstablecimiento, int idUsuario)
         {
             if (idEstablecimiento <= 0) return;
@@ -92,6 +123,8 @@ namespace SistemaOroAmbiental.BLL.Service
 
         private static ServiceResult? Validar(ClientesEstablecimiento model)
         {
+            IntercambioTxtCampos.Aplicar(model);
+
             if (model.IdCliente <= 0)
                 return ServiceResult.Error("Debe seleccionar un cliente.", "validacion");
 

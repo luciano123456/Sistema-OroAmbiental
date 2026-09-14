@@ -40,10 +40,12 @@ namespace SistemaOroAmbiental.Application.Controllers
 
             var ids = lista.Select(x => x.Id).ToList();
             var pagosPorCompra = await _service.SumarPagosPorCompras(ids);
+            var productosPorCompra = await _service.ContarProductosPorCompras(ids);
 
             var vm = lista.Select(c =>
             {
                 pagosPorCompra.TryGetValue(c.Id, out var totalPagado);
+                productosPorCompra.TryGetValue(c.Id, out var cantidadProductos);
                 return new VMCompraLista
                 {
                     Id = c.Id,
@@ -56,7 +58,7 @@ namespace SistemaOroAmbiental.Application.Controllers
                     Descuentos = c.Descuentos,
                     TotalIva = c.TotalIva,
                     ImporteTotal = c.ImporteTotal,
-                    CantidadProductos = c.ComprasProductos?.Count ?? 0,
+                    CantidadProductos = cantidadProductos,
                     NotaInterna = c.NotaInterna,
                     TienePagos = totalPagado > 0,
                     TotalPagado = totalPagado,

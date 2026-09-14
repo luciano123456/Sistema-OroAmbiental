@@ -1,8 +1,11 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using System.IO.Compression;
 using SistemaOroAmbiental.Application.Configuration;
+using SistemaOroAmbiental.Application.Helpers;
 using SistemaOroAmbiental.BLL.Service;
 using SistemaOroAmbiental.DAL.DataContext;
 using SistemaOroAmbiental.DAL.Repository;
@@ -13,6 +16,24 @@ var builder = WebApplication.CreateBuilder(args);
 
 Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
 
+builder.Services.AddResponseCompression(options =>
+{
+    options.EnableForHttps = true;
+    options.Providers.Add<BrotliCompressionProvider>();
+    options.Providers.Add<GzipCompressionProvider>();
+    options.MimeTypes = ResponseCompressionDefaults.MimeTypes.Concat(new[]
+    {
+        "application/javascript",
+        "text/css",
+        "image/svg+xml"
+    });
+});
+builder.Services.Configure<BrotliCompressionProviderOptions>(o => o.Level = CompressionLevel.Fastest);
+builder.Services.Configure<GzipCompressionProviderOptions>(o => o.Level = CompressionLevel.Fastest);
+
+builder.Services.AddMemoryCache();
+builder.Services.AddResponseCaching();
+
 builder.Services.AddControllersWithViews()
     .AddJsonOptions(o =>
     {
@@ -20,15 +41,25 @@ builder.Services.AddControllersWithViews()
         o.JsonSerializerOptions.PropertyNamingPolicy = null;
     });
 
-builder.Services.AddRazorPages().AddRazorRuntimeCompilation();
+if (builder.Environment.IsDevelopment())
+{
+    builder.Services.AddRazorPages().AddRazorRuntimeCompilation();
+}
+else
+{
+    builder.Services.AddRazorPages();
+}
 
-builder.Services.AddDbContext<SistemaOroAmbientalContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("SistemaDB")));
+builder.Services.AddDbContextPool<SistemaOroAmbientalContext>(options =>
+    options.UseSqlServer(
+        builder.Configuration.GetConnectionString("SistemaDB"),
+        sql => sql.EnableRetryOnFailure(maxRetryCount: 3, maxRetryDelay: TimeSpan.FromSeconds(5), errorNumbersToAdd: null)));
 
 builder.Services.AddScoped(typeof(IConfiguracionNombreRepository<>), typeof(ConfiguracionNombreRepository<>));
 builder.Services.AddScoped(typeof(IConfiguracionNombreService<>), typeof(ConfiguracionNombreService<>));
 builder.Services.AddScoped<IDeleteConflictChecker, DeleteConflictChecker>();
 builder.Services.AddScoped<IEntidadCascadeRepository, EntidadCascadeRepository>();
+builder.Services.AddScoped<ICatalogoCascadeRepository, CatalogoCascadeRepository>();
 
 builder.Services.AddScoped<IUsuariosRepository<User>, UsuariosRepository>();
 builder.Services.AddScoped<IUsuariosService, UsuariosService>();
@@ -128,9 +159,14 @@ builder.Services.AddScoped<IProductosService, ProductosService>();
 
 builder.Services.AddScoped<ICamionesRepository, CamionesRepository>();
 builder.Services.AddScoped<ICamionesService, CamionesService>();
+builder.Services.AddScoped<IChoferesRepository, ChoferesRepository>();
+builder.Services.AddScoped<IChoferesService, ChoferesService>();
+builder.Services.AddScoped<ChoferesFirmaStorage>();
 
 builder.Services.AddScoped<IRecorridosRepository, RecorridosRepository>();
 builder.Services.AddScoped<IRecorridosService, RecorridosService>();
+builder.Services.AddScoped<IClientesCertificadosTratamientoRepository, ClientesCertificadosTratamientoRepository>();
+builder.Services.AddScoped<CertificadosTratamientoStorage>();
 
 builder.Services.AddScoped<IProveedoresRepository, ProveedoresRepository>();
 builder.Services.AddScoped<IProveedoresService, ProveedoresService>();
@@ -219,19 +255,40 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
+app.UseResponseCompression();
+app.UseResponseCaching();
+
 app.UseHttpsRedirection();
-app.UseStaticFiles();
+app.UseStaticFiles(new StaticFileOptions
+{
+    OnPrepareResponse = ctx =>
+    {
+        var path = ctx.Context.Request.Path.Value ?? "";
+        if (path.StartsWith("/css/", StringComparison.OrdinalIgnoreCase)
+            || path.StartsWith("/js/", StringComparison.OrdinalIgnoreCase)
+            || path.StartsWith("/lib/", StringComparison.OrdinalIgnoreCase)
+            || path.StartsWith("/Imagenes/", StringComparison.OrdinalIgnoreCase))
+        {
+            ctx.Context.Response.Headers.CacheControl = "public,max-age=604800";
+        }
+    }
+});
 
 app.Use(async (context, next) =>
 {
-    await next();
-    var ct = context.Response.ContentType;
-    if (!string.IsNullOrEmpty(ct)
-        && ct.StartsWith("text/html", StringComparison.OrdinalIgnoreCase)
-        && !ct.Contains("charset", StringComparison.OrdinalIgnoreCase))
+    // Igual que Sistema David: forzar charset UTF-8 en HTML antes de enviar headers
+    context.Response.OnStarting(() =>
     {
-        context.Response.ContentType = ct + "; charset=utf-8";
-    }
+        var ct = context.Response.ContentType;
+        if (!string.IsNullOrEmpty(ct)
+            && ct.StartsWith("text/html", StringComparison.OrdinalIgnoreCase)
+            && !ct.Contains("charset", StringComparison.OrdinalIgnoreCase))
+        {
+            context.Response.ContentType = ct + "; charset=utf-8";
+        }
+        return Task.CompletedTask;
+    });
+    await next();
 });
 
 app.UseRouting();

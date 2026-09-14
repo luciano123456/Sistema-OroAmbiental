@@ -39,10 +39,19 @@ namespace SistemaOroAmbiental.Application.Helpers
             var tipoGenerador = FormatearTipoGenerador(
                 est?.IdTipoGeneradorNavigation ?? cli?.IdTipoGeneradorNavigation);
             var nombreCliente = cli?.Nombre?.Trim() ?? "";
-            var telefono = cli?.Telefono?.Trim() ?? cli?.TelefonoAlt?.Trim() ?? "";
-            var emailContactoEst = est?.ClientesEstablecimientosContactos?
-                .Where(x => !string.IsNullOrWhiteSpace(x.Email))
+            var contactosEst = est?.ClientesEstablecimientosContactos?
                 .OrderBy(x => x.Id)
+                .ToList();
+            var telefonoContactoEst = contactosEst?
+                .Select(x => !string.IsNullOrWhiteSpace(x.Telefono)
+                    ? x.Telefono!.Trim()
+                    : (x.TelefonoAlt?.Trim() ?? ""))
+                .FirstOrDefault(t => !string.IsNullOrWhiteSpace(t));
+            var telefono = !string.IsNullOrWhiteSpace(telefonoContactoEst)
+                ? telefonoContactoEst
+                : (cli?.Telefono?.Trim() ?? cli?.TelefonoAlt?.Trim() ?? "");
+            var emailContactoEst = contactosEst?
+                .Where(x => !string.IsNullOrWhiteSpace(x.Email))
                 .Select(x => x.Email!.Trim())
                 .FirstOrDefault();
             var email = !string.IsNullOrWhiteSpace(emailContactoEst)

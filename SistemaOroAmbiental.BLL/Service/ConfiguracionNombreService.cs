@@ -20,6 +20,9 @@ namespace SistemaOroAmbiental.BLL.Service
 
         public Task<T?> Obtener(int id) => _repo.Obtener(id);
 
+        public Task<T?> BuscarDuplicadoPorNombre(int? idExcluir, string nombre)
+            => _repo.BuscarDuplicadoPorNombre(idExcluir, nombre);
+
         public Task<IQueryable<T>> ObtenerTodos() => _repo.ObtenerTodos();
     }
 }

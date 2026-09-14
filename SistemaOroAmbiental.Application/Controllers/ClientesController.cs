@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using SistemaOroAmbiental.Application.Helpers;
 using SistemaOroAmbiental.Application.Models.ViewModels;
 using SistemaOroAmbiental.BLL.Common;
 using SistemaOroAmbiental.BLL.Service;
@@ -15,17 +17,26 @@ namespace SistemaOroAmbiental.Application.Controllers
         private readonly IClientesEstablecimientosService _establecimientosService;
         private readonly IClientesEstablecimientosRepository _establecimientosRepo;
         private readonly IRecorridosService _recorridosService;
+        private readonly IClientesCertificadosTratamientoRepository _certRepo;
+        private readonly CertificadosTratamientoStorage _certStorage;
+        private readonly IWebHostEnvironment _env;
 
         public ClientesController(
             IClientesService service,
             IClientesEstablecimientosService establecimientosService,
             IClientesEstablecimientosRepository establecimientosRepo,
-            IRecorridosService recorridosService)
+            IRecorridosService recorridosService,
+            IClientesCertificadosTratamientoRepository certRepo,
+            CertificadosTratamientoStorage certStorage,
+            IWebHostEnvironment env)
         {
             _service = service;
             _establecimientosService = establecimientosService;
             _establecimientosRepo = establecimientosRepo;
             _recorridosService = recorridosService;
+            _certRepo = certRepo;
+            _certStorage = certStorage;
+            _env = env;
         }
 
         [AllowAnonymous]
@@ -46,6 +57,76 @@ namespace SistemaOroAmbiental.Application.Controllers
         {
             var clientes = (await _service.ObtenerTodos(soloActivos)).ToList();
             return Ok(clientes.Select(MapVm).ToList());
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> ListaPaginada([FromBody] GrillaServerRequest req)
+        {
+            var consulta = GrillaServerHelper.ToConsulta(req);
+            var result = await _service.ListarPaginado(consulta);
+            var data = result.Items.Select(MapVm).ToList();
+            return Ok(GrillaServerHelper.Respuesta(req, result.Total, result.Filtered, data));
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> PaginaDeId([FromBody] GrillaServerRequest req, int id)
+        {
+            if (id <= 0)
+                return NotFound();
+
+            var consulta = GrillaServerHelper.ToConsulta(req);
+            var indice = await _service.ObtenerIndiceEnLista(id, consulta);
+            if (indice < 0)
+                return NotFound();
+
+            var pageSize = Math.Clamp(consulta.Length, 1, 200);
+            return Ok(new GrillaPaginaDeIdResponse
+            {
+                Page = GrillaServerHelper.CalcularPagina(indice, pageSize),
+                Start = GrillaServerHelper.CalcularPagina(indice, pageSize) * pageSize
+            });
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> Combo(string? q, int take = 40, int? id = null)
+        {
+            take = Math.Clamp(take, 1, 80);
+            var query = await _service.ObtenerTodos(true);
+            var texto = (q ?? "").Trim();
+            if (texto.Length > 0)
+            {
+                if (int.TryParse(texto, out var nro))
+                {
+                    query = query.Where(c =>
+                        c.Nombre.Contains(texto) ||
+                        (c.Cuit != null && c.Cuit.Contains(texto)) ||
+                        c.NumeroCliente == nro);
+                }
+                else
+                {
+                    query = query.Where(c =>
+                        c.Nombre.Contains(texto) ||
+                        (c.Cuit != null && c.Cuit.Contains(texto)));
+                }
+            }
+
+            var list = await query
+                .OrderBy(c => c.Nombre)
+                .Take(take)
+                .Select(c => new { c.Id, c.Nombre })
+                .ToListAsync();
+
+            if (id is > 0 && list.All(x => x.Id != id.Value))
+            {
+                var extra = await (await _service.ObtenerTodos(false))
+                    .Where(c => c.Id == id.Value)
+                    .Select(c => new { c.Id, c.Nombre })
+                    .FirstOrDefaultAsync();
+                if (extra != null)
+                    list.Insert(0, extra);
+            }
+
+            return Ok(list);
         }
 
         [HttpPost]
@@ -249,6 +330,24 @@ namespace SistemaOroAmbiental.Application.Controllers
             est.OrdenRecorrido = model.OrdenRecorrido is > 0 ? model.OrdenRecorrido : null;
             est.Kilos = model.Kilos;
             est.IdTipoGenerador = model.IdTipoGenerador ?? cliente.IdTipoGenerador;
+
+            if (model.DesplazarOrdenRecorrido && est.OrdenRecorrido is > 0)
+            {
+                var idExcluir = esNuevo ? (int?)null : est.Id;
+                var semana = est.IdSemanaRecoleccion;
+                var orden = est.OrdenRecorrido.Value;
+                var slots = new HashSet<(int Camion, int Dia)>();
+                if (est.IdCamion is > 0 && est.IdDiaRecoleccion > 0)
+                    slots.Add((est.IdCamion.Value, est.IdDiaRecoleccion));
+                foreach (var d in diasEntrada)
+                {
+                    if (d.IdCamion is > 0 && d.IdDia > 0)
+                        slots.Add((d.IdCamion.Value, d.IdDia));
+                }
+
+                foreach (var (camion, dia) in slots)
+                    await _establecimientosRepo.DesplazarOrdenRecorridoSiOcupado(camion, dia, semana, orden, idExcluir);
+            }
 
             ServiceResult result = esNuevo
                 ? await _establecimientosService.Insertar(est)
@@ -471,6 +570,104 @@ namespace SistemaOroAmbiental.Application.Controllers
             }
 
             return entity;
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> ManifiestosDocumentos(int idCliente, int? idEstablecimiento = null)
+        {
+            if (idCliente <= 0)
+                return BadRequest();
+
+            var data = await _certRepo.ListarDocumentosPorCliente(idCliente, idEstablecimiento);
+            return Ok(data);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> DescargarCertificado(int id)
+        {
+            if (id <= 0)
+                return NotFound();
+
+            var row = await _certRepo.Obtener(id);
+            if (row == null)
+                return NotFound();
+
+            var abs = _certStorage.AbsPath(row.RutaPdf);
+            if (!System.IO.File.Exists(abs))
+                return NotFound();
+
+            var bytes = await System.IO.File.ReadAllBytesAsync(abs);
+            return File(bytes, "application/pdf", row.NombreArchivo);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> DescargarManifiestoHistorial(int idCamion, int id)
+        {
+            if (idCamion <= 0 || id <= 0)
+                return NotFound();
+
+            var model = await _recorridosService.ObtenerManifiestosHistorial(idCamion, new[] { id });
+            if (model == null)
+                return NotFound();
+
+            try
+            {
+                var header = Path.Combine(_env.WebRootPath, "Imagenes", "manifiesto-header.jpg");
+                var bytes = ManifiestoPdfGenerator.Generar(model, header);
+                return File(bytes, "application/pdf", ManifiestoPdfGenerator.NombreArchivo(model));
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine("[Manifiesto PDF] " + ex);
+                return StatusCode(500, "No se pudo generar el PDF del manifiesto.");
+            }
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> SiguienteNumeroCertificado()
+        {
+            var data = await _certRepo.ObtenerSiguienteNumero(0, 0);
+            return Ok(data);
+        }
+
+        [HttpDelete]
+        public async Task<IActionResult> EliminarCertificado(int id)
+        {
+            if (id <= 0)
+                return Ok(new { valor = false, mensaje = "Certificado inválido.", tipo = "validacion" });
+
+            var row = await _certRepo.Obtener(id);
+            if (row == null)
+                return Ok(new { valor = false, mensaje = "No se encontró el certificado.", tipo = "validacion" });
+
+            var abs = _certStorage.AbsPath(row.RutaPdf);
+            if (System.IO.File.Exists(abs))
+            {
+                try { System.IO.File.Delete(abs); } catch { /* ignore */ }
+            }
+
+            var ok = await _certRepo.Eliminar(id);
+            return Ok(new
+            {
+                valor = ok,
+                mensaje = ok ? "Certificado eliminado." : "No se pudo eliminar el certificado.",
+                tipo = ok ? "ok" : "error"
+            });
+        }
+
+        [HttpDelete]
+        public async Task<IActionResult> EliminarManifiestoHistorial(int idCamion, int id)
+        {
+            if (idCamion <= 0 || id <= 0)
+                return Ok(new { valor = false, mensaje = "Manifiesto inválido.", tipo = "validacion" });
+
+            var result = await _recorridosService.EliminarManifiestoHistorial(idCamion, id);
+            return Ok(new
+            {
+                valor = result.Ok,
+                mensaje = result.Mensaje,
+                tipo = result.Tipo
+            });
         }
     }
 }

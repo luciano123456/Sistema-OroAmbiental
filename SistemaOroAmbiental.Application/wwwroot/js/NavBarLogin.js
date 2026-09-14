@@ -71,21 +71,82 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     initNavbarDropdowns();
+    initNavbarHoverDropdowns();
+    initNavbarCollapseAutoClose();
 });
 
-/** Dropdowns del navbar con Popper fixed (quedan por encima de tablas/modales de pagina). */
+const RP_NAV_EXPAND_MQ = "(min-width: 1200px)";
+
+function isNavbarExpanded() {
+    return window.matchMedia(RP_NAV_EXPAND_MQ).matches;
+}
+
+/** Dropdowns del navbar: Popper fixed en desktop, static en menu colapsado. */
 function initNavbarDropdowns() {
     if (!window.bootstrap?.Dropdown) return;
 
+    const expanded = isNavbarExpanded();
+
     document.querySelectorAll(".rp-navbar [data-bs-toggle='dropdown']").forEach(toggle => {
-        bootstrap.Dropdown.getOrCreateInstance(toggle, {
+        const existing = bootstrap.Dropdown.getInstance(toggle);
+        if (existing) existing.dispose();
+
+        const options = {
             offset: [0, 4],
-            popperConfig(defaultBootstrapConfig) {
+            autoClose: "outside",
+            display: expanded ? "dynamic" : "static"
+        };
+
+        if (expanded) {
+            options.popperConfig = function (defaultBootstrapConfig) {
                 return Object.assign({}, defaultBootstrapConfig, { strategy: "fixed" });
-            }
+            };
+        }
+
+        bootstrap.Dropdown.getOrCreateInstance(toggle, options);
+    });
+}
+
+function initNavbarHoverDropdowns() {
+    document.querySelectorAll(".rp-navbar .rp-nav-main > .nav-item.dropdown").forEach(dropdown => {
+        dropdown.addEventListener("mouseenter", function () {
+            if (!isNavbarExpanded() || window.matchMedia("(hover: none)").matches) return;
+            const toggle = this.querySelector("[data-bs-toggle='dropdown']");
+            if (!toggle || !window.bootstrap?.Dropdown) return;
+            bootstrap.Dropdown.getOrCreateInstance(toggle).show();
+        });
+
+        dropdown.addEventListener("mouseleave", function () {
+            if (!isNavbarExpanded()) return;
+            const toggle = this.querySelector("[data-bs-toggle='dropdown']");
+            if (!toggle || !window.bootstrap?.Dropdown) return;
+            bootstrap.Dropdown.getInstance(toggle)?.hide();
         });
     });
 }
+
+function initNavbarCollapseAutoClose() {
+    const collapseEl = document.getElementById("navbarSupportedContent");
+    if (!collapseEl) return;
+
+    collapseEl.addEventListener("click", function (e) {
+        if (isNavbarExpanded()) return;
+
+        const link = e.target.closest("a");
+        if (!link) return;
+        if (link.classList.contains("dropdown-toggle")) return;
+        if (link.getAttribute("href") === "#" && !link.hasAttribute("onclick")) return;
+
+        const inst = window.bootstrap?.Collapse?.getInstance(collapseEl);
+        if (inst) inst.hide();
+    });
+}
+
+let rpNavResizeTimer = 0;
+window.addEventListener("resize", function () {
+    clearTimeout(rpNavResizeTimer);
+    rpNavResizeTimer = setTimeout(initNavbarDropdowns, 150);
+});
 
 function mostrarMenuCompleto() {
     document.querySelectorAll("#navbarSupportedContent .nav-item").forEach(el => {
@@ -228,6 +289,18 @@ function configurarPanelGeo() {
         }
     }
 
+    const txtCodigo = document.getElementById("txtCodigoConfiguracion");
+    if (txtCodigo) {
+        if (controllerConfiguracion === "Localidades")
+            txtCodigo.maxLength = 4;
+        else if (controllerConfiguracion === "Partidos")
+            txtCodigo.maxLength = 4;
+        else if (controllerConfiguracion === "ClientesTiposGenerador")
+            txtCodigo.maxLength = 2;
+        else
+            txtCodigo.maxLength = 10;
+    }
+
     configurarPanelCuentas();
 }
 
@@ -306,9 +379,11 @@ function aplicarPrefillGeoAtajo() {
 async function listaConfiguracion() {
     const url = urlListaCatalogoConfig(controllerConfiguracion);
     const response = await fetch(url, {
+        cache: "no-store",
         headers: {
             'Authorization': 'Bearer ' + token,
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'Cache-Control': 'no-cache'
         }
     });
     if (!response.ok) throw new Error('Error al cargar configuraciones');
@@ -394,7 +469,9 @@ async function abrirConfiguracion(
         });
         $('#cmbConfiguracionPartido').off('change').on('change', validarCamposConfiguracion);
         $('#cmbConfiguracionTipoCuenta').off('change').on('change', validarCamposConfiguracion);
-        $('#txtBuscarConfiguracion').off('input').on('input', filtrarConfiguraciones);
+        $('#txtBuscarConfiguracion').off('input').on('input', typeof rpDebounce === "function"
+            ? rpDebounce(filtrarConfiguraciones, 300)
+            : filtrarConfiguraciones);
 
         document.getElementById("modalConfiguracionLabel").innerText =
             "Configuracion de " + nombreConfiguracion;
@@ -410,11 +487,20 @@ async function editarConfiguracion(id) {
     try {
         const response = await fetch("/" + controllerConfiguracion + "/EditarInfo?id=" + id, {
             method: "GET",
+            cache: "no-store",
             headers: {
                 "Content-Type": "application/json",
-                "Authorization": "Bearer " + token
+                "Authorization": "Bearer " + token,
+                "Cache-Control": "no-cache"
             }
         });
+
+        if (response.status === 404) {
+            cancelarModificarConfiguracion();
+            await llenarConfiguraciones();
+            errorModal("El registro ya no existe. Actualizamos la lista.");
+            return;
+        }
 
         if (!response.ok) throw new Error("Ha ocurrido un error.");
 
@@ -543,52 +629,39 @@ async function llenarConfiguraciones() {
 
 
 async function eliminarConfiguracion(id) {
-
-
-    let resultado = await confirmarModal("¿Desea eliminar el/la" + nombreConfiguracion + "?");
-    if (!resultado) return;
-
-    if (resultado) {
-        try {
-            const response = await fetch("/" + controllerConfiguracion + "/Eliminar?id=" + id, {
-                method: "DELETE",
-                headers: {
-                    'Authorization': 'Bearer ' + token,
-                    'Content-Type': 'application/json'
-                }
-            });
-
-            if (!response.ok) {
-                throw new Error("Error al eliminar " + nombreConfiguracion);
-            }
-
-            const dataJson = await response.json();
-
-            if (dataJson.valor) {
-                await llenarConfiguraciones();
-
-                if (getPerfilConfigGeo(controllerConfiguracion)) {
-                    cacheProvinciasConfigGeo = null;
-                    cachePartidosConfigGeo = null;
-                }
-
-                exitoModal(dataJson.mensaje || (nombreConfiguracion + " eliminada correctamente"));
-
-                document.dispatchEvent(new CustomEvent("configuracionActualizada", {
-                    detail: {
-                        tipo: controllerConfiguracion,
-                        nuevoId: null,
-                        accion: "eliminar"
-                    }
-                }));
-            } else {
-                errorModal(dataJson?.mensaje || "No se pudo eliminar");
-            }
-        } catch (error) {
-            console.error("Ha ocurrido un error:", error);
-            errorModal("Ha ocurrido un error al eliminar");
-        }
+    if (typeof ejecutarEliminacionEntidad !== "function") {
+        errorModal("No está disponible el asistente de eliminación.");
+        return;
     }
+
+    const resultado = await ejecutarEliminacionEntidad({
+        entidadLabel: "este valor de " + nombreConfiguracion,
+        urlDependencias: "/" + controllerConfiguracion + "/DependenciasEliminar?id=" + id,
+        urlEliminar: cascada => "/" + controllerConfiguracion + "/Eliminar?id=" + id + "&cascada=" + (cascada ? "true" : "false"),
+        headers: {
+            Authorization: "Bearer " + token,
+            "Content-Type": "application/json"
+        }
+    });
+
+    if (resultado.accion !== "ok") return;
+
+    await llenarConfiguraciones();
+
+    if (getPerfilConfigGeo(controllerConfiguracion)) {
+        cacheProvinciasConfigGeo = null;
+        cachePartidosConfigGeo = null;
+    }
+
+    exitoModal(resultado.data?.mensaje || resultado.data?.Mensaje || (nombreConfiguracion + " eliminada correctamente"));
+
+    document.dispatchEvent(new CustomEvent("configuracionActualizada", {
+        detail: {
+            tipo: controllerConfiguracion,
+            nuevoId: null,
+            accion: "eliminar"
+        }
+    }));
 }
 
 
@@ -670,9 +743,9 @@ function guardarCambiosConfiguracion() {
         }
     } else {
         nuevoModelo = {
-            Id: idConfiguracion !== "" ? idConfiguracion : 0,
+            Id: idConfiguracion !== "" ? Number(idConfiguracion) : 0,
             IdCombo: comboNombre != null ? idCombo : 0,
-            Nombre: $("#txtNombreConfiguracion").val()
+            Nombre: ($("#txtNombreConfiguracion").val() || "").trim()
         };
 
         if (controllerConfiguracion === "Cuentas") {
@@ -860,7 +933,9 @@ function abrirConfiguraciones() {
     if (buscadorSecciones) {
         buscadorSecciones.value = "";
         filtrarSeccionesConfiguraciones();
-        $("#txtBuscarSeccionesConfiguracion").off("input").on("input", filtrarSeccionesConfiguraciones);
+        $("#txtBuscarSeccionesConfiguracion").off("input").on("input", typeof rpDebounce === "function"
+            ? rpDebounce(filtrarSeccionesConfiguraciones, 300)
+            : filtrarSeccionesConfiguraciones);
         setTimeout(() => buscadorSecciones.focus(), 150);
     }
 }
@@ -897,18 +972,6 @@ function filtrarSeccionesConfiguraciones() {
         lblVacio.setAttribute("hidden", "hidden");
     }
 }
-
-    document.querySelectorAll('.nav-item.dropdown').forEach(dropdown => {
-        dropdown.addEventListener('mouseenter', function () {
-            const dropdownMenu = this.querySelector('.dropdown-menu');
-            dropdownMenu.classList.add('show'); // Mostrar el dropdown
-        });
-
-        dropdown.addEventListener('mouseleave', function () {
-            const dropdownMenu = this.querySelector('.dropdown-menu');
-            dropdownMenu.classList.remove('show'); // Ocultar el dropdown
-        });
-    });
 
 function cerrarSesion() {
     const go = () => { window.location.href = '/Login/Logout'; };

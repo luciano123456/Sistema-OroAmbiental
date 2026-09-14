@@ -17,6 +17,8 @@ namespace SistemaOroAmbiental.BLL.Service
 
         public async Task<ServiceResult> Insertar(Cliente model)
         {
+            IntercambioTxtCampos.Aplicar(model);
+
             if (string.IsNullOrWhiteSpace(model.Nombre) ||
                 string.IsNullOrWhiteSpace(model.Cuit) ||
                 model.IdSucursal <= 0)
@@ -45,6 +47,8 @@ namespace SistemaOroAmbiental.BLL.Service
 
         public async Task<ServiceResult> Actualizar(Cliente model)
         {
+            IntercambioTxtCampos.Aplicar(model);
+
             if (string.IsNullOrWhiteSpace(model.Nombre) ||
                 string.IsNullOrWhiteSpace(model.Cuit) ||
                 model.IdSucursal <= 0)
@@ -121,6 +125,12 @@ namespace SistemaOroAmbiental.BLL.Service
 
         public Task<IQueryable<Cliente>> ObtenerTodos(bool soloActivos = false)
             => _repo.ObtenerTodos(soloActivos);
+
+        public Task<GrillaPaginadaResult<Cliente>> ListarPaginado(GrillaPaginadaConsulta consulta)
+            => _repo.ListarPaginado(consulta);
+
+        public Task<int> ObtenerIndiceEnLista(int id, GrillaPaginadaConsulta consulta)
+            => _repo.ObtenerIndiceEnLista(id, consulta);
 
         public async Task<ServiceResult> CambiarActivo(int id, bool activo)
         {

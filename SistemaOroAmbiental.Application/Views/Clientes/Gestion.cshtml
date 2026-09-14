@@ -11,8 +11,8 @@
     <link href="~/css/Productora.css?v=6.2" rel="stylesheet" />
     <link href="~/css/disenopantallas.css?v=6.2" rel="stylesheet" />
     <link href="~/css/M_Generico.css?v=6.3" rel="stylesheet" />
-    <link href="~/css/ClientesGestion.css?v=20.5" rel="stylesheet" />
-    <link href="~/css/ClientesEstablecimientos.css?v=5.7" rel="stylesheet" />
+    <link href="~/css/ClientesGestion.css?v=22.7" rel="stylesheet" />
+    <link href="~/css/ClientesEstablecimientos.css?v=6.8" rel="stylesheet" />
     <link href="~/css/ContratosModal.css?v=5.4" rel="stylesheet" />
 }
 
@@ -131,7 +131,8 @@
                         <div class="row g-3 cg-form-section-body">
                             <div class="col-md-4">
                                 <label class="form-label">Nombre</label>
-                                <input id="cgNombre" class="form-control" required />
+                                <input id="cgNombre" class="form-control" required maxlength="@IntercambioTxtCampos.RazonSocial" />
+                                <div class="form-text text-muted">Máx. @IntercambioTxtCampos.RazonSocial caracteres (TXT planta)</div>
                             </div>
                             <div class="col-md-2">
                                 <label class="form-label">Nro cliente</label>
@@ -139,7 +140,7 @@
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label">CUIT</label>
-                                <input id="cgCuit" class="form-control" required />
+                                <input id="cgCuit" class="form-control" required maxlength="@IntercambioTxtCampos.Cuit" />
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label">Sucursal</label>
@@ -226,19 +227,19 @@
                         <div class="row g-3 cg-form-section-body">
                             <div class="col-md-5">
                                 <label class="form-label">Calle</label>
-                                <input id="cgCalle" class="form-control" />
+                                <input id="cgCalle" class="form-control" maxlength="@IntercambioTxtCampos.Calle" />
                             </div>
                             <div class="col-md-2">
                                 <label class="form-label">Numero</label>
-                                <input id="cgNumero" class="form-control" />
+                                <input id="cgNumero" class="form-control" maxlength="@IntercambioTxtCampos.Numero" />
                             </div>
                             <div class="col-md-2">
                                 <label class="form-label">Piso / Depto</label>
-                                <input id="cgPisoDepto" class="form-control" />
+                                <input id="cgPisoDepto" class="form-control" maxlength="@IntercambioTxtCampos.Adicional" />
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label">Codigo postal</label>
-                                <input id="cgCodPostal" class="form-control" />
+                                <input id="cgCodPostal" class="form-control" maxlength="@IntercambioTxtCampos.CodigoPostal" />
                             </div>
 
                             <div class="col-md-10">
@@ -278,11 +279,11 @@
                                 <div class="row g-3">
                                     <div class="col-md-6">
                                         <label class="form-label">Telefono</label>
-                                        <input id="cgTelefono" class="form-control" />
+                                        <input id="cgTelefono" class="form-control" maxlength="@IntercambioTxtCampos.Telefono" />
                                     </div>
                                     <div class="col-md-6">
                                         <label class="form-label">Telefono alternativo</label>
-                                        <input id="cgTelefonoAlt" class="form-control" />
+                                        <input id="cgTelefonoAlt" class="form-control" maxlength="@IntercambioTxtCampos.Telefono" />
                                     </div>
                                     <div class="col-12">
                                         <label class="form-label">Email</label>
@@ -361,7 +362,7 @@
                             <input type="hidden" id="cgEstId" />
                             <div class="col-md-3">
                                 <label class="form-label">Id establecimiento</label>
-                                <input id="cgIdEstablecimientoCliente" class="form-control" maxlength="8" />
+                                <input id="cgIdEstablecimientoCliente" class="form-control" maxlength="@IntercambioTxtCampos.CodigoOpds" />
                             </div>
                             <div class="col-md-9">
                                 <label class="form-label">Tipo generador</label>
@@ -434,6 +435,14 @@
                                 <label class="form-label">Nº recorrido</label>
                                 <input id="cgOrdenRecorrido" class="form-control" type="number" min="0" step="1" placeholder="Auto" title="Posición en la hoja de ruta. Vacío o 0 = al final." />
                                 <div class="form-text text-muted" style="font-size:0.72rem;line-height:1.25;">Vacío/0 = último</div>
+                                <div id="avisoOrdenRecorridoCg" class="rp-orden-aviso" hidden>
+                                    <div class="rp-orden-aviso-text"></div>
+                                    <div class="rp-orden-aviso-actions">
+                                        <button type="button" class="btn btn-warning" data-orden-aviso="si">Sí, reemplazar y desplazar</button>
+                                        <button type="button" class="btn btn-outline-light" data-orden-aviso="no">No</button>
+                                    </div>
+                                    <div class="rp-orden-aviso-estado" hidden></div>
+                                </div>
                             </div>
                             <div class="col-md-2">
                                 <label class="form-label">Kilos</label>
@@ -468,6 +477,9 @@
                             </a>
                             <button type="button" id="btnVerInteresesCg" class="cg-btn cg-btn--ghost cg-btn--sm" title="Ver intereses cargados">
                                 <i class="fa fa-eye"></i> Intereses
+                            </button>
+                            <button type="button" id="btnContactoHub" class="cg-btn cg-btn--wa cg-btn--sm cg-contacto-hub" title="Enviar mensaje o reclamar deuda por WhatsApp o mail">
+                                <i class="fa fa-whatsapp"></i> WhatsApp / mail
                             </button>
                             <button type="button" id="btnRefreshControlMensual" class="cg-btn cg-btn--ghost cg-btn--sm">
                                 <i class="fa fa-refresh"></i> Actualizar
@@ -520,6 +532,9 @@
                                 <strong id="cgAtrasosTitulo">Hay meses con pago atrasado</strong>
                                 <p id="cgAtrasosResumen">Seleccioná un mes para ver el detalle o cargar interés.</p>
                             </div>
+                            <button type="button" class="cg-btn cg-btn--wa cg-btn--sm cg-contacto-hub" id="btnReclamoDeudaAtrasos" title="Reclamar deuda atrasada por WhatsApp o mail">
+                                <i class="fa fa-whatsapp"></i> Reclamar
+                            </button>
                             <button type="button" class="cg-btn cg-btn--ghost cg-btn--sm" id="btnAtrasosToggleLista" aria-expanded="true">
                                 Ver lista
                             </button>
@@ -606,6 +621,9 @@
                                     <strong class="cg-mes-ws-title" id="cgHubMesDetailTitulo">Detalle del mes</strong>
                                 </div>
                                 <div class="cg-mes-ws-head-actions">
+                                    <button type="button" class="cg-btn cg-btn--wa cg-btn--sm d-none cg-reclamo-deuda-hub" id="btnReclamoMesHub" title="Reclamar este mes por WhatsApp o mail">
+                                        <i class="fa fa-whatsapp"></i> Reclamar mes
+                                    </button>
                                     <button type="button" class="cg-btn cg-btn--warn cg-btn--sm d-none" id="btnInteresMesHub" title="Sugerir inter&eacute;s por atraso">
                                         <i class="fa fa-percent"></i> Inter&eacute;s
                                     </button>
@@ -623,8 +641,6 @@
                             <input type="hidden" id="cgCmAnio" />
                             <input type="hidden" id="cgCmMes" />
                             <input type="hidden" id="cgCmIdControl" />
-                            <input type="hidden" id="cgCmAbonoEfectivo" value="" />
-                            <input type="hidden" id="cgCmAbonoTransferencia" value="" />
                             <input type="hidden" id="cgCmFechaTransferencia" value="" />
 
                             <div class="cg-mes-ws-compact">
@@ -637,18 +653,40 @@
                                 </section>
 
                                 <div class="cg-ws-meta-bar">
-                                    <div class="cg-ws-meta-field">
+                                    <div class="cg-ws-meta-field d-none" hidden>
                                         <label class="form-label cg-ws-label" for="cgCmFechaVisita">Fecha</label>
                                         <input type="date" id="cgCmFechaVisita" class="form-control" />
                                         <input type="hidden" id="cgWsFechaEntrega" />
                                     </div>
-                                    <div class="cg-ws-meta-field cg-ws-meta-field--grow">
+                                    <div class="cg-ws-meta-field cg-ws-meta-field--grow d-none" hidden>
                                         <label class="form-label cg-ws-label" for="cgWsEstablecimiento">Establecimiento</label>
                                         <select id="cgWsEstablecimiento" class="form-control"></select>
                                     </div>
                                     <div class="cg-ws-meta-field">
+                                        <label class="form-label cg-ws-label" for="cgCmAbonoEfectivo">Pago en efectivo</label>
+                                        <input type="text" id="cgCmAbonoEfectivo" class="form-control text-end" inputmode="decimal" placeholder="0" />
+                                    </div>
+                                    <div class="cg-ws-meta-field">
+                                        <label class="form-label cg-ws-label" for="cgCmAbonoTransferencia">Pago transferencia</label>
+                                        <input type="text" id="cgCmAbonoTransferencia" class="form-control text-end" inputmode="decimal" placeholder="0" />
+                                    </div>
+                                    <div class="cg-ws-meta-field">
                                         <label class="form-label cg-ws-label" for="cgCmCajasAFavor">Cajas a favor</label>
                                         <input type="number" id="cgCmCajasAFavor" class="form-control" min="0" step="1" />
+                                    </div>
+                                    <div class="cg-ws-meta-field cg-ws-meta-field--grow">
+                                        <label class="form-label cg-ws-label" for="cgCmObservaciones">Observaciones del mes</label>
+                                        <textarea id="cgCmObservaciones" class="form-control" rows="1" maxlength="500"></textarea>
+                                    </div>
+                                    <div class="cg-ws-meta-field">
+                                        <button type="button" class="cg-btn cg-btn--ghost cg-btn--sm" id="btnGuardarDatosMesCg" title="Guardar cajas a favor, pagos y observaciones">
+                                            <i class="fa fa-save"></i> Guardar mes
+                                        </button>
+                                    </div>
+                                    <div class="cg-ws-meta-field">
+                                        <button type="button" class="cg-btn cg-btn--danger-ghost cg-btn--sm" id="btnVaciarMontosMesCg" title="Pone en cero efectivo y transferencia de este mes">
+                                            <i class="fa fa-eraser"></i> Vaciar montos
+                                        </button>
                                     </div>
                                     <div class="cg-ws-meta-field cg-ws-meta-field--switch d-none" hidden>
                                         <div class="cg-cm-sin-entrega-box" id="cgCmSinEntregaBox">
@@ -664,66 +702,46 @@
                                     </div>
                                 </div>
 
-                                <div class="cg-ws-obs-row">
-                                    <label class="form-label cg-ws-label" for="cgCmObservaciones">Observaciones</label>
-                                    <textarea id="cgCmObservaciones" class="form-control" rows="1" maxlength="500"></textarea>
+                                <div class="cg-ws-acc-toolbar">
+                                    <div class="cg-ws-acc-toolbar-title">
+                                        <i class="fa fa-truck"></i>
+                                        <span>Entregas de este mes</span>
+                                        <small id="cgWsEntregasCount">0</small>
+                                    </div>
+                                    <div class="cg-ws-col-actions">
+                                        <a href="#" class="cg-hub-link" id="btnWsAbrirModuloEntregas" target="_blank">M&oacute;dulo</a>
+                                        <button type="button" class="cg-btn cg-btn--ghost cg-btn--xs" id="btnWsNuevaEntregaMes">
+                                            <i class="fa fa-plus"></i> Nueva entrega
+                                        </button>
+                                    </div>
                                 </div>
+                                <div id="cgWsEntregasAcc" class="cg-ws-acc-list"></div>
 
-                                <div class="cg-ws-split">
-                                    <section class="cg-ws-col">
-                                        <div class="cg-ws-col-head">
-                                            <span>Entrega / retiro <small id="cgWsBuildBadge" class="cg-ws-build-badge">js·v26</small></span>
-                                            <div class="cg-ws-col-actions">
-                                                <a href="#" class="cg-hub-link" id="btnWsAbrirModuloEntregas" target="_blank">M&oacute;dulo</a>
-                                                <button type="button" class="cg-btn cg-btn--ghost cg-btn--xs" id="btnWsAgregarLinea">
-                                                    <i class="fa fa-plus"></i> L&iacute;nea
-                                                </button>
-                                            </div>
-                                        </div>
-                                        <div class="cg-ws-sugeridos" id="cgWsSugeridos"></div>
-                                        <div class="cg-ws-lineas-wrap">
-                                            <div class="cg-ws-lineas-list" id="cgWsLineasBody"></div>
-                                        </div>
-                                        <div id="cgWsLineasDupAlert" class="cg-ws-dup-alert d-none" role="alert">
-                                            <i class="fa fa-exclamation-triangle"></i>
-                                            <div>
-                                                <strong>L&iacute;neas repetidas</strong>
-                                                <span>No pod&eacute;s cargar dos l&iacute;neas 100% iguales (producto, tipo, lista, cantidad y precio). Si cambia alg&uacute;n dato, s&iacute; se permite.</span>
-                                            </div>
-                                        </div>
-                                        <div class="cg-ws-entrega-actions">
-                                            <button type="button" class="cg-btn cg-btn--success cg-btn--sm" id="btnGuardarControlMensualCg">
-                                                <i class="fa fa-check"></i> Guardar
-                                            </button>
-                                        </div>
-                                    </section>
+                                <section class="cg-ws-col cg-ws-col--mes-cobros">
+                                    <div class="cg-ws-col-head">
+                                        <span>Otros cobros del mes</span>
+                                        <button type="button" class="cg-btn cg-btn--ghost cg-btn--xs" id="btnWsCobroMes">
+                                            <i class="fa fa-money"></i> Sin entrega
+                                        </button>
+                                    </div>
+                                    <div class="cg-ws-cobros-mes-list" id="cgWsCobrosMesBody">
+                                        <div class="cg-ws-lineas-empty">Sin cobros sueltos en este mes.</div>
+                                    </div>
+                                </section>
 
-                                    <section class="cg-ws-col">
-                                        <div class="cg-ws-col-head">
-                                            <span>Cobros de la entrega</span>
-                                            <button type="button" class="cg-btn cg-btn--ghost cg-btn--xs" id="btnWsAgregarCobro">
-                                                <i class="fa fa-plus"></i> Cobro
-                                            </button>
-                                        </div>
-                                        <div class="cg-ws-cobros-kpis" id="cgWsCobrosKpis">
-                                            <div class="cg-ws-cobro-kpi"><span>Entregado</span><strong id="cgWsCobroTotEntrega">$ 0,00</strong></div>
-                                            <div class="cg-ws-cobro-kpi"><span>Retirado</span><strong id="cgWsCobroTotRetiro">$ 0,00</strong></div>
-                                            <div class="cg-ws-cobro-kpi"><span>Cobrado</span><strong id="cgWsCobroTotPagado">$ 0,00</strong></div>
-                                            <div class="cg-ws-cobro-kpi"><span>Saldo</span><strong id="cgWsCobroSaldo">$ 0,00</strong></div>
-                                        </div>
-                                        <div class="cg-ws-cobros-list" id="cgWsCobrosBody"></div>
-
-                                        <div class="cg-ws-col-head cg-ws-col-head--sub">
-                                            <span>Otros cobros del mes</span>
-                                            <button type="button" class="cg-btn cg-btn--ghost cg-btn--xs" id="btnWsCobroMes">
-                                                <i class="fa fa-money"></i> Sin entrega
-                                            </button>
-                                        </div>
-                                        <div class="cg-ws-cobros-mes-list" id="cgWsCobrosMesBody">
-                                            <div class="cg-ws-lineas-empty">Sin cobros sueltos en este mes.</div>
-                                        </div>
-                                    </section>
+                                <div id="cgWsLineasBody" class="d-none" hidden></div>
+                                <div id="cgWsCobrosBody" class="d-none" hidden></div>
+                                <div id="cgWsSugeridos" class="d-none" hidden></div>
+                                <div id="cgWsLineasDupAlert" class="d-none" hidden></div>
+                                <div id="cgWsCobrosKpis" class="d-none" hidden>
+                                    <strong id="cgWsCobroTotEntrega"></strong>
+                                    <strong id="cgWsCobroTotRetiro"></strong>
+                                    <strong id="cgWsCobroTotPagado"></strong>
+                                    <strong id="cgWsCobroSaldo"></strong>
                                 </div>
+                                <button type="button" class="d-none" hidden id="btnWsAgregarLinea"></button>
+                                <button type="button" class="d-none" hidden id="btnWsAgregarCobro"></button>
+                                <button type="button" class="d-none" hidden id="btnGuardarControlMensualCg"></button>
                             </div>
                         </div>
                         </div>
@@ -806,6 +824,11 @@
                                 <partial name="~/Views/Entities/_EstablecimientoEditorBody.cshtml" />
                             </div>
                             <div class="cg-est-editor-foot" id="cgEstEditorFoot">
+                                <div class="d-flex flex-wrap gap-2 me-auto">
+                                <button type="button" id="btnContactoEst" class="cg-btn cg-btn--wa cg-btn--sm" onclick="contactarEstablecimientoCg()">
+                                    <i class="fa fa-whatsapp"></i> WhatsApp / mail
+                                </button>
+                                </div>
                                 <button type="button" id="btnCancelarEstInline" class="cg-btn cg-btn--ghost cg-btn--sm">
                                     <i class="fa fa-times"></i> Cancelar
                                 </button>
@@ -826,32 +849,35 @@
 
             <!-- CONTRATOS -->
             <div class="tab-pane fade" id="tabContratos">
-                <div class="cg-list-panel" data-cg-list="contratos">
-                    <div class="cg-list-toolbar">
-                        <div class="cg-list-toolbar-info">
-                            <h6 class="cg-list-title"><i class="fa fa-file-text-o"></i> Contratos</h6>
+                <div class="cg-contratos-stage">
+                    <div class="cg-est-rail">
+                        <div class="cg-est-rail-head">
+                            <div class="cg-est-rail-title">
+                                <span class="cg-est-rail-kicker">Por punto de entrega</span>
+                                <h6 class="mb-0"><i class="fa fa-file-text-o"></i> Contratos</h6>
+                                <p class="cg-est-rail-hint mb-0">Tocá para filtrar · todos seleccionados por defecto</p>
+                            </div>
+                            <div class="cg-est-rail-actions">
+                                <button type="button" id="btnContratosEstSelTodos" class="cg-btn cg-btn--ghost cg-btn--sm" title="Seleccionar todos">
+                                    <i class="fa fa-check-double"></i> Todos
+                                </button>
+                                <button type="button" id="btnNuevoContratoTab" class="cg-btn cg-btn--success cg-btn--sm">
+                                    <i class="fa fa-plus"></i> Nuevo
+                                </button>
+                            </div>
                         </div>
-                        <button type="button" id="btnNuevoContratoTab" class="cg-btn cg-btn--success cg-btn--sm">
-                            <i class="fa fa-plus"></i> Nuevo
-                        </button>
+                        <div id="cgContratosEstList" class="cg-est-pills" role="listbox" aria-multiselectable="true"></div>
+                        <div id="cgContratosSelBar" class="cg-est-selbar d-none">
+                            <div id="cgContratosSelLabel" class="cg-est-selbar-label"></div>
+                            <span id="cgContratosSelMode" class="cg-est-selbar-mode"></span>
+                        </div>
                     </div>
-                    <div class="cg-cards-grid" id="cgCards_contratos"></div>
-                    <div class="dt-dark-wrap cg-table-wrap">
-                        <table class="dt-dark display nowrap compact" id="grd_ContratosCg" style="width:100%">
-                        <thead>
-                            <tr>
-                                <th></th>
-                                <th>Id</th>
-                                <th>Establecimiento</th>
-                                <th>Tipo</th>
-                                <th>Fecha contrato</th>
-                                <th>Inicio</th>
-                                <th>Vencimiento</th>
-                                <th>Vigente</th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
+
+                    <div id="cgContratosPanels" class="cg-contratos-panels"></div>
+                    <div id="cgContratosEmpty" class="cg-contratos-empty d-none">
+                        <div class="cg-est-empty-orb"></div>
+                        <i class="fa fa-file-text-o"></i>
+                        <p>Elegí al menos un establecimiento arriba<br>para ver sus contratos.</p>
                     </div>
                 </div>
             </div>
@@ -1084,9 +1110,16 @@
                         <label class="form-label">Fecha</label>
                         <input type="date" id="cgInteresFecha" class="form-control" />
                     </div>
+                    <div class="col-12" id="cgInteresEstWrap">
+                        <label class="form-label">Establecimiento</label>
+                        <select id="cgInteresEstablecimiento" class="form-select">
+                            <option value="">Cliente (general) — sin establecimiento</option>
+                        </select>
+                        <div class="form-text">En la vista del cliente podés indicar a qué establecimiento corresponde este interés.</div>
+                    </div>
                     <div class="col-12">
                         <label class="form-label">Concepto</label>
-                        <input type="text" id="cgInteresConcepto" class="form-control" maxlength="200" />
+                        <input type="text" id="cgInteresConcepto" class="form-control" maxlength="160" />
                     </div>
                 </div>
             </div>
@@ -1114,6 +1147,7 @@
                 <div id="cgInteresesHistBody" class="cg-interes-hist-body"></div>
             </div>
             <div class="modal-footer rp-modal-footer">
+                <span class="text-muted small me-auto">Podés agregar un interés a este mes, editar concepto/importe, o eliminar para revertir el cargo.</span>
                 <button class="rp-btn rp-btn-soft" data-bs-dismiss="modal"><i class="fa fa-times"></i> Cerrar</button>
             </div>
         </div>
@@ -1141,6 +1175,22 @@
 </div>
 
 <partial name="~/Views/Entities/M_Contratos.cshtml" />
+<partial name="~/Views/ClientesEstablecimientos/_ModalReclamoDeuda.cshtml" />
+
+<div class="modal fade" id="modalElegirEstContactoCg" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fa fa-whatsapp text-success"></i> Eleg&iacute; establecimiento</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted mb-3">Este cliente tiene varios locales. &iquest;A cu&aacute;l quer&eacute;s enviar el mensaje?</p>
+                <div id="cgEstContactoLista" class="cg-est-contacto-lista"></div>
+            </div>
+        </div>
+    </div>
+</div>
 
 @section Scripts {
     <script>
@@ -1148,10 +1198,11 @@
     </script>
     <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-    <script src="~/js/Entities/M_ClientesEstablecimientos.js?v=7.3" asp-append-version="true"></script>
+    <script src="~/js/Entities/M_ClientesEstablecimientos.js?v=7.5" asp-append-version="true"></script>
+    <script src="~/js/ClientesEstablecimientosReclamo.js?v=1.9" asp-append-version="true"></script>
     <script src="~/js/ContratosDocumentos.js?v=5.4"></script>
     <script src="~/js/Entities/M_Contratos.js?v=5.4"></script>
-    <script src="~/js/ClientesGestion.js?v=24.7" asp-append-version="true"></script>
+    <script src="~/js/ClientesGestion.js?v=44.9" asp-append-version="true"></script>
     <script>
         /* Guardia inline: corre aunque el .js esté cacheado viejo */
         (function () {
@@ -1207,10 +1258,9 @@
             }
             function syncDups(root) {
                 const scope = root || document;
-                const bodies = [
-                    scope.querySelector("#cgWsLineasBody"),
-                    scope.querySelector("#cgEstWsLineasBody")
-                ].filter(Boolean);
+                const bodies = Array.from(scope.querySelectorAll(
+                    "#cgWsLineasBody, #cgEstWsLineasBody, .cg-ws-lineas-list"
+                ));
                 bodies.forEach(body => {
                     const rows = Array.from(body.querySelectorAll(".cg-ws-linea"));
                     const map = new Map();
@@ -1241,7 +1291,7 @@
                     if (row) syncImporteRow(row);
                     else syncAllImportes(document);
                 }
-                if (e.target?.closest?.("#cgWsLineasBody, #cgEstWsLineasBody")) syncDups(document);
+                if (e.target?.closest?.("#cgWsLineasBody, #cgEstWsLineasBody, .cg-ws-lineas-list")) syncDups(document);
             }, true);
             document.addEventListener("input", function (e) {
                 const imp = e.target?.closest?.(".ws-cobro-importe, #cgCobroImporte");
@@ -1255,7 +1305,7 @@
                         e.stopImmediatePropagation();
                     }
                 }
-                if (e.target?.closest?.("#cgWsLineasBody, #cgEstWsLineasBody")) syncDups(document);
+                if (e.target?.closest?.("#cgWsLineasBody, #cgEstWsLineasBody, .cg-ws-lineas-list")) syncDups(document);
             }, true);
             document.addEventListener("focusin", function (e) {
                 const imp = e.target?.closest?.(".ws-cobro-importe, #cgCobroImporte");
@@ -1286,7 +1336,7 @@
 
             const obs = new MutationObserver(function () { tick(); });
             function arm() {
-                ["cgWsCobrosBody", "cgEstWsCobrosBody", "cgWsLineasBody", "cgEstWsLineasBody", "cgEstHubMount"].forEach(id => {
+                ["cgWsCobrosBody", "cgEstWsCobrosBody", "cgWsLineasBody", "cgEstWsLineasBody", "cgWsEntregasAcc", "cgEstWsEntregasAcc", "cgEstHubMount"].forEach(id => {
                     const el = document.getElementById(id);
                     if (el) obs.observe(el, { childList: true, subtree: true });
                 });

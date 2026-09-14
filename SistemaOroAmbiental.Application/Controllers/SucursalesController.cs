@@ -14,16 +14,16 @@ namespace SistemaOroAmbiental.Application.Controllers
     {
         private readonly SistemaOroAmbientalContext _db;
         private readonly IUsuariosSucursalesService _usuariosSucursales;
-        private readonly IDeleteConflictChecker _deleteChecker;
+        private readonly ICatalogoCascadeRepository _cascade;
 
         public SucursalesController(
             SistemaOroAmbientalContext db,
             IUsuariosSucursalesService usuariosSucursales,
-            IDeleteConflictChecker deleteChecker)
+            ICatalogoCascadeRepository cascade)
         {
             _db = db;
             _usuariosSucursales = usuariosSucursales;
-            _deleteChecker = deleteChecker;
+            _cascade = cascade;
         }
 
         /// <summary>Sucursales permitidas para el usuario logueado (asignadas en Usuarios_Sucursales).</summary>
@@ -86,28 +86,56 @@ namespace SistemaOroAmbiental.Application.Controllers
             return Ok(new { valor = true });
         }
 
-        [HttpDelete]
-        public async Task<IActionResult> Eliminar(int id)
+        [HttpGet]
+        public async Task<IActionResult> DependenciasEliminar(int id)
         {
-            var bloqueo = await _deleteChecker.SucursalAsync(id);
-            if (!string.IsNullOrWhiteSpace(bloqueo))
-                return Ok(new { valor = false, mensaje = bloqueo, tipo = "relacion" });
+            var info = await _cascade.ObtenerDependenciasAsync<Sucursal>(id);
+            return Ok(info);
+        }
 
-            var entity = await _db.Sucursales.FirstOrDefaultAsync(x => x.Id == id);
-            if (entity == null)
-                return Ok(new { valor = false, mensaje = "No se encontró la sucursal.", tipo = "validacion" });
-
+        [HttpDelete]
+        public async Task<IActionResult> Eliminar(int id, bool cascada = false)
+        {
             try
             {
+                var deps = await _cascade.ObtenerDependenciasAsync<Sucursal>(id);
+                if (deps.TieneDependencias && !cascada)
+                    return Ok(new { valor = false, mensaje = deps.MensajeResumen, tipo = "dependencias" });
+
+                if (deps.TieneDependencias && cascada)
+                {
+                    if (!deps.PermiteCascada)
+                        return Ok(new { valor = false, mensaje = deps.MensajeResumen, tipo = "relacion" });
+
+                    await _cascade.EliminarEnCascadaAsync<Sucursal>(id);
+                    return Ok(new
+                    {
+                        valor = true,
+                        mensaje = "Sucursal eliminada. Los registros asociados se desvincularon o reasignaron.",
+                        tipo = "success"
+                    });
+                }
+
+                var entity = await _db.Sucursales.FirstOrDefaultAsync(x => x.Id == id);
+                if (entity == null)
+                    return Ok(new { valor = false, mensaje = "No se encontró la sucursal.", tipo = "validacion" });
+
                 _db.Sucursales.Remove(entity);
                 await _db.SaveChangesAsync();
                 return Ok(new { valor = true, mensaje = "Sucursal eliminada correctamente.", tipo = "success" });
             }
+            catch (InvalidOperationException ex)
+            {
+                return Ok(new { valor = false, mensaje = ex.Message, tipo = "relacion" });
+            }
             catch (DbUpdateException)
             {
-                var msg = await _deleteChecker.SucursalAsync(id)
-                    ?? "No se pudo eliminar la sucursal porque tiene registros relacionados.";
-                return Ok(new { valor = false, mensaje = msg, tipo = "relacion" });
+                return Ok(new
+                {
+                    valor = false,
+                    mensaje = "No se pudo eliminar la sucursal porque tiene registros relacionados.",
+                    tipo = "relacion"
+                });
             }
         }
 

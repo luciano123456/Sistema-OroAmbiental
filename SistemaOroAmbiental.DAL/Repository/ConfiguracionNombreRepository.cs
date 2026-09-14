@@ -15,6 +15,7 @@ namespace SistemaOroAmbiental.DAL.Repository
 
         public async Task<bool> Insertar(T model)
         {
+            NormalizarNombre(model);
             _db.Set<T>().Add(model);
             await _db.SaveChangesAsync();
             return true;
@@ -22,6 +23,7 @@ namespace SistemaOroAmbiental.DAL.Repository
 
         public async Task<bool> Actualizar(T model)
         {
+            NormalizarNombre(model);
             _db.Set<T>().Update(model);
             await _db.SaveChangesAsync();
             return true;
@@ -43,9 +45,34 @@ namespace SistemaOroAmbiental.DAL.Repository
             return await _db.Set<T>().FindAsync(id);
         }
 
+        public async Task<T?> BuscarDuplicadoPorNombre(int? idExcluir, string nombre)
+        {
+            var normalizado = nombre.Trim();
+            if (normalizado.Length == 0)
+                return null;
+
+            return await _db.Set<T>()
+                .AsNoTracking()
+                .Where(e =>
+                    EF.Property<string>(e, "Nombre") == normalizado
+                    && (!idExcluir.HasValue || EF.Property<int>(e, "Id") != idExcluir.Value))
+                .FirstOrDefaultAsync();
+        }
+
         public async Task<IQueryable<T>> ObtenerTodos()
         {
-            return await Task.FromResult(_db.Set<T>().AsNoTracking().AsQueryable());
+            return await Task.FromResult(
+                _db.Set<T>()
+                    .AsNoTracking()
+                    .OrderBy(e => EF.Property<string>(e, "Nombre"))
+                    .AsQueryable());
+        }
+
+        private static void NormalizarNombre(T model)
+        {
+            var prop = model.GetType().GetProperty("Nombre");
+            if (prop?.GetValue(model) is string nombre)
+                prop.SetValue(model, nombre.Trim());
         }
     }
 }

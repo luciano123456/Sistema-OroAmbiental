@@ -18,6 +18,9 @@ namespace SistemaOroAmbiental.DAL.Repository
         {
             try
             {
+                NormalizarFlagsDescartador(model);
+                await LiberarDescartadorHojaRutaSiCorresponde(model, model.Id);
+
                 _db.Productos.Add(model);
                 await _db.SaveChangesAsync();
 
@@ -48,9 +51,13 @@ namespace SistemaOroAmbiental.DAL.Repository
                     return false;
 
                 var costoAnterior = entity.CostoUnitario;
+                NormalizarFlagsDescartador(model);
+                await LiberarDescartadorHojaRutaSiCorresponde(model, model.Id);
 
                 entity.Nombre = model.Nombre;
                 entity.Abreviatura = string.IsNullOrWhiteSpace(model.Abreviatura) ? null : model.Abreviatura.Trim();
+                entity.EsDescartadorChicoHojaRuta = model.EsDescartadorChicoHojaRuta;
+                entity.EsDescartadorGrandeHojaRuta = model.EsDescartadorGrandeHojaRuta;
                 entity.IdCategoria = model.IdCategoria;
                 entity.IdMedida = model.IdMedida;
                 entity.CostoUnitario = model.CostoUnitario;
@@ -91,6 +98,48 @@ namespace SistemaOroAmbiental.DAL.Repository
                 query = query.Where(x => x.Id != idExcluir.Value);
 
             return await query.FirstOrDefaultAsync(x => x.Nombre == nombre);
+        }
+
+        public async Task<Producto?> BuscarDescartadorHojaRuta(bool chico, bool grande, int? idExcluir)
+        {
+            if (!chico && !grande)
+                return null;
+
+            var query = _db.Productos.AsNoTracking().AsQueryable();
+            if (idExcluir is > 0)
+                query = query.Where(x => x.Id != idExcluir.Value);
+
+            if (chico)
+                return await query.FirstOrDefaultAsync(x => x.EsDescartadorChicoHojaRuta);
+
+            return await query.FirstOrDefaultAsync(x => x.EsDescartadorGrandeHojaRuta);
+        }
+
+        private static void NormalizarFlagsDescartador(Producto model)
+        {
+            if (model.EsDescartadorChicoHojaRuta && model.EsDescartadorGrandeHojaRuta)
+                model.EsDescartadorGrandeHojaRuta = false;
+        }
+
+        private async Task LiberarDescartadorHojaRutaSiCorresponde(Producto model, int idActual)
+        {
+            if (model.EsDescartadorChicoHojaRuta)
+            {
+                var otros = await _db.Productos
+                    .Where(x => x.EsDescartadorChicoHojaRuta && x.Id != idActual)
+                    .ToListAsync();
+                foreach (var o in otros)
+                    o.EsDescartadorChicoHojaRuta = false;
+            }
+
+            if (model.EsDescartadorGrandeHojaRuta)
+            {
+                var otros = await _db.Productos
+                    .Where(x => x.EsDescartadorGrandeHojaRuta && x.Id != idActual)
+                    .ToListAsync();
+                foreach (var o in otros)
+                    o.EsDescartadorGrandeHojaRuta = false;
+            }
         }
 
         public async Task<bool> Eliminar(int id)
@@ -196,6 +245,7 @@ namespace SistemaOroAmbiental.DAL.Repository
         {
             var registros = await _db.ProductosCostoHistorials
                 .AsNoTracking()
+                .AsSplitQuery()
                 .Include(x => x.IdUsuarioNavigation)
                 .Include(x => x.IdCompraNavigation)
                     .ThenInclude(c => c!.IdProveedorNavigation)
@@ -203,6 +253,28 @@ namespace SistemaOroAmbiental.DAL.Repository
                 .OrderByDescending(x => x.Fecha)
                 .ThenByDescending(x => x.Id)
                 .ToListAsync();
+
+            var idsCompraFallback = registros
+                .Where(h => h.CostoAnterior <= 0
+                    && h.IdCompra.HasValue
+                    && (h.Origen == ProductosCostoHistorialHelper.OrigenCompra
+                        || h.Origen == ProductosCostoHistorialHelper.OrigenReversionCompra))
+                .Select(h => h.IdCompra!.Value)
+                .Distinct()
+                .ToList();
+
+            var costosAnterioresPorCompra = idsCompraFallback.Count == 0
+                ? new Dictionary<int, decimal>()
+                : await _db.ComprasProductos
+                    .AsNoTracking()
+                    .Where(x => idsCompraFallback.Contains(x.IdCompra) && x.IdProducto == idProducto)
+                    .GroupBy(x => x.IdCompra)
+                    .Select(g => new
+                    {
+                        IdCompra = g.Key,
+                        Costo = g.OrderByDescending(x => x.Id).Select(x => x.CostoUnitarioAnterior).FirstOrDefault()
+                    })
+                    .ToDictionaryAsync(x => x.IdCompra, x => x.Costo);
 
             var filas = new List<ProductoHistorialCostoFila>();
 
@@ -213,17 +285,11 @@ namespace SistemaOroAmbiental.DAL.Repository
                 if (costoAnterior <= 0
                     && (h.Origen == ProductosCostoHistorialHelper.OrigenCompra
                         || h.Origen == ProductosCostoHistorialHelper.OrigenReversionCompra)
-                    && h.IdCompra.HasValue)
+                    && h.IdCompra.HasValue
+                    && costosAnterioresPorCompra.TryGetValue(h.IdCompra.Value, out var anteriorCompra)
+                    && anteriorCompra > 0)
                 {
-                    var anteriorCompra = await _db.ComprasProductos
-                        .AsNoTracking()
-                        .Where(x => x.IdCompra == h.IdCompra && x.IdProducto == idProducto)
-                        .OrderByDescending(x => x.Id)
-                        .Select(x => x.CostoUnitarioAnterior)
-                        .FirstOrDefaultAsync();
-
-                    if (anteriorCompra > 0)
-                        costoAnterior = anteriorCompra;
+                    costoAnterior = anteriorCompra;
                 }
 
                 var variacion = h.CostoNuevo - costoAnterior;

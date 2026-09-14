@@ -15,9 +15,9 @@ namespace SistemaOroAmbiental.BLL.Service
 
         Task<List<ClientesRecorridoDto>> ListarPorCliente(int idCliente);
 
-        Task<ServiceResult> InsertarClientesRecorrido(ClientesRecorrido model);
+        Task<ServiceResult> InsertarClientesRecorrido(ClientesRecorrido model, bool desplazarSiOcupada = true);
 
-        Task<ServiceResult> ActualizarClientesRecorrido(ClientesRecorrido model);
+        Task<ServiceResult> ActualizarClientesRecorrido(ClientesRecorrido model, bool desplazarSiOcupada = true);
 
         Task<ServiceResult> EliminarClientesRecorrido(int id);
 
@@ -28,6 +28,51 @@ namespace SistemaOroAmbiental.BLL.Service
             IReadOnlyList<(int IdSemana, int IdDia)> recorridos,
             DateTime fecha,
             IReadOnlyCollection<int>? idsRecorridoExcluir = null);
+
+        Task<int> ObtenerSiguienteNumeroManifiesto(
+            int idCamion,
+            IReadOnlyList<(int IdSemana, int IdDia)> recorridos);
+
+        Task<ServiceResult> RegistrarUltimoNumeroManifiesto(
+            int idCamion,
+            IReadOnlyList<(int IdSemana, int IdDia)> recorridos,
+            int ultimoNumero,
+            int idUsuario);
+
+        Task<GuardarHistorialManifiestoResultDto> GuardarHistorialManifiestos(
+            int idCamion,
+            ManifiestosHojaDto model,
+            string nombre,
+            int idUsuario);
+
+        Task<ManifiestosCamionDto> ListarManifiestosPorCamion(int idCamion);
+
+        Task<ManifiestosHojaDto?> ObtenerManifiestosHistorial(int idCamion, IReadOnlyList<int> ids);
+
+        Task<List<RecorridoOpcionManifiestoDto>> ListarRutasManifiestoCamion(int idCamion);
+
+        Task<int> ObtenerSiguienteNumeroManifiestoCamion(int idCamion);
+
+        Task<ServiceResult> EliminarManifiestoHistorial(int idCamion, int id);
+
+        Task<ManifiestosHojaDto?> ObtenerManifiestos(
+            int idCamion,
+            IReadOnlyList<(int IdSemana, int IdDia)> recorridos,
+            int numeroInicial,
+            IReadOnlyCollection<int>? idsRecorridoExcluir = null,
+            int? idRecorrido = null,
+            IReadOnlyCollection<int>? idsRecorridoIncluir = null);
+
+        Task<ArchivoIntercambioDto?> ObtenerArchivoIntercambio(
+            int idCamion,
+            IReadOnlyList<(int IdSemana, int IdDia)> recorridos,
+            DateTime fecha,
+            int numeroInicial,
+            IReadOnlyCollection<int>? idsRecorridoExcluir = null,
+            int? idRecorrido = null,
+            string? nombre = null,
+            bool mesCompleto = false,
+            IReadOnlyCollection<int>? idsRecorridoIncluir = null);
 
         Task<List<RecorridoSugeridoDto>> ListarSugeridosPorRecoleccion(int idCamion, int idSemana, int idDia);
 

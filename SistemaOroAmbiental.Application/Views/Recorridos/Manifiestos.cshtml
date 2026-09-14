@@ -1,0 +1,237 @@
+@model SistemaOroAmbiental.Models.ManifiestosHojaDto
+@using SistemaOroAmbiental.Models
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@(string.IsNullOrWhiteSpace(Model.Nombre) ? Model.Titulo : Model.Nombre) - Manifiesto</title>
+    <link href="~/css/Manifiestos.css?v=3.1" rel="stylesheet" asp-append-version="true" />
+</head>
+<body class="mf-page"
+      data-id-camion="@Model.IdCamion"
+      data-id-semana="@Model.IdSemana"
+      data-id-dia="@Model.IdDia"
+      data-recorridos="@Model.RecorridosParam">
+    <div class="mf-toolbar no-print">
+        <label class="mf-num-label" for="mfNumeroInicial">
+            Nº inicial
+            <input type="number" id="mfNumeroInicial" min="1" step="1" value="@Model.NumeroInicial" />
+        </label>
+        <span class="mf-toolbar-hint">Podés cambiar el número a mano. La fecha del transportista queda en blanco.</span>
+        <button type="button" class="mf-btn-print" onclick="imprimirManifiestos()">Imprimir / PDF</button>
+        <button type="button" class="mf-btn-close" onclick="window.close()">Cerrar</button>
+    </div>
+
+    @foreach (var item in Model.Items)
+    {
+        <article class="mf-sheet">
+            <header class="mf-header">
+                <img class="mf-banner" src="~/Imagenes/manifiesto-header.jpg" alt="Ministerio de Ambiente - Gobierno de la Provincia de Buenos Aires" />
+
+                <h1 class="mf-title">Manifiesto de Residuos <strong>PATOGENICOS</strong></h1>
+
+                <div class="mf-meta">
+                    <div class="mf-meta-num">
+                        Manifiesto Nº:<input type="number" class="mf-numero" min="1" step="1" value="@item.Numero" />
+                    </div>
+                    <div class="mf-meta-fecha">Fecha de Programación: @((Model.FechaProgramacion == default ? DateTime.Today : Model.FechaProgramacion).ToString("dd/MM/yyyy"))</div>
+                </div>
+            </header>
+
+            <section class="mf-sec mf-sec--origen">
+                <div class="mf-bar">Origen</div>
+                <div class="mf-sec-body">
+                    <div class="mf-row">
+                        <div><span class="mf-k">Origen del residuo:</span> @ManifiestoDatosEmpresa.OrigenDelResiduo</div>
+                        <div><span class="mf-k">Id Establecimiento:</span> @item.IdEstablecimiento</div>
+                    </div>
+                    <div class="mf-row">
+                        <div><span class="mf-k">CUIT:</span> @item.Cuit</div>
+                        <div><span class="mf-k">Razon Social:</span> @item.RazonSocial</div>
+                    </div>
+                    <div class="mf-row mf-row--1">
+                        <div><span class="mf-k">Direccion:</span> @item.Direccion</div>
+                    </div>
+                    <div class="mf-row">
+                        <div><span class="mf-k">Localidad:</span> @item.Localidad</div>
+                        <div><span class="mf-k">Telefono:</span> @item.Telefono</div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="mf-sec mf-sec--residuos">
+                <div class="mf-bar">Residuos</div>
+                <div class="mf-sec-body">
+                    <div class="mf-row mf-row--1">
+                        <div><span class="mf-k">Tipo Destino:</span> @ManifiestoDatosEmpresa.TipoDestino</div>
+                    </div>
+                    <div class="mf-row mf-row--1">
+                        <div><span class="mf-k">Composicion:</span> @ManifiestoDatosEmpresa.CategoriaResiduo</div>
+                    </div>
+                    <div class="mf-row mf-row--1">
+                        <div><span class="mf-k">Categoria Desecho Principal:</span> @ManifiestoDatosEmpresa.CategoriaDesechoPrincipal</div>
+                    </div>
+                    <div class="mf-row mf-row--1">
+                        <div><span class="mf-k">Carac. Peligrosas:</span> @ManifiestoDatosEmpresa.CaracteristicaPeligrosidad</div>
+                    </div>
+                    <div class="mf-row mf-row--1">
+                        <div>
+                            <span class="mf-k">Cantidad(Kilos):</span>@item.Cantidad
+                            @if (!string.IsNullOrWhiteSpace(item.Cantidad))
+                            {
+                                <span> (Aproximado, debera validar el Operador )</span>
+                            }
+                        </div>
+                    </div>
+                    <div class="mf-row mf-row--1">
+                        <div><span class="mf-k">Estado Fisico:</span> @ManifiestoDatosEmpresa.EstadoFisico</div>
+                    </div>
+                    <div class="mf-row mf-row--1">
+                        <div><span class="mf-k">Observaciones:</span></div>
+                    </div>
+                </div>
+                <div class="mf-sign">
+                    <div class="mf-sign-row">
+                        <div><span class="mf-k">Firma del Responsable:</span><span class="mf-line"></span></div>
+                        <div><span class="mf-k">Aclaracion:</span><span class="mf-line"></span></div>
+                    </div>
+                    <div class="mf-sign-row mf-sign-row--3">
+                        <div><span class="mf-k">Fecha:</span>___/___/___</div>
+                        <div><span class="mf-k">Hora:</span><span class="mf-line mf-line--sm"></span></div>
+                        <div><span class="mf-k">Documento:</span><span class="mf-line"></span></div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="mf-sec mf-sec--transportista">
+                <div class="mf-bar">Transportista</div>
+                <div class="mf-sec-body">
+                    <div class="mf-row mf-row--1">
+                        <div><span class="mf-k">CUIT:</span> @ManifiestoDatosEmpresa.TransportistaCuit</div>
+                    </div>
+                    <div class="mf-row mf-row--1">
+                        <div><span class="mf-k">Razon Social:</span> @ManifiestoDatosEmpresa.TransportistaRazonSocial</div>
+                    </div>
+                    <div class="mf-row mf-row--1">
+                        <div><span class="mf-k">Domicilio:</span> @ManifiestoDatosEmpresa.TransportistaDomicilio</div>
+                    </div>
+                    <div class="mf-row">
+                        <div><span class="mf-k">Telefono:</span> @ManifiestoDatosEmpresa.TransportistaTelefono</div>
+                        <div><span class="mf-k">Localidad:</span> @ManifiestoDatosEmpresa.TransportistaLocalidad</div>
+                    </div>
+                </div>
+                <div class="mf-sign">
+                    <div class="mf-sign-row">
+                        <div><span class="mf-k">Chofer:</span><span class="mf-line"></span></div>
+                        <div><span class="mf-k">Aclaracion:</span><span class="mf-line"></span></div>
+                    </div>
+                    <div class="mf-sign-row mf-sign-row--3">
+                        <div><span class="mf-k">Fecha:</span>___/___/___</div>
+                        <div><span class="mf-k">Hora:</span><span class="mf-line mf-line--sm"></span></div>
+                        <div><span class="mf-k">Documento:</span><span class="mf-line"></span></div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="mf-sec mf-sec--operador">
+                <div class="mf-bar">Operador</div>
+                <div class="mf-sec-body">
+                    <div class="mf-row">
+                        <div><span class="mf-k">Destino del residuo:</span> @ManifiestoDatosEmpresa.TipoDestino</div>
+                        <div><span class="mf-k">Id Establecimiento:</span> @ManifiestoDatosEmpresa.OperadorIdEstablecimiento</div>
+                    </div>
+                    <div class="mf-row">
+                        <div><span class="mf-k">CUIT:</span> @ManifiestoDatosEmpresa.OperadorCuit</div>
+                        <div><span class="mf-k">Razon Social:</span> @ManifiestoDatosEmpresa.OperadorRazonSocial</div>
+                    </div>
+                    <div class="mf-row mf-row--1">
+                        <div><span class="mf-k">Domicilio:</span> @ManifiestoDatosEmpresa.OperadorDomicilio</div>
+                    </div>
+                    <div class="mf-row">
+                        <div><span class="mf-k">Localidad:</span> @ManifiestoDatosEmpresa.OperadorLocalidad</div>
+                        <div><span class="mf-k">Telefono:</span> @ManifiestoDatosEmpresa.OperadorTelefono</div>
+                    </div>
+                </div>
+                <div class="mf-sign">
+                    <div class="mf-sign-row">
+                        <div><span class="mf-k">Firma del Responsable:</span><span class="mf-line"></span></div>
+                        <div><span class="mf-k">Aclaracion:</span><span class="mf-line"></span></div>
+                    </div>
+                    <div class="mf-sign-row mf-sign-row--3">
+                        <div><span class="mf-k">Fecha:</span>___/___/___</div>
+                        <div><span class="mf-k">Hora:</span><span class="mf-line mf-line--sm"></span></div>
+                        <div><span class="mf-k">Documento:</span><span class="mf-line"></span></div>
+                    </div>
+                </div>
+            </section>
+        </article>
+    }
+
+    <script>
+        (function () {
+            const inicial = document.getElementById("mfNumeroInicial");
+            const numeros = () => Array.from(document.querySelectorAll(".mf-numero"));
+
+            function aplicarDesdeInicial() {
+                const start = parseInt(inicial.value, 10);
+                if (!Number.isFinite(start) || start < 1) return;
+                numeros().forEach((inp, i) => { inp.value = String(start + i); });
+            }
+
+            inicial.addEventListener("input", aplicarDesdeInicial);
+            inicial.addEventListener("change", aplicarDesdeInicial);
+
+            function ultimoNumero() {
+                const vals = numeros()
+                    .map(i => parseInt(i.value, 10))
+                    .filter(n => Number.isFinite(n) && n > 0);
+                return vals.length ? Math.max.apply(null, vals) : 0;
+            }
+
+            function token() {
+                try { return localStorage.getItem("JwtToken") || ""; } catch { return ""; }
+            }
+
+            let persistiendo = false;
+            async function persistirUltimo() {
+                const ultimo = ultimoNumero();
+                if (ultimo <= 0 || persistiendo) return;
+                persistiendo = true;
+                try {
+                    await fetch("/Recorridos/RegistrarNumeroManifiesto", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            Authorization: "Bearer " + token()
+                        },
+                        body: JSON.stringify({
+                            IdCamion: parseInt(document.body.dataset.idCamion, 10) || 0,
+                            IdSemana: parseInt(document.body.dataset.idSemana, 10) || 0,
+                            IdDia: parseInt(document.body.dataset.idDia, 10) || 0,
+                            Recorridos: document.body.dataset.recorridos || "",
+                            UltimoNumero: ultimo
+                        })
+                    });
+                } catch (e) {
+                    console.warn(e);
+                } finally {
+                    persistiendo = false;
+                }
+            }
+
+            window.addEventListener("beforeprint", () => { persistirUltimo(); });
+
+            window.imprimirManifiestos = async function () {
+                await persistirUltimo();
+                window.print();
+            };
+        })();
+    </script>
+</body>
+</html>

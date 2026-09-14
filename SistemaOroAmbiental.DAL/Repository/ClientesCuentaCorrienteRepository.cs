@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using SistemaOroAmbiental.DAL.Common;
 using SistemaOroAmbiental.DAL.DataContext;
 using SistemaOroAmbiental.Models;
 
@@ -228,7 +229,7 @@ namespace SistemaOroAmbiental.DAL.Repository
             return saldo;
         }
 
-        public async Task<bool> RegistrarCobro(
+        public Task<bool> RegistrarCobro(
             int idCliente,
             int idCuenta,
             DateTime fecha,
@@ -237,29 +238,11 @@ namespace SistemaOroAmbiental.DAL.Repository
             int idUsuario)
         {
             if (importe <= 0)
-                return false;
+                return Task.FromResult(false);
 
-            await using var trx = await _db.Database.BeginTransactionAsync();
-
-            try
-            {
-                var ok = await RegistrarCobroSinTransaccion(
-                    idCliente, idCuenta, fecha, concepto, importe, idUsuario, null);
-
-                if (!ok)
-                {
-                    await trx.RollbackAsync();
-                    return false;
-                }
-
-                await trx.CommitAsync();
-                return true;
-            }
-            catch
-            {
-                await trx.RollbackAsync();
-                return false;
-            }
+            return _db.ExecuteInTransactionAsync(() =>
+                RegistrarCobroSinTransaccion(
+                    idCliente, idCuenta, fecha, concepto, importe, idUsuario, null));
         }
 
         public async Task<bool> RegistrarCobroSinTransaccion(
@@ -347,9 +330,7 @@ namespace SistemaOroAmbiental.DAL.Repository
             if (debe <= 0 && haber <= 0)
                 return false;
 
-            await using var trx = await _db.Database.BeginTransactionAsync();
-
-            try
+            return await _db.ExecuteInTransactionAsync(async () =>
             {
                 var cc = await ObtenerOCrearCuentaCorriente(idCliente);
                 var ahora = DateTime.Now;
@@ -396,14 +377,8 @@ namespace SistemaOroAmbiental.DAL.Repository
                 cc.Saldo += debe - haber;
 
                 await _db.SaveChangesAsync();
-                await trx.CommitAsync();
                 return true;
-            }
-            catch
-            {
-                await trx.RollbackAsync();
-                return false;
-            }
+            });
         }
 
         public async Task<bool> RegistrarInteres(
@@ -416,9 +391,7 @@ namespace SistemaOroAmbiental.DAL.Repository
             if (importe <= 0)
                 return false;
 
-            await using var trx = await _db.Database.BeginTransactionAsync();
-
-            try
+            return await _db.ExecuteInTransactionAsync(async () =>
             {
                 var cc = await ObtenerOCrearCuentaCorriente(idCliente);
                 var ahora = DateTime.Now;
@@ -443,38 +416,45 @@ namespace SistemaOroAmbiental.DAL.Repository
                 cc.Saldo += importe;
 
                 await _db.SaveChangesAsync();
-                await trx.CommitAsync();
                 return true;
-            }
-            catch
-            {
-                await trx.RollbackAsync();
-                return false;
-            }
+            });
         }
 
-        public async Task<bool> Eliminar(int idMovimiento)
+        public async Task<bool> ActualizarInteres(
+            int idMovimiento,
+            string concepto,
+            decimal importe,
+            int idUsuario)
         {
-            await using var trx = await _db.Database.BeginTransactionAsync();
-
-            try
-            {
-                var ok = await EliminarSinTransaccion(idMovimiento);
-                if (!ok)
-                {
-                    await trx.RollbackAsync();
-                    return false;
-                }
-
-                await trx.CommitAsync();
-                return true;
-            }
-            catch
-            {
-                await trx.RollbackAsync();
+            if (idMovimiento <= 0 || importe <= 0 || string.IsNullOrWhiteSpace(concepto))
                 return false;
-            }
+
+            return await _db.ExecuteInTransactionAsync(async () =>
+            {
+                var mov = await _db.ClientesCuentaCorrienteMovimientos
+                    .Include(x => x.IdCuentaCorrienteNavigation)
+                    .FirstOrDefaultAsync(x => x.Id == idMovimiento);
+
+                if (mov == null || mov.TipoMovimiento != TIPO_INTERES_CLIENTE)
+                    return false;
+
+                var cc = mov.IdCuentaCorrienteNavigation;
+                var delta = importe - mov.Debe;
+
+                mov.Concepto = concepto.Trim();
+                mov.Debe = importe;
+                mov.Haber = 0;
+                mov.IdUsuarioModifica = idUsuario;
+                mov.FechaUsuarioModifica = DateTime.Now;
+                cc.Saldo += delta;
+
+                await _db.SaveChangesAsync();
+                return true;
+            });
         }
+
+        public Task<bool> Eliminar(int idMovimiento)
+            => _db.ExecuteInTransactionAsync(() => EliminarSinTransaccion(idMovimiento));
 
         public async Task<bool> EliminarSinTransaccion(int idMovimiento)
         {
@@ -541,7 +521,7 @@ namespace SistemaOroAmbiental.DAL.Repository
             }
             catch
             {
-                return false;
+                throw;
             }
         }
     }

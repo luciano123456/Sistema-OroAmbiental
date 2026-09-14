@@ -59,6 +59,12 @@ namespace SistemaOroAmbiental.DAL.Repository
             decimal importe,
             int idUsuario);
 
+        Task<bool> ActualizarInteres(
+            int idMovimiento,
+            string concepto,
+            decimal importe,
+            int idUsuario);
+
         Task<bool> Eliminar(int idMovimiento);
 
         Task<bool> EliminarSinTransaccion(int idMovimiento);

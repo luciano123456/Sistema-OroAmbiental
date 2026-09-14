@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using SistemaOroAmbiental.DAL.Common;
 using SistemaOroAmbiental.DAL.DataContext;
 using SistemaOroAmbiental.Models;
 
@@ -42,8 +43,7 @@ namespace SistemaOroAmbiental.DAL.Repository
                 .Include(x => x.IdContratoNavigation)
                     .ThenInclude(c => c!.IdEstablecimientoNavigation)
                 .Include(x => x.IdEstadoNavigation)
-                .Include(x => x.ClientesEntregasProductos)
-                .Include(x => x.ClientesEntregasProductosRecuperados)
+                .AsSplitQuery()
                 .AsQueryable();
 
             if (fechaDesde.HasValue)
@@ -85,6 +85,7 @@ namespace SistemaOroAmbiental.DAL.Repository
         public async Task<ClientesEntrega?> Obtener(int id)
         {
             return await _db.ClientesEntregas
+                .AsSplitQuery()
                 .Include(x => x.IdClienteNavigation)
                     .ThenInclude(cl => cl.IdSucursalNavigation)
                 .Include(x => x.IdEstablecimientoNavigation)
@@ -184,7 +185,7 @@ namespace SistemaOroAmbiental.DAL.Repository
             out decimal subtotalCosto,
             out decimal ganancia)
         {
-            var cant = cantidad > 0 ? cantidad : 0;
+            var cant = cantidad;
 
             descUnitario = Math.Round(precioVenta * porcDescuento / 100m, 4);
             descTotal = Math.Round(descUnitario * cant, 2);
@@ -211,8 +212,15 @@ namespace SistemaOroAmbiental.DAL.Repository
             }
         }
 
-        private static bool EsRetiro(ClientesEntregasProducto linea)
-            => (linea?.TipoMovimiento ?? TIPO_LINEA_ENTREGA) == TIPO_LINEA_RETIRO;
+        private static bool EsEntrega(ClientesEntregasProducto linea)
+            => (linea?.TipoMovimiento ?? 0) == TIPO_LINEA_ENTREGA;
+
+        /// <summary>
+        /// Inventario de depósito: solo salen cajas que se entregan.
+        /// El retiro (lleno a tratamiento) no baja ni sube ese stock.
+        /// </summary>
+        private static bool DescuentaInventarioDeposito(ClientesEntregasProducto linea)
+            => EsEntrega(linea) && !linea.NoRetirado && linea.Cantidad > 0;
 
         private static bool EsCobrable(ClientesEntregasProducto linea)
         {
@@ -312,18 +320,16 @@ namespace SistemaOroAmbiental.DAL.Repository
             int idUsuario,
             DateTime ahora)
         {
-            // Retiro: baja el "en poder del cliente" (entregadas - retiradas) pero NO vuelve al
-            // inventario vendible. Esas cajas van a tratamiento; si se recuperan, se cargan
-            // manualmente / en la solapa Productos recuperados (InventarioRecuperado).
-            if (EsRetiro(linea))
+            if (!DescuentaInventarioDeposito(linea))
                 return;
 
+            var cantidad = linea.Cantidad;
             var producto = await _db.Productos.FirstAsync(x => x.Id == linea.IdProducto);
             var inv = await _invRepo.ObtenerOCrearInventario(idSucursal, linea.IdProducto);
 
-            if (inv.Stock < linea.Cantidad)
+            if (inv.Stock < cantidad)
                 throw new InvalidOperationException(
-                    $"Stock insuficiente para {producto.Nombre} (disponible: {inv.Stock:N2}).");
+                    $"Stock insuficiente para entregar {producto.Nombre} (disponible: {inv.Stock:N2}, a entregar: {cantidad:N2}).");
 
             var mov = new InventarioMovimiento
             {
@@ -333,13 +339,13 @@ namespace SistemaOroAmbiental.DAL.Repository
                 Fecha = fecha,
                 Concepto = $"Entrega #{idEntrega} - {producto.Nombre}",
                 Entrada = 0,
-                Salida = linea.Cantidad,
+                Salida = cantidad,
                 IdUsuarioRegistra = idUsuario,
                 FechaUsuarioRegistra = ahora
             };
 
             _db.InventarioMovimientos.Add(mov);
-            inv.Stock -= linea.Cantidad;
+            inv.Stock -= cantidad;
             if (inv.Stock < 0) inv.Stock = 0;
 
             await _db.SaveChangesAsync();
@@ -437,15 +443,22 @@ namespace SistemaOroAmbiental.DAL.Repository
             await _db.SaveChangesAsync();
         }
 
-        public async Task<int> Insertar(
+        public Task<int> Insertar(
+            ClientesEntrega entrega,
+            List<ClientesEntregasProducto> lineas,
+            List<ClientesEntregasProductosRecuperado> lineasRecuperadas,
+            List<EntregaCobroRegistrar> cobros,
+            int idUsuario)
+            => _db.ExecuteInTransactionAsync(() =>
+                InsertarSinTransaccion(entrega, lineas, lineasRecuperadas, cobros, idUsuario));
+
+        private async Task<int> InsertarSinTransaccion(
             ClientesEntrega entrega,
             List<ClientesEntregasProducto> lineas,
             List<ClientesEntregasProductosRecuperado> lineasRecuperadas,
             List<EntregaCobroRegistrar> cobros,
             int idUsuario)
         {
-            await using var trx = await _db.Database.BeginTransactionAsync();
-
             try
             {
                 var ahora = DateTime.Now;
@@ -544,27 +557,32 @@ namespace SistemaOroAmbiental.DAL.Repository
                 }
 
                 await ActualizarImporteAbonadoYSaldo(entrega.Id);
-                await trx.CommitAsync();
 
                 return entrega.Id;
             }
             catch (Exception ex)
             {
-                await trx.RollbackAsync();
                 throw new InvalidOperationException(
                     "No se pudo registrar la entrega (stock, cuenta corriente o cobros).", ex);
             }
         }
 
-        public async Task<bool> Actualizar(
+        public Task<bool> Actualizar(
+            ClientesEntrega entrega,
+            List<ClientesEntregasProducto> lineas,
+            List<ClientesEntregasProductosRecuperado> lineasRecuperadas,
+            List<EntregaCobroRegistrar> cobros,
+            int idUsuario)
+            => _db.ExecuteInTransactionAsync(() =>
+                ActualizarSinTransaccion(entrega, lineas, lineasRecuperadas, cobros, idUsuario));
+
+        private async Task<bool> ActualizarSinTransaccion(
             ClientesEntrega entrega,
             List<ClientesEntregasProducto> lineas,
             List<ClientesEntregasProductosRecuperado> lineasRecuperadas,
             List<EntregaCobroRegistrar> cobros,
             int idUsuario)
         {
-            await using var trx = await _db.Database.BeginTransactionAsync();
-
             try
             {
                 var entity = await _db.ClientesEntregas
@@ -658,13 +676,11 @@ namespace SistemaOroAmbiental.DAL.Repository
                 await SincronizarCobrosEntrega(entity.Id, idCliente, entity.Fecha, cobros, idUsuario);
                 await ActualizarImporteAbonadoYSaldo(entity.Id);
                 await _db.SaveChangesAsync();
-                await trx.CommitAsync();
 
                 return true;
             }
             catch (Exception ex)
             {
-                await trx.RollbackAsync();
                 throw new InvalidOperationException(
                     "No se pudo modificar la entrega (stock, cuenta corriente o cobros).", ex);
             }
@@ -756,37 +772,29 @@ namespace SistemaOroAmbiental.DAL.Repository
             }
         }
 
-        public async Task<bool> Eliminar(int id)
+        public Task<bool> Eliminar(int id)
+            => _db.ExecuteInTransactionAsync(() => EliminarSinTransaccion(id));
+
+        public async Task<bool> EliminarSinTransaccion(int id)
         {
-            await using var trx = await _db.Database.BeginTransactionAsync();
+            var entity = await _db.ClientesEntregas
+                .Include(x => x.ClientesEntregasProductos)
+                .Include(x => x.ClientesEntregasProductosRecuperados)
+                .FirstOrDefaultAsync(x => x.Id == id);
 
-            try
-            {
-                var entity = await _db.ClientesEntregas
-                    .Include(x => x.ClientesEntregasProductos)
-                    .Include(x => x.ClientesEntregasProductosRecuperados)
-                    .FirstOrDefaultAsync(x => x.Id == id);
+            if (entity == null)
+                return false;
 
-                if (entity == null)
-                    return false;
+            await EliminarCobrosEntregaSinTransaccion(entity.Id);
+            await RevertirStockEntrega(entity.Id);
+            await RevertirMovimientoCuentaCorriente(entity);
 
-                await EliminarCobrosEntregaSinTransaccion(entity.Id);
-                await RevertirStockEntrega(entity.Id);
-                await RevertirMovimientoCuentaCorriente(entity);
+            _db.ClientesEntregasProductos.RemoveRange(entity.ClientesEntregasProductos);
+            _db.ClientesEntregasProductosRecuperados.RemoveRange(entity.ClientesEntregasProductosRecuperados);
+            _db.ClientesEntregas.Remove(entity);
 
-                _db.ClientesEntregasProductos.RemoveRange(entity.ClientesEntregasProductos);
-                _db.ClientesEntregasProductosRecuperados.RemoveRange(entity.ClientesEntregasProductosRecuperados);
-                _db.ClientesEntregas.Remove(entity);
-
-                await _db.SaveChangesAsync();
-                await trx.CommitAsync();
-                return true;
-            }
-            catch
-            {
-                await trx.RollbackAsync();
-                throw;
-            }
+            await _db.SaveChangesAsync();
+            return true;
         }
 
         private async Task EliminarCobrosEntregaSinTransaccion(int idEntrega)
@@ -851,6 +859,30 @@ namespace SistemaOroAmbiental.DAL.Repository
                 .GroupBy(x => x.IdEntrega!.Value)
                 .Select(g => new { Id = g.Key, Total = g.Sum(c => c.Importe) })
                 .ToDictionaryAsync(x => x.Id, x => x.Total);
+        }
+
+        public async Task<Dictionary<int, int>> ContarProductosPorEntregas(IReadOnlyList<int> idsEntrega)
+        {
+            if (idsEntrega == null || idsEntrega.Count == 0)
+                return new Dictionary<int, int>();
+
+            var normales = await _db.ClientesEntregasProductos
+                .AsNoTracking()
+                .Where(x => idsEntrega.Contains(x.IdEntrega))
+                .GroupBy(x => x.IdEntrega)
+                .Select(g => new { Id = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.Id, x => x.Count);
+
+            var recuperados = await _db.ClientesEntregasProductosRecuperados
+                .AsNoTracking()
+                .Where(x => idsEntrega.Contains(x.IdEntrega))
+                .GroupBy(x => x.IdEntrega)
+                .Select(g => new { Id = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.Id, x => x.Count);
+
+            return idsEntrega.ToDictionary(
+                id => id,
+                id => (normales.TryGetValue(id, out var n) ? n : 0) + (recuperados.TryGetValue(id, out var r) ? r : 0));
         }
     }
 }

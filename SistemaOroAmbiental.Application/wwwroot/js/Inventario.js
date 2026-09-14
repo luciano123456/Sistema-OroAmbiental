@@ -134,7 +134,9 @@ function wireEventosInv() {
         mostrarEstadoSinSeleccionInv();
     });
 
-    $("#txtBuscarProducto").on("input", () => renderProductosInv());
+    $("#txtBuscarProducto").on("input", typeof rpDebounce === "function"
+        ? rpDebounce(renderProductosInv, 300)
+        : renderProductosInv);
     $("#fCategoriaLista").on("change", async () => {
         await cargarProductosInv();
         renderProductosInv();

@@ -29,6 +29,9 @@ namespace SistemaOroAmbiental.BLL.Service
         public Task<Dictionary<int, decimal>> SumarCobrosPorEntregas(IEnumerable<int> idsEntrega)
             => _repo.SumarCobrosPorEntregas(idsEntrega?.ToList() ?? new List<int>());
 
+        public Task<Dictionary<int, int>> ContarProductosPorEntregas(IEnumerable<int> idsEntrega)
+            => _repo.ContarProductosPorEntregas(idsEntrega?.ToList() ?? new List<int>());
+
         public async Task<ServiceResult> Insertar(
             ClientesEntrega entrega,
             List<ClientesEntregasProducto> lineas,
@@ -147,6 +150,7 @@ namespace SistemaOroAmbiental.BLL.Service
             return string.Join("|",
                 l.IdProducto,
                 tipo,
+                l.NoRetirado ? "1" : "0",
                 idLista,
                 FormatoDecimal(l.Cantidad),
                 FormatoDecimal(l.PrecioVenta),
@@ -227,14 +231,22 @@ namespace SistemaOroAmbiental.BLL.Service
                     return false;
                 }
 
-                if (l.Cantidad <= 0)
+                if (l.Cantidad == 0)
                 {
-                    error = "Las cantidades deben ser mayores a cero.";
+                    error = "Las cantidades no pueden ser cero.";
                     return false;
                 }
 
-                // Lista / tipo de pago: obligatorio solo en retiros.
+                // No retirado admite cantidad negativa para compensar el saldo (+ / −).
+                if (l.Cantidad < 0 && !(tipo == ClientesEntregasRepository.TIPO_LINEA_RETIRO && l.NoRetirado))
+                {
+                    error = "La cantidad negativa solo se usa en no retirado (−).";
+                    return false;
+                }
+
+                // Lista / tipo de pago: obligatorio en retiros, no en no retirado.
                 if (tipo == ClientesEntregasRepository.TIPO_LINEA_RETIRO
+                    && !l.NoRetirado
                     && l.IdListaPrecio is null or <= 0)
                 {
                     error = "Seleccioná la lista / tipo de pago en las líneas de retiro.";

@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using SistemaOroAmbiental.DAL.Common;
 using SistemaOroAmbiental.DAL.DataContext;
 using SistemaOroAmbiental.Models;
 
@@ -110,81 +111,80 @@ namespace SistemaOroAmbiental.DAL.Repository
             return ArmarInfo("este proveedor", items);
         }
 
-        public async Task EliminarClienteEnCascadaAsync(int idCliente)
-        {
-            var idsContratos = await _db.Contratos
-                .Where(c => c.IdCliente == idCliente)
-                .Select(c => c.Id)
-                .ToListAsync();
-
-            var idsEntregas = await _db.ClientesEntregas
-                .Where(e => e.IdCliente == idCliente || (e.IdContrato.HasValue && idsContratos.Contains(e.IdContrato.Value)))
-                .Select(e => e.Id)
-                .ToListAsync();
-
-            foreach (var idEntrega in idsEntregas)
+        public Task EliminarClienteEnCascadaAsync(int idCliente)
+            => _db.ExecuteInTransactionAsync(async () =>
             {
-                if (!await _entregasRepo.Eliminar(idEntrega))
-                    throw new InvalidOperationException($"No se pudo eliminar la entrega #{idEntrega}.");
-            }
-
-            var recorridosCliente = await _db.ClientesRecorridos
-                .Where(r => r.IdCliente == idCliente)
-                .ToListAsync();
-            if (recorridosCliente.Count > 0)
-            {
-                _db.ClientesRecorridos.RemoveRange(recorridosCliente);
-                await _db.SaveChangesAsync();
-            }
-
-            foreach (var idContrato in idsContratos)
-            {
-                var docs = await _db.ContratosDocumentos
-                    .Where(d => d.IdContrato == idContrato)
-                    .Select(d => d.Id)
+                var idsContratos = await _db.Contratos
+                    .Where(c => c.IdCliente == idCliente)
+                    .Select(c => c.Id)
                     .ToListAsync();
 
-                foreach (var idDoc in docs)
+                var idsEntregas = await _db.ClientesEntregas
+                    .Where(e => e.IdCliente == idCliente || (e.IdContrato.HasValue && idsContratos.Contains(e.IdContrato.Value)))
+                    .Select(e => e.Id)
+                    .ToListAsync();
+
+                foreach (var idEntrega in idsEntregas)
                 {
-                    var doc = await _db.ContratosDocumentos.FindAsync(idDoc);
-                    if (doc != null)
-                        _db.ContratosDocumentos.Remove(doc);
+                    if (!await _entregasRepo.EliminarSinTransaccion(idEntrega))
+                        throw new InvalidOperationException($"No se pudo eliminar la entrega #{idEntrega}.");
                 }
 
-                var renov = await _db.ContratosRenovaciones
-                    .Where(r => r.IdContrato == idContrato)
+                var recorridosCliente = await _db.ClientesRecorridos
+                    .Where(r => r.IdCliente == idCliente)
                     .ToListAsync();
-                _db.ContratosRenovaciones.RemoveRange(renov);
+                if (recorridosCliente.Count > 0)
+                {
+                    _db.ClientesRecorridos.RemoveRange(recorridosCliente);
+                    await _db.SaveChangesAsync();
+                }
 
-                if (!await _contratosRepo.Eliminar(idContrato))
-                    throw new InvalidOperationException($"No se pudo eliminar el contrato #{idContrato}.");
-            }
+                foreach (var idContrato in idsContratos)
+                {
+                    var docs = await _db.ContratosDocumentos
+                        .Where(d => d.IdContrato == idContrato)
+                        .Select(d => d.Id)
+                        .ToListAsync();
 
-            var idsEst = await _db.ClientesEstablecimientos
-                .Where(x => x.IdCliente == idCliente)
-                .Select(x => x.Id)
-                .ToListAsync();
+                    foreach (var idDoc in docs)
+                    {
+                        var doc = await _db.ContratosDocumentos.FindAsync(idDoc);
+                        if (doc != null)
+                            _db.ContratosDocumentos.Remove(doc);
+                    }
 
-            foreach (var idEst in idsEst)
-            {
-                if (!await _establecimientosRepo.Eliminar(idEst))
-                    throw new InvalidOperationException($"No se pudo eliminar el establecimiento #{idEst}.");
-            }
+                    var renov = await _db.ContratosRenovaciones
+                        .Where(r => r.IdContrato == idContrato)
+                        .ToListAsync();
+                    _db.ContratosRenovaciones.RemoveRange(renov);
 
-            var contactos = await _db.ClientesContactos.Where(x => x.IdCliente == idCliente).ToListAsync();
-            _db.ClientesContactos.RemoveRange(contactos);
+                    if (!await _contratosRepo.EliminarSinTransaccion(idContrato))
+                        throw new InvalidOperationException($"No se pudo eliminar el contrato #{idContrato}.");
+                }
 
-            await EliminarCuentaCorrienteClienteAsync(idCliente);
-            await _db.SaveChangesAsync();
+                var idsEst = await _db.ClientesEstablecimientos
+                    .Where(x => x.IdCliente == idCliente)
+                    .Select(x => x.Id)
+                    .ToListAsync();
 
-            if (!await _clientesRepo.Eliminar(idCliente))
-                throw new InvalidOperationException("No se encontró el cliente al finalizar la cascada.");
-        }
+                foreach (var idEst in idsEst)
+                {
+                    if (!await _establecimientosRepo.EliminarSinTransaccion(idEst))
+                        throw new InvalidOperationException($"No se pudo eliminar el establecimiento #{idEst}.");
+                }
 
-        public async Task EliminarProveedorEnCascadaAsync(int idProveedor)
-        {
-            await using var trx = await _db.Database.BeginTransactionAsync();
-            try
+                var contactos = await _db.ClientesContactos.Where(x => x.IdCliente == idCliente).ToListAsync();
+                _db.ClientesContactos.RemoveRange(contactos);
+
+                await EliminarCuentaCorrienteClienteAsync(idCliente);
+                await _db.SaveChangesAsync();
+
+                if (!await _clientesRepo.Eliminar(idCliente))
+                    throw new InvalidOperationException("No se encontró el cliente al finalizar la cascada.");
+            });
+
+        public Task EliminarProveedorEnCascadaAsync(int idProveedor)
+            => _db.ExecuteInTransactionAsync(async () =>
             {
                 var idsCompras = await _db.Compras
                     .Where(x => x.IdProveedor == idProveedor)
@@ -193,7 +193,7 @@ namespace SistemaOroAmbiental.DAL.Repository
 
                 foreach (var idCompra in idsCompras)
                 {
-                    if (!await _comprasRepo.Eliminar(idCompra))
+                    if (!await _comprasRepo.EliminarSinTransaccion(idCompra))
                         throw new InvalidOperationException($"No se pudo eliminar la compra #{idCompra}.");
                 }
 
@@ -207,15 +207,7 @@ namespace SistemaOroAmbiental.DAL.Repository
 
                 if (!await _proveedoresRepo.Eliminar(idProveedor))
                     throw new InvalidOperationException("No se encontró el proveedor al finalizar la cascada.");
-
-                await trx.CommitAsync();
-            }
-            catch
-            {
-                await trx.RollbackAsync();
-                throw;
-            }
-        }
+            });
 
         private async Task EliminarCuentaCorrienteClienteAsync(int idCliente)
         {

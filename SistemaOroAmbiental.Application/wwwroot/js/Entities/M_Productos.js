@@ -22,7 +22,8 @@
                     categorias: "/ProductosCategorias/Lista",
                     medidas: "/UnidadesMedida/Lista",
                     preciosLista: "/ProductosPrecios/ListaPorProducto?idProducto={id}",
-                    preciosGuardar: "/ProductosPrecios/GuardarPorProducto"
+                    preciosGuardar: "/ProductosPrecios/GuardarPorProducto",
+                    verificarDescartador: "/Productos/VerificarDescartadorHojaRuta?esChico={esChico}&esGrande={esGrande}&idExcluir={idExcluir}"
                 },
                 onSaved: null,
                 onDeleted: null,
@@ -441,9 +442,14 @@
                 const lblActivo = this._id("lblActivoProducto");
                 if (chkActivo) chkActivo.checked = true;
                 if (lblActivo) lblActivo.textContent = "Activo";
+                const chkChico = this._id("chkDescartadorChicoHoja");
+                const chkGrande = this._id("chkDescartadorGrandeHoja");
+                if (chkChico) chkChico.checked = false;
+                if (chkGrande) chkGrande.checked = false;
 
                 await this.cargarCombos();
                 await this.cargarPreciosPorLista(0);
+                this.actualizarAlertaHojaRuta();
 
                 this._id("modalEdicionLabel").textContent = "Nuevo Producto";
                 this._id("btnGuardar").innerHTML = `<i class="fa fa-check"></i> Registrar`;
@@ -517,6 +523,10 @@
             const lblActivo = this._id("lblActivoProducto");
             if (chkActivo) chkActivo.checked = modelo.Activo !== false;
             if (lblActivo) lblActivo.textContent = (chkActivo && chkActivo.checked) ? "Activo" : "Inactivo";
+            const chkChico = this._id("chkDescartadorChicoHoja");
+            const chkGrande = this._id("chkDescartadorGrandeHoja");
+            if (chkChico) chkChico.checked = !!modelo.EsDescartadorChicoHojaRuta;
+            if (chkGrande) chkGrande.checked = !!modelo.EsDescartadorGrandeHojaRuta;
 
             if (modelo.IdCategoria) this._setFieldValue("cmbCategoria", modelo.IdCategoria, true);
             if (modelo.IdMedida) this._setFieldValue("cmbMedida", modelo.IdMedida, true);
@@ -581,6 +591,7 @@
 
             if (!data || data.length === 0) {
                 lblSinListas?.classList.remove("d-none");
+                this.actualizarAlertaHojaRuta();
                 return;
             }
 
@@ -623,6 +634,12 @@
                     </div>`;
                 grid.appendChild(card);
             });
+
+            grid.querySelectorAll(".precio-lista-precio").forEach(inp => {
+                inp.addEventListener("input", () => this.actualizarAlertaHojaRuta());
+                inp.addEventListener("change", () => this.actualizarAlertaHojaRuta());
+            });
+            this.actualizarAlertaHojaRuta();
         }
 
         _obtenerPreciosDesdeForm() {
@@ -671,17 +688,24 @@
             }
         }
 
-        async guardar() {
+        async guardar(reemplazarDescartador = false) {
             if (this.isSoloLectura()) return true;
             if (!this.validarCampos()) return false;
 
             const id = this._getFieldValue("txtId");
 
             const abrev = (this._getFieldValue("txtAbreviatura") || "").trim();
+            const chkChico = this._id("chkDescartadorChicoHoja");
+            const chkGrande = this._id("chkDescartadorGrandeHoja");
+            const esChico = !!(chkChico && chkChico.checked);
+            const esGrande = !!(chkGrande && chkGrande.checked);
             const modelo = {
                 Id: id !== "" ? parseInt(id, 10) : 0,
                 Nombre: this._getFieldValue("txtNombre"),
                 Abreviatura: abrev || null,
+                EsDescartadorChicoHojaRuta: esChico,
+                EsDescartadorGrandeHojaRuta: esGrande,
+                ReemplazarDescartadorHojaRuta: !!reemplazarDescartador,
                 IdCategoria: this._getIntOrNull("cmbCategoria"),
                 IdMedida: this._getIntOrNull("cmbMedida"),
                 CostoUnitario: this._getDecimal("txtCostoUnitario"),
@@ -706,6 +730,10 @@
                 });
 
                 if (!data?.valor) {
+                    if (data?.tipo === "descartador_ocupado") {
+                        return { conflict: true, mensaje: data.mensaje || "¿Reemplazar el descartador actual?" };
+                    }
+
                     this.mostrarErrorCampos(
                         data?.mensaje || "No se pudo guardar.",
                         data?.idReferencia ?? null,
@@ -732,6 +760,158 @@
                 this.mostrarErrorCampos("Ha ocurrido un error inesperado al guardar.", null, "error");
                 return false;
             }
+        }
+
+        /**
+         * Guarda con confirmación de reemplazo ANTES de poner el botón en "Guardando...".
+         */
+        async guardarConConfirmacion(btn) {
+            if (this.isSoloLectura()) return true;
+            if (!this.validarCampos()) return false;
+
+            this.actualizarAlertaHojaRuta();
+
+            const chkChico = this._id("chkDescartadorChicoHoja");
+            const chkGrande = this._id("chkDescartadorGrandeHoja");
+            const esChico = !!(chkChico && chkChico.checked);
+            const esGrande = !!(chkGrande && chkGrande.checked);
+            const marcado = esChico || esGrande;
+
+            if (marcado && this._maxPrecioVentaForm() <= 0) {
+                const tipo = esGrande ? "Descartador Grande" : "Descartador Chico";
+                const okSinPrecio = typeof confirmarModal === "function"
+                    ? await confirmarModal(
+                        `Este producto está marcado como ${tipo} pero no tiene precio de venta en Lista de precios. En la hoja de ruta se verá «Sin Precio». ¿Guardar igual?`
+                    )
+                    : window.confirm("Sin precio de venta. ¿Guardar igual?");
+                if (!okSinPrecio) {
+                    this.actualizarAlertaHojaRuta();
+                    return false;
+                }
+            }
+
+            let reemplazar = false;
+            if (marcado) {
+                const idRaw = this._getFieldValue("txtId");
+                const idExcluir = idRaw !== "" ? parseInt(idRaw, 10) : 0;
+                try {
+                    const url = this._replaceUrl(this.options.endpoints.verificarDescartador, {
+                        esChico: esChico ? "true" : "false",
+                        esGrande: esGrande ? "true" : "false",
+                        idExcluir: idExcluir > 0 ? idExcluir : ""
+                    });
+                    const check = await this._fetchJson(url, { headers: this._headers(false) });
+                    if (check && check.valor === false && check.tipo === "descartador_ocupado") {
+                        const ok = typeof confirmarModal === "function"
+                            ? await confirmarModal(check.mensaje || "¿Reemplazar el descartador actual?")
+                            : window.confirm(check.mensaje || "¿Reemplazar el descartador actual?");
+                        if (!ok) return false;
+                        reemplazar = true;
+                    }
+                } catch (e) {
+                    console.warn("No se pudo pre-chequear descartador:", e);
+                }
+            }
+
+            const result = await withBusy(btn, () => this.guardar(reemplazar));
+            if (result && result.conflict) {
+                const ok = typeof confirmarModal === "function"
+                    ? await confirmarModal(result.mensaje)
+                    : window.confirm(result.mensaje);
+                if (!ok) return false;
+                return await withBusy(btn, () => this.guardar(true));
+            }
+
+            return result === true;
+        }
+
+        _maxPrecioVentaForm() {
+            const precios = this._obtenerPreciosDesdeForm?.() || [];
+            let max = 0;
+            for (const p of precios) {
+                const n = Number(p.PrecioVenta) || 0;
+                if (n > max) max = n;
+            }
+            return max;
+        }
+
+        actualizarAlertaHojaRuta() {
+            this.actualizarAlertaHojaRutaAsync();
+        }
+
+        async actualizarAlertaHojaRutaAsync() {
+            const box = this._id("alertHojaRuta");
+            const txt = this._id("alertHojaRutaTexto");
+            const icon = this._id("alertHojaRutaIcon");
+            if (!box || !txt) return;
+
+            const seq = (this._alertaHojaSeq = (this._alertaHojaSeq || 0) + 1);
+
+            const chkChico = this._id("chkDescartadorChicoHoja");
+            const chkGrande = this._id("chkDescartadorGrandeHoja");
+            const esChico = !!(chkChico && chkChico.checked);
+            const esGrande = !!(chkGrande && chkGrande.checked);
+            const maxPrecio = this._maxPrecioVentaForm();
+            const tipo = esGrande ? "Descartador Grande" : "Descartador Chico";
+            const tipoCorto = esGrande ? "descartador grande" : "descartador chico";
+
+            const setAlert = (warn, mensaje) => {
+                if (seq !== this._alertaHojaSeq) return;
+                box.classList.toggle("is-warn", !!warn);
+                if (icon) {
+                    icon.className = warn ? "fa fa-exclamation-triangle" : "fa fa-info-circle";
+                }
+                txt.textContent = mensaje;
+            };
+
+            if (!esChico && !esGrande) {
+                setAlert(false, "Marcá un tipo para usar el precio de venta de este producto en el encabezado de la hoja.");
+                return;
+            }
+
+            let ocupante = null;
+            try {
+                const idRaw = this._getFieldValue("txtId");
+                const idExcluir = idRaw !== "" ? parseInt(idRaw, 10) : 0;
+                const url = this._replaceUrl(this.options.endpoints.verificarDescartador, {
+                    esChico: esChico ? "true" : "false",
+                    esGrande: esGrande ? "true" : "false",
+                    idExcluir: idExcluir > 0 ? idExcluir : ""
+                });
+                const check = await this._fetchJson(url, { headers: this._headers(false) });
+                if (seq !== this._alertaHojaSeq) return;
+                if (check && check.valor === false && check.tipo === "descartador_ocupado") {
+                    ocupante = (check.productoOcupante || "").trim()
+                        || this._extraerNombreDeMensajeDescartador(check.mensaje)
+                        || "otro producto";
+                }
+            } catch (e) {
+                console.warn("No se pudo chequear descartador ocupado:", e);
+            }
+
+            if (ocupante) {
+                let msg = `Cuidado: «${ocupante}» ya es el ${tipoCorto} de la hoja. Si guardás, lo vas a reemplazar.`;
+                if (maxPrecio <= 0) {
+                    msg += " Además este producto no tiene precio de venta (se verá «Sin Precio»).";
+                }
+                setAlert(true, msg);
+                return;
+            }
+
+            if (maxPrecio > 0) {
+                const fmt = typeof formatearNumero === "function"
+                    ? formatearNumero(maxPrecio)
+                    : String(maxPrecio);
+                setAlert(false, `Se usará como ${tipo} en la hoja (precio de venta: $ ${fmt}).`);
+                return;
+            }
+
+            setAlert(true, `Marcado como ${tipo}, pero no hay precio de venta en Lista de precios. En la hoja se verá «Sin Precio». Cargalo en la pestaña Lista de precios.`);
+        }
+
+        _extraerNombreDeMensajeDescartador(mensaje) {
+            const m = String(mensaje || "").match(/producto\s+'([^']+)'/i);
+            return m ? m[1] : "";
         }
 
         async eliminar(id) {
@@ -778,6 +958,7 @@
             this.setSoloLecturaAttribute(false);
             this.modalEl.querySelectorAll("input, select, textarea").forEach(el => {
                 if (el.id === "txtId") { el.value = ""; return; }
+                if (el.type === "checkbox") { el.checked = false; return; }
                 if (el.tagName === "SELECT") el.selectedIndex = 0;
                 else el.value = "";
             });
@@ -1002,7 +1183,7 @@
             const guardarBtn = this._id("btnGuardar");
             if (guardarBtn) {
                 guardarBtn.removeAttribute("onclick");
-                guardarBtn.addEventListener("click", () => withBusy(guardarBtn, () => this.guardar()));
+                guardarBtn.addEventListener("click", () => this.guardarConConfirmacion(guardarBtn));
             }
 
             const cerrarErrorBtn = this.modalEl.querySelector("#errorCampos .rp-error-close");
@@ -1028,6 +1209,19 @@
                 });
             }
 
+            const chkChico = this._id("chkDescartadorChicoHoja");
+            const chkGrande = this._id("chkDescartadorGrandeHoja");
+            if (chkChico && chkGrande) {
+                chkChico.addEventListener("change", () => {
+                    if (chkChico.checked) chkGrande.checked = false;
+                    this.actualizarAlertaHojaRuta();
+                });
+                chkGrande.addEventListener("change", () => {
+                    if (chkGrande.checked) chkChico.checked = false;
+                    this.actualizarAlertaHojaRuta();
+                });
+            }
+
             this._validacion?.attachEvents({ select2Namespace: "mproductos" });
         }
 
@@ -1039,7 +1233,10 @@
     }
 
     window.guardarProducto = function () {
-        return window.productoModal?.guardar?.();
+        const modal = window.productoModal;
+        if (!modal) return;
+        const btn = modal._id?.("btnGuardar");
+        return modal.guardarConConfirmacion?.(btn) ?? modal.guardar?.();
     };
 
     window.cerrarErrorCampos = function () {

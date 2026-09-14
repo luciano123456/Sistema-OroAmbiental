@@ -92,18 +92,25 @@ namespace SistemaOroAmbiental.BLL.Service
             if ((debe > 0 || haber > 0) && (!idCuenta.HasValue || idCuenta <= 0))
                 return ServiceResult.Error("Seleccione una cuenta de caja para el impacto en tesorería.", "validacion");
 
-            var ok = await _repo.RegistrarAjuste(
-                idCliente,
-                idCuenta,
-                fecha,
-                concepto.Trim(),
-                debe,
-                haber,
-                idUsuario);
+            try
+            {
+                var ok = await _repo.RegistrarAjuste(
+                    idCliente,
+                    idCuenta,
+                    fecha,
+                    concepto.Trim(),
+                    debe,
+                    haber,
+                    idUsuario);
 
-            return ok
-                ? ServiceResult.Success("Ajuste registrado correctamente.")
-                : ServiceResult.Error("No se pudo registrar el ajuste.");
+                return ok
+                    ? ServiceResult.Success("Ajuste registrado correctamente.")
+                    : ServiceResult.Error("No se pudo registrar el ajuste.");
+            }
+            catch (Exception ex)
+            {
+                return ServiceResult.Error(MensajeDb(ex));
+            }
         }
 
         public async Task<ServiceResult> RegistrarInteres(
@@ -122,25 +129,84 @@ namespace SistemaOroAmbiental.BLL.Service
             if (importe <= 0)
                 return ServiceResult.Error("El importe de interés debe ser mayor a cero.", "validacion");
 
-            var ok = await _repo.RegistrarInteres(
-                idCliente,
-                fecha,
-                concepto.Trim(),
-                importe,
-                idUsuario);
+            try
+            {
+                var ok = await _repo.RegistrarInteres(
+                    idCliente,
+                    fecha,
+                    concepto.Trim(),
+                    importe,
+                    idUsuario);
 
-            return ok
-                ? ServiceResult.Success("Interés registrado correctamente.")
-                : ServiceResult.Error("No se pudo registrar el interés.");
+                return ok
+                    ? ServiceResult.Success("Interés registrado correctamente.")
+                    : ServiceResult.Error("No se pudo registrar el interés.");
+            }
+            catch (Exception ex)
+            {
+                return ServiceResult.Error(MensajeDb(ex));
+            }
+        }
+
+        public async Task<ServiceResult> ActualizarInteres(
+            int idMovimiento,
+            string concepto,
+            decimal importe,
+            int idUsuario)
+        {
+            if (idMovimiento <= 0)
+                return ServiceResult.Error("Movimiento inválido.", "validacion");
+
+            if (string.IsNullOrWhiteSpace(concepto))
+                return ServiceResult.Error("El concepto es obligatorio.", "validacion");
+
+            if (importe <= 0)
+                return ServiceResult.Error("El importe de interés debe ser mayor a cero.", "validacion");
+
+            try
+            {
+                var ok = await _repo.ActualizarInteres(
+                    idMovimiento,
+                    concepto.Trim(),
+                    importe,
+                    idUsuario);
+
+                return ok
+                    ? ServiceResult.Success("Interés actualizado correctamente.")
+                    : ServiceResult.Error("No se pudo actualizar el interés. Solo se pueden editar intereses manuales.");
+            }
+            catch (Exception ex)
+            {
+                return ServiceResult.Error(MensajeDb(ex));
+            }
         }
 
         public async Task<ServiceResult> Eliminar(int id)
         {
-            var ok = await _repo.Eliminar(id);
+            try
+            {
+                var ok = await _repo.Eliminar(id);
 
-            return ok
-                ? ServiceResult.Success("Movimiento eliminado correctamente.")
-                : ServiceResult.Error("No se pudo eliminar el movimiento. Solo se pueden eliminar cobros, ajustes e intereses manuales.");
+                return ok
+                    ? ServiceResult.Success("Movimiento eliminado correctamente.")
+                    : ServiceResult.Error("No se pudo eliminar el movimiento. Solo se pueden eliminar cobros, ajustes e intereses manuales.");
+            }
+            catch (Exception ex)
+            {
+                return ServiceResult.Error(MensajeDb(ex));
+            }
+        }
+
+        private static string MensajeDb(Exception ex)
+        {
+            var msg = ex.InnerException?.Message ?? ex.Message;
+            if (string.IsNullOrWhiteSpace(msg))
+                return "No se pudo guardar el cambio en cuenta corriente.";
+            if (msg.Contains("truncated", StringComparison.OrdinalIgnoreCase) ||
+                msg.Contains("truncated string", StringComparison.OrdinalIgnoreCase) ||
+                msg.Contains("String or binary data", StringComparison.OrdinalIgnoreCase))
+                return "El concepto es demasiado largo. Acortalo e intentá de nuevo.";
+            return msg;
         }
     }
 }

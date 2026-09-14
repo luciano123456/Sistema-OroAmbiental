@@ -1,0 +1,180 @@
+<div class="modal fade" id="modalReclamoDeudaEst" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content rd-modal">
+            <div class="modal-header colorEncabezado border-0">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="rd-badge"><i class="fa fa-whatsapp"></i></span>
+                    <div>
+                        <h5 class="modal-title fw-bold mb-0" id="rdEstTitulo">Informe de cuenta / reclamo</h5>
+                        <small class="rd-subtitle" id="rdEstSubtitulo">WhatsApp o mail</small>
+                    </div>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <div id="rdEstLoading" class="rd-loading">
+                    <i class="fa fa-spinner fa-spin"></i> Cargando deuda...
+                </div>
+                <div id="rdEstBody" class="d-none">
+                    <label class="rd-libre-toggle">
+                        <input type="checkbox" id="rdEstLibre">
+                        <span>
+                            <strong>Mensaje personalizado</strong>
+                            <small>Sin informe de deuda: escribís el texto y se envía tal cual por WhatsApp o mail</small>
+                        </span>
+                    </label>
+
+                    <div id="rdEstDeudaUi">
+                        <div class="rd-kpis">
+                            <div class="rd-kpi">
+                                <span>Meses en el informe</span>
+                                <strong id="rdEstKpiMeses">0</strong>
+                            </div>
+                            <div class="rd-kpi is-warn">
+                                <span>Total adeudado</span>
+                                <strong id="rdEstKpiTotal">$ 0,00</strong>
+                            </div>
+                        </div>
+
+                        <div class="rd-layout">
+                            <div class="rd-col" id="rdEstColMeses">
+                                <label class="form-label rd-label mb-2">Meses del informe</label>
+                                <div class="rd-meses-toolbar" role="group" aria-label="Filtro de meses">
+                                    <button type="button" class="rd-chip" id="rdEstSelDeuda" data-preset="deuda">
+                                        <i class="fa fa-exclamation-circle"></i>
+                                        <span>Con deuda</span>
+                                    </button>
+                                    <button type="button" class="rd-chip" id="rdEstSelUlt3" data-preset="ult3">
+                                        <i class="fa fa-calendar"></i>
+                                        <span>Últimos 3</span>
+                                    </button>
+                                    <button type="button" class="rd-chip" id="rdEstSelUlt6" data-preset="ult6">
+                                        <i class="fa fa-calendar-o"></i>
+                                        <span>Últimos 6</span>
+                                    </button>
+                                    <button type="button" class="rd-chip" id="rdEstSelTodos" data-preset="todos">
+                                        <i class="fa fa-th"></i>
+                                        <span>Todos</span>
+                                    </button>
+                                    <button type="button" class="rd-chip rd-chip--ghost" id="rdEstSelNinguno" data-preset="ninguno">
+                                        <i class="fa fa-times"></i>
+                                        <span>Ninguno</span>
+                                    </button>
+                                </div>
+                                <div id="rdEstMeses" class="rd-meses"></div>
+                                <p id="rdEstSinDeuda" class="rd-empty d-none">Este establecimiento no tiene movimientos en los últimos 3 años.</p>
+                                <p class="rd-hint mb-0">Incluí meses anteriores (aunque estén pagos) para mostrar cómo se imputó cada transferencia o efectivo.</p>
+                            </div>
+
+                            <div class="rd-col">
+                                <label class="form-label rd-label">Cómo enviar</label>
+                                <div class="rd-modos" role="group">
+                                    <label class="rd-modo">
+                                        <input type="radio" name="rdEstModo" value="junto" checked>
+                                        <span>
+                                            <strong>Un solo informe</strong>
+                                            <small>Tabla de meses con cargos, pagos, fecha de transferencia e imputación</small>
+                                        </span>
+                                    </label>
+                                    <label class="rd-modo">
+                                        <input type="radio" name="rdEstModo" value="separado">
+                                        <span>
+                                            <strong>Un mensaje por mes</strong>
+                                            <small>Abre WhatsApp o mail de a uno, para reclamar período por período</small>
+                                        </span>
+                                    </label>
+                                </div>
+
+                                <label class="form-label rd-label mt-3">Texto introductorio</label>
+                                <div class="rd-templates" id="rdEstTemplates">
+                                    <button type="button" class="rd-tpl is-active" data-tpl="formal">Formal</button>
+                                    <button type="button" class="rd-tpl" data-tpl="corto">Corto</button>
+                                    <button type="button" class="rd-tpl" data-tpl="mio">El mío</button>
+                                </div>
+                                <textarea id="rdEstIntro" class="form-control rd-intro" rows="4"
+                                          placeholder="Texto que va al inicio del reclamo..."></textarea>
+                                <div class="rd-hint">Se guarda en este equipo. Variables: {cliente}, {establecimiento}, {direccion}, {mes}, {anio}, {total}, {meses}.</div>
+
+                                <label class="form-label rd-label mt-3" for="rdEstCierre">Cierre</label>
+                                <input id="rdEstCierre" class="form-control" type="text" maxlength="240"
+                                       placeholder="Quedamos a disposición para coordinar el pago." />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="rdEstLibrePanel" class="d-none">
+                        <label class="form-label rd-label mt-2" for="rdEstLibreTexto">Tu mensaje</label>
+                        <textarea id="rdEstLibreTexto" class="form-control rd-intro" rows="10"
+                                  placeholder="Escribí acá lo que quieras enviar. No se agrega deuda ni plantilla."></textarea>
+                        <div class="d-flex flex-wrap gap-2 mt-2">
+                            <button type="button" class="rd-btn rd-btn-ghost" id="rdEstLibreDatos">
+                                <i class="fa fa-map-marker"></i> Insertar datos del local
+                            </button>
+                        </div>
+                        <div class="rd-hint">Se guarda en este equipo. Opcional: {cliente}, {establecimiento}, {direccion}.</div>
+                    </div>
+
+                    <div class="rd-envio mt-3">
+                        <div class="rd-local" id="rdEstLocal">
+                            <span class="rd-local-kicker">Este mensaje es del local</span>
+                            <strong id="rdEstLocalNombre">—</strong>
+                            <span class="rd-local-dir" id="rdEstLocalDir"></span>
+                        </div>
+
+                        <label class="form-label rd-label mt-3 mb-2">Elegí el WhatsApp</label>
+                        <div id="rdEstDestinosWa" class="rd-destinos"></div>
+                        <p id="rdEstDestinosWaVacio" class="rd-hint d-none">No hay teléfonos en los contactos de este local. Escribí el número abajo.</p>
+
+                        <div class="rd-destino-resumen" id="rdEstDestinoResumen"></div>
+
+                        <div class="row g-2 mt-2">
+                            <div class="col-md-6">
+                                <label class="form-label rd-label" for="rdEstTelefono">Número (se puede editar)</label>
+                                <input id="rdEstTelefono" class="form-control" type="text" placeholder="Ej: 11 5555 5555" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label rd-label" for="rdEstEmail">Mail</label>
+                                <input id="rdEstEmail" class="form-control" type="email" placeholder="mail@cliente.com" />
+                            </div>
+                        </div>
+
+                        <div class="rd-preview-head">
+                            <label class="form-label rd-label mb-0">Vista previa</label>
+                            <button type="button" class="rd-btn rd-btn-ghost rd-btn-sm" id="rdEstBtnCopiar">
+                                <i class="fa fa-clone"></i> Copiar
+                            </button>
+                        </div>
+                        <pre id="rdEstPreview" class="rd-preview"></pre>
+                    </div>
+
+                    <div id="rdEstStepper" class="rd-stepper d-none">
+                        <div>
+                            <strong id="rdEstStepperTitulo">Mes 1 de 1</strong>
+                            <p id="rdEstStepperTexto" class="mb-0">Se abrió el mensaje. Cuando lo envíes, seguí con el siguiente mes.</p>
+                        </div>
+                        <div class="rd-stepper-actions">
+                            <button type="button" class="rd-btn rd-btn-ghost" id="rdEstStepperCancel">
+                                Cancelar
+                            </button>
+                            <button type="button" class="rd-btn rd-btn-wa" id="rdEstStepperNext">
+                                Siguiente mes
+                            </button>
+                        </div>
+                    </div>
+                    <a id="rdEstMailtoLink" href="mailto:" tabindex="-1" aria-hidden="true" class="rd-mailto-link">mail</a>
+                </div>
+            </div>
+            <div class="modal-footer rd-footer border-0 flex-wrap gap-2">
+                <button type="button" class="rd-btn rd-btn-ghost me-auto" data-bs-dismiss="modal">
+                    Cerrar
+                </button>
+                <button type="button" class="rd-btn rd-btn-mail" id="rdEstBtnMail">
+                    <i class="fa fa-envelope"></i> <span id="rdEstBtnMailTxt">Enviar mail</span>
+                </button>
+                <button type="button" class="rd-btn rd-btn-wa" id="rdEstBtnWa">
+                    <i class="fa fa-whatsapp"></i> <span id="rdEstBtnWaTxt">WhatsApp</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

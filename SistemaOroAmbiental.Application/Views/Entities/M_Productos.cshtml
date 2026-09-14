@@ -45,13 +45,13 @@
                         <form class="row g-3">
                             <input type="text" id="txtId" hidden />
 
-                            <div class="col-md-6">
+                            <div class="col-md-8">
                                 <label class="form-label">Nombre</label>
                                 <input id="txtNombre" class="form-control" required />
                                 <div class="invalid-feedback">Campo obligatorio</div>
                             </div>
 
-                            <div class="col-md-3">
+                            <div class="col-md-4">
                                 <label class="form-label">Abreviatura</label>
                                 <input id="txtAbreviatura" class="form-control" maxlength="20" placeholder="Ej. C/C" />
                                 <div class="form-text text-muted">Se muestra en la hoja de ruta.</div>
@@ -99,8 +99,8 @@
                                 <div class="invalid-feedback">Valor invalido</div>
                             </div>
 
-                            <div class="col-md-3">
-                                <div class="rp-activo-box">
+                            <div class="col-md-4">
+                                <div class="rp-activo-box h-100">
                                     <div class="rp-activo-box-head">
                                         <span class="rp-activo-box-title">Estado del registro</span>
                                         <span class="rp-activo-box-sub">Productos inactivos no se listan por defecto.</span>
@@ -110,6 +110,35 @@
                                         <span class="rp-switch-slider"></span>
                                         <span class="rp-activo-estado-text" id="lblActivoProducto">Activo</span>
                                     </label>
+                                </div>
+                            </div>
+
+                            <div class="col-md-8">
+                                <div class="rp-activo-box rp-hoja-ruta-box h-100">
+                                    <div class="rp-activo-box-head">
+                                        <span class="rp-activo-box-title"><i class="fa fa-map-o"></i> Hoja de ruta</span>
+                                        <span class="rp-activo-box-sub">Precio del encabezado · un solo producto por tipo.</span>
+                                    </div>
+                                    <div class="rp-hoja-ruta-chips" role="group" aria-label="Rol en hoja de ruta">
+                                        <label class="rp-hoja-chip" for="chkDescartadorChicoHoja">
+                                            <input type="checkbox" id="chkDescartadorChicoHoja" class="rp-hoja-chip-input">
+                                            <span class="rp-hoja-chip-ui">
+                                                <i class="fa fa-cube" aria-hidden="true"></i>
+                                                <span>Descartador chico</span>
+                                            </span>
+                                        </label>
+                                        <label class="rp-hoja-chip" for="chkDescartadorGrandeHoja">
+                                            <input type="checkbox" id="chkDescartadorGrandeHoja" class="rp-hoja-chip-input">
+                                            <span class="rp-hoja-chip-ui">
+                                                <i class="fa fa-cubes" aria-hidden="true"></i>
+                                                <span>Descartador grande</span>
+                                            </span>
+                                        </label>
+                                    </div>
+                                    <div class="rp-hoja-ruta-alert" id="alertHojaRuta" role="status">
+                                        <i class="fa fa-info-circle" id="alertHojaRutaIcon" aria-hidden="true"></i>
+                                        <span id="alertHojaRutaTexto">Marcá un tipo para usar el precio de venta de este producto en el encabezado de la hoja.</span>
+                                    </div>
                                 </div>
                             </div>
                         </form>

@@ -51,8 +51,8 @@ $(document).ready(() => {
     establecimientoModal = typeof initEstablecimientoModal === "function"
         ? initEstablecimientoModal({
             token: token,
-            onSaved: async () => { await listaEstablecimientos(); },
-            onDeleted: async () => { await listaEstablecimientos(); }
+            onSaved: async () => { recargarGrillaServer(gridEstablecimientos); },
+            onDeleted: async () => { recargarGrillaServer(gridEstablecimientos); }
         })
         : null;
 
@@ -72,6 +72,11 @@ $(document).ready(() => {
 
     listaEstablecimientos();
 });
+
+const API_ESTABLECIMIENTOS = {
+    listaPaginada: "/ClientesEstablecimientos/ListaPaginada",
+    paginaDeId: "/ClientesEstablecimientos/PaginaDeId"
+};
 
 function ensureSelect2Est($el, options) {
     if (!$el || !$el.length) return;
@@ -93,83 +98,85 @@ function inicializarSelect2FiltroEst($select) {
 }
 
 async function listaEstablecimientos() {
-    const paginaActual = gridEstablecimientos != null ? gridEstablecimientos.page() : 0;
-
-    const response = await fetch("/ClientesEstablecimientos/Lista", {
-        method: "GET",
-        headers: {
-            Authorization: "Bearer " + token,
-            "Content-Type": "application/json"
-        }
-    });
-
-    if (!response.ok) throw new Error(`Error: ${response.statusText}`);
-
-    const data = await response.json();
-    await configurarDataTableEst(data);
-
-    if (paginaActual > 0) {
-        gridEstablecimientos.page(paginaActual).draw("page");
+    if (!gridEstablecimientos) {
+        await initGridEstablecimientos();
+        return;
     }
+    recargarGrillaServer(gridEstablecimientos);
 }
 
-async function configurarDataTableEst(data) {
-    if (!gridEstablecimientos) {
-        gridEstablecimientos = $("#grd_Establecimientos").DataTable({
-            data: data,
-            language: { sLengthMenu: "Mostrar MENU registros", url: "//cdn.datatables.net/plug-ins/2.0.7/i18n/es-MX.json" },
-            autoWidth: false,
-            columnDefs: typeof columnDefsGridLista === "function" ? columnDefsGridLista() : [],
-            scrollX: true,
-            scrollCollapse: true,
-            columns: [
-                columnaGridAcciones({
-                    ver: "verEstablecimiento",
-                    editar: "editarEstablecimiento",
-                    eliminar: "eliminarEstablecimiento"
-                }, "Clientes"),
-                columnaGridId(),
-                { data: "IdEstablecimientoCliente", defaultContent: "" },
-                { data: "Cliente" },
-                { data: "Nombre" },
-                { data: "Cuit" },
-                { data: "Provincia" },
-                { data: "Partido", defaultContent: "" },
-                { data: "CodigoPartido", defaultContent: "" },
-                { data: "Localidad", defaultContent: "" },
-                { data: "CodigoLocalidad", defaultContent: "" },
-                { data: "DiaRecoleccion" },
-                { data: "SemanaRecoleccion" },
-                { data: "ListaPrecio" },
-                {
-                    data: "DiasHorarios",
-                    defaultContent: "",
-                    render: function (d, type, row) {
-                        if (d) return d;
-                        const desde = row.HorarioRecoleccionDesde || "";
-                        const hasta = row.HorarioRecoleccionHasta || "";
-                        return desde && hasta ? `${desde} - ${hasta}` : "";
-                    }
+async function initGridEstablecimientos() {
+    if (gridEstablecimientos) return;
+
+    gridEstablecimientos = $("#grd_Establecimientos").DataTable({
+        serverSide: true,
+        processing: true,
+        ajax: crearOpcionesAjaxGrillaServer(API_ESTABLECIMIENTOS.listaPaginada, "#grd_Establecimientos"),
+        language: {
+            sLengthMenu: "Mostrar MENU registros",
+            url: "//cdn.datatables.net/plug-ins/2.0.7/i18n/es-MX.json",
+            processing: "Cargando..."
+        },
+        autoWidth: false,
+        columnDefs: [
+            { targets: 0, className: "rp-col-acciones", width: "188px", orderable: false },
+            { targets: 1, className: "rp-col-id", width: "92px" }
+        ],
+        scrollX: true,
+        scrollCollapse: true,
+        columns: [
+            columnaGridAcciones({
+                ver: "verEstablecimiento",
+                editar: "editarEstablecimiento",
+                eliminar: "eliminarEstablecimiento",
+                reclamar: "abrirReclamoDeudaEstablecimiento",
+                whatsapp: "abrirMensajeWhatsappEstablecimiento"
+            }, "Clientes"),
+            columnaGridId(),
+            { data: "IdEstablecimientoCliente", defaultContent: "" },
+            { data: "Cliente" },
+            { data: "Nombre" },
+            { data: "Cuit" },
+            { data: "Provincia" },
+            { data: "Partido", defaultContent: "" },
+            { data: "CodigoPartido", defaultContent: "" },
+            { data: "Localidad", defaultContent: "" },
+            { data: "CodigoLocalidad", defaultContent: "" },
+            { data: "DiaRecoleccion" },
+            { data: "SemanaRecoleccion" },
+            { data: "ListaPrecio" },
+            {
+                data: "DiasHorarios",
+                defaultContent: "",
+                render: function (d, type, row) {
+                    if (d) return d;
+                    const desde = row.HorarioRecoleccionDesde || "";
+                    const hasta = row.HorarioRecoleccionHasta || "";
+                    return desde && hasta ? `${desde} - ${hasta}` : "";
                 }
-            ],
-            dom: "Bfrtip",
-            buttons: getBotonesExportacion(gridEstablecimientos, "Establecimientos"),
-            orderCellsTop: true,
-            fixedHeader: true,
-            initComplete: async function () {
-                const api = this.api();
-                await armarFiltrosGrillaLista(api, "#grd_Establecimientos", columnConfigEst, {
-                    includeActivo: false,
-                    initSelect2: ($el) => inicializarSelect2FiltroEst($el)
-                });
-                configurarOpcionesColumnasEst();
-                actualizarKpisEst(data);
             }
-        });
-    } else {
-        gridEstablecimientos.clear().rows.add(data).draw();
-        actualizarKpisEst(data);
-    }
+        ],
+        dom: "Bfrtip",
+        buttons: getBotonesExportacion(gridEstablecimientos, "Establecimientos"),
+        orderCellsTop: true,
+        fixedHeader: true,
+        drawCallback: function () {
+            const total = $("#grd_Establecimientos").data("rpRecordsFiltered") ?? 0;
+            actualizarKpisEst(total);
+        },
+        initComplete: async function () {
+            const api = this.api();
+            await armarFiltrosGrillaLista(api, "#grd_Establecimientos", columnConfigEst, {
+                includeActivo: false,
+                initSelect2: ($el) => inicializarSelect2FiltroEst($el)
+            });
+            configurarOpcionesColumnasEst();
+        }
+    });
+}
+
+async function configurarDataTableEst(_data) {
+    recargarGrillaServer(gridEstablecimientos);
 }
 
 async function listaClientesFilterEst() {
@@ -212,7 +219,12 @@ function configurarOpcionesColumnasEst() {
     configurarMenuColumnasDataTable(gridEstablecimientos, "configColumnasMenuEst");
 }
 
-function actualizarKpisEst(data) {
+function actualizarKpisEst(totalOrData) {
     const el = document.getElementById("kpiCantEstablecimientos");
-    if (el) el.textContent = String((data || []).length);
+    if (!el) return;
+    if (typeof totalOrData === "number") {
+        el.textContent = String(totalOrData);
+    } else {
+        el.textContent = String((totalOrData || []).length);
+    }
 }
