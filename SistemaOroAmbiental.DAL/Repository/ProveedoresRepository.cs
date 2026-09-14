@@ -26,7 +26,7 @@ namespace SistemaOroAmbiental.DAL.Repository
                 return false;
             }
         }
-        v 
+
         public async Task<bool> Actualizar(Proveedore model)
         {
             try
