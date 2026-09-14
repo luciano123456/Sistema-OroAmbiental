@@ -36,26 +36,93 @@ namespace SistemaOroAmbiental.Application.Controllers
         [HttpPost]
         public virtual async Task<IActionResult> Insertar([FromBody] VMGenericModel model)
         {
-            var entity = new TEntity();
-            SetNombre(entity, model.Nombre ?? "");
+            var nombre = (model.Nombre ?? "").Trim();
+            if (string.IsNullOrWhiteSpace(nombre))
+            {
+                return Ok(new { valor = false, mensaje = "Debe ingresar un nombre.", tipo = "validacion" });
+            }
 
-            bool respuesta = await Service.Insertar(entity);
+            var duplicado = await Service.BuscarDuplicadoPorNombre(null, nombre);
+            if (duplicado != null)
+            {
+                return Ok(new
+                {
+                    valor = false,
+                    mensaje = $"Ya existe un registro con el nombre '{GetNombre(duplicado)}'.",
+                    tipo = "duplicado",
+                    idReferencia = GetId(duplicado)
+                });
+            }
 
-            return Ok(new { valor = respuesta, id = GetId(entity) });
+            try
+            {
+                var entity = new TEntity();
+                SetNombre(entity, nombre);
+
+                bool respuesta = await Service.Insertar(entity);
+
+                return Ok(new { valor = respuesta, id = GetId(entity) });
+            }
+            catch (DbUpdateException)
+            {
+                return Ok(new
+                {
+                    valor = false,
+                    mensaje = "Ya existe un registro con ese nombre.",
+                    tipo = "duplicado"
+                });
+            }
         }
 
         [HttpPut]
         public virtual async Task<IActionResult> Actualizar([FromBody] VMGenericModel model)
         {
+            if (model.Id <= 0)
+            {
+                return Ok(new { valor = false, mensaje = "Registro inválido.", tipo = "validacion" });
+            }
+
+            var nombre = (model.Nombre ?? "").Trim();
+            if (string.IsNullOrWhiteSpace(nombre))
+            {
+                return Ok(new { valor = false, mensaje = "Debe ingresar un nombre.", tipo = "validacion" });
+            }
+
             var entity = await Service.Obtener(model.Id);
             if (entity == null)
-                return NotFound();
+            {
+                return Ok(new { valor = false, mensaje = "No se encontró el registro.", tipo = "validacion" });
+            }
 
-            SetNombre(entity, model.Nombre ?? "");
+            var duplicado = await Service.BuscarDuplicadoPorNombre(model.Id, nombre);
+            if (duplicado != null)
+            {
+                return Ok(new
+                {
+                    valor = false,
+                    mensaje = $"Ya existe un registro con el nombre '{GetNombre(duplicado)}'.",
+                    tipo = "duplicado",
+                    idReferencia = GetId(duplicado)
+                });
+            }
 
-            bool respuesta = await Service.Actualizar(entity);
+            try
+            {
+                SetNombre(entity, nombre);
 
-            return Ok(new { valor = respuesta });
+                bool respuesta = await Service.Actualizar(entity);
+
+                return Ok(new { valor = respuesta });
+            }
+            catch (DbUpdateException)
+            {
+                return Ok(new
+                {
+                    valor = false,
+                    mensaje = "Ya existe un registro con ese nombre.",
+                    tipo = "duplicado"
+                });
+            }
         }
 
         [HttpGet]

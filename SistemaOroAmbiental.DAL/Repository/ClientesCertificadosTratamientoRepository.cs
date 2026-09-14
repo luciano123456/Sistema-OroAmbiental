@@ -156,30 +156,47 @@ namespace SistemaOroAmbiental.DAL.Repository
             }
         }
 
-        public async Task<List<ClienteDocumentoManifiestoDto>> ListarDocumentosPorCliente(int idCliente)
+        public async Task<List<ClienteDocumentoManifiestoDto>> ListarDocumentosPorCliente(int idCliente, int? idEstablecimiento = null)
         {
             if (idCliente <= 0)
                 return new List<ClienteDocumentoManifiestoDto>();
 
             var lista = new List<ClienteDocumentoManifiestoDto>();
+            var idEst = idEstablecimiento is > 0 ? idEstablecimiento.Value : 0;
 
             try
             {
-                var manifiestos = await _db.RecorridosManifiestos.AsNoTracking()
+                var qMf = _db.RecorridosManifiestos.AsNoTracking()
                     .Include(x => x.IdCamionNavigation)
                     .Include(x => x.IdSemanaNavigation)
                     .Include(x => x.IdDiaNavigation)
                     .Include(x => x.IdUsuarioNavigation)
-                    .Where(x => x.IdCliente == idCliente)
+                    .Where(x => x.IdCliente == idCliente);
+
+                if (idEst > 0)
+                    qMf = qMf.Where(x => x.IdEstablecimiento == idEst);
+
+                var manifiestos = await qMf
                     .OrderByDescending(x => x.FechaGeneracion)
                     .ThenByDescending(x => x.Numero)
                     .ToListAsync();
+
+                var idsMf = manifiestos.Select(x => x.Id).ToHashSet();
 
                 var certificados = await _db.ClientesCertificadosTratamiento.AsNoTracking()
                     .Include(x => x.IdCamionNavigation)
                     .Include(x => x.IdUsuarioNavigation)
                     .Where(x => x.IdCliente == idCliente)
                     .ToListAsync();
+
+                if (idEst > 0)
+                {
+                    certificados = certificados
+                        .Where(c =>
+                            c.IdEstablecimiento == idEst
+                            || (c.IdManifiestoHistorial.HasValue && idsMf.Contains(c.IdManifiestoHistorial.Value)))
+                        .ToList();
+                }
 
                 var certPorManifiesto = certificados
                     .Where(c => c.IdManifiestoHistorial.HasValue)

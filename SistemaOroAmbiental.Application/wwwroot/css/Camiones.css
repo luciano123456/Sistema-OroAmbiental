@@ -336,6 +336,61 @@
 .cmf-clients {
     flex-direction: column;
     flex-wrap: nowrap;
+    max-height: 280px;
+}
+
+.cmf-lote-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.78rem;
+}
+
+.cmf-lote-table th,
+.cmf-lote-table td {
+    padding: 0.28rem 0.35rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+    vertical-align: middle;
+}
+
+.cmf-lote-table thead th {
+    position: sticky;
+    top: 0;
+    background: #152033;
+    color: #cbd5e1;
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-weight: 800;
+}
+
+.cmf-lote-table .cmf-num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    font-weight: 800;
+    color: #fecaca;
+    background: rgba(185, 28, 28, 0.2);
+    white-space: nowrap;
+}
+
+.cmf-lote-table tr.is-off {
+    opacity: 0.45;
+}
+
+.cmf-copias {
+    width: 3.6rem;
+    min-height: 1.7rem;
+    padding: 0.1rem 0.25rem;
+    text-align: center;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(8, 15, 32, 0.6);
+    color: #e2e8f0;
+}
+
+.cmf-copias-todas {
+    display: block;
+    margin-top: 0.3rem;
+    width: 4.2rem;
 }
 
 .cmf-chip {

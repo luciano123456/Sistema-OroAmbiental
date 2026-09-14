@@ -245,7 +245,7 @@ body.hr-page {
 /* Cabecera clara: N° + cliente en negro + abono */
 .hr-stop-head {
     display: grid;
-    grid-template-columns: 1.8rem 1.5fr 0.8fr 0.75fr 1fr 2.4fr 0.65fr;
+    grid-template-columns: 1.8rem 1.45fr 0.52fr 0.48fr 0.52fr 0.95fr 2.15fr 0.48fr;
     gap: 0;
     align-items: center;
     background: var(--hr-head-stop);
@@ -265,15 +265,35 @@ body.hr-page {
 .hr-stop-cliente {
     font-size: 0.82rem;
     line-height: 1.1;
-    grid-column: 2 / 5;
+    grid-column: 2 / 6;
     padding-right: 0.2rem;
     text-transform: uppercase;
     color: #111827;
     font-weight: 800;
 }
 
+.hr-link-stock {
+    display: inline-block;
+    margin-left: 0.45rem;
+    padding: 0.12rem 0.4rem;
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: none;
+    text-decoration: none;
+    color: #065f46;
+    background: #d1fae5;
+    border: 1px solid #6ee7b7;
+    border-radius: 999px;
+    vertical-align: middle;
+}
+
+.hr-link-stock:hover {
+    background: #a7f3d0;
+}
+
 .hr-stop-abono {
-    grid-column: 5 / 8;
+    grid-column: 6 / 9;
     display: flex;
     align-items: center;
     gap: 0.25rem;
@@ -355,10 +375,10 @@ body.hr-page {
     color: #0f172a;
 }
 
-/* Grilla de datos (6 columnas, misma proporción que la cabecera) */
+/* Grilla de datos (7 columnas) */
 .hr-stop-grid {
     display: grid;
-    grid-template-columns: 1.5fr 0.8fr 0.75fr 1fr 2.4fr 0.65fr;
+    grid-template-columns: 1.45fr 0.52fr 0.48fr 0.52fr 0.95fr 2.15fr 0.48fr;
     min-height: 2.85rem;
 }
 
@@ -379,8 +399,8 @@ body.hr-page {
 .hr-cell-label {
     font-size: 0.58rem;
     text-transform: uppercase;
-    color: var(--hr-muted);
-    font-weight: 700;
+    color: #111827;
+    font-weight: 800;
     line-height: 1.05;
     margin-bottom: 0.06rem;
 }
@@ -393,23 +413,23 @@ body.hr-page {
     word-break: break-word;
 }
 
+.hr-cell-value--domicilio {
+    font-size: 0.84rem;
+    font-weight: 800;
+    line-height: 1.2;
+    color: #0f172a;
+}
+
 .hr-cell-value--tel {
     flex: 0;
     font-weight: 700;
     color: #0f172a;
 }
 
-.hr-cell-contacto {
+.hr-cell-localidad,
+.hr-cell-telefono,
+.hr-cell-horario {
     min-width: 0;
-    gap: 0.05rem;
-}
-
-.hr-cell-contacto .hr-cell-value {
-    flex: 0 0 auto;
-}
-
-.hr-cell-label--stack {
-    margin-top: 0.12rem;
 }
 
 .hr-tone-green {
@@ -461,7 +481,7 @@ body.hr-page {
 }
 
 .hr-cell-hora .hr-write-box {
-    min-height: 1.85rem;
+    min-height: 1.55rem;
 }
 
 @media print {
@@ -597,6 +617,17 @@ body.hr-page {
         line-height: 1.12;
     }
 
+    .hr-cell-value--domicilio {
+        font-size: 0.78rem;
+        font-weight: 800;
+        line-height: 1.15;
+    }
+
+    .hr-cell-label {
+        font-weight: 800;
+        color: #111827;
+    }
+
     .hr-cell-obs .hr-cell-value {
         font-size: 0.66rem;
         line-height: 1.1;
@@ -604,7 +635,7 @@ body.hr-page {
 
     .hr-cell-hora .hr-write-box,
     .hr-cell-box .hr-write-box {
-        min-height: 1.25rem;
+        min-height: 1.05rem;
     }
 
     .hr-write-box--sm {
@@ -665,6 +696,6 @@ body.hr-page {
 
     .hr-stop-head,
     .hr-stop-grid {
-        min-width: 900px;
+        min-width: 980px;
     }
 }

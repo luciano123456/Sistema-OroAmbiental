@@ -11,7 +11,7 @@
     <link href="~/css/Productora.css?v=6.2" rel="stylesheet" />
     <link href="~/css/disenopantallas.css?v=6.2" rel="stylesheet" />
     <link href="~/css/M_Generico.css?v=6.3" rel="stylesheet" />
-    <link href="~/css/ClientesGestion.css?v=22.1" rel="stylesheet" />
+    <link href="~/css/ClientesGestion.css?v=22.7" rel="stylesheet" />
     <link href="~/css/ClientesEstablecimientos.css?v=6.8" rel="stylesheet" />
     <link href="~/css/ContratosModal.css?v=5.4" rel="stylesheet" />
 }
@@ -88,11 +88,6 @@
                 <li class="nav-item">
                     <button class="nav-link" id="tabBtnEntregas" data-bs-toggle="tab" data-bs-target="#tabEntregas" type="button" data-cg-tab="entregas" disabled>
                         <i class="fa fa-truck"></i><span>Entregas</span>
-                    </button>
-                </li>
-                <li class="nav-item">
-                    <button class="nav-link" id="tabBtnManifiestos" data-bs-toggle="tab" data-bs-target="#tabManifiestos" type="button" data-cg-tab="manifiestos" disabled>
-                        <i class="fa fa-file-text-o"></i><span>Manifiestos</span>
                     </button>
                 </li>
             </ul>
@@ -646,8 +641,6 @@
                             <input type="hidden" id="cgCmAnio" />
                             <input type="hidden" id="cgCmMes" />
                             <input type="hidden" id="cgCmIdControl" />
-                            <input type="hidden" id="cgCmAbonoEfectivo" value="" />
-                            <input type="hidden" id="cgCmAbonoTransferencia" value="" />
                             <input type="hidden" id="cgCmFechaTransferencia" value="" />
 
                             <div class="cg-mes-ws-compact">
@@ -670,6 +663,14 @@
                                         <select id="cgWsEstablecimiento" class="form-control"></select>
                                     </div>
                                     <div class="cg-ws-meta-field">
+                                        <label class="form-label cg-ws-label" for="cgCmAbonoEfectivo">Pago en efectivo</label>
+                                        <input type="text" id="cgCmAbonoEfectivo" class="form-control text-end" inputmode="decimal" placeholder="0" />
+                                    </div>
+                                    <div class="cg-ws-meta-field">
+                                        <label class="form-label cg-ws-label" for="cgCmAbonoTransferencia">Pago transferencia</label>
+                                        <input type="text" id="cgCmAbonoTransferencia" class="form-control text-end" inputmode="decimal" placeholder="0" />
+                                    </div>
+                                    <div class="cg-ws-meta-field">
                                         <label class="form-label cg-ws-label" for="cgCmCajasAFavor">Cajas a favor</label>
                                         <input type="number" id="cgCmCajasAFavor" class="form-control" min="0" step="1" />
                                     </div>
@@ -678,8 +679,13 @@
                                         <textarea id="cgCmObservaciones" class="form-control" rows="1" maxlength="500"></textarea>
                                     </div>
                                     <div class="cg-ws-meta-field">
-                                        <button type="button" class="cg-btn cg-btn--ghost cg-btn--sm" id="btnGuardarDatosMesCg" title="Guardar cajas a favor y observaciones">
+                                        <button type="button" class="cg-btn cg-btn--ghost cg-btn--sm" id="btnGuardarDatosMesCg" title="Guardar cajas a favor, pagos y observaciones">
                                             <i class="fa fa-save"></i> Guardar mes
+                                        </button>
+                                    </div>
+                                    <div class="cg-ws-meta-field">
+                                        <button type="button" class="cg-btn cg-btn--danger-ghost cg-btn--sm" id="btnVaciarMontosMesCg" title="Pone en cero efectivo y transferencia de este mes">
+                                            <i class="fa fa-eraser"></i> Vaciar montos
                                         </button>
                                     </div>
                                     <div class="cg-ws-meta-field cg-ws-meta-field--switch d-none" hidden>
@@ -983,43 +989,6 @@
                 </div>
             </div>
 
-            <!-- MANIFIESTOS -->
-            <div class="tab-pane fade" id="tabManifiestos">
-                <div class="cg-list-panel" data-cg-list="manifiestos">
-                    <div class="cg-list-toolbar">
-                        <div class="cg-list-toolbar-info">
-                            <h6 class="cg-list-title"><i class="fa fa-file-text-o"></i> Manifiestos y certificados</h6>
-                            <small class="text-muted">Historial de manifiestos patogénicos y certificados de tratamiento emitidos para este cliente</small>
-                        </div>
-                        <div class="d-flex gap-2 flex-wrap">
-                            <button type="button" id="btnRefreshManifiestosCg" class="cg-btn cg-btn--ghost cg-btn--sm">
-                                <i class="fa fa-refresh"></i> Actualizar
-                            </button>
-                        </div>
-                    </div>
-                    <div class="cg-mf-split">
-                        <section class="cg-mf-col cg-mf-col--cert">
-                            <header class="cg-mf-col-head">
-                                <span class="cg-mf-badge cg-mf-badge--cert">Certificados</span>
-                                <strong id="cgMfCertCount">0</strong>
-                            </header>
-                            <div id="cgTabCertificadosList" class="cg-manifiestos-list">
-                                <div class="cg-hub-stock-empty">Sin certificados registrados.</div>
-                            </div>
-                        </section>
-                        <section class="cg-mf-col cg-mf-col--manif">
-                            <header class="cg-mf-col-head">
-                                <span class="cg-mf-badge cg-mf-badge--manif">Manifiestos</span>
-                                <strong id="cgMfManifCount">0</strong>
-                            </header>
-                            <div id="cgTabManifiestosList" class="cg-manifiestos-list">
-                                <div class="cg-hub-stock-empty">Sin manifiestos registrados.</div>
-                            </div>
-                        </section>
-                    </div>
-                </div>
-            </div>
-
         </div>
     </div>
 </div>
@@ -1150,7 +1119,7 @@
                     </div>
                     <div class="col-12">
                         <label class="form-label">Concepto</label>
-                        <input type="text" id="cgInteresConcepto" class="form-control" maxlength="200" />
+                        <input type="text" id="cgInteresConcepto" class="form-control" maxlength="160" />
                     </div>
                 </div>
             </div>
@@ -1178,7 +1147,7 @@
                 <div id="cgInteresesHistBody" class="cg-interes-hist-body"></div>
             </div>
             <div class="modal-footer rp-modal-footer">
-                <span class="text-muted small me-auto">Podés editar concepto/importe y guardar, o eliminar para revertir el cargo.</span>
+                <span class="text-muted small me-auto">Podés agregar un interés a este mes, editar concepto/importe, o eliminar para revertir el cargo.</span>
                 <button class="rp-btn rp-btn-soft" data-bs-dismiss="modal"><i class="fa fa-times"></i> Cerrar</button>
             </div>
         </div>
@@ -1229,11 +1198,11 @@
     </script>
     <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-    <script src="~/js/Entities/M_ClientesEstablecimientos.js?v=7.4" asp-append-version="true"></script>
+    <script src="~/js/Entities/M_ClientesEstablecimientos.js?v=7.5" asp-append-version="true"></script>
     <script src="~/js/ClientesEstablecimientosReclamo.js?v=1.9" asp-append-version="true"></script>
     <script src="~/js/ContratosDocumentos.js?v=5.4"></script>
     <script src="~/js/Entities/M_Contratos.js?v=5.4"></script>
-    <script src="~/js/ClientesGestion.js?v=42" asp-append-version="true"></script>
+    <script src="~/js/ClientesGestion.js?v=44.9" asp-append-version="true"></script>
     <script>
         /* Guardia inline: corre aunque el .js esté cacheado viejo */
         (function () {

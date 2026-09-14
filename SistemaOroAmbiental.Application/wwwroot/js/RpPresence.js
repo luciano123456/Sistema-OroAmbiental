@@ -161,7 +161,10 @@
         if (timer) clearInterval(timer);
         ensureDock();
         refresh();
-        timer = setInterval(refresh, POLL_MS);
+        timer = setInterval(() => {
+            if (document.visibilityState === "hidden") return;
+            refresh();
+        }, POLL_MS);
 
         document.addEventListener("visibilitychange", () => {
             if (document.visibilityState === "visible") refresh();

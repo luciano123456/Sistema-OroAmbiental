@@ -1199,6 +1199,7 @@
             this._setFieldValue("txtIdEstablecimientoClienteEst", modelo.IdEstablecimientoCliente || "");
             this._setFieldValue("txtCuitEst", modelo.Cuit || "");
             this._setFieldValue("txtCalleEst", modelo.Calle || modelo.Domicilio || "");
+            this._setFieldValue("txtDescripcionEst", modelo.Descripcion || "");
             this._setFieldValue("txtNumeroEst", modelo.Numero || "");
             this._setFieldValue("txtPisoDeptoEst", modelo.PisoDepartamento || "");
             this._setFieldValue("txtCodPostalEst", modelo.CodPostal || "");
@@ -1451,6 +1452,7 @@
                 IdCondicionIva: this._getIntOrNull("cmbCondicionIvaEst"),
                 ImpuestoIva: !!this._getFieldValue("chkImpuestoIvaEst"),
                 Calle: (this._getFieldValue("txtCalleEst") || "").trim() || null,
+                Descripcion: (this._getFieldValue("txtDescripcionEst") || "").trim() || null,
                 Numero: (this._getFieldValue("txtNumeroEst") || "").trim() || null,
                 PisoDepartamento: (this._getFieldValue("txtPisoDeptoEst") || "").trim() || null,
                 IdTipoGenerador: this._getIntOrNull("cmbTipoGeneradorEst"),

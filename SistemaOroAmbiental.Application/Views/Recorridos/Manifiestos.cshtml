@@ -11,7 +11,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@(string.IsNullOrWhiteSpace(Model.Nombre) ? Model.Titulo : Model.Nombre) - Manifiesto</title>
-    <link href="~/css/Manifiestos.css?v=2.2" rel="stylesheet" asp-append-version="true" />
+    <link href="~/css/Manifiestos.css?v=3.1" rel="stylesheet" asp-append-version="true" />
 </head>
 <body class="mf-page"
       data-id-camion="@Model.IdCamion"
@@ -31,127 +31,145 @@
     @foreach (var item in Model.Items)
     {
         <article class="mf-sheet">
-            <img class="mf-banner" src="~/Imagenes/manifiesto-header.jpg" alt="Ministerio de Ambiente - Gobierno de la Provincia de Buenos Aires" />
+            <header class="mf-header">
+                <img class="mf-banner" src="~/Imagenes/manifiesto-header.jpg" alt="Ministerio de Ambiente - Gobierno de la Provincia de Buenos Aires" />
 
-            <h1 class="mf-title">Manifiesto de Residuos <strong>PATOGENICOS</strong></h1>
+                <h1 class="mf-title">Manifiesto de Residuos <strong>PATOGENICOS</strong></h1>
 
-            <div class="mf-meta">
-                <div class="mf-meta-num">
-                    Manifiesto Nº:<input type="number" class="mf-numero" min="1" step="1" value="@item.Numero" />
+                <div class="mf-meta">
+                    <div class="mf-meta-num">
+                        Manifiesto Nº:<input type="number" class="mf-numero" min="1" step="1" value="@item.Numero" />
+                    </div>
+                    <div class="mf-meta-fecha">Fecha de Programación: @((Model.FechaProgramacion == default ? DateTime.Today : Model.FechaProgramacion).ToString("dd/MM/yyyy"))</div>
                 </div>
-                <div class="mf-meta-fecha">Fecha de Programación: @((Model.FechaProgramacion == default ? DateTime.Today : Model.FechaProgramacion).ToString("dd/MM/yyyy"))</div>
-            </div>
+            </header>
 
-            <div class="mf-bar">Origen</div>
-            <div class="mf-row">
-                <div><span class="mf-k">Origen del residuo:</span> @ManifiestoDatosEmpresa.OrigenDelResiduo</div>
-                <div><span class="mf-k">Id Establecimiento:</span> @item.IdEstablecimiento</div>
-            </div>
-            <div class="mf-row">
-                <div><span class="mf-k">CUIT:</span> @item.Cuit</div>
-                <div><span class="mf-k">Razon Social:</span> @item.RazonSocial</div>
-            </div>
-            <div class="mf-row mf-row--1">
-                <div><span class="mf-k">Direccion:</span> @item.Direccion</div>
-            </div>
-            <div class="mf-row">
-                <div><span class="mf-k">Localidad:</span> @item.Localidad</div>
-                <div><span class="mf-k">Telefono:</span> @item.Telefono</div>
-            </div>
+            <section class="mf-sec mf-sec--origen">
+                <div class="mf-bar">Origen</div>
+                <div class="mf-sec-body">
+                    <div class="mf-row">
+                        <div><span class="mf-k">Origen del residuo:</span> @ManifiestoDatosEmpresa.OrigenDelResiduo</div>
+                        <div><span class="mf-k">Id Establecimiento:</span> @item.IdEstablecimiento</div>
+                    </div>
+                    <div class="mf-row">
+                        <div><span class="mf-k">CUIT:</span> @item.Cuit</div>
+                        <div><span class="mf-k">Razon Social:</span> @item.RazonSocial</div>
+                    </div>
+                    <div class="mf-row mf-row--1">
+                        <div><span class="mf-k">Direccion:</span> @item.Direccion</div>
+                    </div>
+                    <div class="mf-row">
+                        <div><span class="mf-k">Localidad:</span> @item.Localidad</div>
+                        <div><span class="mf-k">Telefono:</span> @item.Telefono</div>
+                    </div>
+                </div>
+            </section>
 
-            <div class="mf-bar">Residuos</div>
-            <div class="mf-row mf-row--1">
-                <div><span class="mf-k">Tipo Destino:</span> @ManifiestoDatosEmpresa.TipoDestino</div>
-            </div>
-            <div class="mf-row mf-row--1">
-                <div><span class="mf-k">Composicion:</span> @ManifiestoDatosEmpresa.CategoriaResiduo</div>
-            </div>
-            <div class="mf-row mf-row--1">
-                <div><span class="mf-k">Categoria Desecho Principal:</span> @ManifiestoDatosEmpresa.CategoriaDesechoPrincipal</div>
-            </div>
-            <div class="mf-row mf-row--1">
-                <div><span class="mf-k">Carac. Peligrosas:</span> @ManifiestoDatosEmpresa.CaracteristicaPeligrosidad</div>
-            </div>
-            <div class="mf-row mf-row--1">
-                <div>
-                    <span class="mf-k">Cantidad(Kilos):</span>@item.Cantidad
-                    @if (!string.IsNullOrWhiteSpace(item.Cantidad))
-                    {
-                        <span> (Aproximado, debera validar el Operador )</span>
-                    }
+            <section class="mf-sec mf-sec--residuos">
+                <div class="mf-bar">Residuos</div>
+                <div class="mf-sec-body">
+                    <div class="mf-row mf-row--1">
+                        <div><span class="mf-k">Tipo Destino:</span> @ManifiestoDatosEmpresa.TipoDestino</div>
+                    </div>
+                    <div class="mf-row mf-row--1">
+                        <div><span class="mf-k">Composicion:</span> @ManifiestoDatosEmpresa.CategoriaResiduo</div>
+                    </div>
+                    <div class="mf-row mf-row--1">
+                        <div><span class="mf-k">Categoria Desecho Principal:</span> @ManifiestoDatosEmpresa.CategoriaDesechoPrincipal</div>
+                    </div>
+                    <div class="mf-row mf-row--1">
+                        <div><span class="mf-k">Carac. Peligrosas:</span> @ManifiestoDatosEmpresa.CaracteristicaPeligrosidad</div>
+                    </div>
+                    <div class="mf-row mf-row--1">
+                        <div>
+                            <span class="mf-k">Cantidad(Kilos):</span>@item.Cantidad
+                            @if (!string.IsNullOrWhiteSpace(item.Cantidad))
+                            {
+                                <span> (Aproximado, debera validar el Operador )</span>
+                            }
+                        </div>
+                    </div>
+                    <div class="mf-row mf-row--1">
+                        <div><span class="mf-k">Estado Fisico:</span> @ManifiestoDatosEmpresa.EstadoFisico</div>
+                    </div>
+                    <div class="mf-row mf-row--1">
+                        <div><span class="mf-k">Observaciones:</span></div>
+                    </div>
                 </div>
-            </div>
-            <div class="mf-row mf-row--1">
-                <div><span class="mf-k">Estado Fisico:</span> @ManifiestoDatosEmpresa.EstadoFisico</div>
-            </div>
-            <div class="mf-row mf-row--1">
-                <div><span class="mf-k">Observaciones:</span></div>
-            </div>
-            <div class="mf-sign">
-                <div class="mf-sign-row">
-                    <div><span class="mf-k">Firma del Responsable:</span><span class="mf-line"></span></div>
-                    <div><span class="mf-k">Aclaracion:</span><span class="mf-line"></span></div>
+                <div class="mf-sign">
+                    <div class="mf-sign-row">
+                        <div><span class="mf-k">Firma del Responsable:</span><span class="mf-line"></span></div>
+                        <div><span class="mf-k">Aclaracion:</span><span class="mf-line"></span></div>
+                    </div>
+                    <div class="mf-sign-row mf-sign-row--3">
+                        <div><span class="mf-k">Fecha:</span>___/___/___</div>
+                        <div><span class="mf-k">Hora:</span><span class="mf-line mf-line--sm"></span></div>
+                        <div><span class="mf-k">Documento:</span><span class="mf-line"></span></div>
+                    </div>
                 </div>
-                <div class="mf-sign-row mf-sign-row--3">
-                    <div><span class="mf-k">Fecha:</span>___/___/___</div>
-                    <div><span class="mf-k">Hora:</span><span class="mf-line mf-line--sm"></span></div>
-                    <div><span class="mf-k">Documento:</span><span class="mf-line"></span></div>
-                </div>
-            </div>
+            </section>
 
-            <div class="mf-bar">Transportista</div>
-            <div class="mf-row mf-row--1">
-                <div><span class="mf-k">CUIT:</span> @ManifiestoDatosEmpresa.TransportistaCuit</div>
-            </div>
-            <div class="mf-row mf-row--1">
-                <div><span class="mf-k">Razon Social:</span> @ManifiestoDatosEmpresa.TransportistaRazonSocial</div>
-            </div>
-            <div class="mf-row mf-row--1">
-                <div><span class="mf-k">Domicilio:</span> @ManifiestoDatosEmpresa.TransportistaDomicilio</div>
-            </div>
-            <div class="mf-row">
-                <div><span class="mf-k">Telefono:</span> @ManifiestoDatosEmpresa.TransportistaTelefono</div>
-                <div><span class="mf-k">Localidad:</span> @ManifiestoDatosEmpresa.TransportistaLocalidad</div>
-            </div>
-            <div class="mf-sign">
-                <div class="mf-sign-row">
-                    <div><span class="mf-k">Chofer:</span><span class="mf-line"></span></div>
-                    <div><span class="mf-k">Aclaracion:</span><span class="mf-line"></span></div>
+            <section class="mf-sec mf-sec--transportista">
+                <div class="mf-bar">Transportista</div>
+                <div class="mf-sec-body">
+                    <div class="mf-row mf-row--1">
+                        <div><span class="mf-k">CUIT:</span> @ManifiestoDatosEmpresa.TransportistaCuit</div>
+                    </div>
+                    <div class="mf-row mf-row--1">
+                        <div><span class="mf-k">Razon Social:</span> @ManifiestoDatosEmpresa.TransportistaRazonSocial</div>
+                    </div>
+                    <div class="mf-row mf-row--1">
+                        <div><span class="mf-k">Domicilio:</span> @ManifiestoDatosEmpresa.TransportistaDomicilio</div>
+                    </div>
+                    <div class="mf-row">
+                        <div><span class="mf-k">Telefono:</span> @ManifiestoDatosEmpresa.TransportistaTelefono</div>
+                        <div><span class="mf-k">Localidad:</span> @ManifiestoDatosEmpresa.TransportistaLocalidad</div>
+                    </div>
                 </div>
-                <div class="mf-sign-row mf-sign-row--3">
-                    <div><span class="mf-k">Fecha:</span>___/___/___</div>
-                    <div><span class="mf-k">Hora:</span><span class="mf-line mf-line--sm"></span></div>
-                    <div><span class="mf-k">Documento:</span><span class="mf-line"></span></div>
+                <div class="mf-sign">
+                    <div class="mf-sign-row">
+                        <div><span class="mf-k">Chofer:</span><span class="mf-line"></span></div>
+                        <div><span class="mf-k">Aclaracion:</span><span class="mf-line"></span></div>
+                    </div>
+                    <div class="mf-sign-row mf-sign-row--3">
+                        <div><span class="mf-k">Fecha:</span>___/___/___</div>
+                        <div><span class="mf-k">Hora:</span><span class="mf-line mf-line--sm"></span></div>
+                        <div><span class="mf-k">Documento:</span><span class="mf-line"></span></div>
+                    </div>
                 </div>
-            </div>
+            </section>
 
-            <div class="mf-bar">Operador</div>
-            <div class="mf-row">
-                <div><span class="mf-k">Destino del residuo:</span> @ManifiestoDatosEmpresa.TipoDestino</div>
-                <div><span class="mf-k">Id Establecimiento:</span> @ManifiestoDatosEmpresa.OperadorIdEstablecimiento</div>
-            </div>
-            <div class="mf-row">
-                <div><span class="mf-k">CUIT:</span> @ManifiestoDatosEmpresa.OperadorCuit</div>
-                <div><span class="mf-k">Razon Social:</span> @ManifiestoDatosEmpresa.OperadorRazonSocial</div>
-            </div>
-            <div class="mf-row mf-row--1">
-                <div><span class="mf-k">Domicilio:</span> @ManifiestoDatosEmpresa.OperadorDomicilio</div>
-            </div>
-            <div class="mf-row">
-                <div><span class="mf-k">Localidad:</span> @ManifiestoDatosEmpresa.OperadorLocalidad</div>
-                <div><span class="mf-k">Telefono:</span> @ManifiestoDatosEmpresa.OperadorTelefono</div>
-            </div>
-            <div class="mf-sign">
-                <div class="mf-sign-row">
-                    <div><span class="mf-k">Firma del Responsable:</span><span class="mf-line"></span></div>
-                    <div><span class="mf-k">Aclaracion:</span><span class="mf-line"></span></div>
+            <section class="mf-sec mf-sec--operador">
+                <div class="mf-bar">Operador</div>
+                <div class="mf-sec-body">
+                    <div class="mf-row">
+                        <div><span class="mf-k">Destino del residuo:</span> @ManifiestoDatosEmpresa.TipoDestino</div>
+                        <div><span class="mf-k">Id Establecimiento:</span> @ManifiestoDatosEmpresa.OperadorIdEstablecimiento</div>
+                    </div>
+                    <div class="mf-row">
+                        <div><span class="mf-k">CUIT:</span> @ManifiestoDatosEmpresa.OperadorCuit</div>
+                        <div><span class="mf-k">Razon Social:</span> @ManifiestoDatosEmpresa.OperadorRazonSocial</div>
+                    </div>
+                    <div class="mf-row mf-row--1">
+                        <div><span class="mf-k">Domicilio:</span> @ManifiestoDatosEmpresa.OperadorDomicilio</div>
+                    </div>
+                    <div class="mf-row">
+                        <div><span class="mf-k">Localidad:</span> @ManifiestoDatosEmpresa.OperadorLocalidad</div>
+                        <div><span class="mf-k">Telefono:</span> @ManifiestoDatosEmpresa.OperadorTelefono</div>
+                    </div>
                 </div>
-                <div class="mf-sign-row mf-sign-row--3">
-                    <div><span class="mf-k">Fecha:</span>___/___/___</div>
-                    <div><span class="mf-k">Hora:</span><span class="mf-line mf-line--sm"></span></div>
-                    <div><span class="mf-k">Documento:</span><span class="mf-line"></span></div>
+                <div class="mf-sign">
+                    <div class="mf-sign-row">
+                        <div><span class="mf-k">Firma del Responsable:</span><span class="mf-line"></span></div>
+                        <div><span class="mf-k">Aclaracion:</span><span class="mf-line"></span></div>
+                    </div>
+                    <div class="mf-sign-row mf-sign-row--3">
+                        <div><span class="mf-k">Fecha:</span>___/___/___</div>
+                        <div><span class="mf-k">Hora:</span><span class="mf-line mf-line--sm"></span></div>
+                        <div><span class="mf-k">Documento:</span><span class="mf-line"></span></div>
+                    </div>
                 </div>
-            </div>
+            </section>
         </article>
     }
 

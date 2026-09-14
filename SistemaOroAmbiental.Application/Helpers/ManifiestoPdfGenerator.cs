@@ -31,102 +31,28 @@ namespace SistemaOroAmbiental.Application.Helpers
             return Document.Create(container =>
             {
                 foreach (var item in items)
-                {
-                    container.Page(page =>
-                    {
-                        page.Size(PageSizes.A4);
-                        page.MarginHorizontal(10, Unit.Millimetre);
-                        page.MarginTop(8, Unit.Millimetre);
-                        page.MarginBottom(12, Unit.Millimetre);
-                        page.PageColor(Colors.White);
-                        page.DefaultTextStyle(x => x
-                            .FontFamily("Helvetica")
-                            .FontSize(7)
-                            .Bold()
-                            .FontColor(Colors.Black)
-                            .LineHeight(14.17f / 7f));
-
-                        page.Content().Column(col =>
-                        {
-                            if (header != null && header.Length > 0)
-                            {
-                                col.Item()
-                                    .Width(130, Unit.Millimetre)
-                                    .Height(10.8f, Unit.Millimetre)
-                                    .Image(header)
-                                    .FitArea();
-                            }
-
-                            col.Item().PaddingTop(6).Text("Manifiesto de Residuos PATOGENICOS")
-                                .FontSize(10)
-                                .NormalWeight()
-                                .LineHeight(1);
-
-                            col.Item().PaddingTop(4).PaddingBottom(6).Row(row =>
-                            {
-                                row.RelativeItem().Text($"Manifiesto Nº:{item.Numero}")
-                                    .FontSize(8)
-                                    .NormalWeight()
-                                    .LineHeight(1);
-                                row.AutoItem().Text($"Fecha de Programación: {FechaTxt(fechaProgramacion)}")
-                                    .FontSize(8)
-                                    .NormalWeight()
-                                    .LineHeight(1);
-                            });
-
-                            Barra(col, "Origen");
-                            Fila2(col,
-                                $"Origen del residuo: {ManifiestoDatosEmpresa.OrigenDelResiduo}",
-                                $"Id Establecimiento: {item.IdEstablecimiento}",
-                                corta: true);
-                            Fila2(col,
-                                $"CUIT: {item.Cuit}",
-                                $"Razon Social: {item.RazonSocial}",
-                                corta: true);
-                            Fila1(col, $"Direccion: {item.Direccion}");
-                            Fila2(col,
-                                $"Localidad: {item.Localidad}",
-                                $"Telefono: {item.Telefono}");
-
-                            Barra(col, "Residuos");
-                            Fila1(col, $"Tipo Destino: {ManifiestoDatosEmpresa.TipoDestino}");
-                            Fila1(col, $"Composicion: {ManifiestoDatosEmpresa.CategoriaResiduo}");
-                            Fila1(col, $"Categoria Desecho Principal: {ManifiestoDatosEmpresa.CategoriaDesechoPrincipal}");
-                            Fila1(col, $"Carac. Peligrosas: {ManifiestoDatosEmpresa.CaracteristicaPeligrosidad}");
-                            Fila1(col, CantidadTexto(item.Cantidad));
-                            Fila1(col, $"Estado Fisico: {ManifiestoDatosEmpresa.EstadoFisico}");
-                            Fila1(col, "Observaciones:");
-                            Firmas(col);
-
-                            Barra(col, "Transportista");
-                            Fila1(col, $"CUIT: {ManifiestoDatosEmpresa.TransportistaCuit}");
-                            Fila1(col, $"Razon Social: {ManifiestoDatosEmpresa.TransportistaRazonSocial}");
-                            Fila1(col, $"Domicilio: {ManifiestoDatosEmpresa.TransportistaDomicilio}");
-                            Fila2(col,
-                                $"Telefono: {ManifiestoDatosEmpresa.TransportistaTelefono}",
-                                $"Localidad: {ManifiestoDatosEmpresa.TransportistaLocalidad}",
-                                corta: true);
-                            Firmas(col, chofer: true);
-
-                            Barra(col, "Operador");
-                            Fila2(col,
-                                $"Destino del residuo: {ManifiestoDatosEmpresa.TipoDestino}",
-                                $"Id Establecimiento: {ManifiestoDatosEmpresa.OperadorIdEstablecimiento}",
-                                corta: true);
-                            Fila2(col,
-                                $"CUIT: {ManifiestoDatosEmpresa.OperadorCuit}",
-                                $"Razon Social: {ManifiestoDatosEmpresa.OperadorRazonSocial}",
-                                corta: true);
-                            Fila1(col, $"Domicilio: {ManifiestoDatosEmpresa.OperadorDomicilio}");
-                            Fila2(col,
-                                $"Localidad: {ManifiestoDatosEmpresa.OperadorLocalidad}",
-                                $"Telefono: {ManifiestoDatosEmpresa.OperadorTelefono}",
-                                corta: true);
-                            Firmas(col);
-                        });
-                    });
-                }
+                    Pagina(container, item, fechaProgramacion, header, model);
             }).GeneratePdf();
+        }
+
+        public static byte[] GenerarUno(ManifiestosHojaDto model, ManifiestoItemDto item, string? headerImagePath)
+        {
+            var copia = new ManifiestosHojaDto
+            {
+                IdCamion = model.IdCamion,
+                IdSemana = model.IdSemana,
+                IdDia = model.IdDia,
+                RecorridosParam = model.RecorridosParam,
+                Titulo = model.Titulo,
+                Nombre = item.RazonSocial,
+                FechaProgramacion = model.FechaProgramacion,
+                NumeroInicial = item.Numero,
+                ChoferNombre = model.ChoferNombre,
+                ChoferDni = model.ChoferDni,
+                ChoferFirmaPng = model.ChoferFirmaPng,
+                Items = new List<ManifiestoItemDto> { item }
+            };
+            return Generar(copia, headerImagePath);
         }
 
         public static string NombreArchivo(ManifiestosHojaDto model)
@@ -147,6 +73,128 @@ namespace SistemaOroAmbiental.Application.Helpers
             var desde = items.Min(x => x.Numero);
             var hasta = items.Max(x => x.Numero);
             return $"Manifiestos_{desde}-{hasta}_{limpio}.pdf";
+        }
+
+        public static string NombreArchivoCliente(ManifiestoItemDto item, DateTime fecha, int copiaIndex)
+        {
+            var cliente = Sanitizar(item.RazonSocial);
+            if (string.IsNullOrWhiteSpace(cliente))
+                cliente = "Cliente";
+            var fechaTxt = (fecha == default ? DateTime.Today : fecha.Date)
+                .ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+            var extra = copiaIndex > 1 ? $"_{copiaIndex}" : "";
+            return $"{cliente}_{fechaTxt}{extra}.pdf";
+        }
+
+        public static string NombreCarpetaLote(ManifiestosHojaDto model)
+        {
+            var fecha = (model.FechaProgramacion == default ? DateTime.Today : model.FechaProgramacion.Date)
+                .ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+            var rec = Sanitizar(model.Nombre);
+            if (string.IsNullOrWhiteSpace(rec))
+                rec = Sanitizar(model.Titulo);
+            if (string.IsNullOrWhiteSpace(rec))
+                rec = "Recorrido";
+            return $"{fecha}_{rec}";
+        }
+
+        private static void Pagina(
+            IDocumentContainer container,
+            ManifiestoItemDto item,
+            DateTime fechaProgramacion,
+            byte[]? header,
+            ManifiestosHojaDto model)
+        {
+            container.Page(page =>
+            {
+                page.Size(PageSizes.A4);
+                page.MarginHorizontal(10, Unit.Millimetre);
+                page.MarginTop(8, Unit.Millimetre);
+                page.MarginBottom(12, Unit.Millimetre);
+                page.PageColor(Colors.White);
+                page.DefaultTextStyle(x => x
+                    .FontFamily("Helvetica")
+                    .FontSize(7)
+                    .FontColor(Colors.Black)
+                    .LineHeight(14.17f / 7f));
+
+                page.Content().Column(col =>
+                {
+                    if (header != null && header.Length > 0)
+                    {
+                        col.Item()
+                            .Width(130, Unit.Millimetre)
+                            .Height(10.8f, Unit.Millimetre)
+                            .Image(header)
+                            .FitArea();
+                    }
+
+                    col.Item().PaddingTop(6).Text("Manifiesto de Residuos PATOGENICOS")
+                        .FontSize(10)
+                        .Bold()
+                        .LineHeight(1);
+
+                    col.Item().PaddingTop(4).PaddingBottom(6).Row(row =>
+                    {
+                        row.RelativeItem().Text($"Manifiesto Nº:{item.Numero}")
+                            .FontSize(8)
+                            .Bold()
+                            .LineHeight(1);
+                        row.AutoItem().Text($"Fecha de Programación: {FechaTxt(fechaProgramacion)}")
+                            .FontSize(8)
+                            .Bold()
+                            .LineHeight(1);
+                    });
+
+                    Barra(col, "Origen");
+                    Fila2(col,
+                        $"Origen del residuo: {ManifiestoDatosEmpresa.OrigenDelResiduo}",
+                        $"Id Establecimiento: {item.IdEstablecimiento}",
+                        corta: true);
+                    Fila2(col,
+                        $"CUIT: {item.Cuit}",
+                        $"Razon Social: {item.RazonSocial}",
+                        corta: true);
+                    Fila1(col, $"Direccion: {item.Direccion}");
+                    Fila2(col,
+                        $"Localidad: {item.Localidad}",
+                        $"Telefono: {item.Telefono}");
+
+                    Barra(col, "Residuos");
+                    Fila1(col, $"Tipo Destino: {ManifiestoDatosEmpresa.TipoDestino}");
+                    Fila1(col, $"Composicion: {ManifiestoDatosEmpresa.CategoriaResiduo}");
+                    Fila1(col, $"Categoria Desecho Principal: {ManifiestoDatosEmpresa.CategoriaDesechoPrincipal}");
+                    Fila1(col, $"Carac. Peligrosas: {ManifiestoDatosEmpresa.CaracteristicaPeligrosidad}");
+                    Fila1(col, CantidadTexto(item.Cantidad));
+                    Fila1(col, $"Estado Fisico: {ManifiestoDatosEmpresa.EstadoFisico}");
+                    Fila1(col, "Observaciones:");
+                    Firmas(col, false, null, null, null);
+
+                    Barra(col, "Transportista");
+                    Fila1(col, $"CUIT: {ManifiestoDatosEmpresa.TransportistaCuit}");
+                    Fila1(col, $"Razon Social: {ManifiestoDatosEmpresa.TransportistaRazonSocial}");
+                    Fila1(col, $"Domicilio: {ManifiestoDatosEmpresa.TransportistaDomicilio}");
+                    Fila2(col,
+                        $"Localidad: {ManifiestoDatosEmpresa.TransportistaLocalidad}",
+                        $"Telefono: {ManifiestoDatosEmpresa.TransportistaTelefono}");
+                    Firmas(col, true, model.ChoferNombre, model.ChoferDni, model.ChoferFirmaPng);
+
+                    Barra(col, "Operador");
+                    Fila2(col,
+                        $"Destino del residuo: {ManifiestoDatosEmpresa.TipoDestino}",
+                        $"Id Establecimiento: {ManifiestoDatosEmpresa.OperadorIdEstablecimiento}",
+                        corta: true);
+                    Fila2(col,
+                        $"CUIT: {ManifiestoDatosEmpresa.OperadorCuit}",
+                        $"Razon Social: {ManifiestoDatosEmpresa.OperadorRazonSocial}",
+                        corta: true);
+                    Fila1(col, $"Domicilio: {ManifiestoDatosEmpresa.OperadorDomicilio}");
+                    Fila2(col,
+                        $"Localidad: {ManifiestoDatosEmpresa.OperadorLocalidad}",
+                        $"Telefono: {ManifiestoDatosEmpresa.OperadorTelefono}");
+                    Firmas(col, false, null, null, null);
+                });
+            });
         }
 
         private static void Barra(ColumnDescriptor col, string titulo)
@@ -193,19 +241,99 @@ namespace SistemaOroAmbiental.Application.Helpers
             col.Item().PaddingTop(2).PaddingBottom(4).LineHorizontal(0.57f).LineColor(Colors.Black);
         }
 
-        private static void Firmas(ColumnDescriptor col, bool chofer = false)
+        private static void LineaSolida(IContainer container)
         {
-            const string raya = "_________________________";
+            container.LineHorizontal(0.57f).LineColor(Colors.Black);
+        }
+
+        private static void CampoConLinea(IContainer container, string etiqueta, string? valorArriba, byte[]? firmaPng)
+        {
+            container.Row(row =>
+            {
+                row.AutoItem().AlignBottom().PaddingBottom(1).Text(etiqueta);
+                row.RelativeItem().PaddingLeft(3).Column(inner =>
+                {
+                    if (firmaPng != null && firmaPng.Length > 0)
+                    {
+                        inner.Item()
+                            .Height(14, Unit.Millimetre)
+                            .PaddingBottom(2)
+                            .AlignBottom()
+                            .Image(firmaPng)
+                            .FitArea();
+                    }
+                    else
+                    {
+                        inner.Item()
+                            .MinHeight(10)
+                            .PaddingBottom(2)
+                            .AlignBottom()
+                            .Text(string.IsNullOrWhiteSpace(valorArriba) ? " " : valorArriba);
+                    }
+
+                    inner.Item().Element(LineaSolida);
+                });
+            });
+        }
+
+        private static void FechaHoraConLineas(IContainer container)
+        {
+            container.Row(row =>
+            {
+                void Etiqueta(string texto) =>
+                    row.AutoItem().AlignBottom().PaddingBottom(1).Text(texto);
+
+                void Tramo(float mm)
+                {
+                    row.ConstantItem(mm, Unit.Millimetre).AlignBottom().Column(inner =>
+                    {
+                        inner.Item().MinHeight(10).PaddingBottom(2);
+                        inner.Item().Element(LineaSolida);
+                    });
+                }
+
+                Etiqueta("Fecha:");
+                Tramo(8);
+                Etiqueta("/");
+                Tramo(8);
+                Etiqueta("/");
+                Tramo(8);
+                Etiqueta(" Hora:");
+                row.RelativeItem().AlignBottom().Column(inner =>
+                {
+                    inner.Item().MinHeight(10).PaddingBottom(2);
+                    inner.Item().Element(LineaSolida);
+                });
+            });
+        }
+
+        private static void Firmas(
+            ColumnDescriptor col,
+            bool chofer,
+            string? choferNombre,
+            string? choferDni,
+            byte[]? firmaPng)
+        {
             LineaHorizontal(col);
+
+            var nombre = (choferNombre ?? "").Trim();
+            var dni = (choferDni ?? "").Trim();
+            var hayFirma = chofer && firmaPng != null && firmaPng.Length > 0;
+            var aclaracion = chofer && !string.IsNullOrWhiteSpace(nombre) ? nombre : null;
+            var documento = chofer && !string.IsNullOrWhiteSpace(dni) ? dni : null;
+
             col.Item().Row(row =>
             {
-                row.RelativeItem().Text($"{(chofer ? "Chofer:" : "Firma del Responsable:")}{raya}");
-                row.RelativeItem().Text($"Aclaracion: {raya}");
+                row.RelativeItem().AlignBottom().PaddingRight(18, Unit.Millimetre).Element(c =>
+                    CampoConLinea(c, chofer ? "Chofer:" : "Firma del Responsable:", null, hayFirma ? firmaPng : null));
+                row.RelativeItem().AlignBottom().PaddingLeft(6).PaddingRight(28, Unit.Millimetre).Element(c =>
+                    CampoConLinea(c, "Aclaracion:", aclaracion, null));
             });
             col.Item().Row(row =>
             {
-                row.RelativeItem().Text("Fecha:___/___/___ Hora:_____________");
-                row.RelativeItem().Text($"Documento: {raya}");
+                row.RelativeItem().AlignBottom().PaddingRight(18, Unit.Millimetre).Element(FechaHoraConLineas);
+                row.RelativeItem().AlignBottom().PaddingLeft(6).PaddingRight(28, Unit.Millimetre).Element(c =>
+                    CampoConLinea(c, "Documento:", documento, null));
             });
         }
 

@@ -245,6 +245,7 @@ namespace SistemaOroAmbiental.DAL.Repository
         {
             var registros = await _db.ProductosCostoHistorials
                 .AsNoTracking()
+                .AsSplitQuery()
                 .Include(x => x.IdUsuarioNavigation)
                 .Include(x => x.IdCompraNavigation)
                     .ThenInclude(c => c!.IdProveedorNavigation)
@@ -252,6 +253,28 @@ namespace SistemaOroAmbiental.DAL.Repository
                 .OrderByDescending(x => x.Fecha)
                 .ThenByDescending(x => x.Id)
                 .ToListAsync();
+
+            var idsCompraFallback = registros
+                .Where(h => h.CostoAnterior <= 0
+                    && h.IdCompra.HasValue
+                    && (h.Origen == ProductosCostoHistorialHelper.OrigenCompra
+                        || h.Origen == ProductosCostoHistorialHelper.OrigenReversionCompra))
+                .Select(h => h.IdCompra!.Value)
+                .Distinct()
+                .ToList();
+
+            var costosAnterioresPorCompra = idsCompraFallback.Count == 0
+                ? new Dictionary<int, decimal>()
+                : await _db.ComprasProductos
+                    .AsNoTracking()
+                    .Where(x => idsCompraFallback.Contains(x.IdCompra) && x.IdProducto == idProducto)
+                    .GroupBy(x => x.IdCompra)
+                    .Select(g => new
+                    {
+                        IdCompra = g.Key,
+                        Costo = g.OrderByDescending(x => x.Id).Select(x => x.CostoUnitarioAnterior).FirstOrDefault()
+                    })
+                    .ToDictionaryAsync(x => x.IdCompra, x => x.Costo);
 
             var filas = new List<ProductoHistorialCostoFila>();
 
@@ -262,17 +285,11 @@ namespace SistemaOroAmbiental.DAL.Repository
                 if (costoAnterior <= 0
                     && (h.Origen == ProductosCostoHistorialHelper.OrigenCompra
                         || h.Origen == ProductosCostoHistorialHelper.OrigenReversionCompra)
-                    && h.IdCompra.HasValue)
+                    && h.IdCompra.HasValue
+                    && costosAnterioresPorCompra.TryGetValue(h.IdCompra.Value, out var anteriorCompra)
+                    && anteriorCompra > 0)
                 {
-                    var anteriorCompra = await _db.ComprasProductos
-                        .AsNoTracking()
-                        .Where(x => x.IdCompra == h.IdCompra && x.IdProducto == idProducto)
-                        .OrderByDescending(x => x.Id)
-                        .Select(x => x.CostoUnitarioAnterior)
-                        .FirstOrDefaultAsync();
-
-                    if (anteriorCompra > 0)
-                        costoAnterior = anteriorCompra;
+                    costoAnterior = anteriorCompra;
                 }
 
                 var variacion = h.CostoNuevo - costoAnterior;

@@ -13,13 +13,21 @@ namespace SistemaOroAmbiental.Application.Helpers
                 {
                     if (contenido == null || contenido.Length == 0)
                         continue;
-                    var entry = zip.CreateEntry(Sanitize(nombre), CompressionLevel.Fastest);
+                    var entry = zip.CreateEntry(SanitizePath(nombre), CompressionLevel.Fastest);
                     using var stream = entry.Open();
                     stream.Write(contenido, 0, contenido.Length);
                 }
             }
 
             return ms.ToArray();
+        }
+
+        private static string SanitizePath(string name)
+        {
+            name = (name ?? "").Replace('\\', '/').Trim().TrimStart('/');
+            var partes = name.Split('/', StringSplitOptions.RemoveEmptyEntries);
+            var limpios = partes.Select(Sanitize).Where(p => p.Length > 0);
+            return string.Join("/", limpios);
         }
 
         private static string Sanitize(string name)

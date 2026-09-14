@@ -27,6 +27,8 @@ public partial class SistemaOroAmbientalContext : DbContext
 
     public virtual DbSet<Camion> Camiones { get; set; }
 
+    public virtual DbSet<Chofer> Choferes { get; set; }
+
     public virtual DbSet<RecorridosMatriz> RecorridosMatriz { get; set; }
 
     public virtual DbSet<RecorridosManifiestoContador> RecorridosManifiestosContador { get; set; }
@@ -406,7 +408,7 @@ public partial class SistemaOroAmbientalContext : DbContext
         modelBuilder.Entity<ClientesCuentaCorrienteMovimiento>(entity =>
         {
             entity.Property(e => e.Concepto)
-                .HasMaxLength(200)
+                .HasMaxLength(400)
                 .IsUnicode(false);
             entity.Property(e => e.Debe).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.Fecha).HasColumnType("datetime");
@@ -600,6 +602,9 @@ public partial class SistemaOroAmbientalContext : DbContext
                 .IsUnicode(false);
             entity.Property(e => e.Calle)
                 .HasMaxLength(IntercambioTxtCampos.Calle)
+                .IsUnicode(false);
+            entity.Property(e => e.Descripcion)
+                .HasMaxLength(200)
                 .IsUnicode(false);
             entity.Property(e => e.Numero)
                 .HasMaxLength(IntercambioTxtCampos.Numero)
@@ -834,6 +839,8 @@ public partial class SistemaOroAmbientalContext : DbContext
 
         modelBuilder.Entity<ClientesActividad>(entity =>
         {
+            entity.HasIndex(e => e.Nombre).IsUnique();
+
             entity.Property(e => e.Nombre)
                 .HasMaxLength(150)
                 .IsUnicode(false);
@@ -1627,6 +1634,34 @@ public partial class SistemaOroAmbientalContext : DbContext
                 .HasForeignKey(d => d.IdUsuarioRegistra)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Camiones_Usuarios_Registra");
+        });
+
+        modelBuilder.Entity<Chofer>(entity =>
+        {
+            entity.ToTable("Choferes");
+            entity.Property(e => e.Activo)
+                .IsRequired()
+                .HasDefaultValueSql("((1))");
+            entity.Property(e => e.Nombre)
+                .HasMaxLength(120)
+                .IsUnicode(false);
+            entity.Property(e => e.Dni)
+                .HasMaxLength(20)
+                .IsUnicode(false);
+            entity.Property(e => e.FirmaArchivo)
+                .HasMaxLength(260)
+                .IsUnicode(false);
+            entity.Property(e => e.FechaUsuarioModifica).HasColumnType("datetime");
+            entity.Property(e => e.FechaUsuarioRegistra).HasColumnType("datetime");
+
+            entity.HasOne(d => d.IdUsuarioModificaNavigation).WithMany()
+                .HasForeignKey(d => d.IdUsuarioModifica)
+                .HasConstraintName("FK_Choferes_Usuarios_Modifica");
+
+            entity.HasOne(d => d.IdUsuarioRegistraNavigation).WithMany()
+                .HasForeignKey(d => d.IdUsuarioRegistra)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_Choferes_Usuarios_Registra");
         });
 
         modelBuilder.Entity<RecorridosMatriz>(entity =>

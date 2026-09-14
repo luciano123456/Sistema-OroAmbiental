@@ -379,9 +379,11 @@ function aplicarPrefillGeoAtajo() {
 async function listaConfiguracion() {
     const url = urlListaCatalogoConfig(controllerConfiguracion);
     const response = await fetch(url, {
+        cache: "no-store",
         headers: {
             'Authorization': 'Bearer ' + token,
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'Cache-Control': 'no-cache'
         }
     });
     if (!response.ok) throw new Error('Error al cargar configuraciones');
@@ -467,7 +469,9 @@ async function abrirConfiguracion(
         });
         $('#cmbConfiguracionPartido').off('change').on('change', validarCamposConfiguracion);
         $('#cmbConfiguracionTipoCuenta').off('change').on('change', validarCamposConfiguracion);
-        $('#txtBuscarConfiguracion').off('input').on('input', filtrarConfiguraciones);
+        $('#txtBuscarConfiguracion').off('input').on('input', typeof rpDebounce === "function"
+            ? rpDebounce(filtrarConfiguraciones, 300)
+            : filtrarConfiguraciones);
 
         document.getElementById("modalConfiguracionLabel").innerText =
             "Configuracion de " + nombreConfiguracion;
@@ -483,11 +487,20 @@ async function editarConfiguracion(id) {
     try {
         const response = await fetch("/" + controllerConfiguracion + "/EditarInfo?id=" + id, {
             method: "GET",
+            cache: "no-store",
             headers: {
                 "Content-Type": "application/json",
-                "Authorization": "Bearer " + token
+                "Authorization": "Bearer " + token,
+                "Cache-Control": "no-cache"
             }
         });
+
+        if (response.status === 404) {
+            cancelarModificarConfiguracion();
+            await llenarConfiguraciones();
+            errorModal("El registro ya no existe. Actualizamos la lista.");
+            return;
+        }
 
         if (!response.ok) throw new Error("Ha ocurrido un error.");
 
@@ -730,9 +743,9 @@ function guardarCambiosConfiguracion() {
         }
     } else {
         nuevoModelo = {
-            Id: idConfiguracion !== "" ? idConfiguracion : 0,
+            Id: idConfiguracion !== "" ? Number(idConfiguracion) : 0,
             IdCombo: comboNombre != null ? idCombo : 0,
-            Nombre: $("#txtNombreConfiguracion").val()
+            Nombre: ($("#txtNombreConfiguracion").val() || "").trim()
         };
 
         if (controllerConfiguracion === "Cuentas") {
@@ -920,7 +933,9 @@ function abrirConfiguraciones() {
     if (buscadorSecciones) {
         buscadorSecciones.value = "";
         filtrarSeccionesConfiguraciones();
-        $("#txtBuscarSeccionesConfiguracion").off("input").on("input", filtrarSeccionesConfiguraciones);
+        $("#txtBuscarSeccionesConfiguracion").off("input").on("input", typeof rpDebounce === "function"
+            ? rpDebounce(filtrarSeccionesConfiguraciones, 300)
+            : filtrarSeccionesConfiguraciones);
         setTimeout(() => buscadorSecciones.focus(), 150);
     }
 }

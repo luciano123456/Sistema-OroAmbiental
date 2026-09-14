@@ -96,6 +96,8 @@ const URL_GESTION_CLIENTE = id => id > 0 ? `/Clientes/Gestion?id=${id}` : "/Clie
 
 const API_CLIENTES = {
     lista: "/Clientes/Lista",
+    listaPaginada: "/Clientes/ListaPaginada",
+    paginaDeId: "/Clientes/PaginaDeId",
     dashboard: "/ClientesOperativo/Dashboard"
 };
 
@@ -111,8 +113,10 @@ $(document).ready(() => {
         });
     }
 
+    $("#grd_Clientes").data("rpActivoModo", "todos");
+
     cargarDashboardClientes();
-    listaClientes();
+    initGridClientes();
 
     $("#listaAlertasLicencia")
         .off("dblclick.clAlertaNav")
@@ -214,7 +218,12 @@ function irDesdeAlertaLicencia(id) {
 
 function navegarAFilaCliente(id) {
     const ok = typeof window.irAFilaGrilla === "function"
-        && window.irAFilaGrilla("grd_Clientes", id, { scroll: true, flash: true, limpiarFiltros: true });
+        && window.irAFilaGrilla("grd_Clientes", id, {
+            scroll: true,
+            flash: true,
+            limpiarFiltros: true,
+            paginaDeIdUrl: API_CLIENTES.paginaDeId
+        });
 
     if (!ok && typeof errorModal === "function") {
         errorModal("No se encontro el cliente en el listado.");
@@ -249,7 +258,7 @@ async function eliminarClienteIndex(id) {
         exitoModal(resultado.data?.mensaje ?? "Cliente eliminado correctamente");
     }
 
-    await listaClientes();
+    recargarGrillaServer(gridClientes);
 }
 
 function ensureSelect2($el, options) {
@@ -271,97 +280,84 @@ function inicializarSelect2Filtro($select) {
     });
 }
 
-async function listaClientes() {
-    let paginaActual = gridClientes != null ? gridClientes.page() : 0;
+async function initGridClientes() {
+    if (gridClientes) return;
 
-    const response = await fetch(`/Clientes/Lista`, {
-        method: 'GET',
-        headers: {
-            'Authorization': 'Bearer ' + token,
-            'Content-Type': 'application/json'
+    gridClientes = $('#grd_Clientes').DataTable({
+        serverSide: true,
+        processing: true,
+        ajax: crearOpcionesAjaxGrillaServer(API_CLIENTES.listaPaginada, "#grd_Clientes"),
+        language: {
+            sLengthMenu: "Mostrar MENU registros",
+            url: "//cdn.datatables.net/plug-ins/2.0.7/i18n/es-MX.json",
+            processing: "Cargando..."
+        },
+        autoWidth: false,
+        columnDefs: columnDefsClientesGrid(),
+        scrollX: true,
+        scrollCollapse: true,
+        columns: [
+            columnaGridAcciones({
+                ver: "verCliente",
+                editar: "editarCliente",
+                eliminar: "eliminarCliente"
+            }, "Clientes"),
+            columnaGridId(),
+            {
+                data: 'Nombre',
+                className: 'rp-col-nombre',
+                render: function (_data, type, row) {
+                    return renderNombreClienteConLicencia(row, type);
+                }
+            },
+            { data: 'Cuit', className: 'rp-col-cuit' },
+            { data: 'Sucursal', className: 'rp-col-sucursal' },
+            { data: 'Provincia', className: 'rp-col-provincia' },
+            { data: 'Profesion', className: 'rp-col-profesion' },
+            { data: 'CondicionIva', className: 'rp-col-iva' },
+            { data: 'Telefono', className: 'rp-col-tel' },
+            { data: 'Email', className: 'rp-col-email' },
+            typeof columnaGridActivo === "function" ? columnaGridActivo("Clientes") : { data: "Activo", className: "rp-col-activo" },
+        ],
+        createdRow: function (row, data) {
+            if (typeof createdRowEstiloActivoGrilla === "function") {
+                createdRowEstiloActivoGrilla(row, data);
+            }
+            if (clienteEnLicencia(data)) {
+                $(row).addClass("dt-row-licencia");
+            }
+        },
+        dom: 'Bfrtip',
+        buttons: getBotonesExportacion(gridClientes, "Clientes"),
+        orderCellsTop: true,
+        fixedHeader: true,
+        drawCallback: function () {
+            const total = $("#grd_Clientes").data("rpRecordsFiltered") ?? $("#grd_Clientes").data("rpRecordsTotal");
+            actualizarKpis(total);
+        },
+        initComplete: async function () {
+            const api = this.api();
+            await initFiltrosGrillaListaEnInitComplete(api, '#grd_Clientes', columnConfig, {
+                defaultActivoModo: 'todos',
+                initSelect2: ($el) => inicializarSelect2Filtro($el)
+            }, {
+                afterFilters: () => {
+                    configurarOpcionesColumnas();
+                },
+                afterAdjust: () => {
+                    setTimeout(() => ajustarColumnasGrillaLista(api, '#grd_Clientes'), 200);
+                }
+            });
         }
     });
-
-    if (!response.ok) throw new Error(`Error en la solicitud: ${response.statusText}`);
-
-    const data = await response.json();
-    await configurarDataTable(data);
-
-    if (paginaActual > 0) {
-        gridClientes.page(paginaActual).draw('page');
-    }
 }
 
-async function configurarDataTable(data) {
+function listaClientes() {
+    recargarGrillaServer(gridClientes);
+}
 
-    if (!gridClientes) {
-
-        gridClientes = $('#grd_Clientes').DataTable({
-            data: data,
-            language: {
-                sLengthMenu: "Mostrar MENU registros",
-                url: "//cdn.datatables.net/plug-ins/2.0.7/i18n/es-MX.json"
-            },
-            autoWidth: false,
-            columnDefs: columnDefsClientesGrid(),
-            scrollX: true,
-            scrollCollapse: true,
-            columns: [
-                columnaGridAcciones({
-                    ver: "verCliente",
-                    editar: "editarCliente",
-                    eliminar: "eliminarCliente"
-                }, "Clientes"),
-                columnaGridId(),
-                {
-                    data: 'Nombre',
-                    className: 'rp-col-nombre',
-                    render: function (_data, type, row) {
-                        return renderNombreClienteConLicencia(row, type);
-                    }
-                },
-                { data: 'Cuit', className: 'rp-col-cuit' },
-                { data: 'Sucursal', className: 'rp-col-sucursal' },
-                { data: 'Provincia', className: 'rp-col-provincia' },
-                { data: 'Profesion', className: 'rp-col-profesion' },
-                { data: 'CondicionIva', className: 'rp-col-iva' },
-                { data: 'Telefono', className: 'rp-col-tel' },
-                { data: 'Email', className: 'rp-col-email' },
-                typeof columnaGridActivo === "function" ? columnaGridActivo("Clientes") : { data: "Activo", className: "rp-col-activo" },
-            ],
-            createdRow: function (row, data) {
-                if (typeof createdRowEstiloActivoGrilla === "function") {
-                    createdRowEstiloActivoGrilla(row, data);
-                }
-                if (clienteEnLicencia(data)) {
-                    $(row).addClass("dt-row-licencia");
-                }
-            },
-            dom: 'Bfrtip',
-            buttons: getBotonesExportacion(gridClientes, "Clientes"),
-            orderCellsTop: true,
-            fixedHeader: true,
-            initComplete: async function () {
-                const api = this.api();
-                await initFiltrosGrillaListaEnInitComplete(api, '#grd_Clientes', columnConfig, {
-                    defaultActivoModo: 'todos',
-                    initSelect2: ($el) => inicializarSelect2Filtro($el)
-                }, {
-                    afterFilters: () => {
-                        configurarOpcionesColumnas();
-                        actualizarKpis(data);
-                    },
-                    afterAdjust: () => {
-                        setTimeout(() => ajustarColumnasGrillaLista(api, '#grd_Clientes'), 200);
-                    }
-                });
-            }
-        });
-
-    } else {
-        gridClientes.clear().rows.add(data).draw();
-        actualizarKpis(data);
-    }
+async function configurarDataTable(_data) {
+    listaClientes();
 }
 
 async function listaSucursalesFilter() {
@@ -431,8 +427,15 @@ function configurarOpcionesColumnas() {
     });
 }
 
-function actualizarKpis(data) {
-    const cant = Array.isArray(data) ? data.length : 0;
+function actualizarKpis(totalOrData) {
+    let cant = 0;
+    if (typeof totalOrData === "number") {
+        cant = totalOrData;
+    } else if (Array.isArray(totalOrData)) {
+        cant = totalOrData.length;
+    } else {
+        cant = $("#grd_Clientes").data("rpRecordsFiltered") ?? 0;
+    }
     $("#kpiCantClientes").text(cant);
     cargarDashboardClientes();
 }

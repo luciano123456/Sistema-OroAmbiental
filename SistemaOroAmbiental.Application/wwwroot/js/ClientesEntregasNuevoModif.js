@@ -1431,8 +1431,8 @@ window.__OA_ENTREGA_BUILD = "precio-entrega-lista-20260811";
                         <label class="en-field en-field--tipo">
                             <span>Tipo</span>
                             <select class="form-select vn-input vn-mini linea-tipo">
-                                <option value="${TIPO_LINEA_ENTREGA}" ${t === TIPO_LINEA_ENTREGA ? "selected" : ""}>Entrega</option>
-                                <option value="${TIPO_LINEA_RETIRO}" ${t === TIPO_LINEA_RETIRO ? "selected" : ""}>Retiro</option>
+                                <option value="${TIPO_LINEA_ENTREGA}" ${t === TIPO_LINEA_ENTREGA ? "selected" : ""}>Entrega (depósito −)</option>
+                                <option value="${TIPO_LINEA_RETIRO}" ${t === TIPO_LINEA_RETIRO ? "selected" : ""}>Retiro (sin stock)</option>
                             </select>
                         </label>
                         <label class="en-field en-field--lista">

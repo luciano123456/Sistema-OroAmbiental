@@ -3,7 +3,7 @@
 <Project>
   <PropertyGroup>
     <_PublishTargetUrl>D:\Publicaciones Webs\SistemaOroAmbiental</_PublishTargetUrl>
-    <History>True|2026-08-26T20:23:18.6313024Z||;True|2026-08-26T17:04:39.5191094-03:00||;True|2026-08-26T16:52:45.4033402-03:00||;True|2026-08-26T16:03:49.2524845-03:00||;True|2026-08-26T12:41:43.5691991-03:00||;True|2026-08-26T10:23:46.8565423-03:00||;True|2026-08-26T09:52:45.0212758-03:00||;True|2026-08-25T10:53:51.3496649-03:00||;True|2026-08-21T15:12:05.7354775-03:00||;True|2026-08-21T02:30:04.4591424-03:00||;True|2026-08-21T02:29:49.0928577-03:00||;True|2026-08-14T00:20:17.8262323-03:00||;True|2026-08-13T12:45:35.4734436-03:00||;True|2026-08-13T12:22:31.9164382-03:00||;True|2026-08-12T12:35:43.4086662-03:00||;True|2026-08-06T12:35:24.4883496-03:00||;True|2026-08-06T01:37:20.3335473-03:00||;True|2026-08-05T10:14:25.0535464-03:00||;True|2026-08-05T10:14:17.9647582-03:00||;True|2026-08-04T13:35:55.1822570-03:00||;True|2026-08-04T12:48:56.6794838-03:00||;True|2026-08-04T12:48:42.9349335-03:00||;True|2026-08-03T17:36:43.6859920-03:00||;True|2026-08-03T17:36:28.9864353-03:00||;True|2026-08-03T16:13:49.8468903-03:00||;True|2026-07-31T13:26:24.9979661-03:00||;True|2026-07-30T17:00:45.7007517-03:00||;True|2026-07-30T16:22:15.2926487-03:00||;True|2026-07-30T10:39:39.0465184-03:00||;True|2026-07-29T12:40:47.2555091-03:00||;True|2026-07-29T01:53:46.5696699-03:00||;True|2026-07-28T12:11:47.8324500-03:00||;True|2026-07-28T11:32:21.0867614-03:00||;True|2026-07-28T11:02:05.3241821-03:00||;True|2026-07-28T10:55:47.7478355-03:00||;True|2026-07-28T10:55:28.0227804-03:00||;True|2026-07-28T02:47:59.7108356-03:00||;True|2026-07-23T15:46:55.5245224-03:00||;True|2026-07-23T15:25:33.3339107-03:00||;True|2026-05-28T02:26:44.0369537-03:00||;True|2026-05-28T02:18:52.6183947-03:00||;True|2026-05-28T02:11:39.4250829-03:00||;True|2026-05-28T02:11:18.7744890-03:00||;True|2026-05-28T02:08:24.5888913-03:00||;True|2026-05-28T02:05:47.9929034-03:00||;True|2026-05-22T14:45:59.6858432-03:00||;True|2026-05-22T14:45:53.1454479-03:00||;True|2026-05-22T13:35:34.1649039-03:00||;True|2026-05-22T13:25:06.7944089-03:00||;True|2026-05-22T13:08:56.8323196-03:00||;True|2026-04-02T16:36:02.2659843-03:00||;True|2026-04-02T04:43:45.9892414-03:00||;True|2026-03-30T16:42:38.9829677-03:00||;True|2026-03-30T16:36:51.4400355-03:00||;True|2026-03-30T15:38:02.1330758-03:00||;True|2026-03-29T00:52:30.6897306-03:00||;True|2026-03-21T02:47:36.2684676-03:00||;True|2026-03-02T02:28:42.6919597-03:00||;True|2026-03-02T02:14:42.1640304-03:00||;True|2026-02-26T02:07:13.7997676-03:00||;True|2026-02-26T02:03:17.5123264-03:00||;True|2026-02-26T01:59:42.9479354-03:00||;True|2026-02-21T07:42:34.0406289-03:00||;True|2026-02-21T07:31:52.1547139-03:00||;True|2026-02-21T07:27:55.9546246-03:00||;True|2026-02-18T20:24:30.7518990-03:00||;True|2026-02-18T20:21:18.3235652-03:00||;True|2026-02-16T19:22:50.5531319-03:00||;True|2025-07-29T02:51:07.0177832-03:00||;True|2025-07-29T02:50:56.9678421-03:00||;True|2025-07-29T02:46:39.4414630-03:00||;True|2025-07-29T02:44:00.2722681-03:00||;True|2025-06-29T23:26:58.0824451-03:00||;True|2025-05-29T23:49:19.3864678-03:00||;True|2025-05-28T00:43:44.4281880-03:00||;True|2025-05-28T00:31:35.3388304-03:00||;True|2025-05-28T00:31:13.8717052-03:00||;True|2025-05-28T00:27:53.6765124-03:00||;True|2025-04-26T02:54:13.6621334-03:00||;True|2025-04-26T02:45:05.0430095-03:00||;True|2025-04-25T02:02:07.7055893-03:00||;True|2025-04-25T02:01:56.8158633-03:00||;True|2025-04-25T01:59:36.2860368-03:00||;True|2025-04-25T01:48:36.6325680-03:00||;True|2025-04-25T01:39:58.4038976-03:00||;True|2025-04-25T01:36:54.5227465-03:00||;False|2025-04-25T01:36:43.1194289-03:00||;True|2025-04-24T22:11:51.9710747-03:00||;True|2025-04-24T15:34:07.7326625-03:00||;True|2025-04-24T12:47:10.4491689-03:00||;True|2025-04-24T12:44:33.6964155-03:00||;True|2025-04-24T02:14:46.9418069-03:00||;True|2025-04-24T02:13:02.4597199-03:00||;True|2025-04-24T02:09:35.6076147-03:00||;True|2025-04-24T02:09:27.5489914-03:00||;True|2025-04-22T13:50:48.8079215-03:00||;</History>
+    <History>True|2026-09-09T15:43:21.8948833Z||;True|2026-09-09T12:14:18.9268923-03:00||;True|2026-09-09T11:09:53.1347384-03:00||;True|2026-09-07T01:24:15.7127725-03:00||;True|2026-09-03T23:16:44.7958184-03:00||;True|2026-09-03T23:15:12.3853010-03:00||;True|2026-08-31T11:30:57.5493673-03:00||;True|2026-08-31T09:57:28.5658833-03:00||;True|2026-08-26T17:23:18.6313024-03:00||;True|2026-08-26T17:04:39.5191094-03:00||;True|2026-08-26T16:52:45.4033402-03:00||;True|2026-08-26T16:03:49.2524845-03:00||;True|2026-08-26T12:41:43.5691991-03:00||;True|2026-08-26T10:23:46.8565423-03:00||;True|2026-08-26T09:52:45.0212758-03:00||;True|2026-08-25T10:53:51.3496649-03:00||;True|2026-08-21T15:12:05.7354775-03:00||;True|2026-08-21T02:30:04.4591424-03:00||;True|2026-08-21T02:29:49.0928577-03:00||;True|2026-08-14T00:20:17.8262323-03:00||;True|2026-08-13T12:45:35.4734436-03:00||;True|2026-08-13T12:22:31.9164382-03:00||;True|2026-08-12T12:35:43.4086662-03:00||;True|2026-08-06T12:35:24.4883496-03:00||;True|2026-08-06T01:37:20.3335473-03:00||;True|2026-08-05T10:14:25.0535464-03:00||;True|2026-08-05T10:14:17.9647582-03:00||;True|2026-08-04T13:35:55.1822570-03:00||;True|2026-08-04T12:48:56.6794838-03:00||;True|2026-08-04T12:48:42.9349335-03:00||;True|2026-08-03T17:36:43.6859920-03:00||;True|2026-08-03T17:36:28.9864353-03:00||;True|2026-08-03T16:13:49.8468903-03:00||;True|2026-07-31T13:26:24.9979661-03:00||;True|2026-07-30T17:00:45.7007517-03:00||;True|2026-07-30T16:22:15.2926487-03:00||;True|2026-07-30T10:39:39.0465184-03:00||;True|2026-07-29T12:40:47.2555091-03:00||;True|2026-07-29T01:53:46.5696699-03:00||;True|2026-07-28T12:11:47.8324500-03:00||;True|2026-07-28T11:32:21.0867614-03:00||;True|2026-07-28T11:02:05.3241821-03:00||;True|2026-07-28T10:55:47.7478355-03:00||;True|2026-07-28T10:55:28.0227804-03:00||;True|2026-07-28T02:47:59.7108356-03:00||;True|2026-07-23T15:46:55.5245224-03:00||;True|2026-07-23T15:25:33.3339107-03:00||;True|2026-05-28T02:26:44.0369537-03:00||;True|2026-05-28T02:18:52.6183947-03:00||;True|2026-05-28T02:11:39.4250829-03:00||;True|2026-05-28T02:11:18.7744890-03:00||;True|2026-05-28T02:08:24.5888913-03:00||;True|2026-05-28T02:05:47.9929034-03:00||;True|2026-05-22T14:45:59.6858432-03:00||;True|2026-05-22T14:45:53.1454479-03:00||;True|2026-05-22T13:35:34.1649039-03:00||;True|2026-05-22T13:25:06.7944089-03:00||;True|2026-05-22T13:08:56.8323196-03:00||;True|2026-04-02T16:36:02.2659843-03:00||;True|2026-04-02T04:43:45.9892414-03:00||;True|2026-03-30T16:42:38.9829677-03:00||;True|2026-03-30T16:36:51.4400355-03:00||;True|2026-03-30T15:38:02.1330758-03:00||;True|2026-03-29T00:52:30.6897306-03:00||;True|2026-03-21T02:47:36.2684676-03:00||;True|2026-03-02T02:28:42.6919597-03:00||;True|2026-03-02T02:14:42.1640304-03:00||;True|2026-02-26T02:07:13.7997676-03:00||;True|2026-02-26T02:03:17.5123264-03:00||;True|2026-02-26T01:59:42.9479354-03:00||;True|2026-02-21T07:42:34.0406289-03:00||;True|2026-02-21T07:31:52.1547139-03:00||;True|2026-02-21T07:27:55.9546246-03:00||;True|2026-02-18T20:24:30.7518990-03:00||;True|2026-02-18T20:21:18.3235652-03:00||;True|2026-02-16T19:22:50.5531319-03:00||;True|2025-07-29T02:51:07.0177832-03:00||;True|2025-07-29T02:50:56.9678421-03:00||;True|2025-07-29T02:46:39.4414630-03:00||;True|2025-07-29T02:44:00.2722681-03:00||;True|2025-06-29T23:26:58.0824451-03:00||;True|2025-05-29T23:49:19.3864678-03:00||;True|2025-05-28T00:43:44.4281880-03:00||;True|2025-05-28T00:31:35.3388304-03:00||;True|2025-05-28T00:31:13.8717052-03:00||;True|2025-05-28T00:27:53.6765124-03:00||;True|2025-04-26T02:54:13.6621334-03:00||;True|2025-04-26T02:45:05.0430095-03:00||;True|2025-04-25T02:02:07.7055893-03:00||;True|2025-04-25T02:01:56.8158633-03:00||;True|2025-04-25T01:59:36.2860368-03:00||;True|2025-04-25T01:48:36.6325680-03:00||;True|2025-04-25T01:39:58.4038976-03:00||;True|2025-04-25T01:36:54.5227465-03:00||;False|2025-04-25T01:36:43.1194289-03:00||;True|2025-04-24T22:11:51.9710747-03:00||;True|2025-04-24T15:34:07.7326625-03:00||;True|2025-04-24T12:47:10.4491689-03:00||;True|2025-04-24T12:44:33.6964155-03:00||;True|2025-04-24T02:14:46.9418069-03:00||;</History>
     <LastFailureDetails />
   </PropertyGroup>
   <ItemGroup>
@@ -11,7 +11,7 @@
       <publishTime>07/30/2026 09:41:51</publishTime>
     </File>
     <File Include="Views/AnalisisDatos/Index.cshtml">
-      <publishTime>08/06/2026 19:30:42</publishTime>
+      <publishTime>09/03/2026 11:25:40</publishTime>
     </File>
     <File Include="Views/Artistas/Index.cshtml">
       <publishTime>04/02/2026 04:40:43</publishTime>
@@ -26,10 +26,13 @@
       <publishTime>07/30/2026 09:41:51</publishTime>
     </File>
     <File Include="Views/Camiones/Index.cshtml">
-      <publishTime>08/26/2026 09:19:15</publishTime>
+      <publishTime>09/09/2026 12:11:52</publishTime>
+    </File>
+    <File Include="Views/Choferes/Index.cshtml">
+      <publishTime>09/07/2026 00:45:59</publishTime>
     </File>
     <File Include="Views/Clientes/Gestion.cshtml">
-      <publishTime>08/26/2026 16:58:55</publishTime>
+      <publishTime>09/09/2026 11:07:00</publishTime>
     </File>
     <File Include="Views/Clientes/Index.cshtml">
       <publishTime>08/11/2026 14:44:21</publishTime>
@@ -41,10 +44,10 @@
       <publishTime>08/11/2026 14:44:21</publishTime>
     </File>
     <File Include="Views/ClientesEntregas/NuevoModif.cshtml">
-      <publishTime>08/21/2026 12:40:43</publishTime>
+      <publishTime>09/03/2026 22:47:47</publishTime>
     </File>
     <File Include="Views/ClientesEstablecimientos/Index.cshtml">
-      <publishTime>08/26/2026 12:39:40</publishTime>
+      <publishTime>09/09/2026 10:39:01</publishTime>
     </File>
     <File Include="Views/ClientesEstablecimientos/_ModalReclamoDeuda.cshtml">
       <publishTime>08/25/2026 17:46:27</publishTime>
@@ -56,7 +59,7 @@
       <publishTime>08/13/2026 11:58:09</publishTime>
     </File>
     <File Include="Views/Contratos/Index.cshtml">
-      <publishTime>08/21/2026 13:40:01</publishTime>
+      <publishTime>09/09/2026 10:39:01</publishTime>
     </File>
     <File Include="Views/Cuentas/Index.cshtml">
       <publishTime>01/01/0001 00:00:00</publishTime>
@@ -68,7 +71,7 @@
       <publishTime>04/02/2026 04:41:06</publishTime>
     </File>
     <File Include="Views/Entities/M_Camiones.cshtml">
-      <publishTime>08/26/2026 09:17:47</publishTime>
+      <publishTime>09/09/2026 12:42:00</publishTime>
     </File>
     <File Include="Views/Entities/M_Clientes.cshtml">
       <publishTime>08/24/2026 11:09:34</publishTime>
@@ -89,7 +92,7 @@
       <publishTime>04/02/2026 16:34:45</publishTime>
     </File>
     <File Include="Views/Entities/M_Productos.cshtml">
-      <publishTime>08/13/2026 11:58:01</publishTime>
+      <publishTime>09/03/2026 11:25:39</publishTime>
     </File>
     <File Include="Views/Entities/M_Proveedores.cshtml">
       <publishTime>07/30/2026 09:41:51</publishTime>
@@ -98,7 +101,7 @@
       <publishTime>04/02/2026 04:41:21</publishTime>
     </File>
     <File Include="Views/Entities/_EstablecimientoEditorBody.cshtml">
-      <publishTime>08/26/2026 16:50:59</publishTime>
+      <publishTime>09/08/2026 14:05:33</publishTime>
     </File>
     <File Include="Views/Finanzas/Index.cshtml">
       <publishTime>08/05/2026 22:00:46</publishTime>
@@ -119,13 +122,13 @@
       <publishTime>07/30/2026 09:41:51</publishTime>
     </File>
     <File Include="Views/Gastos/Index.cshtml">
-      <publishTime>08/26/2026 10:18:49</publishTime>
+      <publishTime>09/09/2026 09:25:43</publishTime>
     </File>
     <File Include="Views/Inventario/Index.cshtml">
       <publishTime>08/05/2026 22:00:46</publishTime>
     </File>
     <File Include="Views/LibroDiario/Index.cshtml">
-      <publishTime>08/26/2026 10:18:49</publishTime>
+      <publishTime>09/09/2026 09:25:43</publishTime>
     </File>
     <File Include="Views/Login/Index.cshtml">
       <publishTime>08/05/2026 22:00:46</publishTime>
@@ -173,13 +176,13 @@
       <publishTime>01/01/0001 00:00:00</publishTime>
     </File>
     <File Include="Views/Recorridos/HojaRuta.cshtml">
-      <publishTime>08/26/2026 17:03:47</publishTime>
+      <publishTime>09/07/2026 00:39:52</publishTime>
     </File>
     <File Include="Views/Recorridos/Index.cshtml">
-      <publishTime>08/26/2026 09:19:12</publishTime>
+      <publishTime>09/09/2026 12:42:00</publishTime>
     </File>
     <File Include="Views/Recorridos/Manifiestos.cshtml">
-      <publishTime>08/21/2026 12:18:53</publishTime>
+      <publishTime>09/09/2026 11:54:30</publishTime>
     </File>
     <File Include="Views/Representantes/Index.cshtml">
       <publishTime>04/02/2026 04:42:07</publishTime>
@@ -191,13 +194,13 @@
       <publishTime>07/30/2026 09:41:51</publishTime>
     </File>
     <File Include="Views/Shared/Partials/NavBarLogin.cshtml">
-      <publishTime>08/26/2026 16:43:19</publishTime>
+      <publishTime>09/07/2026 00:36:19</publishTime>
     </File>
     <File Include="Views/Shared/Partials/ProductosHubNav.cshtml">
       <publishTime>07/30/2026 09:41:51</publishTime>
     </File>
     <File Include="Views/Shared/_Layout.cshtml">
-      <publishTime>08/25/2026 12:51:48</publishTime>
+      <publishTime>09/03/2026 22:11:21</publishTime>
     </File>
     <File Include="Views/Shared/_Layout.cshtml.css">
       <publishTime>08/11/2025 23:47:33</publishTime>
@@ -206,7 +209,7 @@
       <publishTime>08/25/2026 12:51:49</publishTime>
     </File>
     <File Include="Views/Shared/_LayoutModulo.cshtml">
-      <publishTime>08/25/2026 12:51:49</publishTime>
+      <publishTime>09/03/2026 22:11:21</publishTime>
     </File>
     <File Include="Views/Shared/_ValidationScriptsPartial.cshtml">
       <publishTime>07/27/2026 18:11:34</publishTime>
@@ -218,7 +221,7 @@
       <publishTime>04/02/2026 04:42:26</publishTime>
     </File>
     <File Include="Views/Usuarios/Configuracion.cshtml">
-      <publishTime>08/26/2026 10:18:49</publishTime>
+      <publishTime>09/09/2026 09:25:43</publishTime>
     </File>
     <File Include="Views/Usuarios/Index.cshtml">
       <publishTime>08/26/2026 17:22:19</publishTime>
@@ -239,7 +242,7 @@
       <publishTime>07/27/2026 18:11:34</publishTime>
     </File>
     <File Include="wwwroot/css/AnalisisDatos.css">
-      <publishTime>08/06/2026 19:30:42</publishTime>
+      <publishTime>09/03/2026 11:25:39</publishTime>
     </File>
     <File Include="wwwroot/css/BotonMenu.css">
       <publishTime>01/01/0001 00:00:00</publishTime>
@@ -251,22 +254,22 @@
       <publishTime>01/01/0001 00:00:00</publishTime>
     </File>
     <File Include="wwwroot/css/Camiones.css">
-      <publishTime>01/01/0001 00:00:00</publishTime>
+      <publishTime>09/09/2026 11:40:50</publishTime>
     </File>
     <File Include="wwwroot/css/Choferes.css">
-      <publishTime>01/01/0001 00:00:00</publishTime>
+      <publishTime>09/07/2026 00:36:04</publishTime>
     </File>
     <File Include="wwwroot/css/Clientes.css">
       <publishTime>08/11/2026 14:44:21</publishTime>
     </File>
     <File Include="wwwroot/css/ClientesEntregas.css">
-      <publishTime>01/01/0001 00:00:00</publishTime>
+      <publishTime>09/03/2026 11:25:39</publishTime>
     </File>
     <File Include="wwwroot/css/ClientesEstablecimientos.css">
       <publishTime>01/01/0001 00:00:00</publishTime>
     </File>
     <File Include="wwwroot/css/ClientesGestion.css">
-      <publishTime>01/01/0001 00:00:00</publishTime>
+      <publishTime>09/09/2026 11:06:57</publishTime>
     </File>
     <File Include="wwwroot/css/Compras.css">
       <publishTime>01/01/0001 00:00:00</publishTime>
@@ -287,7 +290,7 @@
       <publishTime>01/01/0001 00:00:00</publishTime>
     </File>
     <File Include="wwwroot/css/DisenoPantallas.css">
-      <publishTime>01/01/0001 00:00:00</publishTime>
+      <publishTime>09/09/2026 09:25:43</publishTime>
     </File>
     <File Include="wwwroot/css/FinanzasGestion.css">
       <publishTime>01/01/0001 00:00:00</publishTime>
@@ -299,7 +302,7 @@
       <publishTime>01/01/0001 00:00:00</publishTime>
     </File>
     <File Include="wwwroot/css/HojaRuta.css">
-      <publishTime>01/01/0001 00:00:00</publishTime>
+      <publishTime>09/07/2026 00:39:51</publishTime>
     </File>
     <File Include="wwwroot/css/Insumos.css">
       <publishTime>01/01/0001 00:00:00</publishTime>
@@ -314,7 +317,7 @@
       <publishTime>01/01/0001 00:00:00</publishTime>
     </File>
     <File Include="wwwroot/css/Manifiestos.css">
-      <publishTime>01/01/0001 00:00:00</publishTime>
+      <publishTime>09/09/2026 11:54:30</publishTime>
     </File>
     <File Include="wwwroot/css/Monedas.css">
       <publishTime>01/01/0001 00:00:00</publishTime>
@@ -371,7 +374,7 @@
       <publishTime>01/01/0001 00:00:00</publishTime>
     </File>
     <File Include="wwwroot/css/Recorridos.css">
-      <publishTime>01/01/0001 00:00:00</publishTime>
+      <publishTime>09/09/2026 11:38:54</publishTime>
     </File>
     <File Include="wwwroot/css/RpAvatar.css">
       <publishTime>08/11/2026 14:44:21</publishTime>
@@ -383,10 +386,10 @@
       <publishTime>08/11/2026 14:44:21</publishTime>
     </File>
     <File Include="wwwroot/css/site.css">
-      <publishTime>01/01/0001 00:00:00</publishTime>
+      <publishTime>09/03/2026 11:25:39</publishTime>
     </File>
     <File Include="wwwroot/css/Usuarios.css">
-      <publishTime>01/01/0001 00:00:00</publishTime>
+      <publishTime>09/09/2026 09:25:43</publishTime>
     </File>
     <File Include="wwwroot/css/Ventas.css">
       <publishTime>03/07/2026 05:22:55</publishTime>
@@ -533,7 +536,7 @@
       <publishTime>08/11/2025 23:47:33</publishTime>
     </File>
     <File Include="wwwroot/js/AnalisisDatos.js">
-      <publishTime>06/08/2026 19:30:42</publishTime>
+      <publishTime>03/09/2026 11:25:40</publishTime>
     </File>
     <File Include="wwwroot/js/Artistas.js">
       <publishTime>04/02/2026 02:59:55</publishTime>
@@ -551,19 +554,22 @@
       <publishTime>01/01/0001 00:00:00</publishTime>
     </File>
     <File Include="wwwroot/js/CamionesManifiestos.js">
-      <publishTime>01/01/0001 00:00:00</publishTime>
+      <publishTime>09/09/2026 12:11:50</publishTime>
+    </File>
+    <File Include="wwwroot/js/Choferes.js">
+      <publishTime>07/09/2026 00:46:16</publishTime>
     </File>
     <File Include="wwwroot/js/Clientes.js">
-      <publishTime>11/08/2026 14:44:21</publishTime>
+      <publishTime>01/01/0001 00:00:00</publishTime>
     </File>
     <File Include="wwwroot/js/ClientesCuentaCorriente.js">
-      <publishTime>05/08/2026 22:00:46</publishTime>
+      <publishTime>01/01/0001 00:00:00</publishTime>
     </File>
     <File Include="wwwroot/js/ClientesEntregas.js">
       <publishTime>11/08/2026 14:44:21</publishTime>
     </File>
     <File Include="wwwroot/js/ClientesEntregasNuevoModif.js">
-      <publishTime>01/01/0001 00:00:00</publishTime>
+      <publishTime>03/09/2026 22:47:47</publishTime>
     </File>
     <File Include="wwwroot/js/ClientesEstablecimientos.js">
       <publishTime>01/01/0001 00:00:00</publishTime>
@@ -572,7 +578,7 @@
       <publishTime>01/01/0001 00:00:00</publishTime>
     </File>
     <File Include="wwwroot/js/ClientesGestion.js">
-      <publishTime>01/01/0001 00:00:00</publishTime>
+      <publishTime>09/09/2026 11:06:56</publishTime>
     </File>
     <File Include="wwwroot/js/Compras.js">
       <publishTime>01/01/0001 00:00:00</publishTime>
@@ -593,7 +599,7 @@
       <publishTime>01/01/0001 00:00:00</publishTime>
     </File>
     <File Include="wwwroot/js/Dashboard.js">
-      <publishTime>01/01/0001 00:00:00</publishTime>
+      <publishTime>09/09/2026 09:25:43</publishTime>
     </File>
     <File Include="wwwroot/js/Entities/M_Artistas.js">
       <publishTime>04/02/2026 03:40:33</publishTime>
@@ -605,7 +611,7 @@
       <publishTime>05/08/2026 22:00:46</publishTime>
     </File>
     <File Include="wwwroot/js/Entities/M_ClientesEstablecimientos.js">
-      <publishTime>01/01/0001 00:00:00</publishTime>
+      <publishTime>09/09/2026 10:39:01</publishTime>
     </File>
     <File Include="wwwroot/js/Entities/M_Contratos.js">
       <publishTime>05/08/2026 22:00:46</publishTime>
@@ -620,7 +626,7 @@
       <publishTime>04/02/2026 03:40:33</publishTime>
     </File>
     <File Include="wwwroot/js/Entities/M_Productos.js">
-      <publishTime>01/01/0001 00:00:00</publishTime>
+      <publishTime>03/09/2026 11:25:39</publishTime>
     </File>
     <File Include="wwwroot/js/Entities/M_Proveedores.js">
       <publishTime>05/08/2026 22:00:46</publishTime>
@@ -644,7 +650,7 @@
       <publishTime>01/01/0001 00:00:00</publishTime>
     </File>
     <File Include="wwwroot/js/Inventario.js">
-      <publishTime>05/08/2026 22:00:46</publishTime>
+      <publishTime>01/01/0001 00:00:00</publishTime>
     </File>
     <File Include="wwwroot/js/LibroDiario.js">
       <publishTime>05/08/2026 22:00:46</publishTime>
@@ -692,10 +698,10 @@
       <publishTime>11/08/2026 14:44:21</publishTime>
     </File>
     <File Include="wwwroot/js/ProveedoresCuentaCorriente.js">
-      <publishTime>05/08/2026 22:00:46</publishTime>
+      <publishTime>01/01/0001 00:00:00</publishTime>
     </File>
     <File Include="wwwroot/js/ProveedoresGestion.js">
-      <publishTime>06/08/2026 19:30:42</publishTime>
+      <publishTime>03/09/2026 11:25:40</publishTime>
     </File>
     <File Include="wwwroot/js/PuntosDeVenta.js">
       <publishTime>01/01/0001 00:00:00</publishTime>
@@ -704,7 +710,10 @@
       <publishTime>01/01/0001 00:00:00</publishTime>
     </File>
     <File Include="wwwroot/js/Recorridos.js">
-      <publishTime>01/01/0001 00:00:00</publishTime>
+      <publishTime>09/09/2026 12:11:48</publishTime>
+    </File>
+    <File Include="wwwroot/js/RecorridosStock.js">
+      <publishTime>07/09/2026 01:04:27</publishTime>
     </File>
     <File Include="wwwroot/js/Representantes.js">
       <publishTime>04/02/2026 03:40:33</publishTime>
@@ -713,16 +722,16 @@
       <publishTime>11/08/2026 14:44:21</publishTime>
     </File>
     <File Include="wwwroot/js/RpModulos.js">
-      <publishTime>11/08/2026 14:44:21</publishTime>
+      <publishTime>07/09/2026 00:36:20</publishTime>
     </File>
     <File Include="wwwroot/js/RpPresence.js">
-      <publishTime>11/08/2026 14:44:21</publishTime>
+      <publishTime>01/01/0001 00:00:00</publishTime>
     </File>
     <File Include="wwwroot/js/SessionManager.js">
       <publishTime>11/08/2026 14:44:21</publishTime>
     </File>
     <File Include="wwwroot/js/site.js">
-      <publishTime>01/01/0001 00:00:00</publishTime>
+      <publishTime>07/09/2026 00:36:20</publishTime>
     </File>
     <File Include="wwwroot/js/Tareas.js">
       <publishTime>04/02/2026 04:16:42</publishTime>
@@ -734,7 +743,7 @@
       <publishTime>01/01/0001 00:00:00</publishTime>
     </File>
     <File Include="wwwroot/js/UsuariosConfiguracion.js">
-      <publishTime>01/01/0001 00:00:00</publishTime>
+      <publishTime>09/09/2026 09:25:43</publishTime>
     </File>
     <File Include="wwwroot/js/Utils/moment.js">
       <publishTime>01/01/0001 00:00:00</publishTime>
@@ -925,11 +934,380 @@
     <File Include="wwwroot/Uploads/Avatares/.gitkeep">
       <publishTime>08/11/2026 14:44:21</publishTime>
     </File>
+    <File Include="wwwroot/Uploads/Avatares/u_11_724e1f0501c343859a3e5f70e423ca70.jpeg">
+      <publishTime>01/01/0001 00:00:00</publishTime>
+    </File>
     <File Include="wwwroot/Uploads/certificados/1/Certificado_2_Daniel_Perez.pdf">
       <publishTime>01/01/0001 00:00:00</publishTime>
     </File>
     <File Include="wwwroot/Uploads/certificados/1/Certificado_4_Daniel_Perez.pdf">
       <publishTime>01/01/0001 00:00:00</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/10/Certificado_354712_BORENSZTEIN_VERONICA_LAURA_AOLZ.pdf">
+      <publishTime>09/03/2026 22:56:21</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/10/Certificado_354757_BORENSZTEIN_VERONICA_LAURA_AOLZ.pdf">
+      <publishTime>09/03/2026 22:58:09</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/10/Certificado_354801_BORENSZTEIN_VERONICA_LAURA_AOLZ.pdf">
+      <publishTime>09/03/2026 23:13:19</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/10/Certificado_354983_BORENSZTEIN_VERONICA_LAURA_AOLZ.pdf">
+      <publishTime>09/09/2026 11:48:05</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/10/Certificado_354986_BORENSZTEIN_VERONICA_LAURA_AOLZ.pdf">
+      <publishTime>09/09/2026 11:59:05</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/10/Certificado_354990_BORENSZTEIN_VERONICA_LAURA_AOLZ.pdf">
+      <publishTime>09/09/2026 12:39:56</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/11/Certificado_354713_RONCHI_ANDREA_SUSANA.pdf">
+      <publishTime>09/03/2026 22:56:21</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/11/Certificado_354758_RONCHI_ANDREA_SUSANA.pdf">
+      <publishTime>09/03/2026 22:58:09</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/11/Certificado_354802_RONCHI_ANDREA_SUSANA.pdf">
+      <publishTime>09/03/2026 23:13:19</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/11/Certificado_354984_RONCHI_ANDREA_SUSANA.pdf">
+      <publishTime>09/09/2026 11:48:05</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/11/Certificado_354987_RONCHI_ANDREA_SUSANA.pdf">
+      <publishTime>09/09/2026 11:59:05</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/13/Certificado_354714_KALOZ_Paula_Verónica.pdf">
+      <publishTime>09/03/2026 22:56:21</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/13/Certificado_354759_KALOZ_Paula_Verónica.pdf">
+      <publishTime>09/03/2026 22:58:09</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/13/Certificado_354803_KALOZ_Paula_Verónica.pdf">
+      <publishTime>09/03/2026 23:13:19</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/14/Certificado_354715_BARDANCA_María_Belen.pdf">
+      <publishTime>09/03/2026 22:56:21</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/14/Certificado_354760_BARDANCA_María_Belen.pdf">
+      <publishTime>09/03/2026 22:58:09</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/14/Certificado_354804_BARDANCA_María_Belen.pdf">
+      <publishTime>09/03/2026 23:13:19</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/15/Certificado_354716_BARRESI_DECUZZI_Melisa.pdf">
+      <publishTime>09/03/2026 22:56:21</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/15/Certificado_354717_BARRESI_DECUZZI_Melisa.pdf">
+      <publishTime>09/03/2026 22:56:21</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/15/Certificado_354761_BARRESI_DECUZZI_Melisa.pdf">
+      <publishTime>09/03/2026 22:58:09</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/15/Certificado_354762_BARRESI_DECUZZI_Melisa.pdf">
+      <publishTime>09/03/2026 22:58:09</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/15/Certificado_354805_BARRESI_DECUZZI_Melisa.pdf">
+      <publishTime>09/03/2026 23:13:19</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/15/Certificado_354806_BARRESI_DECUZZI_Melisa.pdf">
+      <publishTime>09/03/2026 23:13:19</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/17/Certificado_354718_GHISOLFI_CORREA_Hernán.pdf">
+      <publishTime>09/03/2026 22:56:21</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/17/Certificado_354763_GHISOLFI_CORREA_Hernán.pdf">
+      <publishTime>09/03/2026 22:58:09</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/17/Certificado_354807_GHISOLFI_CORREA_Hernán.pdf">
+      <publishTime>09/03/2026 23:13:19</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/18/Certificado_354719_VALENZUELA_Matías_Gastón.pdf">
+      <publishTime>09/03/2026 22:56:21</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/18/Certificado_354764_VALENZUELA_Matías_Gastón.pdf">
+      <publishTime>09/03/2026 22:58:09</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/18/Certificado_354808_VALENZUELA_Matías_Gastón.pdf">
+      <publishTime>09/03/2026 23:13:19</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/19/Certificado_354720_Higa_Gonzalo_Eduardo.pdf">
+      <publishTime>09/03/2026 22:56:21</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/19/Certificado_354765_Higa_Gonzalo_Eduardo.pdf">
+      <publishTime>09/03/2026 22:58:09</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/19/Certificado_354809_Higa_Gonzalo_Eduardo.pdf">
+      <publishTime>09/03/2026 23:13:19</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/20/Certificado_354721_PERRONE_CORREA_Rodrigo_Omar.pdf">
+      <publishTime>09/03/2026 22:56:21</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/20/Certificado_354766_PERRONE_CORREA_Rodrigo_Omar.pdf">
+      <publishTime>09/03/2026 22:58:09</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/20/Certificado_354810_PERRONE_CORREA_Rodrigo_Omar.pdf">
+      <publishTime>09/03/2026 23:13:19</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/21/Certificado_354722_MG_MUJER_SRL.pdf">
+      <publishTime>09/03/2026 22:56:21</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/21/Certificado_354767_MG_MUJER_SRL.pdf">
+      <publishTime>09/03/2026 22:58:09</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/21/Certificado_354811_MG_MUJER_SRL.pdf">
+      <publishTime>09/03/2026 23:13:19</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/22/Certificado_354723_MARTINEZ_Luciano_Diego.pdf">
+      <publishTime>09/03/2026 22:56:21</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/22/Certificado_354768_MARTINEZ_Luciano_Diego.pdf">
+      <publishTime>09/03/2026 22:58:09</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/22/Certificado_354812_MARTINEZ_Luciano_Diego.pdf">
+      <publishTime>09/03/2026 23:13:19</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/23/Certificado_354724_CO.SIM_ODONTOLOGIA_S.R.L..pdf">
+      <publishTime>09/03/2026 22:56:21</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/23/Certificado_354769_CO.SIM_ODONTOLOGIA_S.R.L..pdf">
+      <publishTime>09/03/2026 22:58:09</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/23/Certificado_354813_CO.SIM_ODONTOLOGIA_S.R.L..pdf">
+      <publishTime>09/03/2026 23:13:19</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/24/Certificado_354725_LUCHETTI_Jorge_Luis.pdf">
+      <publishTime>09/03/2026 22:56:21</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/24/Certificado_354770_LUCHETTI_Jorge_Luis.pdf">
+      <publishTime>09/03/2026 22:58:09</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/24/Certificado_354814_LUCHETTI_Jorge_Luis.pdf">
+      <publishTime>09/03/2026 23:13:19</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/25/Certificado_354726_ENRICO_Sebastián.pdf">
+      <publishTime>09/03/2026 22:56:21</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/25/Certificado_354771_ENRICO_Sebastián.pdf">
+      <publishTime>09/03/2026 22:58:09</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/25/Certificado_354815_ENRICO_Sebastián.pdf">
+      <publishTime>09/03/2026 23:13:19</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/26/Certificado_354727_KLIGMAN_Eleonor_Sara.pdf">
+      <publishTime>09/03/2026 22:56:21</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/26/Certificado_354772_KLIGMAN_Eleonor_Sara.pdf">
+      <publishTime>09/03/2026 22:58:09</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/26/Certificado_354816_KLIGMAN_Eleonor_Sara.pdf">
+      <publishTime>09/03/2026 23:13:19</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/27/Certificado_354728_ROCCA_Marisa_Alejandra.pdf">
+      <publishTime>09/03/2026 22:56:21</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/27/Certificado_354773_ROCCA_Marisa_Alejandra.pdf">
+      <publishTime>09/03/2026 22:58:09</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/27/Certificado_354817_ROCCA_Marisa_Alejandra.pdf">
+      <publishTime>09/03/2026 23:13:19</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/28/Certificado_354729_ABDALA_Salvador.pdf">
+      <publishTime>09/03/2026 22:56:21</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/28/Certificado_354774_ABDALA_Salvador.pdf">
+      <publishTime>09/03/2026 22:58:09</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/28/Certificado_354818_ABDALA_Salvador.pdf">
+      <publishTime>09/03/2026 23:13:19</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/29/Certificado_354730_MAGGIORI_German.pdf">
+      <publishTime>09/03/2026 22:56:21</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/29/Certificado_354775_MAGGIORI_German.pdf">
+      <publishTime>09/03/2026 22:58:09</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/29/Certificado_354819_MAGGIORI_German.pdf">
+      <publishTime>09/03/2026 23:13:19</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/30/Certificado_354731_UNZU_Marina.pdf">
+      <publishTime>09/03/2026 22:56:21</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/30/Certificado_354776_UNZU_Marina.pdf">
+      <publishTime>09/03/2026 22:58:09</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/30/Certificado_354820_UNZU_Marina.pdf">
+      <publishTime>09/03/2026 23:13:19</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/31/Certificado_354732_LARA_Omar_Aníbal.pdf">
+      <publishTime>09/03/2026 22:56:21</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/31/Certificado_354777_LARA_Omar_Aníbal.pdf">
+      <publishTime>09/03/2026 22:58:09</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/31/Certificado_354821_LARA_Omar_Aníbal.pdf">
+      <publishTime>09/03/2026 23:13:19</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/32/Certificado_354733_PARDI_María_Griselda.pdf">
+      <publishTime>09/03/2026 22:56:21</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/32/Certificado_354778_PARDI_María_Griselda.pdf">
+      <publishTime>09/03/2026 22:58:09</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/32/Certificado_354822_PARDI_María_Griselda.pdf">
+      <publishTime>09/03/2026 23:13:19</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/33/Certificado_354734_POGONZA_Beatriz_del_Valle.pdf">
+      <publishTime>09/03/2026 22:56:21</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/33/Certificado_354779_POGONZA_Beatriz_del_Valle.pdf">
+      <publishTime>09/03/2026 22:58:09</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/33/Certificado_354823_POGONZA_Beatriz_del_Valle.pdf">
+      <publishTime>09/03/2026 23:13:19</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/34/Certificado_354735_CIRCULO_ODONTOLOGICO_ALMIRANTE.pdf">
+      <publishTime>09/03/2026 22:56:21</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/34/Certificado_354780_CIRCULO_ODONTOLOGICO_ALMIRANTE.pdf">
+      <publishTime>09/03/2026 22:58:09</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/34/Certificado_354824_CIRCULO_ODONTOLOGICO_ALMIRANTE.pdf">
+      <publishTime>09/03/2026 23:13:19</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/35/Certificado_354736_SARASIBAR_Vanesa.pdf">
+      <publishTime>09/03/2026 22:56:21</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/35/Certificado_354781_SARASIBAR_Vanesa.pdf">
+      <publishTime>09/03/2026 22:58:09</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/35/Certificado_354825_SARASIBAR_Vanesa.pdf">
+      <publishTime>09/03/2026 23:13:19</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/36/Certificado_354737_MAYNARD_Pablo.pdf">
+      <publishTime>09/03/2026 22:56:21</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/36/Certificado_354782_MAYNARD_Pablo.pdf">
+      <publishTime>09/03/2026 22:58:09</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/36/Certificado_354826_MAYNARD_Pablo.pdf">
+      <publishTime>09/03/2026 23:13:19</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/37/Certificado_354738_GONTAREWICZ_Alejandra.pdf">
+      <publishTime>09/03/2026 22:56:21</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/37/Certificado_354783_GONTAREWICZ_Alejandra.pdf">
+      <publishTime>09/03/2026 22:58:09</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/37/Certificado_354827_GONTAREWICZ_Alejandra.pdf">
+      <publishTime>09/03/2026 23:13:19</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/38/Certificado_354739_ODONTOLOGIA_INTEGRAL_LOMAS_SRL___OCAMPO.pdf">
+      <publishTime>09/03/2026 22:56:21</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/38/Certificado_354784_ODONTOLOGIA_INTEGRAL_LOMAS_SRL___OCAMPO.pdf">
+      <publishTime>09/03/2026 22:58:09</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/38/Certificado_354828_ODONTOLOGIA_INTEGRAL_LOMAS_SRL___OCAMPO.pdf">
+      <publishTime>09/03/2026 23:13:19</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/39/Certificado_354740_TOLARONOK_Sergio_Nahuel.pdf">
+      <publishTime>09/03/2026 22:56:21</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/39/Certificado_354785_TOLARONOK_Sergio_Nahuel.pdf">
+      <publishTime>09/03/2026 22:58:09</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/39/Certificado_354829_TOLARONOK_Sergio_Nahuel.pdf">
+      <publishTime>09/03/2026 23:13:19</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/40/Certificado_354741_LUKOMSKI_Irene_Isabel.pdf">
+      <publishTime>09/03/2026 22:56:21</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/40/Certificado_354786_LUKOMSKI_Irene_Isabel.pdf">
+      <publishTime>09/03/2026 22:58:09</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/40/Certificado_354830_LUKOMSKI_Irene_Isabel.pdf">
+      <publishTime>09/03/2026 23:13:19</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/41/Certificado_354742_ORSI_Estela_María.pdf">
+      <publishTime>09/03/2026 22:56:21</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/41/Certificado_354787_ORSI_Estela_María.pdf">
+      <publishTime>09/03/2026 22:58:10</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/41/Certificado_354831_ORSI_Estela_María.pdf">
+      <publishTime>09/03/2026 23:13:19</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/42/Certificado_354743_FURIO_Ana_María.pdf">
+      <publishTime>09/03/2026 22:56:21</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/42/Certificado_354788_FURIO_Ana_María.pdf">
+      <publishTime>09/03/2026 22:58:10</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/42/Certificado_354832_FURIO_Ana_María.pdf">
+      <publishTime>09/03/2026 23:13:19</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/43/Certificado_354744_WOLF_Sabrina_Carolina.pdf">
+      <publishTime>09/03/2026 22:56:21</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/43/Certificado_354789_WOLF_Sabrina_Carolina.pdf">
+      <publishTime>09/03/2026 22:58:10</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/43/Certificado_354833_WOLF_Sabrina_Carolina.pdf">
+      <publishTime>09/03/2026 23:13:19</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/44/Certificado_354745_LAURORA_Fabián_Pablo.pdf">
+      <publishTime>09/03/2026 22:56:21</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/44/Certificado_354790_LAURORA_Fabián_Pablo.pdf">
+      <publishTime>09/03/2026 22:58:10</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/44/Certificado_354834_LAURORA_Fabián_Pablo.pdf">
+      <publishTime>09/03/2026 23:13:19</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/45/Certificado_354746_PEREZ_Liliana_Viviana.pdf">
+      <publishTime>09/03/2026 22:56:21</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/45/Certificado_354791_PEREZ_Liliana_Viviana.pdf">
+      <publishTime>09/03/2026 22:58:10</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/45/Certificado_354835_PEREZ_Liliana_Viviana.pdf">
+      <publishTime>09/03/2026 23:13:19</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/46/Certificado_354747_LECADITO_María_Natalia.pdf">
+      <publishTime>09/03/2026 22:56:21</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/46/Certificado_354792_LECADITO_María_Natalia.pdf">
+      <publishTime>09/03/2026 22:58:10</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/46/Certificado_354836_LECADITO_María_Natalia.pdf">
+      <publishTime>09/03/2026 23:13:19</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/47/Certificado_354748_GRANATO_Claudio_Gabriel.pdf">
+      <publishTime>09/03/2026 22:56:21</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/47/Certificado_354793_GRANATO_Claudio_Gabriel.pdf">
+      <publishTime>09/03/2026 22:58:10</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/47/Certificado_354837_GRANATO_Claudio_Gabriel.pdf">
+      <publishTime>09/03/2026 23:13:19</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/48/Certificado_354749_VACCARO_Fernando.pdf">
+      <publishTime>09/03/2026 22:56:21</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/48/Certificado_354794_VACCARO_Fernando.pdf">
+      <publishTime>09/03/2026 22:58:10</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/48/Certificado_354838_VACCARO_Fernando.pdf">
+      <publishTime>09/03/2026 23:13:19</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/49/Certificado_354750_VACCARO_Guillermo_José.pdf">
+      <publishTime>09/03/2026 22:56:21</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/49/Certificado_354795_VACCARO_Guillermo_José.pdf">
+      <publishTime>09/03/2026 22:58:10</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/49/Certificado_354839_VACCARO_Guillermo_José.pdf">
+      <publishTime>09/03/2026 23:13:19</publishTime>
     </File>
     <File Include="wwwroot/Uploads/certificados/5/Certificado_1_Luciano_Escobar.pdf">
       <publishTime>01/01/0001 00:00:00</publishTime>
@@ -939,6 +1317,54 @@
     </File>
     <File Include="wwwroot/Uploads/certificados/5/Certificado_5_Luciano_Escobar.pdf">
       <publishTime>01/01/0001 00:00:00</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/5/Certificado_6_Luciano_Escobar.pdf">
+      <publishTime>09/07/2026 01:23:30</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/50/Certificado_354751_GAMAZA_Ernesto_Jaime.pdf">
+      <publishTime>09/03/2026 22:56:21</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/50/Certificado_354796_GAMAZA_Ernesto_Jaime.pdf">
+      <publishTime>09/03/2026 22:58:10</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/50/Certificado_354840_GAMAZA_Ernesto_Jaime.pdf">
+      <publishTime>09/03/2026 23:13:19</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/51/Certificado_354752_D´ERRICO_Sofía_Manuela.pdf">
+      <publishTime>09/03/2026 22:56:21</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/51/Certificado_354797_D´ERRICO_Sofía_Manuela.pdf">
+      <publishTime>09/03/2026 22:58:10</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/51/Certificado_354841_D´ERRICO_Sofía_Manuela.pdf">
+      <publishTime>09/03/2026 23:13:19</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/52/Certificado_354753_CORLATTI_Mayra_Alejandra.pdf">
+      <publishTime>09/03/2026 22:56:21</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/52/Certificado_354798_CORLATTI_Mayra_Alejandra.pdf">
+      <publishTime>09/03/2026 22:58:10</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/52/Certificado_354842_CORLATTI_Mayra_Alejandra.pdf">
+      <publishTime>09/03/2026 23:13:19</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/53/Certificado_354754_FAINBOIM_Javier_Marcelo.pdf">
+      <publishTime>09/03/2026 22:56:21</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/53/Certificado_354799_FAINBOIM_Javier_Marcelo.pdf">
+      <publishTime>09/03/2026 22:58:10</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/53/Certificado_354843_FAINBOIM_Javier_Marcelo.pdf">
+      <publishTime>09/03/2026 23:13:19</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/54/Certificado_354755_DE_MAIO_Luisa_Patricia.pdf">
+      <publishTime>09/03/2026 22:56:21</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/54/Certificado_354800_DE_MAIO_Luisa_Patricia.pdf">
+      <publishTime>09/03/2026 22:58:10</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/54/Certificado_354844_DE_MAIO_Luisa_Patricia.pdf">
+      <publishTime>09/03/2026 23:13:19</publishTime>
     </File>
     <File Include="wwwroot/Uploads/certificados/8/Certificado_354657_PUTASIO_MARIA_LORENA_asdfsadfsadfsafdsad.pdf">
       <publishTime>01/01/0001 00:00:00</publishTime>
@@ -957,6 +1383,21 @@
     </File>
     <File Include="wwwroot/Uploads/certificados/8/Certificado_354662_PUTASIO_MARIA_LORENA_asdfsadfsadfsafdsad.pdf">
       <publishTime>01/01/0001 00:00:00</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/8/Certificado_354756_PUTASIO_MARIA_LORENA.pdf">
+      <publishTime>09/03/2026 22:58:09</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/8/Certificado_354982_PUTASIO_MARIA_LORENA.pdf">
+      <publishTime>09/09/2026 11:48:05</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/8/Certificado_354985_PUTASIO_MARIA_LORENA.pdf">
+      <publishTime>09/09/2026 11:59:05</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/certificados/8/Certificado_354989_PUTASIO_MARIA_LORENA.pdf">
+      <publishTime>09/09/2026 12:39:56</publishTime>
+    </File>
+    <File Include="wwwroot/Uploads/choferes/1/firma.png">
+      <publishTime>09/07/2026 00:46:49</publishTime>
     </File>
   </ItemGroup>
 </Project>

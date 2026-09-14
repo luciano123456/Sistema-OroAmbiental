@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.ResponseCaching;
 using SistemaOroAmbiental.Application.Models.ViewModels;
 using SistemaOroAmbiental.BLL.Service;
 using SistemaOroAmbiental.DAL.Repository;
@@ -22,6 +23,7 @@ namespace SistemaOroAmbiental.Application.Controllers
 
         [AllowAnonymous]
         [HttpGet]
+        [ResponseCache(Duration = 600, Location = ResponseCacheLocation.Any)]
         public async Task<IActionResult> Lista()
         {
             var items = (await _service.ObtenerTodos())
@@ -49,8 +51,7 @@ namespace SistemaOroAmbiental.Application.Controllers
             if (string.IsNullOrWhiteSpace(codigo))
                 return Ok(new { valor = false, mensaje = "El código es obligatorio (Efectivo o Transferencia)." });
 
-            var existe = (await _service.ObtenerTodos()).Any(x =>
-                x.Codigo.Equals(codigo, StringComparison.OrdinalIgnoreCase));
+            var existe = await _service.ExisteCodigo(codigo);
             if (existe)
                 return Ok(new { valor = false, mensaje = $"Ya existe un tipo de pago con código {codigo}." });
 
@@ -81,9 +82,7 @@ namespace SistemaOroAmbiental.Application.Controllers
             if (string.IsNullOrWhiteSpace(codigo))
                 return Ok(new { valor = false, mensaje = "El código es obligatorio (Efectivo o Transferencia)." });
 
-            var existe = (await _service.ObtenerTodos()).Any(x =>
-                x.Id != entity.Id &&
-                x.Codigo.Equals(codigo, StringComparison.OrdinalIgnoreCase));
+            var existe = await _service.ExisteCodigo(codigo, entity.Id);
             if (existe)
                 return Ok(new { valor = false, mensaje = $"Ya existe un tipo de pago con código {codigo}." });
 

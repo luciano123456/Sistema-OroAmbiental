@@ -281,13 +281,18 @@ const API_CG = {
     entregaEliminar: id => `/ClientesEntregas/Eliminar?id=${id}`,
     entregaCobros: id => `/ClientesEntregas/Cobros?id=${id}`,
     guardarControlMensual: "/ClientesOperativo/GuardarControlMensual",
+    vaciarAbonosMes: "/ClientesOperativo/VaciarAbonosMes",
     recoleccionPrincipal: id => `/Clientes/RecoleccionPrincipal?idCliente=${id}`,
     recoleccionPrincipalGuardar: "/Clientes/RecoleccionPrincipal",
     dias: "/Dias/Lista",
     semanas: "/Semanas/Lista",
     listasPrecios: "/ListasPrecios/Lista",
     camiones: "/Camiones/Lista?soloActivos=true",
-    manifiestosDocumentos: id => `/Clientes/ManifiestosDocumentos?idCliente=${id}`,
+    manifiestosDocumentos: (id, idEst) => {
+        const est = Number(idEst) || 0;
+        const qs = est > 0 ? `&idEstablecimiento=${est}` : "";
+        return `/Clientes/ManifiestosDocumentos?idCliente=${id}${qs}`;
+    },
     descargarCertificado: id => `/Clientes/DescargarCertificado?id=${id}`,
     descargarManifiestoHistorial: (idCamion, id) => `/Clientes/DescargarManifiestoHistorial?idCamion=${idCamion}&id=${id}`,
     eliminarCertificado: id => `/Clientes/EliminarCertificado?id=${id}`,
@@ -298,8 +303,7 @@ const CG_TAB_LABELS = {
     establecimientos: "Establecimientos",
     contratos: "Contratos",
     cuentaCorriente: "Cuenta corriente",
-    entregas: "Entregas",
-    manifiestos: "Manifiestos"
+    entregas: "Entregas"
 };
 
 const authCg = () => ({
@@ -325,6 +329,7 @@ $(document).ready(async () => {
             await cargarRecoleccionPrincipalCg();
             habilitarTabsRelacionados(true);
             await cargarHubDatosCg(true);
+            aplicarDeepLinkGestionCg();
             await restaurarEstadoRetornoCg();
         } else {
             actualizarHeaderCg("Nuevo cliente", "Complete los datos y registre el cliente");
@@ -403,6 +408,28 @@ function guardarOrdenSeccionesCg(orden) {
 }
 
 /** Estado de solapa / establecimiento / mes abierto al ir a una entrega (para Volver). */
+function aplicarDeepLinkGestionCg() {
+    if (!(CG.id > 0)) return;
+    const q = new URLSearchParams(window.location.search);
+    const est = Number(q.get("est") || 0);
+    const tab = (q.get("tab") || "").toLowerCase();
+    if (!(est > 0) && tab !== "stock" && tab !== "pagos") return;
+
+    const st = {
+        v: 1,
+        idCliente: CG.id,
+        mainTab: est > 0 ? "establecimientos" : "datos",
+        estIds: est > 0 ? [est] : [],
+        estTab: est > 0 ? "stock" : null,
+        hubActivo: est > 0 ? "est" : "cliente",
+        mesCliente: null,
+        mesEst: null
+    };
+    try {
+        sessionStorage.setItem(CG_NAV_RETURN_PREFIX + CG.id, JSON.stringify(st));
+    } catch { /* noop */ }
+}
+
 function capturarEstadoRetornoCg() {
     if (!(CG.id > 0)) return null;
 
@@ -414,6 +441,7 @@ function capturarEstadoRetornoCg() {
     else if ($("#tabBtnContactosEst").hasClass("active")) estTab = "contactos";
     else if ($("#tabBtnContratosEst").hasClass("active")) estTab = "contratos";
     else if ($("#tabBtnProductosEst").hasClass("active")) estTab = "productos";
+    else if ($("#tabBtnManifiestosEst").hasClass("active")) estTab = "manifiestos";
     else if ($("#tabBtnDatosEst").hasClass("active")) estTab = "datos";
 
     const mesClienteVisible = !$("#cgHubMesDetail").prop("hidden") && CG.hubMesSel
@@ -508,6 +536,7 @@ async function restaurarEstadoRetornoCg() {
                 contactos: "tabBtnContactosEst",
                 contratos: "tabBtnContratosEst",
                 productos: "tabBtnProductosEst",
+                manifiestos: "tabBtnManifiestosEst",
                 datos: "tabBtnDatosEst"
             };
             const estBtnId = estTabMap[st.estTab] || "tabBtnDatosEst";
@@ -518,6 +547,10 @@ async function restaurarEstadoRetornoCg() {
 
             if (st.estTab === "contratos") {
                 await cargarContratosEstablecimientoCg(idsEstablecimientoSeleccionadosCg()[0]);
+            }
+
+            if (st.estTab === "manifiestos") {
+                await cargarTabManifiestos(true);
             }
 
             if (st.estTab === "stock" || st.mesEst) {
@@ -908,7 +941,7 @@ function wireEventosCg() {
         if (!id) return;
         toggleContratosEstSelCg(id, { exclusive: e.shiftKey });
     });
-    $(document).on("click", "#tabBtnDatosEst.disabled, #tabBtnContactosEst.disabled, #tabBtnContratosEst.disabled, #tabBtnProductosEst.disabled", function (e) {
+    $(document).on("click", "#tabBtnDatosEst.disabled, #tabBtnContactosEst.disabled, #tabBtnContratosEst.disabled, #tabBtnProductosEst.disabled, #tabBtnManifiestosEst.disabled", function (e) {
         e.preventDefault();
         e.stopPropagation();
     });
@@ -925,12 +958,15 @@ function wireEventosCg() {
         e.preventDefault();
         e.stopPropagation();
     });
-    $(document).on("shown.bs.tab", "#tabBtnDatosEst, #tabBtnContactosEst, #tabBtnContratosEst, #tabBtnProductosEst", function () {
+    $(document).on("shown.bs.tab", "#tabBtnDatosEst, #tabBtnContactosEst, #tabBtnContratosEst, #tabBtnProductosEst, #tabBtnManifiestosEst", function () {
         CG.hubActivo = "cliente";
         syncEstEditorFootCg();
         if (this.id === "tabBtnContratosEst") {
             const idEst = idsEstablecimientoSeleccionadosCg()[0] || 0;
             cargarContratosEstablecimientoCg(idEst);
+        }
+        if (this.id === "tabBtnManifiestosEst") {
+            cargarTabManifiestos(true);
         }
     });
     $(document).on("shown.bs.tab", "#tabBtnEstablecimientos", () => {
@@ -968,6 +1004,10 @@ function wireEventosCg() {
     // Legacy bindings replaced by delegated handlers above (hub-aware).
     $h("btnGuardarControlMensualCg").on("click", busyHandler(guardarVisitaUnificadaCg));
     $h("btnGuardarDatosMesCg").on("click", busyHandler(() => guardarControlMensualCg({ silent: false })));
+    $(document).on("click", "#btnVaciarMontosMesCg, #btnEstVaciarMontosMesCg", busyHandler(function () {
+        syncHubActivoFromElCg(this);
+        return vaciarAbonosMesCg();
+    }));
     $h("btnWsNuevaEntregaMes").on("click", () => {
         CG.hubActivo = "cliente";
         agregarEntregaDraftMesCg();
@@ -1143,13 +1183,7 @@ function wireEventosCg() {
     $h("cgWsSugeridos").on("click", ".cg-ws-chip", function () {
         const idx = Number($(this).data("idx"));
         const s = CG.wsSugeridos[idx];
-        if (s) agregarLineaWsCg({
-            IdProducto: s.IdProducto,
-            IdListaPrecio: s.IdListaPrecio || 0,
-            TipoMovimiento: 1,
-            Cantidad: s.Cantidad || 1,
-            PrecioVenta: Number(s.PrecioVenta) || 0
-        });
+        if (s) agregarLineaWsCg(prefLineaDesdeSugeridoWsCg(s, $(this).data("tipo")));
     });
     $h("cgWsLineasBody").on("click", ".btn-ws-quitar", function () {
         const idx = Number($(this).data("idx"));
@@ -1216,13 +1250,7 @@ function wireEventosCg() {
         syncHubActivoFromElCg(this);
         const idx = Number($(this).data("idx"));
         const s = CG.wsSugeridos[idx];
-        if (s) agregarLineaWsCg({
-            IdProducto: s.IdProducto,
-            IdListaPrecio: s.IdListaPrecio || 0,
-            TipoMovimiento: 1,
-            Cantidad: s.Cantidad || 1,
-            PrecioVenta: Number(s.PrecioVenta) || 0
-        }, this);
+        if (s) agregarLineaWsCg(prefLineaDesdeSugeridoWsCg(s, $(this).data("tipo")), this);
     });
     $(document).off("click.wsAccQuitar").on("click.wsAccQuitar", ".cg-ws-acc .btn-ws-quitar", function (e) {
         e.preventDefault();
@@ -1789,7 +1817,7 @@ function actualizarEnlacesAccionCg() {
 }
 
 function habilitarTabsRelacionados(habilitar) {
-    const tabs = ["establecimientos", "contratos", "cuentaCorriente", "entregas", "manifiestos"];
+    const tabs = ["establecimientos", "contratos", "cuentaCorriente", "entregas"];
     tabs.forEach(t => {
         $(`button[data-cg-tab="${t}"]`).prop("disabled", !habilitar);
     });
@@ -2007,9 +2035,6 @@ async function cargarTabCg(tab) {
                     break;
                 case "entregas":
                     await cargarHubEntregasCg(true);
-                    break;
-                case "manifiestos":
-                    await cargarTabManifiestos(true);
                     break;
             }
         } catch (e) {
@@ -2261,6 +2286,7 @@ function partesDomicilioEstablecimientoCg(e) {
     const partes = [];
     if (calleNro) partes.push(calleNro);
     else if (e.Domicilio) partes.push(String(e.Domicilio).trim());
+    if (e.Descripcion) partes.push(String(e.Descripcion).trim());
     if (e.Localidad) partes.push(String(e.Localidad).trim());
     if (e.Partido) partes.push(String(e.Partido).trim());
     if (e.Provincia) partes.push(String(e.Provincia).trim());
@@ -2329,6 +2355,8 @@ async function aplicarSeleccionEstablecimientosCg(opts = {}) {
         limpiarHubEstablecimientoCg();
         setStockEstTabDisponibleCg(false);
         CG.hubActivo = "cliente";
+        renderManifiestosCg([]);
+        CG.tabsLoaded.manifiestos = 0;
         return;
     }
 
@@ -2363,6 +2391,9 @@ async function aplicarSeleccionEstablecimientosCg(opts = {}) {
         if (tabStock?.classList.contains("active")) {
             await cargarHubEstablecimientoCg(true);
         }
+        if ($("#tabBtnManifiestosEst").hasClass("active")) {
+            await cargarTabManifiestos(true);
+        }
         syncEstEditorFootCg();
     });
 }
@@ -2385,7 +2416,8 @@ function aplicarModoTabsEstCg(cantidad) {
         ["#tabBtnDatosEst", "#tabDatosEst"],
         ["#tabBtnContactosEst", "#tabContactosEst"],
         ["#tabBtnContratosEst", "#tabContratosEst"],
-        ["#tabBtnProductosEst", "#tabProductosEst"]
+        ["#tabBtnProductosEst", "#tabProductosEst"],
+        ["#tabBtnManifiestosEst", "#tabManifiestosEst"]
     ];
 
     map.forEach(([btn, pane]) => {
@@ -2407,10 +2439,10 @@ function aplicarModoTabsEstCg(cantidad) {
     if (multi) {
         $stockBtn.removeClass("d-none").addClass("active");
         $stockPane.addClass("show active");
-        $("#tabBtnDatosEst, #tabBtnContactosEst, #tabBtnContratosEst, #tabBtnProductosEst").removeClass("active");
+        $("#tabBtnDatosEst, #tabBtnContactosEst, #tabBtnContratosEst, #tabBtnProductosEst, #tabBtnManifiestosEst").removeClass("active");
     } else if (cantidad === 1 && !$stockBtn.hasClass("active") && !$("#tabBtnDatosEst").hasClass("active")
         && !$("#tabBtnContactosEst").hasClass("active") && !$("#tabBtnContratosEst").hasClass("active")
-        && !$("#tabBtnProductosEst").hasClass("active")) {
+        && !$("#tabBtnProductosEst").hasClass("active") && !$("#tabBtnManifiestosEst").hasClass("active")) {
         $("#tabBtnDatosEst").addClass("active");
         $("#tabDatosEst").addClass("show active");
         $stockBtn.removeClass("active");
@@ -2858,6 +2890,10 @@ function bindEstHubEventsCg() {
         CG.hubActivo = "est";
         return guardarControlMensualCg({ silent: false });
     }));
+    $(root).on("click", "#btnEstVaciarMontosMesCg", busyHandler(() => {
+        CG.hubActivo = "est";
+        return vaciarAbonosMesCg();
+    }));
     $(root).on("click", "#btnEstWsNuevaEntregaMes", () => {
         CG.hubActivo = "est";
         agregarEntregaDraftMesCg();
@@ -2903,13 +2939,7 @@ function bindEstHubEventsCg() {
         CG.hubActivo = "est";
         const idx = Number($(this).data("idx"));
         const s = CG.wsSugeridos[idx];
-        if (s) agregarLineaWsCg({
-            IdProducto: s.IdProducto,
-            IdListaPrecio: s.IdListaPrecio || 0,
-            TipoMovimiento: 1,
-            Cantidad: s.Cantidad || 1,
-            PrecioVenta: Number(s.PrecioVenta) || 0
-        });
+        if (s) agregarLineaWsCg(prefLineaDesdeSugeridoWsCg(s, $(this).data("tipo")));
     });
     $(root).on("change input", "#cgEstWsLineasBody select, #cgEstWsLineasBody input", async function () {
         CG.hubActivo = "est";
@@ -3549,12 +3579,17 @@ async function cargarTabEntregas() {
 }
 
 async function cargarTabManifiestos(force) {
-    if (CG.id <= 0) return;
-    if (CG.tabsLoaded.manifiestos && !force) return;
+    const idEst = idsEstablecimientoSeleccionadosCg()[0] || Number(CG.establecimientoSelId) || 0;
+    if (CG.id <= 0 || idEst <= 0) {
+        renderManifiestosCg([]);
+        CG.tabsLoaded.manifiestos = 0;
+        return;
+    }
+    if (!force && CG.tabsLoaded.manifiestos === idEst) return;
 
-    const items = await fetchJsonCg(API_CG.manifiestosDocumentos(CG.id), { headers: authCg() }) || [];
+    const items = await fetchJsonCg(API_CG.manifiestosDocumentos(CG.id, idEst), { headers: authCg() }) || [];
     renderManifiestosCg(items);
-    CG.tabsLoaded.manifiestos = true;
+    CG.tabsLoaded.manifiestos = idEst;
 }
 
 function renderManifiestosCg(items) {
@@ -3636,11 +3671,21 @@ function renderListaDocsMf(selector, items, esCert) {
                     if (typeof errorModal === "function") errorModal("No se pudo descargar el documento.");
                     return;
                 }
-                const blob = await response.blob();
+                const raw = await response.blob();
+                const ct = (response.headers.get("Content-Type") || "").split(";")[0].trim().toLowerCase();
                 const disp = response.headers.get("Content-Disposition") || "";
                 const basic = /filename="?([^";]+)"?/i.exec(disp);
                 let archivo = "Documento.pdf";
                 if (basic && basic[1]) archivo = basic[1];
+                const esCert = String(url).toLowerCase().includes("descargacertificado");
+                if (esCert && (ct === "application/zip" || /\.zip$/i.test(archivo))) {
+                    if (typeof errorModal === "function") errorModal("El certificado no se pudo descargar como PDF.");
+                    return;
+                }
+                if (!/\.pdf$/i.test(archivo) || /\.zip$/i.test(archivo)) archivo = "Documento.pdf";
+                const blob = ct !== "application/zip"
+                    ? new Blob([raw], { type: "application/pdf" })
+                    : raw;
                 const href = URL.createObjectURL(blob);
                 const a = document.createElement("a");
                 a.href = href;
@@ -4779,9 +4824,7 @@ async function cargarSugeridosEnAccCg($acc, idEstablecimiento) {
     $box.html(CG.wsSugeridos.map((s, i) => {
         const label = (s.Abreviatura || s.Producto || "").trim();
         const lista = s.ListaPrecio ? ` · ${s.ListaPrecio}` : "";
-        return `<button type="button" class="cg-ws-chip" data-idx="${i}" title="${escapeCg(s.Producto)}${lista}">
-            <i class="fa fa-plus"></i> ${escapeCg(label)} × ${fmtQtyCg(s.Cantidad)} · ${fmtMoneyCg(s.PrecioVenta)}
-        </button>`;
+        return htmlChipSugeridoWsCg(s, i);
     }).join(""));
 }
 
@@ -4963,10 +5006,37 @@ async function cargarSugeridosWsCg(idEstablecimiento) {
     $box.html(CG.wsSugeridos.map((s, i) => {
         const label = (s.Abreviatura || s.Producto || "").trim();
         const lista = s.ListaPrecio ? ` · ${s.ListaPrecio}` : "";
-        return `<button type="button" class="cg-ws-chip" data-idx="${i}" title="${escapeCg(s.Producto)}${lista}">
-            <i class="fa fa-plus"></i> ${escapeCg(label)} × ${fmtQtyCg(s.Cantidad)} · ${fmtMoneyCg(s.PrecioVenta)}
-        </button>`;
+        return htmlChipSugeridoWsCg(s, i);
     }).join(""));
+}
+
+function prefLineaDesdeSugeridoWsCg(s, tipoRaw) {
+    const tipo = Number(tipoRaw) === 2 ? 2 : 1;
+    return {
+        IdProducto: s.IdProducto,
+        IdListaPrecio: s.IdListaPrecio || 0,
+        TipoMovimiento: tipo,
+        Cantidad: s.Cantidad || 1,
+        PrecioVenta: Number(s.PrecioVenta) || 0
+    };
+}
+
+function htmlChipSugeridoWsCg(s, i) {
+    const label = (s.Abreviatura || s.Producto || "").trim();
+    const lista = s.ListaPrecio ? ` · ${s.ListaPrecio}` : "";
+    const nom = escapeCg(s.Producto || label);
+    const qty = fmtQtyCg(s.Cantidad);
+    const precio = fmtMoneyCg(s.PrecioVenta);
+    return `<span class="cg-ws-chip-pair">
+        <button type="button" class="cg-ws-chip" data-idx="${i}" data-tipo="1"
+            title="Entrega: descuenta el depósito. ${nom}${lista}">
+            <i class="fa fa-plus"></i> ${escapeCg(label)} × ${qty} · Entrega
+        </button>
+        <button type="button" class="cg-ws-chip cg-ws-chip--retiro" data-idx="${i}" data-tipo="2"
+            title="Retiro: no baja ni sube el depósito. ${nom}${lista}">
+            Retiro × ${qty} · ${precio}
+        </button>
+    </span>`;
 }
 
 function agregarLineaWsCg(pref, el) {
@@ -5097,9 +5167,9 @@ function renderLineasWsCg(el) {
                 </label>
                 <label class="cg-ws-field">
                     <span>Tipo</span>
-                    <select class="form-control ws-tipo">
-                        <option value="1">Entrega</option>
-                        <option value="2">Retiro</option>
+                    <select class="form-control ws-tipo" title="Entrega descuenta depósito. Retiro no mueve el inventario.">
+                        <option value="1">Entrega (depósito −)</option>
+                        <option value="2">Retiro (sin stock)</option>
                     </select>
                 </label>
                 <label class="cg-ws-field">
@@ -5766,6 +5836,14 @@ async function eliminarEntregaAccCg(el) {
     else await cargarHubDatosCg(true);
     if (hubPropCg("hubMesSel")) {
         await abrirWorkspaceMesCg(hubPropCg("hubMesSel").anio, hubPropCg("hubMesSel").mes, true);
+        const sel = hubPropCg("hubMesSel");
+        const filas = hubPropCg("controlFiltrado")?.Filas || [];
+        const m = filas.find(x => Number(x.Mes) === Number(sel.mes) && Number(x.Anio || CG.controlAnio) === Number(sel.anio));
+        const sinMov = !m || ((Number(m.Entregadas) || 0) === 0 && (Number(m.Retiradas) || 0) === 0);
+        const hayAbono = !!m && ((Number(m.AbonoEfectivo) || 0) > 0 || (Number(m.AbonoTransferencia) || 0) > 0);
+        if (sinMov && hayAbono) {
+            await vaciarAbonosMesCg({ silent: true });
+        }
     }
 }
 
@@ -6184,9 +6262,11 @@ function abrirModalInteresesHistCg(anioFiltro, mesFiltro) {
         ? interesesDelMesCg(CG.interesesHistAnio, CG.interesesHistMes)
         : todos.slice().sort((a, b) => new Date(b.Fecha).getTime() - new Date(a.Fecha).getTime());
 
+    const m = filtrar
+        ? (hubPropCg("controlFiltrado")?.Filas || []).find(x =>
+            Number(x.Mes) === CG.interesesHistMes && Number(x.Anio || CG.controlAnio) === CG.interesesHistAnio)
+        : null;
     if (filtrar) {
-        const m = (hubPropCg("controlFiltrado")?.Filas || []).find(x =>
-            Number(x.Mes) === CG.interesesHistMes && Number(x.Anio || CG.controlAnio) === CG.interesesHistAnio);
         const nom = m?.MesNombre || `Mes ${CG.interesesHistMes}`;
         $("#cgInteresesHistSub").text(
             isHubEstCg()
@@ -6202,6 +6282,7 @@ function abrirModalInteresesHistCg(anioFiltro, mesFiltro) {
     }
 
     const total = lista.reduce((s, x) => s + (Number(x.Importe) || 0), 0);
+    CG.interesesHistTotal = total;
     const filasPlanilla = hubPropCg("controlFiltrado")?.Filas || [];
     const conInt = filasPlanilla.filter(f => (Number(f.CantidadIntereses) || 0) > 0).length;
     const atrasados = listarMesesAtrasadosCg(filasPlanilla);
@@ -6210,14 +6291,16 @@ function abrirModalInteresesHistCg(anioFiltro, mesFiltro) {
         return !(Number(f?.CantidadIntereses) || 0);
     });
 
-    $("#cgInteresesHistResumen").html(`
-        <div class="cg-interes-hist-kpis">
+    $("#cgInteresesHistResumen").html(
+        filtrar
+            ? htmlResumenMesInteresHistCg(m, lista.length, total)
+            : `<div class="cg-interes-hist-kpis">
             <div><span>Cargas</span><strong>${lista.length}</strong></div>
             <div><span>Total</span><strong class="rp-money-out">${fmtMoneyCg(total)}</strong></div>
-            ${filtrar ? "" : `<div><span>Meses con interés</span><strong>${conInt}</strong></div>
-            <div><span>Atrasados sin interés</span><strong class="${atrasadosSinInt.length ? "rp-money-out" : ""}">${atrasadosSinInt.length}</strong></div>`}
+            <div><span>Meses con interés</span><strong>${conInt}</strong></div>
+            <div><span>Atrasados sin interés</span><strong class="${atrasadosSinInt.length ? "rp-money-out" : ""}">${atrasadosSinInt.length}</strong></div>
         </div>
-        ${!filtrar && atrasadosSinInt.length ? `
+        ${atrasadosSinInt.length ? `
             <div class="cg-interes-hist-pendientes">
                 <strong>Atrasados sin interés cargado:</strong>
                 <div class="cg-interes-hist-chips">
@@ -6227,14 +6310,15 @@ function abrirModalInteresesHistCg(anioFiltro, mesFiltro) {
                             <span class="cg-atraso-chip-monto rp-money-out">${fmtMoneyCg(x.base)}</span>
                         </button>`).join("")}
                 </div>
-            </div>` : ""}
-    `);
+            </div>` : ""}`
+    );
 
+    const partesBody = [];
     if (!lista.length) {
-        $("#cgInteresesHistBody").html(`<div class="cg-hub-stock-empty">No hay intereses cargados${filtrar ? " en este mes" : ""}${isHubEstCg() ? " para este establecimiento" : ""}.</div>`);
+        partesBody.push(`<div class="cg-hub-stock-empty">No hay intereses cargados${filtrar ? " en este mes" : ""}${isHubEstCg() ? " para este establecimiento" : ""}.</div>`);
     } else {
         const mostrarEst = !isHubEstCg();
-        $("#cgInteresesHistBody").html(`
+        partesBody.push(`
             <table class="cg-hub-prod-table cg-interes-hist-table">
                 <thead>
                     <tr>
@@ -6266,7 +6350,7 @@ function abrirModalInteresesHistCg(anioFiltro, mesFiltro) {
                             <td>${mesRef}</td>
                             ${mostrarEst ? `<td><span class="cg-interes-hist-est">${escapeCg(estNom)}</span></td>` : ""}
                             <td>
-                                <input type="text" class="form-control form-control-sm cg-interes-hist-concepto" value="${escapeCg(conceptoEdit)}" ${disabled} maxlength="250" />
+                                <input type="text" class="form-control form-control-sm cg-interes-hist-concepto" value="${escapeCg(conceptoEdit)}" ${disabled} maxlength="160" />
                             </td>
                             <td class="text-end">
                                 <input type="text" class="form-control form-control-sm text-end cg-interes-hist-importe" value="${escapeCg(importeEdit)}" ${disabled} inputmode="decimal" />
@@ -6284,6 +6368,8 @@ function abrirModalInteresesHistCg(anioFiltro, mesFiltro) {
                 </tbody>
             </table>`);
     }
+    if (filtrar) partesBody.push(htmlAltaInteresHistCg(CG.interesesHistAnio, CG.interesesHistMes));
+    $("#cgInteresesHistBody").html(partesBody.join(""));
 
     $("#cgInteresesHistResumen").off("click.cgIntHist").on("click.cgIntHist", ".cg-atraso-chip", function () {
         const anio = Number($(this).data("anio"));
@@ -6293,7 +6379,7 @@ function abrirModalInteresesHistCg(anioFiltro, mesFiltro) {
     });
 
     $("#cgInteresesHistBody")
-        .off("click.cgIntHist")
+        .off(".cgIntHist")
         .on("click.cgIntHist", ".cg-interes-hist-save", busyHandler(function () {
             const $tr = $(this).closest("tr");
             return guardarInteresHistCg($tr);
@@ -6301,9 +6387,321 @@ function abrirModalInteresesHistCg(anioFiltro, mesFiltro) {
         .on("click.cgIntHist", ".cg-interes-hist-del", busyHandler(function () {
             const $tr = $(this).closest("tr");
             return eliminarInteresHistCg($tr);
-        }));
+        }))
+        .on("click.cgIntHist", "#btnMostrarAltaInteresHist", () => mostrarAltaInteresHistCg())
+        .on("click.cgIntHist", "#btnHistNuevoInteres", busyHandler(() => agregarInteresDesdeHistCg()))
+        .on("input.cgIntHist change.cgIntHist keyup.cgIntHist", "#cgHistNuevoBase", () => syncAltaInteresHistCamposCg("base"))
+        .on("input.cgIntHist change.cgIntHist keyup.cgIntHist", "#cgHistNuevoPct", () => syncAltaInteresHistCamposCg("pct"));
 
     CG.modalInteresesHist?.show();
+}
+
+function htmlAltaInteresHistCg(anio, mes) {
+    const modo = CG.interesHubMode || (isHubEstCg() ? "est" : "cliente");
+    const mostrarEst = modo !== "est";
+    return `
+        <div class="cg-interes-hist-alta-wrap">
+            <button type="button" class="cg-btn cg-btn--primary cg-btn--sm" id="btnMostrarAltaInteresHist">
+                <i class="fa fa-plus"></i> Añadir interés
+            </button>
+            <div class="cg-interes-hist-alta d-none" id="cgHistAltaPanel">
+                <div class="cg-interes-hist-alta-title"><i class="fa fa-plus"></i> Nuevo interés</div>
+            <div class="row g-2 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label">Fecha</label>
+                    <input type="date" id="cgHistNuevoFecha" class="form-control form-control-sm" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Base</label>
+                    <input type="text" id="cgHistNuevoBase" class="form-control form-control-sm text-end Inputmiles"
+                           inputmode="decimal" autocomplete="off"
+                           title="Deuda o monto sobre el que se aplica el %." />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">% interés</label>
+                    <input type="number" id="cgHistNuevoPct" class="form-control form-control-sm" min="0" step="0.01" />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Importe</label>
+                    <input type="text" id="cgHistNuevoImporte" class="form-control form-control-sm text-end" readonly tabindex="-1"
+                           title="Se calcula solo: Base × % / 100. Es lo que se va a cobrar." />
+                </div>
+                ${mostrarEst ? `<div class="col-md-4">
+                    <label class="form-label">Establecimiento</label>
+                    <select id="cgHistNuevoEstablecimiento" class="form-select form-select-sm">
+                        <option value="">Cliente (general)</option>
+                    </select>
+                </div>` : `<input type="hidden" id="cgHistNuevoEstablecimiento" value="" />`}
+                <div class="col-12">
+                    <label class="form-label">Concepto</label>
+                    <input type="text" id="cgHistNuevoConcepto" class="form-control form-control-sm" maxlength="160" />
+                </div>
+                <div class="col-12 d-flex justify-content-end">
+                    <button type="button" class="cg-btn cg-btn--primary cg-btn--sm" id="btnHistNuevoInteres">
+                        <i class="fa fa-check"></i> Guardar interés
+                    </button>
+                </div>
+            </div>
+        </div>
+        </div>`;
+}
+
+function fmtPctAltaHistCg(valor) {
+    const n = Math.round((Number(valor) || 0) * 100) / 100;
+    return Number.isFinite(n) ? String(n) : "";
+}
+
+function roundMoneyAltaHistCg(valor) {
+    return Math.round((Number(valor) || 0) * 100) / 100;
+}
+
+function filaMesInteresHistCg(anio, mes) {
+    return (hubPropCg("controlFiltrado")?.Filas || []).find(x =>
+        Number(x.Mes) === Number(mes) && Number(x.Anio || CG.controlAnio) === Number(anio));
+}
+
+function htmlResumenMesInteresHistCg(m, cargas, totalCargas) {
+    const totalMes = Number(m?.TotalMes != null ? m.TotalMes : ((Number(m?.Debe) || 0) + (Number(m?.TotalIntereses) || 0))) || 0;
+    const pagado = Number(m?.Haber) || 0;
+    const restante = Number(m?.RestanteMes != null ? m.RestanteMes : (totalMes - pagado)) || 0;
+    const deuda = baseAdeudadaMesCg(m);
+    const saldo = Number(m?.Saldo) || 0;
+    const clsRest = typeof clsSaldoDeudaMoney === "function" ? clsSaldoDeudaMoney(restante) : "";
+    const clsDeuda = typeof clsSaldoDeudaMoney === "function" ? clsSaldoDeudaMoney(deuda) : "";
+    const clsAcum = typeof clsSaldoDeudaMoney === "function" ? clsSaldoDeudaMoney(saldo) : "";
+    const anio = Number(m?.Anio || CG.interesesHistAnio);
+    const mes = Number(m?.Mes || CG.interesesHistMes);
+    const atrasado = m ? puedeCargarInteresMesCg(m, anio, mes) : false;
+    const mesNom = m?.MesNombre || `Mes ${mes}`;
+
+    return `
+        <div class="cg-interes-hist-mesbox">
+            <div class="cg-interes-hist-mesbox-head">
+                <div>
+                    <span class="cg-interes-hist-mesbox-kicker">Situación del mes</span>
+                    <strong>${escapeCg(mesNom)} ${anio || ""}</strong>
+                </div>
+                ${atrasado ? `<span class="cg-interes-hist-mesbox-badge"><i class="fa fa-exclamation-triangle"></i> Atrasado</span>` : ""}
+            </div>
+            <div class="cg-interes-hist-mesbox-grid">
+                <div class="cg-interes-hist-mesbox-kpi cg-interes-hist-mesbox-kpi--monto" title="Retiros del mes + intereses">
+                    <span>Monto del mes</span>
+                    <strong class="cg-val-debe">${fmtMoneyCg(totalMes)}</strong>
+                </div>
+                <div class="cg-interes-hist-mesbox-kpi cg-interes-hist-mesbox-kpi--pagado" title="Cobros / abonos del mes">
+                    <span>Pagado</span>
+                    <strong class="cg-val-haber">${fmtMoneyCg(pagado)}</strong>
+                </div>
+                <div class="cg-interes-hist-mesbox-kpi cg-interes-hist-mesbox-kpi--deuda" title="Total mes − pagado">
+                    <span>Debe / restante</span>
+                    <strong class="${clsRest}">${fmtMoneyCg(restante)}</strong>
+                </div>
+                <div class="cg-interes-hist-mesbox-kpi" title="Saldo adeudado vencido sobre el que se calcula el interés">
+                    <span>Base interés</span>
+                    <strong class="${clsDeuda}">${fmtMoneyCg(deuda)}</strong>
+                </div>
+                <div class="cg-interes-hist-mesbox-kpi cg-interes-hist-mesbox-kpi--int" title="Intereses ya cargados a este mes">
+                    <span>Intereses</span>
+                    <strong class="rp-money-out">${fmtMoneyCg(totalCargas)}</strong>
+                    <em>${cargas} carga${cargas === 1 ? "" : "s"}</em>
+                </div>
+                <div class="cg-interes-hist-mesbox-kpi cg-interes-hist-mesbox-kpi--acum" title="Deuda o saldo a favor acumulado al cierre">
+                    <span>Saldo acum.</span>
+                    <strong class="${clsAcum}">${fmtMoneyCg(saldo)}</strong>
+                </div>
+            </div>
+        </div>`;
+}
+
+function mostrarAltaInteresHistCg() {
+    const anio = CG.interesesHistAnio;
+    const mes = CG.interesesHistMes;
+    const m = filaMesInteresHistCg(anio, mes);
+    const mesNom = m?.MesNombre || `Mes ${mes}`;
+    $("#btnMostrarAltaInteresHist").addClass("d-none");
+    $("#cgHistAltaPanel").removeClass("d-none");
+    $("#cgHistNuevoFecha").val(new Date().toISOString().slice(0, 10));
+    $("#cgHistNuevoBase").val("");
+    $("#cgHistNuevoPct").val("");
+    $("#cgHistNuevoImporte").val("0");
+    $("#cgHistNuevoConcepto").val(`Interés por atraso ${mesNom} ${anio}`);
+    llenarEstAltaInteresHistCg();
+}
+
+function escribirImporteAltaHistCg(selector, valor) {
+    const n = roundMoneyAltaHistCg(valor);
+    const $el = $(selector);
+    const esImporteCalc = selector === "#cgHistNuevoImporte";
+    if (n <= 0) {
+        $el.val(esImporteCalc ? "0" : "");
+        return;
+    }
+    $el.val(n.toLocaleString("es-AR", {
+        minimumFractionDigits: Number.isInteger(n) ? 0 : 2,
+        maximumFractionDigits: 2
+    }));
+}
+
+function leerCampoAltaHistCg(selector) {
+    const raw = $(selector).val();
+    if (raw == null || String(raw).trim() === "") return 0;
+    if (typeof parseNumero === "function") return parseNumero(raw) || 0;
+    const n = parseFloat(String(raw).replace(/\./g, "").replace(",", "."));
+    return Number.isFinite(n) ? n : 0;
+}
+
+function baseRefAltaInteresHistCg() {
+    const m = filaMesInteresHistCg(CG.interesesHistAnio, CG.interesesHistMes);
+    const deuda = baseAdeudadaMesCg(m);
+    if (deuda > 0.009) return deuda;
+    const totalMes = Number(m?.TotalMes != null ? m.TotalMes : ((Number(m?.Debe) || 0) + (Number(m?.TotalIntereses) || 0))) || 0;
+    if (totalMes > 0.009) return totalMes;
+    return Number(CG.interesesHistTotal) || 0;
+}
+
+function lockSyncAltaInteresHistCg() {
+    CG._syncAltaInteresHist = true;
+    CG._syncAltaInteresHistGen = (CG._syncAltaInteresHistGen || 0) + 1;
+    const gen = CG._syncAltaInteresHistGen;
+    return () => {
+        window.setTimeout(() => {
+            if (CG._syncAltaInteresHistGen === gen) CG._syncAltaInteresHist = false;
+        }, 50);
+    };
+}
+
+function syncAltaInteresHistCamposCg(origen) {
+    if (CG._syncAltaInteresHist) return;
+    const unlock = lockSyncAltaInteresHistCg();
+    try {
+        let base = leerCampoAltaHistCg("#cgHistNuevoBase");
+        let pct = leerCampoAltaHistCg("#cgHistNuevoPct");
+
+        if (origen === "base") {
+            if (base <= 0.009) {
+                escribirImporteAltaHistCg("#cgHistNuevoImporte", 0);
+                return;
+            }
+            if (pct <= 0) {
+                pct = leerPctInteresDefaultCg();
+                $("#cgHistNuevoPct").val(fmtPctAltaHistCg(pct));
+            }
+        }
+
+        if (origen === "pct") {
+            if (pct <= 0) {
+                escribirImporteAltaHistCg("#cgHistNuevoImporte", 0);
+                return;
+            }
+            if (base <= 0.009) {
+                base = baseRefAltaInteresHistCg();
+                if (base > 0.009) escribirImporteAltaHistCg("#cgHistNuevoBase", base);
+            }
+        }
+
+        if (base > 0.009 && pct > 0) {
+            escribirImporteAltaHistCg("#cgHistNuevoImporte", base * pct / 100);
+        } else {
+            escribirImporteAltaHistCg("#cgHistNuevoImporte", 0);
+        }
+    } finally {
+        unlock();
+    }
+}
+
+async function llenarEstAltaInteresHistCg() {
+    const $sel = $("#cgHistNuevoEstablecimiento");
+    if (!$sel.length) return;
+
+    const modo = CG.interesHubMode || (isHubEstCg() ? "est" : "cliente");
+    if (modo === "est") {
+        const idEst = hubIdEstablecimientoCg() || (idsEstablecimientoSeleccionadosCg()[0] || 0);
+        $sel.val(idEst || "");
+        return;
+    }
+
+    if ($sel.is("select")) {
+        let lista = Array.isArray(CG.establecimientos) ? CG.establecimientos : [];
+        if (!lista.length && CG.id) {
+            try {
+                lista = await fetchJsonCg(API_CG.establecimientosPorCliente(CG.id), { headers: authCg() }) || [];
+                CG.establecimientos = lista;
+            } catch { lista = []; }
+        }
+        const opts = [`<option value="">Cliente (general)</option>`]
+            .concat(lista.map(e => {
+                const id = Number(e.Id ?? e.id) || 0;
+                if (!id) return "";
+                const nom = (e.Nombre ?? e.nombre ?? `Est. #${id}`).toString().trim();
+                return `<option value="${id}">${escapeCg(nom)}</option>`;
+            }).filter(Boolean));
+        $sel.html(opts.join(""));
+        const idSel = hubIdEstablecimientoCg() || (idsEstablecimientoSeleccionadosCg()[0] || 0);
+        if (idSel) $sel.val(String(idSel));
+    }
+}
+
+async function agregarInteresDesdeHistCg() {
+    if (!CG.id) {
+        errorModal("Seleccione un cliente.");
+        return;
+    }
+
+    const anioRef = Number(CG.interesesHistAnio) || null;
+    const mesRef = Number(CG.interesesHistMes) || null;
+    if (!anioRef || !mesRef) {
+        errorModal("Abrí el detalle de un mes para agregar el interés.");
+        return;
+    }
+
+    const importe = leerImporteDesdeTextoCg($("#cgHistNuevoImporte").val());
+    const concepto = ($("#cgHistNuevoConcepto").val() || "").trim();
+    const fecha = $("#cgHistNuevoFecha").val();
+    const pct = Number($("#cgHistNuevoPct").val()) || 0;
+
+    if (importe <= 0) {
+        errorModal("Indique un importe de interés mayor a cero.");
+        return;
+    }
+    if (!concepto) {
+        errorModal("El concepto es obligatorio.");
+        return;
+    }
+    if (!fecha) {
+        errorModal("Indique la fecha.");
+        return;
+    }
+
+    const modoInteres = CG.interesHubMode || (isHubEstCg() ? "est" : "cliente");
+    let idEstInteres = 0;
+    if (modoInteres === "est") {
+        idEstInteres = hubIdEstablecimientoCg() || (idsEstablecimientoSeleccionadosCg()[0] || 0);
+    } else {
+        idEstInteres = parseInt($("#cgHistNuevoEstablecimiento").val(), 10) || 0;
+    }
+
+    const data = await fetchJsonCg(API_CG.ccRegistrarInteres, {
+        method: "POST",
+        headers: authCg(),
+        body: JSON.stringify({
+            IdCliente: CG.id,
+            Fecha: fecha,
+            Concepto: concepto,
+            Importe: importe,
+            AnioRef: anioRef,
+            MesRef: mesRef,
+            IdEstablecimiento: idEstInteres > 0 ? idEstInteres : null
+        })
+    });
+
+    if (!data?.valor) {
+        errorModal(data?.mensaje || "No se pudo registrar el interés.");
+        return;
+    }
+
+    guardarPctInteresDefaultCg(pct);
+    exitoModal(data.mensaje || "Interés registrado.");
+    await refrescarTrasCambioInteresCg();
 }
 
 function conceptoInteresSinTagCg(concepto) {
@@ -6380,6 +6778,7 @@ async function guardarInteresHistCg($tr) {
     const importe = leerImporteDesdeTextoCg($tr.find(".cg-interes-hist-importe").val());
     const anioRef = Number($tr.data("anio-ref")) || null;
     const mesRef = Number($tr.data("mes-ref")) || null;
+    const idEst = Number($tr.data("est-id")) || 0;
 
     if (!concepto) {
         errorModal("El concepto es obligatorio.");
@@ -6390,27 +6789,12 @@ async function guardarInteresHistCg($tr) {
         return;
     }
 
-    let conceptoFinal = concepto;
-    if (anioRef && mesRef) {
-        const tag = `ref:${anioRef}-${String(mesRef).padStart(2, "0")}`;
-        if (!conceptoFinal.toLowerCase().includes(tag.toLowerCase())) {
-            conceptoFinal = `${conceptoFinal} · ${tag}`;
-        }
-    }
-    const idEst = Number($tr.data("est-id")) || 0;
-    if (idEst > 0) {
-        const estTag = `est:${idEst}`;
-        if (!conceptoFinal.toLowerCase().includes(estTag.toLowerCase())) {
-            conceptoFinal = `${conceptoFinal} · ${estTag}`;
-        }
-    }
-
     const data = await fetchJsonCg(API_CG.ccActualizarInteres, {
         method: "POST",
         headers: authCg(),
         body: JSON.stringify({
             Id: id,
-            Concepto: conceptoFinal,
+            Concepto: concepto,
             Importe: importe,
             AnioRef: anioRef,
             MesRef: mesRef,
@@ -6435,10 +6819,17 @@ async function eliminarInteresHistCg($tr) {
     }
 
     const concepto = ($tr.find(".cg-interes-hist-concepto").val() || "").trim() || "este interés";
+    const histVisible = $("#modalInteresesHistCg").hasClass("show");
+    if (histVisible && CG.modalInteresesHist) {
+        try { CG.modalInteresesHist.hide(); } catch { /* noop */ }
+    }
     const ok = typeof confirmarModal === "function"
         ? await confirmarModal(`¿Eliminar "${concepto}" y revertir el cargo en cuenta corriente?`)
         : confirm(`¿Eliminar "${concepto}" y revertir el cargo en cuenta corriente?`);
-    if (!ok) return;
+    if (!ok) {
+        if (histVisible) abrirModalInteresesHistCg(CG.interesesHistAnio, CG.interesesHistMes);
+        return;
+    }
 
     const data = await fetchJsonCg(API_CG.ccEliminar(id), { method: "DELETE", headers: authCg() });
     if (!data?.valor) {
@@ -6580,27 +6971,12 @@ async function confirmarInteresCg() {
         if (!ok) return;
     }
 
-    // Asegurar tag ref:YYYY-MM en el concepto (el backend también lo agrega; refuerzo local).
-    let conceptoFinal = concepto;
-    if (anioRef && mesRef) {
-        const tag = `ref:${anioRef}-${String(mesRef).padStart(2, "0")}`;
-        if (!conceptoFinal.toLowerCase().includes(tag.toLowerCase())) {
-            conceptoFinal = `${conceptoFinal} · ${tag}`;
-        }
-    }
-
     const modoInteres = CG.interesHubMode || (isHubEstCg() ? "est" : "cliente");
     let idEstInteres = 0;
     if (modoInteres === "est") {
         idEstInteres = hubIdEstablecimientoCg() || (idsEstablecimientoSeleccionadosCg()[0] || 0);
     } else {
         idEstInteres = parseInt($("#cgInteresEstablecimiento").val(), 10) || 0;
-    }
-    if (idEstInteres > 0) {
-        const estTag = `est:${idEstInteres}`;
-        if (!conceptoFinal.toLowerCase().includes(estTag.toLowerCase())) {
-            conceptoFinal = `${conceptoFinal} · ${estTag}`;
-        }
     }
 
     const estNomSel = idEstInteres > 0
@@ -6610,7 +6986,7 @@ async function confirmarInteresCg() {
     const payload = {
         IdCliente: CG.id,
         Fecha: fecha,
-        Concepto: conceptoFinal,
+        Concepto: concepto,
         Importe: importe,
         AnioRef: anioRef,
         MesRef: mesRef,
@@ -6636,7 +7012,7 @@ async function confirmarInteresCg() {
     // mientras vuelve el reload (y por si la solapa est filtraba mal los movimientos).
     aplicarInteresLocalCg(anioRef, mesRef, {
         Fecha: fecha,
-        Concepto: conceptoFinal,
+        Concepto: concepto,
         Importe: importe,
         AnioRef: anioRef,
         MesRef: mesRef,
@@ -6800,6 +7176,57 @@ function leerImporteInputCg(selector) {
 
 function abrirModalControlMensual(anio, mes) {
     return abrirWorkspaceMesCg(anio, mes);
+}
+
+async function vaciarAbonosMesCg(opts) {
+    const silent = !!(opts && opts.silent);
+    const mes = parseInt($h("cgCmMes").val(), 10);
+    const anio = parseInt($h("cgCmAnio").val(), 10);
+    if (!mes || !anio || !(CG.id > 0)) return;
+
+    if (!silent) {
+        const ok = typeof confirmarModal === "function"
+            ? await confirmarModal("¿Poner en cero el pago en efectivo y la transferencia de este mes? No borra entregas ni intereses.")
+            : window.confirm("¿Vaciar los montos de este mes?");
+        if (!ok) return;
+    }
+
+    setImporteInputCg("#cgCmAbonoEfectivo", 0);
+    setImporteInputCg("#cgCmAbonoTransferencia", 0);
+
+    let data;
+    try {
+        data = await fetchJsonCg(API_CG.vaciarAbonosMes, {
+            method: "POST",
+            headers: authCg(),
+            body: JSON.stringify({
+                IdCliente: CG.id,
+                IdEstablecimiento: hubIdEstablecimientoCg(),
+                Anio: anio,
+                Mes: mes
+            })
+        });
+    } catch (e) {
+        if (!silent) errorModal("No se pudieron vaciar los montos del mes.");
+        throw e;
+    }
+
+    if (!data?.valor) {
+        if (!silent) errorModal(data?.mensaje || "No se pudieron vaciar los montos.");
+        return;
+    }
+
+    if (!silent) exitoModal(data.mensaje || "Montos del mes en cero.");
+
+    if (isHubEstCg()) await cargarHubEstablecimientoCg(true);
+    else {
+        CG.tabsLoaded.controlMensual = false;
+        await cargarTabControlMensual(true);
+        await cargarHubStockCg(true);
+    }
+    if (hubPropCg("hubMesSel")) {
+        await abrirWorkspaceMesCg(hubPropCg("hubMesSel").anio, hubPropCg("hubMesSel").mes, true);
+    }
 }
 
 async function guardarControlMensualCg(opts) {

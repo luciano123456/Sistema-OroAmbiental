@@ -21,6 +21,8 @@ public partial class ClientesEstablecimiento
 
     public string? Calle { get; set; }
 
+    public string? Descripcion { get; set; }
+
     public string? Numero { get; set; }
 
     public string? PisoDepartamento { get; set; }

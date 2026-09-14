@@ -29,7 +29,7 @@ registrarFiltrosGrilla('grd_Usuarios', columnConfig, {
 });
 
 $(document).ready(() => {
-    listaUsuarios();
+    initGridUsuarios();
     // Solo presencia (payload mínimo), sin recargar DataTables
     setInterval(() => {
         if (document.visibilityState === "visible") refrescarPresenciaUsuarios();
@@ -183,7 +183,7 @@ async function guardarCambios() {
             ? "Usuario guardado correctamente"
             : "Usuario actualizado correctamente");
 
-        await listaUsuarios();
+        recargarGrillaServer(gridUsuarios);
 
     } catch (err) {
         console.error(err);
@@ -282,7 +282,7 @@ async function eliminarUsuario(id) {
 
         const dataJson = await response.json();
         if (dataJson.valor) {
-            listaUsuarios();
+            recargarGrillaServer(gridUsuarios);
             exitoModal("Usuario eliminado correctamente");
         }
     } catch (e) {
@@ -295,56 +295,38 @@ async function eliminarUsuario(id) {
    LISTA + DATATABLE
 ========================= */
 
-async function listaUsuarios() {
-    let paginaActual = gridUsuarios != null ? gridUsuarios.page() : 0;
+const API_USUARIOS = {
+    listaPaginada: "/Usuarios/ListaPaginada"
+};
 
-    const response = await fetch(`/Usuarios/Lista`, {
-        method: 'GET',
-        headers: {
-            'Authorization': 'Bearer ' + token,
-            'Content-Type': 'application/json'
-        }
-    });
-
-    if (!response.ok) throw new Error(`Error en la solicitud: ${response.statusText}`);
-
-    const data = await response.json();
-    await configurarDataTable(data);
-
-    if (paginaActual > 0) {
-        gridUsuarios.page(paginaActual).draw('page');
-    }
+function listaUsuarios() {
+    recargarGrillaServer(gridUsuarios);
 }
 
-function rpBadgeEstado(estado) {
-    const s = (estado || "").toString().toLowerCase();
-    if (s.includes("bloq")) return `<span class="rp-badge rp-badge-danger">Bloqueado</span>`;
-    if (s.includes("acti")) return `<span class="rp-badge rp-badge-success">Activo</span>`;
-    return `<span class="rp-badge rp-badge-soft">${estado || "-"}</span>`;
-}
+async function initGridUsuarios() {
+    if (gridUsuarios) return;
 
-async function configurarDataTable(data) {
-
-    if (!gridUsuarios) {
-
-        gridUsuarios = $('#grd_Usuarios').DataTable({
-            data: data,
-            language: {
-                sLengthMenu: "Mostrar MENU registros",
-                url: "//cdn.datatables.net/plug-ins/2.0.7/i18n/es-MX.json"
-            },
-            autoWidth: false,
-            columnDefs: typeof columnDefsGridLista === "function" ? columnDefsGridLista() : [],
-            scrollX: true,
-            scrollCollapse: true,
-            columns: [
-                columnaGridAcciones({
-                    ver: "verUsuario",
-                    editar: "editarUsuario",
-                    eliminar: "eliminarUsuario"
-                }, "Usuarios", (id, type, row) => {
-                    const user = String(row?.Usuario || "").replace(/\\/g, "\\\\").replace(/'/g, "\\'");
-                    return `
+    gridUsuarios = $('#grd_Usuarios').DataTable({
+        serverSide: true,
+        processing: true,
+        ajax: crearOpcionesAjaxGrillaServer(API_USUARIOS.listaPaginada, "#grd_Usuarios"),
+        language: {
+            sLengthMenu: "Mostrar MENU registros",
+            url: "//cdn.datatables.net/plug-ins/2.0.7/i18n/es-MX.json",
+            processing: "Cargando..."
+        },
+        autoWidth: false,
+        columnDefs: typeof columnDefsGridLista === "function" ? columnDefsGridLista() : [],
+        scrollX: true,
+        scrollCollapse: true,
+        columns: [
+            columnaGridAcciones({
+                ver: "verUsuario",
+                editar: "editarUsuario",
+                eliminar: "eliminarUsuario"
+            }, "Usuarios", (id, type, row) => {
+                const user = String(row?.Usuario || "").replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+                return `
                     <div class="rp-row-actions" data-id="${id}">
                         <button type="button" class="btn btn-sm rp-act rp-act-view" title="Ver" onclick="verUsuario(${id})">
                             <i class="fa fa-file-text-o"></i>
@@ -360,110 +342,113 @@ async function configurarDataTable(data) {
                             <i class="fa fa-trash-o"></i>
                         </button>
                     </div>`;
-                }),
-                columnaGridId(),
-                {
-                    data: 'Usuario',
-                    render: function (data, type, row) {
-                        if (type === "sort" || type === "filter" || type === "type") return data || "";
-                        if (type === "export" || type === "print") return data || "";
-                        const online = !!row?.EnLinea;
-                        return `<span class="usr-user-cell">
+            }),
+            columnaGridId(),
+            {
+                data: 'Usuario',
+                render: function (data, type, row) {
+                    if (type === "sort" || type === "filter" || type === "type") return data || "";
+                    if (type === "export" || type === "print") return data || "";
+                    const online = !!row?.EnLinea;
+                    return `<span class="usr-user-cell">
                             <span class="usr-presence ${online ? "is-online" : "is-offline"}" title="${online ? "En línea" : "Desconectado"}">
                                 <span class="usr-presence-dot"></span>
                             </span>
                             <span class="usr-user-name">${escapeHtml(data)}</span>
                             <span class="usr-presence-label ${online ? "is-online" : "is-offline"}">${online ? "En línea" : "Offline"}</span>
                         </span>`;
-                    }
-                },
-                {
-                    data: 'UltimoModulo',
-                    render: function (data, type, row) {
-                        if (type === "sort" || type === "filter" || type === "type") {
-                            return row?.EnLinea ? (data || "") : "";
-                        }
-                        if (type === "export" || type === "print") {
-                            return row?.EnLinea ? (window.RpModulos ? RpModulos.label(data) : (data || "")) : "";
-                        }
-                        return renderDondeEstaCell(row);
-                    }
-                },
-                { data: 'Nombre' },
-                { data: 'Apellido' },
-                { data: 'Dni' },
-                { data: 'Telefono' },
-                { data: 'Direccion' },
-                { data: 'UsuariosRol' },
-                {
-                    data: 'Estado',
-                    render: function (data) {
-                        return rpBadgeEstado(data);
-                    }
-                },
-            ],
-            dom: 'Bfrtip',
-            buttons: [
-                {
-                    extend: 'excelHtml5',
-                    text: 'Excel',
-                    filename: 'Reporte Usuarios',
-                    title: '',
-                    className: 'rp-dt-btn'
-                },
-                {
-                    extend: 'pdfHtml5',
-                    text: 'PDF',
-                    filename: 'Reporte Usuarios',
-                    title: '',
-                    className: 'rp-dt-btn'
-                },
-                {
-                    extend: 'print',
-                    text: 'Imprimir',
-                    title: '',
-                    className: 'rp-dt-btn'
-                },
-                {
-                    extend: "pageLength",
-                    background: false,
-                    className: "rp-dt-btn-length"
                 }
-            ],
-            orderCellsTop: true,
-            fixedHeader: true,
-            drawCallback: function () {
-                if (window.RpGridView && !RpGridView.debeMostrarTabla()) return;
-                this.api().rows({ page: "current" }).every(function () {
-                    pintarAvataresDondeEstaEnFila($(this.node()), this.data());
-                });
             },
-            initComplete: async function () {
-                const api = this.api();
-                await armarFiltrosGrillaLista(api, '#grd_Usuarios', columnConfig, {
-                    includeActivo: false,
-                    maxColumnIndex: 9
-                });
-                configurarOpcionesColumnas();
-                setTimeout(() => {
-                    if (typeof ajustarColumnasGrillaLista === "function") {
-                        ajustarColumnasGrillaLista(api, "#grd_Usuarios");
+            {
+                data: 'UltimoModulo',
+                render: function (data, type, row) {
+                    if (type === "sort" || type === "filter" || type === "type") {
+                        return row?.EnLinea ? (data || "") : "";
                     }
-                }, 200);
-                actualizarKpis(data);
-                if (window.RpGridView) {
-                    RpGridView.renderCards("usuarios");
+                    if (type === "export" || type === "print") {
+                        return row?.EnLinea ? (window.RpModulos ? RpModulos.label(data) : (data || "")) : "";
+                    }
+                    return renderDondeEstaCell(row);
                 }
+            },
+            { data: 'Nombre' },
+            { data: 'Apellido' },
+            { data: 'Dni' },
+            { data: 'Telefono' },
+            { data: 'Direccion' },
+            { data: 'UsuariosRol' },
+            {
+                data: 'Estado',
+                render: function (data) {
+                    return rpBadgeEstado(data);
+                }
+            },
+        ],
+        dom: 'Bfrtip',
+        buttons: [
+            {
+                extend: 'excelHtml5',
+                text: 'Excel',
+                filename: 'Reporte Usuarios',
+                title: '',
+                className: 'rp-dt-btn'
+            },
+            {
+                extend: 'pdfHtml5',
+                text: 'PDF',
+                filename: 'Reporte Usuarios',
+                title: '',
+                className: 'rp-dt-btn'
+            },
+            {
+                extend: 'print',
+                text: 'Imprimir',
+                title: '',
+                className: 'rp-dt-btn'
+            },
+            {
+                extend: "pageLength",
+                background: false,
+                className: "rp-dt-btn-length"
             }
-        });
-
-    } else {
-        gridUsuarios.clear().rows.add(data).draw();
-        actualizarKpis(data);
-        if (window.RpGridView) {
-            RpGridView.renderCards("usuarios");
+        ],
+        orderCellsTop: true,
+        fixedHeader: true,
+        drawCallback: function () {
+            const total = $("#grd_Usuarios").data("rpRecordsFiltered") ?? 0;
+            actualizarKpis(total);
+            if (window.RpGridView && !RpGridView.debeMostrarTabla()) {
+                RpGridView.renderCards("usuarios");
+                return;
+            }
+            this.api().rows({ page: "current" }).every(function () {
+                pintarAvataresDondeEstaEnFila($(this.node()), this.data());
+            });
+            if (window.RpGridView) {
+                RpGridView.renderCards("usuarios");
+            }
+        },
+        initComplete: async function () {
+            const api = this.api();
+            await armarFiltrosGrillaLista(api, '#grd_Usuarios', columnConfig, {
+                includeActivo: false,
+                maxColumnIndex: 10
+            });
+            configurarOpcionesColumnas();
+            setTimeout(() => {
+                if (typeof ajustarColumnasGrillaLista === "function") {
+                    ajustarColumnasGrillaLista(api, "#grd_Usuarios");
+                }
+            }, 200);
+            if (window.RpGridView) {
+                RpGridView.renderCards("usuarios");
+            }
         }
-    }
+    });
+}
+
+async function configurarDataTable(_data) {
+    recargarGrillaServer(gridUsuarios);
 }
 
 /* =========================
@@ -683,8 +668,22 @@ function cerrarErrorCampos() {
     panel.innerHTML = "";
 }
 
-function actualizarKpis(data) {
-    const cant = Array.isArray(data) ? data.length : 0;
+function rpBadgeEstado(estado) {
+    const s = (estado || "").toString().toLowerCase();
+    if (s.includes("bloq")) return `<span class="rp-badge rp-badge-danger">Bloqueado</span>`;
+    if (s.includes("acti")) return `<span class="rp-badge rp-badge-success">Activo</span>`;
+    return `<span class="rp-badge rp-badge-soft">${estado || "-"}</span>`;
+}
+
+function actualizarKpis(totalOrData) {
+    let cant = 0;
+    if (typeof totalOrData === "number") {
+        cant = totalOrData;
+    } else if (Array.isArray(totalOrData)) {
+        cant = totalOrData.length;
+    } else {
+        cant = $("#grd_Usuarios").data("rpRecordsFiltered") ?? 0;
+    }
     const el = document.getElementById('kpiCantUsuarios');
     if (el) el.textContent = cant;
 }

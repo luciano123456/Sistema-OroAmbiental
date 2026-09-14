@@ -14,6 +14,8 @@ let busquedaTimer = null;
 let recClientesAbort = null;
 let txtSeleccionActiva = false;
 let txtSeleccionIds = new Set();
+let mfSeleccionActiva = false;
+let mfSeleccionIds = new Set();
 
 const getTokenRec = () => window.token || localStorage.getItem("JwtToken") || "";
 
@@ -159,15 +161,17 @@ $(document).ready(async () => {
     });
     $("#listaClientesRecorrido").on("change", ".rec-txt-check", function () {
         const id = parseInt($(this).data("id"), 10);
-        setTxtSeleccionCliente(id, this.checked);
+        if (mfSeleccionActiva) setMfSeleccionCliente(id, this.checked);
+        else setTxtSeleccionCliente(id, this.checked);
     });
     $("#listaClientesRecorrido").on("click", ".rec-cliente-item", function (e) {
-        if (!txtSeleccionActiva) return;
+        if (!txtSeleccionActiva && !mfSeleccionActiva) return;
         if ($(e.target).closest("button, a, textarea, input, select, label, .rec-cliente-obs, .rec-cliente-productos").length)
             return;
         const id = parseInt($(this).data("id"), 10);
         if (!id) return;
-        setTxtSeleccionCliente(id, !txtSeleccionIds.has(id));
+        if (mfSeleccionActiva) setMfSeleccionCliente(id, !mfSeleccionIds.has(id));
+        else setTxtSeleccionCliente(id, !txtSeleccionIds.has(id));
     });
     $("#listaClientesRecorrido").on("change", ".rec-prod-lista", async function () {
         await onCambioListaProductoRec($(this));
@@ -203,6 +207,10 @@ $(document).ready(async () => {
     $("#btnTxtSelTodosRecorrido").on("click", () => seleccionarTodosTxtRecorrido());
     $("#btnTxtSelExportarRecorrido").on("click", () => abrirModalManifiestoRecorrido(0, "txt-sel"));
     $("#btnTxtSelCancelarRecorrido").on("click", () => cancelarTxtSeleccionRecorrido());
+    $("#btnMfSeleccionarRecorrido").on("click", () => activarMfSeleccionRecorrido());
+    $("#btnMfSelTodosRecorrido").on("click", () => seleccionarTodosMfRecorrido());
+    $("#btnMfSelGenerarRecorrido").on("click", () => abrirModalManifiestoRecorrido(0, "manifiesto-sel"));
+    $("#btnMfSelCancelarRecorrido").on("click", () => cancelarMfSeleccionRecorrido());
     $("#btnManifiestosRecorrido").on("click", () => abrirModalManifiestoRecorrido(0, "manifiesto"));
     $("#btnConfirmarManifiestoRecorrido").on("click", busyHandler(confirmarManifiestoRecorrido, { label: "Generando..." }));
     $("#btnExportarTxtIntercambioRecorrido").on("click", busyHandler(exportarArchivoIntercambioRecorrido, { label: "Generando..." }));
@@ -210,6 +218,16 @@ $(document).ready(async () => {
         const on = $(this).is(":checked");
         $("#mfCertificadosPanel").toggleClass("d-none", !on);
     });
+    $("#mfNumeroManifiesto").on("input", function () {
+        if (!$("#mfLotePreviewWrap").hasClass("d-none")) pintarPreviewLoteManifiesto();
+    });
+    $(document).on("input", "#mfLotePreviewBody [data-copias-id]", function () {
+        pintarPreviewLoteManifiesto();
+    });
+    $(document).on("input", "#mfCopiasTodas", function () {
+        aplicarCopiasTodasLotePreview($(this).val());
+    });
+    $(document).on("change", "#mfIdChofer", aplicarChoferSeleccionadoManifiesto);
     $("#mfNumeroManifiesto, #mfNombreManifiesto").on("keydown", function (e) {
         if (e.key === "Enter") {
             e.preventDefault();
@@ -333,7 +351,32 @@ async function cargarCatalogos() {
         fetchJson("/Dias/Lista")
     ]);
     semanas = Array.isArray(rSemanas) ? rSemanas : [];
-    dias = Array.isArray(rDias) ? rDias : [];
+    dias = ordenarDiasSemana(Array.isArray(rDias) ? rDias : []);
+}
+
+function ordenIndiceDiaSemana(nombre) {
+    const n = String(nombre || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .trim();
+    if (n.startsWith("lun")) return 1;
+    if (n.startsWith("mar")) return 2;
+    if (n.startsWith("mie")) return 3;
+    if (n.startsWith("jue")) return 4;
+    if (n.startsWith("vie")) return 5;
+    if (n.startsWith("sab")) return 6;
+    if (n.startsWith("dom")) return 7;
+    return 100;
+}
+
+function ordenarDiasSemana(lista) {
+    return [...(lista || [])].sort((a, b) => {
+        const ia = ordenIndiceDiaSemana(a.Nombre);
+        const ib = ordenIndiceDiaSemana(b.Nombre);
+        if (ia !== ib) return ia - ib;
+        return String(a.Nombre || "").localeCompare(String(b.Nombre || ""), "es");
+    });
 }
 
 function llenarFiltrosCatalogos() {
@@ -449,7 +492,7 @@ function setEstadoUnidadSeleccionada(seleccionada) {
         $("#lblRutasHint").html(
             '<span class="rec-hint-pendiente"><i class="fa fa-arrow-circle-up"></i> Elegi una unidad arriba para continuar</span>'
         );
-        cancelarTxtSeleccionRecorrido(false);
+        cancelarSeleccionesHojaRecorrido(false);
     }
     syncBotonesTxtPlanta();
 }
@@ -669,20 +712,20 @@ function syncSeleccionRecorridosUI(recargarClientes) {
     const activo = getRecorridoActivo();
     if (!activo) {
         $("#lblRecorridoSeleccionado").text("Elegi un recorrido de la lista");
-        $("#btnNuevoClienteRecorrido, #btnHojaRutaRecorrido, #btnManifiestosRecorrido, #btnTraerProgramadosRec").prop("disabled", true);
+        $("#btnNuevoClienteRecorrido, #btnHojaRutaRecorrido, #btnManifiestosRecorrido, #btnMfSeleccionarRecorrido, #btnTraerProgramadosRec").prop("disabled", true);
         $("#btnTraerProgramadosRec").addClass("d-none");
         ocultarPanelSugeridos();
-        cancelarTxtSeleccionRecorrido(false);
+        cancelarSeleccionesHojaRecorrido(false);
         syncBotonesTxtPlanta();
         if (recargarClientes) renderClientesRecorrido([]);
         return;
     }
 
-    $("#btnNuevoClienteRecorrido, #btnHojaRutaRecorrido, #btnManifiestosRecorrido").prop("disabled", false);
+    $("#btnNuevoClienteRecorrido, #btnHojaRutaRecorrido, #btnManifiestosRecorrido, #btnMfSeleccionarRecorrido").prop("disabled", false);
     if (recorridosSeleccionados.length === 1) {
         $("#btnTraerProgramadosRec").removeClass("d-none").prop("disabled", false);
     }
-    if (recargarClientes) cancelarTxtSeleccionRecorrido(false);
+    if (recargarClientes) cancelarSeleccionesHojaRecorrido(false);
     syncBotonesTxtPlanta();
     actualizarLabelRecorridoSeleccionado();
 
@@ -764,10 +807,9 @@ function limpiarSeleccionRecorrido() {
     recorridosSeleccionados = [];
     $(".rec-ruta-item").removeClass("selected");
     $("#lblRecorridoSeleccionado").text("Elegi un recorrido de la lista");
-    $("#btnNuevoClienteRecorrido, #btnHojaRutaRecorrido, #btnManifiestosRecorrido, #btnTraerProgramadosRec").prop("disabled", true);
+    $("#btnNuevoClienteRecorrido, #btnHojaRutaRecorrido, #btnManifiestosRecorrido, #btnMfSeleccionarRecorrido, #btnTraerProgramadosRec").prop("disabled", true);
     $("#btnTraerProgramadosRec").addClass("d-none");
-    cancelarTxtSeleccionRecorrido(false);
-    syncBotonesTxtPlanta();
+    cancelarSeleccionesHojaRecorrido(false);
     ocultarPanelSugeridos();
     renderClientesRecorrido([]);
 }
@@ -921,6 +963,17 @@ function idsNoExportarLicenciaActuales() {
         .filter(id => id > 0);
 }
 
+function idsClientesManifiestoDesde(idDesde) {
+    const inicio = Number(idDesde) || 0;
+    const excluidos = new Set(idsNoExportarLicenciaActuales());
+    const ids = (clientesRecorridoActual || [])
+        .map(x => Number(x.Id))
+        .filter(id => id > 0 && !excluidos.has(id));
+    const idx = ids.indexOf(inicio);
+    if (idx < 0) return inicio > 0 ? [inicio] : [];
+    return ids.slice(idx);
+}
+
 function toggleNoExportarLicenciaRec(idRecorridoCliente) {
     const id = Number(idRecorridoCliente) || 0;
     const item = (clientesRecorridoActual || []).find(x => Number(x.Id) === id);
@@ -943,17 +996,40 @@ function idCamionActualRec() {
     return parseInt($("#selCamion").val(), 10) || 0;
 }
 
+function haySeleccionHojaRecorrido() {
+    return txtSeleccionActiva || mfSeleccionActiva;
+}
+
+function cancelarSeleccionesHojaRecorrido(repintar) {
+    const estaba = haySeleccionHojaRecorrido();
+    txtSeleccionActiva = false;
+    txtSeleccionIds = new Set();
+    mfSeleccionActiva = false;
+    mfSeleccionIds = new Set();
+    $("#panelClientes").removeClass("rec-txt-sel rec-mf-sel");
+    $("#barTxtSeleccionRecorrido, #barMfSeleccionRecorrido").addClass("d-none");
+    $("#btnTxtMesRecorrido, #btnTxtSeleccionarRecorrido, #btnMfSeleccionarRecorrido, #btnManifiestosRecorrido").removeClass("d-none");
+    if (estaba && repintar !== false) renderClientesRecorrido(clientesRecorridoActual);
+    syncBotonesTxtPlanta();
+}
+
 function syncBotonesTxtPlanta() {
     const hayUnidad = idCamionActualRec() > 0;
     const hayRuta = !!getRecorridoActivo();
     const hayClientes = (clientesRecorridoActual || []).length > 0;
+    const sel = haySeleccionHojaRecorrido();
 
-    $("#btnTxtMesRecorrido").prop("disabled", !hayUnidad || txtSeleccionActiva);
-    $("#btnTxtSeleccionarRecorrido").prop("disabled", !hayRuta || !hayClientes || txtSeleccionActiva);
-    $("#btnTxtMesRecorrido, #btnTxtSeleccionarRecorrido").toggleClass("d-none", txtSeleccionActiva);
+    $("#btnTxtMesRecorrido").prop("disabled", !hayUnidad || sel);
+    $("#btnTxtSeleccionarRecorrido").prop("disabled", !hayRuta || !hayClientes || sel);
+    $("#btnMfSeleccionarRecorrido").prop("disabled", !hayRuta || !hayClientes || sel);
+    $("#btnTxtMesRecorrido, #btnTxtSeleccionarRecorrido").toggleClass("d-none", sel);
+    $("#btnMfSeleccionarRecorrido, #btnManifiestosRecorrido").toggleClass("d-none", sel);
     $("#barTxtSeleccionRecorrido").toggleClass("d-none", !txtSeleccionActiva);
+    $("#barMfSeleccionRecorrido").toggleClass("d-none", !mfSeleccionActiva);
     $("#panelClientes").toggleClass("rec-txt-sel", txtSeleccionActiva);
+    $("#panelClientes").toggleClass("rec-mf-sel", mfSeleccionActiva);
     actualizarBarraTxtSeleccion();
+    actualizarBarraMfSeleccion();
 }
 
 function activarTxtSeleccionRecorrido() {
@@ -965,6 +1041,7 @@ function activarTxtSeleccionRecorrido() {
         errorModal("Este recorrido no tiene clientes para exportar.");
         return;
     }
+    cancelarMfSeleccionRecorrido(false);
     txtSeleccionActiva = true;
     txtSeleccionIds = new Set();
     renderClientesRecorrido(clientesRecorridoActual);
@@ -977,7 +1054,6 @@ function cancelarTxtSeleccionRecorrido(repintar) {
     txtSeleccionIds = new Set();
     $("#panelClientes").removeClass("rec-txt-sel");
     $("#barTxtSeleccionRecorrido").addClass("d-none");
-    $("#btnTxtMesRecorrido, #btnTxtSeleccionarRecorrido").removeClass("d-none");
     if (estaba && repintar !== false) renderClientesRecorrido(clientesRecorridoActual);
     syncBotonesTxtPlanta();
 }
@@ -1008,6 +1084,60 @@ function actualizarBarraTxtSeleccion() {
         n === 1 ? "1 seleccionado" : `${n} seleccionados`
     );
     $("#btnTxtSelExportarRecorrido").prop("disabled", n === 0);
+}
+
+function activarMfSeleccionRecorrido() {
+    if (!getRecorridoActivo()) {
+        errorModal("Selecciona un recorrido para elegir clientes.");
+        return;
+    }
+    if (!(clientesRecorridoActual || []).length) {
+        errorModal("Este recorrido no tiene clientes para armar manifiestos.");
+        return;
+    }
+    cancelarTxtSeleccionRecorrido(false);
+    mfSeleccionActiva = true;
+    mfSeleccionIds = new Set();
+    renderClientesRecorrido(clientesRecorridoActual);
+    syncBotonesTxtPlanta();
+}
+
+function cancelarMfSeleccionRecorrido(repintar) {
+    const estaba = mfSeleccionActiva;
+    mfSeleccionActiva = false;
+    mfSeleccionIds = new Set();
+    $("#panelClientes").removeClass("rec-mf-sel");
+    $("#barMfSeleccionRecorrido").addClass("d-none");
+    if (estaba && repintar !== false) renderClientesRecorrido(clientesRecorridoActual);
+    syncBotonesTxtPlanta();
+}
+
+function setMfSeleccionCliente(id, marcado) {
+    const n = Number(id) || 0;
+    if (n <= 0 || !mfSeleccionActiva) return;
+    if (marcado) mfSeleccionIds.add(n);
+    else mfSeleccionIds.delete(n);
+
+    const $item = $(`#listaClientesRecorrido .rec-cliente-item[data-id="${n}"]`);
+    $item.toggleClass("is-mf-checked", marcado);
+    $item.find(".rec-txt-check").prop("checked", marcado);
+    actualizarBarraMfSeleccion();
+}
+
+function seleccionarTodosMfRecorrido() {
+    const ids = (clientesRecorridoActual || []).map(x => Number(x.Id)).filter(n => n > 0);
+    const todos = ids.length > 0 && ids.every(id => mfSeleccionIds.has(id));
+    mfSeleccionIds = todos ? new Set() : new Set(ids);
+    renderClientesRecorrido(clientesRecorridoActual);
+    syncBotonesTxtPlanta();
+}
+
+function actualizarBarraMfSeleccion() {
+    const n = mfSeleccionIds.size;
+    $("#lblMfSeleccionRecorrido").text(
+        n === 1 ? "1 seleccionado" : `${n} seleccionados`
+    );
+    $("#btnMfSelGenerarRecorrido").prop("disabled", n === 0);
 }
 
 function getSiguientePosicionRecorrido() {
@@ -1135,10 +1265,13 @@ function renderClientesRecorrido(data) {
                </button>`
             : "";
 
-        const marcadoTxt = txtSeleccionActiva && txtSeleccionIds.has(Number(item.Id));
-        const checkTxt = txtSeleccionActiva
-            ? `<label class="rec-cliente-txtcheck" title="Incluir en el TXT de planta">
-                    <input type="checkbox" class="rec-txt-check" data-id="${item.Id}" ${marcadoTxt ? "checked" : ""}>
+        const modoSel = mfSeleccionActiva ? "mf" : (txtSeleccionActiva ? "txt" : "");
+        const marcadoSel = modoSel === "mf"
+            ? mfSeleccionIds.has(Number(item.Id))
+            : (modoSel === "txt" && txtSeleccionIds.has(Number(item.Id)));
+        const checkSel = modoSel
+            ? `<label class="rec-cliente-txtcheck" title="${modoSel === "mf" ? "Incluir en el manifiesto" : "Incluir en el TXT de planta"}">
+                    <input type="checkbox" class="rec-txt-check" data-id="${item.Id}" ${marcadoSel ? "checked" : ""}>
                     <span></span>
                </label>`
             : "";
@@ -1149,15 +1282,16 @@ function renderClientesRecorrido(data) {
             enLicencia ? "rec-cliente-item--licencia" : "",
             reprogramado ? "rec-cliente-item--reprogramado" : "",
             noExportar ? "rec-cliente-item--noexport" : "",
-            txtSeleccionActiva ? "rec-cliente-item--txtsel" : "",
-            marcadoTxt ? "is-txt-checked" : ""
+            modoSel ? "rec-cliente-item--txtsel" : "",
+            modoSel === "txt" && marcadoSel ? "is-txt-checked" : "",
+            modoSel === "mf" && marcadoSel ? "is-mf-checked" : ""
         ].filter(Boolean).join(" ");
 
         return `
             <article class="${clasesItem}" data-id="${item.Id}"
                      data-cliente="${item.IdCliente}" data-establecimiento="${item.IdEstablecimiento || 0}"
                      data-licencia="${enLicencia ? "1" : "0"}">
-                ${checkTxt}
+                ${checkSel}
                 <div class="rec-cliente-pos" title="Posicion en la ruta">
                     <span>${item.Posicion}</span>
                 </div>
@@ -1198,6 +1332,9 @@ function renderClientesRecorrido(data) {
                         </button>
                         <button type="button" class="rec-cliente-btn rec-cliente-btn--txt" onclick="abrirModalManifiestoRecorrido(${item.Id}, 'txt')" title="Exportar TXT a planta">
                             <i class="fa fa-download"></i>
+                        </button>
+                        <button type="button" class="rec-cliente-btn rec-cliente-btn--stock" onclick="abrirPagosStockRecorrido(${item.IdCliente}, ${item.IdEstablecimiento || 0}, ${item.Id})" title="Cargar stock, pagos y visita">
+                            <i class="fa fa-cubes"></i>
                         </button>
                         <button type="button" class="rec-cliente-btn rec-cliente-btn--edit" onclick="editarClienteRecorrido(${item.Id})" title="Editar">
                             <i class="fa fa-pencil"></i>
@@ -1275,7 +1412,7 @@ function htmlCuerpoProductosRec(item) {
         return `<div class="rec-prod-empty">Asigná un establecimiento al cliente en la ruta para ver productos.</div>`;
     }
     if (!productos.length) {
-        return `<div class="rec-prod-empty">Sin productos en el establecimiento. Cargalos desde Clientes → Establecimientos → Productos.</div>`;
+        return `<div class="rec-prod-empty">Sin productos en el establecimiento. Cargalos con el ícono verde de stock en esta misma tarjeta.</div>`;
     }
 
     const rows = productos.map(p => {
@@ -1629,6 +1766,7 @@ async function abrirModalManifiestoRecorrido(idRecorrido, modo) {
     const esTxt = modoNorm.startsWith("txt");
     const esMes = modoNorm === "txt-mes";
     const esSel = modoNorm === "txt-sel";
+    const esMfSel = modoNorm === "manifiesto-sel";
     const id = Number(idRecorrido) || 0;
 
     if (esMes) {
@@ -1645,9 +1783,13 @@ async function abrirModalManifiestoRecorrido(idRecorrido, modo) {
         errorModal("Seleccioná al menos un cliente para exportar.");
         return;
     }
+    if (esMfSel && mfSeleccionIds.size === 0) {
+        errorModal("Seleccioná al menos un cliente para armar el manifiesto.");
+        return;
+    }
 
     $("#mfIdRecorrido").val(id > 0 ? String(id) : "0");
-    $("#mfModoExport").val(esTxt ? modoNorm : "manifiesto");
+    $("#mfModoExport").val(esTxt ? modoNorm : (esMfSel ? "manifiesto-sel" : "manifiesto"));
 
     const item = id > 0
         ? (clientesRecorridoActual || []).find(x => Number(x.Id) === id)
@@ -1662,6 +1804,9 @@ async function abrirModalManifiestoRecorrido(idRecorrido, modo) {
         $("#mfNombreManifiesto").val(`MES ${camionNombre}`);
         $("#mfGenerarCertificados").closest(".col-12").addClass("d-none");
         $("#mfCertificadosPanel").addClass("d-none");
+        $("#mfLoteOpdsWrap").addClass("d-none");
+        $("#mfLotePreviewWrap").addClass("d-none");
+        $("#mfModalDialog").removeClass("modal-xl");
     } else if (esSel) {
         $("#modalManifiestoRecorridoTitulo").text(`Exportar TXT (${txtSeleccionIds.size} cliente${txtSeleccionIds.size === 1 ? "" : "s"})`);
         $("#btnConfirmarManifiestoRecorrido").addClass("d-none");
@@ -1669,6 +1814,9 @@ async function abrirModalManifiestoRecorrido(idRecorrido, modo) {
         $("#mfNombreManifiesto").val(nombreRecorridoParaManifiesto());
         $("#mfGenerarCertificados").closest(".col-12").addClass("d-none");
         $("#mfCertificadosPanel").addClass("d-none");
+        $("#mfLoteOpdsWrap").addClass("d-none");
+        $("#mfLotePreviewWrap").addClass("d-none");
+        $("#mfModalDialog").removeClass("modal-xl");
     } else if (esTxt) {
         $("#modalManifiestoRecorridoTitulo").text(id > 0 ? "Exportar TXT a planta" : "Exportar TXT de intercambio");
         $("#btnConfirmarManifiestoRecorrido").addClass("d-none");
@@ -1678,18 +1826,43 @@ async function abrirModalManifiestoRecorrido(idRecorrido, modo) {
             : nombreRecorridoParaManifiesto());
         $("#mfGenerarCertificados").closest(".col-12").addClass("d-none");
         $("#mfCertificadosPanel").addClass("d-none");
+        $("#mfLoteOpdsWrap").addClass("d-none");
+        $("#mfLotePreviewWrap").addClass("d-none");
+        $("#mfModalDialog").removeClass("modal-xl");
+    } else if (esMfSel) {
+        $("#modalManifiestoRecorridoTitulo").text(`Manifiestos (${mfSeleccionIds.size} cliente${mfSeleccionIds.size === 1 ? "" : "s"})`);
+        $("#btnConfirmarManifiestoRecorrido").removeClass("d-none");
+        $("#btnExportarTxtIntercambioRecorrido").removeClass("d-none");
+        $("#mfNombreManifiesto").val(nombreRecorridoParaManifiesto());
+        $("#mfGenerarCertificados").closest(".col-12").removeClass("d-none");
+        $("#mfLoteOpdsWrap").removeClass("d-none");
+        $("#mfLotePreviewWrap").removeClass("d-none");
+        $("#mfModalDialog").addClass("modal-xl");
+        $("#mfGenerarLoteOpds").prop("checked", true);
+        const idOpdsSel = leerIdTransportistaOpds();
+        if (idOpdsSel) $("#mfIdTransportistaOpds").val(idOpdsSel);
     } else if (id > 0) {
         $("#modalManifiestoRecorridoTitulo").text("Armar manifiesto");
         $("#btnConfirmarManifiestoRecorrido").removeClass("d-none");
         $("#btnExportarTxtIntercambioRecorrido").addClass("d-none");
         $("#mfNombreManifiesto").val(item?.Cliente || nombreRecorridoParaManifiesto());
         $("#mfGenerarCertificados").closest(".col-12").removeClass("d-none");
+        $("#mfLoteOpdsWrap").addClass("d-none");
+        $("#mfLotePreviewWrap").addClass("d-none");
+        $("#mfGenerarLoteOpds").prop("checked", false);
+        $("#mfModalDialog").removeClass("modal-xl");
     } else {
-        $("#modalManifiestoRecorridoTitulo").text("Generar manifiestos");
+        $("#modalManifiestoRecorridoTitulo").text("Manifiestos por lote");
         $("#btnConfirmarManifiestoRecorrido").removeClass("d-none");
         $("#btnExportarTxtIntercambioRecorrido").removeClass("d-none");
         $("#mfNombreManifiesto").val(nombreRecorridoParaManifiesto());
         $("#mfGenerarCertificados").closest(".col-12").removeClass("d-none");
+        $("#mfLoteOpdsWrap").removeClass("d-none");
+        $("#mfLotePreviewWrap").removeClass("d-none");
+        $("#mfModalDialog").addClass("modal-xl");
+        $("#mfGenerarLoteOpds").prop("checked", true);
+        const idOpds = leerIdTransportistaOpds();
+        if (idOpds) $("#mfIdTransportistaOpds").val(idOpds);
     }
 
     const hoy = new Date();
@@ -1734,8 +1907,68 @@ async function abrirModalManifiestoRecorrido(idRecorrido, modo) {
         $("#mfNumeroManifiesto").val("1");
     }
 
+    if (!$("#mfLotePreviewWrap").hasClass("d-none")) pintarPreviewLoteManifiesto();
+
+    await cargarChoferesManifiestoRec();
+
     if (modalManifiestoRecorrido) modalManifiestoRecorrido.show();
     else errorModal("No se pudo abrir el diálogo.");
+}
+
+let choferesManifiestoCache = [];
+
+async function cargarChoferesManifiestoRec() {
+    try {
+        const data = await fetchJson("/Choferes/Lista?soloActivos=true");
+        choferesManifiestoCache = Array.isArray(data) ? data : [];
+    } catch {
+        choferesManifiestoCache = [];
+    }
+
+    const $sel = $("#mfIdChofer");
+    const prev = $sel.val();
+    $sel.empty().append(`<option value="0">Sin chofer (líneas en blanco)</option>`);
+    choferesManifiestoCache.forEach(c => {
+        const id = Number(c.Id || c.id);
+        const nom = c.Nombre || c.nombre || "";
+        $sel.append(`<option value="${id}">${escapeHtml(nom)}</option>`);
+    });
+    if (prev && $sel.find(`option[value="${prev}"]`).length) $sel.val(prev);
+    else if (choferesManifiestoCache.length === 1) $sel.val(String(choferesManifiestoCache[0].Id || choferesManifiestoCache[0].id));
+    aplicarChoferSeleccionadoManifiesto();
+}
+
+function aplicarChoferSeleccionadoManifiesto() {
+    const id = parseInt($("#mfIdChofer").val(), 10) || 0;
+    const c = choferesManifiestoCache.find(x => Number(x.Id || x.id) === id);
+    $("#mfChoferAclaracion").val(c ? (c.Nombre || "") : "");
+    $("#mfChoferDni").val(c ? (c.Dni || c.dni || "") : "");
+}
+
+function aplicarChoferManifiestoAParams(params) {
+    const id = parseInt($("#mfIdChofer").val(), 10) || 0;
+    const nom = ($("#mfChoferAclaracion").val() || "").trim();
+    const dni = ($("#mfChoferDni").val() || "").trim();
+    if (id > 0) params.set("idChofer", String(id));
+    if (nom) params.set("choferNombre", nom);
+    if (dni) params.set("choferDni", dni);
+}
+
+function abrirPagosStockRecorrido(idCliente, idEstablecimiento, idRecorridoCliente) {
+    if (typeof abrirPanelStockRecorrido === "function") {
+        abrirPanelStockRecorrido(idCliente, idEstablecimiento, idRecorridoCliente);
+        return;
+    }
+    const id = Number(idCliente) || 0;
+    if (!(id > 0)) {
+        errorModal("Este cliente no tiene ficha para abrir pagos y stock.");
+        return;
+    }
+    const est = Number(idEstablecimiento) || 0;
+    const qs = est > 0
+        ? `id=${id}&est=${est}&tab=stock`
+        : `id=${id}&tab=pagos`;
+    window.open(`/Clientes/Gestion?${qs}`, "_blank");
 }
 
 function nombreRecorridoParaManifiesto() {
@@ -1763,6 +1996,140 @@ function nombreRecorridoParaManifiesto() {
     return `${semana} ${dia}`.trim();
 }
 
+function clientesParaLotePreview() {
+    const excluidos = new Set(idsNoExportarLicenciaActuales());
+    const modo = ($("#mfModoExport").val() || "").trim();
+    const soloSel = modo === "manifiesto-sel";
+    return (clientesRecorridoActual || []).filter(x => {
+        const id = Number(x.Id);
+        if (id <= 0 || excluidos.has(id)) return false;
+        if (soloSel && !mfSeleccionIds.has(id)) return false;
+        return true;
+    });
+}
+
+function leerCopiasLotePreview() {
+    const map = new Map();
+    $("#mfLotePreviewBody [data-copias-id]").each(function () {
+        const id = Number($(this).attr("data-copias-id"));
+        let n = parseInt($(this).val(), 10);
+        if (!Number.isFinite(n) || n < 0) n = 0;
+        if (n > 50) n = 50;
+        map.set(id, n);
+    });
+    return map;
+}
+
+function idsIncluirLotePreview() {
+    const copias = leerCopiasLotePreview();
+    return clientesParaLotePreview()
+        .map(x => Number(x.Id))
+        .filter(id => (copias.get(id) || 0) > 0);
+}
+
+function aplicarCopiasLoteAParams(params) {
+    const copias = leerCopiasLotePreview();
+    const partes = [];
+    const incluir = [];
+    clientesParaLotePreview().forEach(x => {
+        const id = Number(x.Id);
+        const n = copias.has(id) ? copias.get(id) : 1;
+        partes.push(`${id}:${n}`);
+        if (n > 0) incluir.push(id);
+    });
+    if (incluir.length) params.set("incluirIds", incluir.join(","));
+    if (partes.length) params.set("copias", partes.join(","));
+}
+
+function pintarPreviewLoteManifiesto() {
+    const $body = $("#mfLotePreviewBody");
+    const $total = $("#mfLotePreviewTotal");
+    if (!$body.length) return;
+
+    const clientes = clientesParaLotePreview();
+    const copiasPrev = leerCopiasLotePreview();
+
+    if (!clientes.length) {
+        $body.html(`<tr><td colspan="4" class="text-muted">No hay clientes en esta hoja para el lote.</td></tr>`);
+        $total.text("");
+        return;
+    }
+
+    const idsActuales = $body.find("[data-copias-id]").map(function () { return Number($(this).attr("data-copias-id")); }).get();
+    const idsNuevos = clientes.map(x => Number(x.Id));
+    const mismaGrilla = idsActuales.length === idsNuevos.length && idsActuales.every((id, i) => id === idsNuevos[i]);
+
+    if (!mismaGrilla) {
+        $body.html(clientes.map(item => {
+            const id = Number(item.Id);
+            const n = copiasPrev.has(id) ? copiasPrev.get(id) : 1;
+            const nombre = escapeHtml(item.Cliente || item.Establecimiento || "");
+            const nroCli = escapeHtml((item.CodigoOpds || item.codigoOpds || "").trim() || "—");
+            return `<tr>
+                <td>${nombre}</td>
+                <td><input type="number" class="form-control rec-input mf-lote-copias" data-copias-id="${id}" min="0" max="50" step="1" value="${n}" /></td>
+                <td>${nroCli}</td>
+                <td class="mf-lote-num">—</td>
+            </tr>`;
+        }).join(""));
+    }
+
+    actualizarNumerosLotePreview();
+}
+
+function aplicarCopiasTodasLotePreview(valor) {
+    const raw = String(valor ?? "").trim();
+    if (raw === "") return;
+    let n = parseInt(raw, 10);
+    if (!Number.isFinite(n) || n < 0) return;
+    if (n > 50) n = 50;
+    $("#mfLotePreviewBody [data-copias-id]").each(function () {
+        $(this).val(n);
+    });
+    actualizarNumerosLotePreview();
+}
+
+function actualizarNumerosLotePreview() {
+    let numero = parseInt($("#mfNumeroManifiesto").val(), 10);
+    if (!Number.isFinite(numero) || numero < 1) numero = 1;
+    let impresos = 0;
+    let manifiestos = 0;
+    let primero = null;
+    let ultimo = null;
+
+    $("#mfLotePreviewBody tr").each(function () {
+        const $inp = $(this).find("[data-copias-id]");
+        if (!$inp.length) return;
+        let n = parseInt($inp.val(), 10);
+        if (!Number.isFinite(n) || n < 0) n = 0;
+        if (n > 50) n = 50;
+        const $num = $(this).find(".mf-lote-num");
+        $(this).toggleClass("mf-lote-row--off", n <= 0);
+        if (n <= 0) {
+            $num.text("—");
+            return;
+        }
+        const nro = numero;
+        numero++;
+        if (primero == null) primero = nro;
+        ultimo = nro;
+        manifiestos++;
+        impresos += n;
+        $num.text(n === 1 ? String(nro) : `${nro} ×${n}`);
+    });
+
+    const $total = $("#mfLotePreviewTotal");
+    if (manifiestos <= 0) {
+        $total.text("Ningún manifiesto a imprimir. Poné copias en los clientes que correspondan.");
+    } else if (impresos === 1) {
+        $total.text(`Se va a imprimir 1 manifiesto (Nº ${primero}).`);
+    } else if (impresos === manifiestos) {
+        $total.text(`Se van a imprimir ${manifiestos} manifiestos (Nº ${primero} al ${ultimo}).`);
+    } else {
+        $total.text(`Se van a imprimir ${impresos} copias de ${manifiestos} manifiestos (Nº ${primero} al ${ultimo}). Las copias de un mismo cliente llevan el mismo número.`);
+    }
+}
+
 async function confirmarManifiestoRecorrido() {
     const params = paramsRecorridosManifiesto();
     if (!params) {
@@ -1776,13 +2143,48 @@ async function confirmarManifiestoRecorrido() {
         return;
     }
 
+    const lotePreview = !$("#mfLotePreviewWrap").hasClass("d-none");
+    if (lotePreview) {
+        const idsConCopia = idsIncluirLotePreview();
+        if (!idsConCopia.length) {
+            errorModal("Poné al menos 1 copia en algún cliente para armar el lote.");
+            return;
+        }
+    }
+
     const nombre = ($("#mfNombreManifiesto").val() || "").trim();
     const fecha = ($("#mfFechaIntercambio").val() || "").trim();
     params.set("numeroInicial", String(numero));
     if (nombre) params.set("nombre", nombre);
     if (fecha) params.set("fecha", fecha);
+    aplicarChoferManifiestoAParams(params);
     const idRecorrido = parseInt($("#mfIdRecorrido").val(), 10) || 0;
-    if (idRecorrido > 0) params.set("idRecorrido", String(idRecorrido));
+    if (idRecorrido > 0) {
+        const idsDesde = idsClientesManifiestoDesde(idRecorrido);
+        const haySiguientes = idsDesde.length > 1;
+        if (haySiguientes) {
+            const hastaNro = numero + idsDesde.length - 1;
+            const aplicarAbajo = typeof confirmarModal === "function"
+                ? await confirmarModal(
+                    `¿Deseás aplicar esta fecha de programación también a los ${idsDesde.length - 1} cliente(s) que siguen en la hoja (desde este inclusive)? Los manifiestos se van a numerar en secuencia del ${numero} al ${hastaNro}.`,
+                    {
+                        titulo: "Fecha de programación",
+                        aceptar: "Sí, a todos",
+                        cancelar: "Solo este"
+                    }
+                )
+                : window.confirm("¿Aplicar la fecha y numerar los manifiestos de los clientes que siguen?");
+            if (aplicarAbajo) {
+                params.set("incluirIds", idsDesde.join(","));
+            } else {
+                params.set("idRecorrido", String(idRecorrido));
+            }
+        } else {
+            params.set("idRecorrido", String(idRecorrido));
+        }
+    } else if (lotePreview) {
+        aplicarCopiasLoteAParams(params);
+    }
 
     const conCert = $("#mfGenerarCertificados").is(":checked");
     if (conCert) {
@@ -1795,6 +2197,16 @@ async function confirmarManifiestoRecorrido() {
         if (ft) params.set("fechaTratamiento", ft);
         if (Number.isFinite(nc) && nc > 0) params.set("numeroCertificadoInicial", String(nc));
         if (Number.isFinite(no) && no > 0) params.set("numeroOrdenInicial", String(no));
+    }
+
+    if ($("#mfLoteOpdsWrap").is(":visible") && $("#mfGenerarLoteOpds").is(":checked")) {
+        const idOpds = ($("#mfIdTransportistaOpds").val() || "").trim() || leerIdTransportistaOpds();
+        if (!idOpds) {
+            errorModal("Ingresá el N° de establecimiento OPDS del transportista para armar el archivo por lote.");
+            $("#mfIdTransportistaOpds").trigger("focus");
+            return;
+        }
+        $("#mfIdTransportistaOpds").val(idOpds);
     }
 
     try {
@@ -1814,28 +2226,46 @@ async function confirmarManifiestoRecorrido() {
                 return;
             }
 
-            await descargarRespuestaArchivo(responseMf, "Manifiesto.pdf");
-
+            let responseCert = null;
             if (conCert) {
-                // Pequeña pausa para que el navegador no bloquee la 2ª descarga.
-                await new Promise(r => setTimeout(r, 350));
-                params.set("formato", "certificados");
-                const responseCert = await fetch(`/Recorridos/Manifiestos?${params.toString()}`, {
+                const certParams = new URLSearchParams(params.toString());
+                certParams.set("formato", "certificados");
+                certParams.set("generarCertificados", "true");
+                responseCert = await fetch(`/Recorridos/Manifiestos?${certParams.toString()}`, {
                     headers: { Authorization: "Bearer " + getTokenRec() }
                 });
-                if (responseCert.ok) {
-                    await descargarRespuestaArchivo(responseCert, "Certificado.pdf");
-                } else if (typeof errorModal === "function") {
+                if (!responseCert.ok) {
+                    await descargarRespuestaArchivo(responseMf, "Manifiesto.pdf");
                     errorModal("El manifiesto se descargó, pero no se pudo generar el certificado.");
                     return;
                 }
+                await descargarRespuestaArchivo(responseCert, "Certificado.pdf", true);
+                await new Promise(r => setTimeout(r, 400));
+            }
+
+            await descargarRespuestaArchivo(responseMf, "Manifiesto.pdf");
+
+            const esLoteVisible = $("#mfLoteOpdsWrap").is(":visible");
+            const quiereLoteOpds = esLoteVisible && $("#mfGenerarLoteOpds").is(":checked");
+            if (quiereLoteOpds) {
+                const lote = await descargarManifiestoLoteOpds(params);
+                if (modalManifiestoRecorrido) modalManifiestoRecorrido.hide();
+                if (($("#mfModoExport").val() || "") === "manifiesto-sel") cancelarMfSeleccionRecorrido();
+                if (lote.ok) {
+                    if (lote.warning && typeof advertenciaModal === "function") advertenciaModal(lote.warning);
+                    else if (typeof exitoModal === "function") exitoModal(mensajeExitoManifiesto(conCert, true));
+                } else if (typeof advertenciaModal === "function") {
+                    advertenciaModal("El manifiesto se descargó, pero el lote OPDS no: " + (lote.mensaje || "revisá los Ids del ministerio."));
+                } else if (typeof exitoModal === "function") {
+                    exitoModal(mensajeExitoManifiesto(conCert, false));
+                }
+                return;
             }
 
             if (modalManifiestoRecorrido) modalManifiestoRecorrido.hide();
+            if (($("#mfModoExport").val() || "") === "manifiesto-sel") cancelarMfSeleccionRecorrido();
             if (typeof exitoModal === "function") {
-                exitoModal(conCert
-                    ? "Se descargaron el manifiesto y el certificado."
-                    : "Se descargó el manifiesto en PDF.");
+                exitoModal(mensajeExitoManifiesto(conCert, quiereLoteOpds));
             }
         });
     } catch (e) {
@@ -1847,7 +2277,7 @@ async function confirmarManifiestoRecorrido() {
 async function exportarArchivoIntercambioRecorrido() {
     const modo = ($("#mfModoExport").val() || "txt").trim();
     const esMes = modo === "txt-mes";
-    const esSel = modo === "txt-sel";
+    const esSel = modo === "txt-sel" || modo === "manifiesto-sel";
     const idCamion = idCamionActualRec();
     if (!idCamion) {
         errorModal("Elegí una unidad.");
@@ -1886,7 +2316,7 @@ async function exportarArchivoIntercambioRecorrido() {
     if (nombre) params.set("nombre", nombre);
 
     if (esSel) {
-        const ids = [...txtSeleccionIds].filter(n => n > 0);
+        const ids = [...(modo === "manifiesto-sel" ? mfSeleccionIds : txtSeleccionIds)].filter(n => n > 0);
         if (!ids.length) {
             errorModal("Seleccioná al menos un cliente para exportar.");
             return;
@@ -1925,7 +2355,8 @@ async function exportarArchivoIntercambioRecorrido() {
             setTimeout(() => URL.revokeObjectURL(url), 1500);
 
             if (modalManifiestoRecorrido) modalManifiestoRecorrido.hide();
-            if (esSel) cancelarTxtSeleccionRecorrido();
+            if (modo === "manifiesto-sel") cancelarMfSeleccionRecorrido();
+            else if (esSel) cancelarTxtSeleccionRecorrido();
             if (typeof exitoModal === "function") {
                 exitoModal("Se descargó el archivo TXT de intercambio para la planta.");
             }
@@ -1946,9 +2377,27 @@ function nombreDescargaIntercambio(response) {
     return basic && basic[1] ? basic[1] : "";
 }
 
-async function descargarRespuestaArchivo(response, fallback) {
-    const blob = await response.blob();
-    const archivo = nombreDescargaIntercambio(response) || fallback || "archivo";
+async function descargarRespuestaArchivo(response, fallback, exigirPdf) {
+    const raw = await response.blob();
+    const ct = (response.headers.get("Content-Type") || "").split(";")[0].trim().toLowerCase();
+    let archivo = nombreDescargaIntercambio(response) || fallback || "archivo";
+    const esZip = ct === "application/zip" || ct === "application/x-zip-compressed" || /\.zip$/i.test(archivo);
+    if (exigirPdf && esZip) {
+        if (typeof errorModal === "function") {
+            errorModal("El certificado no se pudo descargar como PDF.");
+        }
+        return;
+    }
+    const esPdf = !esZip && (exigirPdf || ct === "application/pdf" || /\.pdf$/i.test(fallback || ""));
+    if (esPdf) {
+        if (!/\.pdf$/i.test(archivo) || /\.zip$/i.test(archivo)) {
+            archivo = fallback && /\.pdf$/i.test(fallback) ? fallback : archivo.replace(/\.zip$/i, ".pdf");
+            if (!/\.pdf$/i.test(archivo)) archivo = "Certificado.pdf";
+        }
+    }
+    const blob = esPdf
+        ? new Blob([raw], { type: "application/pdf" })
+        : raw;
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -1957,6 +2406,69 @@ async function descargarRespuestaArchivo(response, fallback) {
     a.click();
     a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 1500);
+}
+
+function leerIdTransportistaOpds() {
+    try { return (localStorage.getItem("mfIdTransportistaOpds") || "").trim(); } catch { return ""; }
+}
+
+function guardarIdTransportistaOpds(valor) {
+    const v = (valor || "").trim();
+    try {
+        if (v) localStorage.setItem("mfIdTransportistaOpds", v);
+        else localStorage.removeItem("mfIdTransportistaOpds");
+    } catch { /* ignore */ }
+}
+
+function esManifiestoLoteParams(params) {
+    const id = parseInt(params.get("idRecorrido") || "0", 10) || 0;
+    return id <= 0;
+}
+
+function mensajeExitoManifiesto(conCert, conLote) {
+    if (conLote && conCert) return "Se descargaron el PDF, el certificado y el archivo de lote OPDS.";
+    if (conLote) return "Se descargaron el PDF de impresión y el archivo de lote OPDS.";
+    if (conCert) return "Se descargaron el manifiesto y el certificado.";
+    return "Se descargó el manifiesto en PDF.";
+}
+
+async function descargarManifiestoLoteOpds(params) {
+    const idOpds = ($("#mfIdTransportistaOpds").val() || "").trim() || leerIdTransportistaOpds();
+    if (!idOpds) {
+        return { ok: false, mensaje: "Falta el N° OPDS del transportista." };
+    }
+    guardarIdTransportistaOpds(idOpds);
+
+    const loteParams = new URLSearchParams(params.toString());
+    loteParams.delete("formato");
+    loteParams.delete("generarCertificados");
+    loteParams.set("idTransportistaOpds", idOpds);
+
+    await new Promise(r => setTimeout(r, 350));
+    const response = await fetch(`/Recorridos/ManifiestoLoteOpds?${loteParams.toString()}`, {
+        headers: { Authorization: "Bearer " + getTokenRec() }
+    });
+
+    if (response.status === 404) {
+        return { ok: false, mensaje: "No hay clientes para armar el archivo de lote." };
+    }
+
+    if (!response.ok) {
+        let msg = "No se pudo generar el archivo de lote OPDS.";
+        try {
+            const data = await response.json();
+            if (data?.mensaje) msg = data.mensaje;
+        } catch { /* ignore */ }
+        return { ok: false, mensaje: msg };
+    }
+
+    await descargarRespuestaArchivo(response, "LOTE_PATOGENICOS.txt");
+    let warning = "";
+    try {
+        const raw = response.headers.get("X-OA-Warning") || "";
+        if (raw) warning = decodeURIComponent(raw);
+    } catch { /* ignore */ }
+    return { ok: true, warning };
 }
 
 async function buscarRecorridos(texto) {

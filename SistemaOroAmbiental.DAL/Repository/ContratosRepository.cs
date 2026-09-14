@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using SistemaOroAmbiental.DAL.Common;
 using SistemaOroAmbiental.DAL.DataContext;
 using SistemaOroAmbiental.Models;
 
@@ -17,6 +18,7 @@ namespace SistemaOroAmbiental.DAL.Repository
         {
             var query = _db.Contratos
                 .AsNoTracking()
+                .AsSplitQuery()
                 .Include(x => x.IdClienteNavigation)
                     .ThenInclude(c => c.IdSucursalNavigation)
                 .Include(x => x.IdEstablecimientoNavigation)
@@ -53,6 +55,7 @@ namespace SistemaOroAmbiental.DAL.Repository
         {
             return _db.Contratos
                 .AsNoTracking()
+                .AsSplitQuery()
                 .Include(x => x.IdClienteNavigation)
                     .ThenInclude(c => c.IdSucursalNavigation)
                 .Include(x => x.IdEstablecimientoNavigation)
@@ -67,6 +70,7 @@ namespace SistemaOroAmbiental.DAL.Repository
         {
             return await _db.Contratos
                 .AsNoTracking()
+                .AsSplitQuery()
                 .Include(x => x.IdClienteNavigation)
                     .ThenInclude(c => c.IdSucursalNavigation)
                 .Include(x => x.IdEstablecimientoNavigation)
@@ -151,32 +155,25 @@ namespace SistemaOroAmbiental.DAL.Repository
             }
         }
 
-        public async Task<bool> Eliminar(int id)
+        public Task<bool> Eliminar(int id)
+            => _db.ExecuteInTransactionAsync(() => EliminarSinTransaccion(id));
+
+        public async Task<bool> EliminarSinTransaccion(int id)
         {
-            await using var tx = await _db.Database.BeginTransactionAsync();
-            try
-            {
-                var entity = await _db.Contratos.FirstOrDefaultAsync(x => x.Id == id);
-                if (entity == null) return false;
+            var entity = await _db.Contratos.FirstOrDefaultAsync(x => x.Id == id);
+            if (entity == null) return false;
 
-                if (await TieneEntregas(id))
-                    throw new InvalidOperationException("ENTREGAS");
+            if (await TieneEntregas(id))
+                throw new InvalidOperationException("ENTREGAS");
 
-                var renovaciones = await _db.ContratosRenovaciones
-                    .Where(x => x.IdContrato == id)
-                    .ToListAsync();
+            var renovaciones = await _db.ContratosRenovaciones
+                .Where(x => x.IdContrato == id)
+                .ToListAsync();
 
-                _db.ContratosRenovaciones.RemoveRange(renovaciones);
-                _db.Contratos.Remove(entity);
-                await _db.SaveChangesAsync();
-                await tx.CommitAsync();
-                return true;
-            }
-            catch
-            {
-                await tx.RollbackAsync();
-                throw;
-            }
+            _db.ContratosRenovaciones.RemoveRange(renovaciones);
+            _db.Contratos.Remove(entity);
+            await _db.SaveChangesAsync();
+            return true;
         }
 
         public async Task<bool> ActualizarVencimientoSiMayor(int idContrato, DateTime fechaVencimiento)

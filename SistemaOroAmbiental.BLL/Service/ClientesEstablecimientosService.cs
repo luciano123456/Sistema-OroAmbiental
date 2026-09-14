@@ -83,6 +83,14 @@ namespace SistemaOroAmbiental.BLL.Service
 
         public Task<IQueryable<ClientesEstablecimiento>> ObtenerTodos() => _repo.ObtenerTodos();
 
+        public Task<List<ClientesEstablecimiento>> ListarPorCliente(int idCliente) => _repo.ListarPorCliente(idCliente);
+
+        public Task<GrillaPaginadaResult<ClientesEstablecimiento>> ListarPaginado(GrillaPaginadaConsulta consulta)
+            => _repo.ListarPaginado(consulta);
+
+        public Task<int> ObtenerIndiceEnLista(int id, GrillaPaginadaConsulta consulta)
+            => _repo.ObtenerIndiceEnLista(id, consulta);
+
         public Task<OrdenRecorridoOcupanteDto> ObtenerOcupanteOrdenRecorrido(
             int idCamion, int idDia, int idSemana, int orden, int? idExcluirEstablecimiento)
             => _repo.ObtenerOcupanteOrdenRecorrido(idCamion, idDia, idSemana, orden, idExcluirEstablecimiento);

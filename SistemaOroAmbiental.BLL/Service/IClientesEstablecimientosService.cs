@@ -10,6 +10,9 @@ namespace SistemaOroAmbiental.BLL.Service
         Task<ServiceResult> Eliminar(int id);
         Task<ClientesEstablecimiento?> Obtener(int id);
         Task<IQueryable<ClientesEstablecimiento>> ObtenerTodos();
+        Task<List<ClientesEstablecimiento>> ListarPorCliente(int idCliente);
+        Task<GrillaPaginadaResult<ClientesEstablecimiento>> ListarPaginado(GrillaPaginadaConsulta consulta);
+        Task<int> ObtenerIndiceEnLista(int id, GrillaPaginadaConsulta consulta);
         Task<OrdenRecorridoOcupanteDto> ObtenerOcupanteOrdenRecorrido(
             int idCamion, int idDia, int idSemana, int orden, int? idExcluirEstablecimiento);
     }

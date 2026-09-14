@@ -8,7 +8,7 @@ using SistemaOroAmbiental.Models;
 namespace SistemaOroAmbiental.Application.Helpers
 {
     /// <summary>
-    /// Réplica al milímetro del certificado oficial (MediaBox 1008×612 pt, Arial).
+    /// Réplica al milímetro del certificado oficial (MediaBox 1008×612 pt, Helvetica).
     /// Coordenadas medidas del PDF del cliente (origen arriba-izquierda en QuestPDF).
     /// </summary>
     public static class CertificadoTratamientoPdfGenerator
@@ -24,24 +24,6 @@ namespace SistemaOroAmbiental.Application.Helpers
         static CertificadoTratamientoPdfGenerator()
         {
             QuestPDF.Settings.License = LicenseType.Community;
-            try
-            {
-                var fonts = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Fonts));
-                void Reg(string name)
-                {
-                    var path = Path.Combine(fonts, name);
-                    if (File.Exists(path))
-                        QuestPDF.Drawing.FontManager.RegisterFont(File.OpenRead(path));
-                }
-                Reg("arial.ttf");
-                Reg("arialbd.ttf");
-                Reg("ariali.ttf");
-                Reg("arialbi.ttf");
-            }
-            catch
-            {
-                // Fallback de QuestPDF si no hay Arial del sistema.
-            }
         }
 
         public static byte[] Generar(CertificadoTratamientoItemDto item)
@@ -62,7 +44,7 @@ namespace SistemaOroAmbiental.Application.Helpers
                         page.Margin(0);
                         page.PageColor(Colors.White);
                         page.DefaultTextStyle(x => x
-                            .FontFamily("Arial")
+                            .FontFamily("Helvetica")
                             .FontSize(10)
                             .FontColor(Colors.Black)
                             .LineHeight(1.1f));
@@ -89,7 +71,7 @@ namespace SistemaOroAmbiental.Application.Helpers
                                     .AlignCenter().AlignMiddle()
                                     .PaddingHorizontal(8)
                                     .Text("CERTIFICADO DE TRATAMIENTO DE RESIDUOS\nPATOGENICOS")
-                                    .FontFamily("Arial").FontSize(16).Bold()
+                                    .FontFamily("Helvetica").FontSize(16).Bold()
                                     .FontColor(Colors.White)
                                     .AlignCenter()
                                     .LineHeight(1.05f);
@@ -101,8 +83,8 @@ namespace SistemaOroAmbiental.Application.Helpers
                                     .AlignLeft().AlignMiddle()
                                     .Text(t =>
                                     {
-                                        t.Span("Fecha de Emisión: ").FontFamily("Arial").FontSize(12).Bold();
-                                        t.Span(FechaTxt(item.FechaEmision)).FontFamily("Arial").FontSize(12);
+                                        t.Span("Fecha de Emision: ").FontFamily("Helvetica").FontSize(12).Bold();
+                                        t.Span(FechaTxt(item.FechaEmision)).FontFamily("Helvetica").FontSize(12);
                                     });
 
                                 layers.Layer()
@@ -111,9 +93,9 @@ namespace SistemaOroAmbiental.Application.Helpers
                                     .AlignLeft().AlignMiddle()
                                     .Text(t =>
                                     {
-                                        t.Span("Nro. Certificado: ").FontFamily("Arial").FontSize(12).Bold();
+                                        t.Span("Nro. Certificado: ").FontFamily("Helvetica").FontSize(12).Bold();
                                         t.Span(item.NumeroCertificado.ToString(CultureInfo.InvariantCulture))
-                                            .FontFamily("Arial").FontSize(12).Bold();
+                                            .FontFamily("Helvetica").FontSize(12).Bold();
                                     });
 
                                 // Texto legal (x=503, debajo de fecha; ~3 líneas italic 8pt)
@@ -121,7 +103,7 @@ namespace SistemaOroAmbiental.Application.Helpers
                                     .TranslateX(503).TranslateY(74)
                                     .Width(474).Height(42)
                                     .Text(ManifiestoDatosEmpresa.CertificadoTextoLegal)
-                                    .FontFamily("Arial").FontSize(8).Italic()
+                                    .FontFamily("Helvetica").FontSize(8).Italic()
                                     .FontColor(Colors.Black)
                                     .AlignLeft()
                                     .LineHeight(1.2f);
@@ -134,9 +116,9 @@ namespace SistemaOroAmbiental.Application.Helpers
                                     .Element(c => CajaDatos(c, "DATOS DEL TRATADOR", 10f, new[]
                                     {
                                         ("Razón Social:", ManifiestoDatosEmpresa.CertificadoTratadorRazonSocial),
-                                        ("C.H.E. Nro.:", ""),
+                                        ("C.H.E. Nro.:", ManifiestoDatosEmpresa.CertificadoTratadorChe),
                                         ("Ubicacion de la planta de tratamiento:",
-                                            $"Calle: {ManifiestoDatosEmpresa.CertificadoTratadorCalle} Nro: {ManifiestoDatosEmpresa.CertificadoTratadorNumero} Piso: Ruta: Km: Localidad: {ManifiestoDatosEmpresa.CertificadoTratadorLocalidad}"),
+                                            $"Calle: {ManifiestoDatosEmpresa.CertificadoTratadorCalle} Nro: {ManifiestoDatosEmpresa.CertificadoTratadorNumero} Piso: Ruta:\nKm: Localidad: {ManifiestoDatosEmpresa.CertificadoTratadorLocalidad}"),
                                         ("Firma Resp. Tecnico:", "")
                                     }));
 
@@ -148,7 +130,7 @@ namespace SistemaOroAmbiental.Application.Helpers
                                     .Element(c => CajaDatos(c, "DATOS DEL GENERADOR", 12f, new[]
                                     {
                                         ("Razon Social:", (item.RazonSocial ?? "").Trim().ToUpperInvariant()),
-                                        ("C.H.E. Nro.:", ""),
+                                        ("C.H.E. Nro.:", (item.CheNro ?? "").Trim()),
                                         ("Domicilio Real:", DomicilioGenerador(item)),
                                         ("Firma:", "")
                                     }));
@@ -197,7 +179,7 @@ namespace SistemaOroAmbiental.Application.Helpers
                     bar.Background(GrayBar).Height(tituloSize <= 10 ? 12f : 14f)
                         .AlignCenter().AlignMiddle()
                         .Text(titulo)
-                        .FontFamily("Arial").FontSize(tituloSize)
+                        .FontFamily("Helvetica").FontSize(tituloSize)
                         .FontColor(Colors.White);
                 });
 
@@ -211,8 +193,8 @@ namespace SistemaOroAmbiental.Application.Helpers
                         {
                             inner.Item().Text(t =>
                             {
-                                t.Span(label + " ").FontFamily("Arial").FontSize(10).Bold();
-                                t.Span(value ?? "").FontFamily("Arial").FontSize(10);
+                                t.Span(label + " ").FontFamily("Helvetica").FontSize(10).Bold();
+                                t.Span(value ?? "").FontFamily("Helvetica").FontSize(10);
                             });
                         }
                     });
@@ -228,7 +210,7 @@ namespace SistemaOroAmbiental.Application.Helpers
                 col.Item().Background(GrayBar).Height(14.6f)
                     .AlignCenter().AlignMiddle()
                     .Text("DATOS OPERATIVOS")
-                    .FontFamily("Arial").FontSize(10).Bold()
+                    .FontFamily("Helvetica").FontSize(10).Bold()
                     .FontColor(Colors.White);
 
                 col.Item().Table(table =>
@@ -247,7 +229,7 @@ namespace SistemaOroAmbiental.Application.Helpers
                             .PaddingHorizontal(2).PaddingTop(3).Height(41.8f)
                             .AlignCenter().AlignTop()
                             .Text(text)
-                            .FontFamily("Arial").FontSize(10).Bold()
+                            .FontFamily("Helvetica").FontSize(10).Bold()
                             .AlignCenter()
                             .LineHeight(1.02f);
                     }
@@ -258,11 +240,11 @@ namespace SistemaOroAmbiental.Application.Helpers
                     HeaderCell("Estado\nFisico");
                     HeaderCell("N° de\nmanifiesto de\ntransporte");
                     HeaderCell("Cantidad\n(4)");
-                    HeaderCell("Fecha\n(5)");
+                    HeaderCell("Fecha (5)");
                     HeaderCell("N° orden del\nregistro de\noperaciones(6)");
                     HeaderCell("Tipo de\ntratamiento(7)");
                     HeaderCell("Residuos del\ntratamiento(8)");
-                    HeaderCell("Lugar de\ndisposicion\nfinal(9)");
+                    HeaderCell("Lugar de\ndisposicion final(9)");
 
                     void DataCell(string text)
                     {
@@ -272,7 +254,7 @@ namespace SistemaOroAmbiental.Application.Helpers
                             .PaddingHorizontal(2).PaddingTop(4).Height(41.8f)
                             .AlignCenter().AlignTop()
                             .Text(text ?? "")
-                            .FontFamily("Arial").FontSize(10)
+                            .FontFamily("Helvetica").FontSize(10)
                             .AlignCenter()
                             .LineHeight(1.05f);
                     }
@@ -297,9 +279,9 @@ namespace SistemaOroAmbiental.Application.Helpers
             // Original: col1 = 1-3, col2 = 4-7, col3 = 8-9
             var col1 = new[]
             {
-                "1. De acuerdo a la nomenclatura consignada en la Declaración Jurada del Decreto 806/97 presentada ante el O.P.D.S. o \"Residuos Patogénicos\" cuando corresponda.",
+                "1. De acuerdo a la nomenclatura consignada en la Declaración Jurada del Decreto\n806/97 presentada ante el O.P.D.S. o \"Residuos Patogénicos\" cuando\ncorresponda.",
                 "2. De acuerdo al Anexo I de la Ley 11720 o al artículo 2° del Decreto 403/97.",
-                "3. De acuerdo al Anexo II de la Ley 11720 o los Códigos \"H\" del Convenio de Basilea."
+                "3. De acuerdo al Anexo II de la Ley 11720 o los Códigos \"H\" del Convenio de\nBasilea."
             };
             var col2 = new[]
             {
@@ -310,7 +292,7 @@ namespace SistemaOroAmbiental.Application.Helpers
             };
             var col3 = new[]
             {
-                "8. Consignar los residuos que se originen como consecuencia del proceso u operación de tratamiento, indicando si los mismos poseen características de peligrosidad.",
+                "8. Consignar los residuos que se originen como consecuencia del proceso u\noperación de tratamiento, indicando si los mismos poseen características de\npeligrosidad.",
                 "9. Nombre del establecimiento o centro de disposición final."
             };
 
@@ -324,7 +306,7 @@ namespace SistemaOroAmbiental.Application.Helpers
                         foreach (var n in notas)
                         {
                             c.Item().Text(n)
-                                .FontFamily("Arial")
+                                .FontFamily("Helvetica")
                                 .FontSize(8)
                                 .Italic()
                                 .FontColor(Colors.Black)
@@ -346,10 +328,10 @@ namespace SistemaOroAmbiental.Application.Helpers
         {
             var calle = (item.Calle ?? "").Trim();
             var nro = (item.NumeroCalle ?? "").Trim();
-            var piso = (item.Piso ?? "").Trim();
             var loc = (item.Localidad ?? "").Trim();
-
-            return $"Calle: {(string.IsNullOrWhiteSpace(calle) ? "" : calle.ToUpperInvariant())} Nro: {nro} Piso: {(string.IsNullOrWhiteSpace(piso) ? "" : piso)} Localidad: {(string.IsNullOrWhiteSpace(loc) ? "" : loc.ToUpperInvariant())}";
+            var calleTxt = string.IsNullOrWhiteSpace(calle) ? "" : calle.ToUpperInvariant();
+            var locTxt = string.IsNullOrWhiteSpace(loc) ? "" : loc.ToUpperInvariant();
+            return $"Calle: {calleTxt} Nro: {nro} Localidad: {locTxt}";
         }
 
         private static string VacioSiBlanco(string? valor)

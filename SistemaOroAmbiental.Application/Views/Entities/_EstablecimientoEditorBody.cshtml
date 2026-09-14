@@ -1,5 +1,6 @@
 @{
     var incluirStock = ViewData["IncluirStockEst"] as bool? == true;
+    var incluirManifiestos = incluirStock || ViewData["IncluirManifiestosEst"] as bool? == true;
 }
 
 <div id="errorCamposEst" class="rp-error-panel d-none mb-2">
@@ -35,6 +36,14 @@
                 <i class="fa fa-cube"></i><span>Productos</span>
             </button>
         </li>
+        @if (incluirManifiestos)
+        {
+            <li class="nav-item">
+                <button class="nav-link" id="tabBtnManifiestosEst" data-bs-toggle="tab" data-bs-target="#tabManifiestosEst" type="button">
+                    <i class="fa fa-file-text-o"></i><span>Manifiestos</span>
+                </button>
+            </li>
+        }
         @if (incluirStock)
         {
             <li class="nav-item">
@@ -157,6 +166,13 @@
             <div class="col-md-5">
                 <label class="form-label">Calle</label>
                 <input id="txtCalleEst" class="form-control" maxlength="@IntercambioTxtCampos.Calle" />
+            </div>
+
+            <div class="col-md-7">
+                <label class="form-label">Descripcion</label>
+                <input id="txtDescripcionEst" class="form-control" maxlength="200"
+                       placeholder="Entrecalles, referencias, etc."
+                       title="Entrecalles, referencias u otras indicaciones del domicilio" />
             </div>
 
             <div class="w-100"></div>
@@ -433,6 +449,45 @@
             </div>
         </div>
     </div>
+
+    @if (incluirManifiestos)
+    {
+        <div class="tab-pane fade" id="tabManifiestosEst">
+            <div class="cg-list-panel" data-cg-list="manifiestos">
+                <div class="cg-list-toolbar">
+                    <div class="cg-list-toolbar-info">
+                        <h6 class="cg-list-title"><i class="fa fa-file-text-o"></i> Manifiestos y certificados</h6>
+                        <small class="text-muted">Historial de este establecimiento</small>
+                    </div>
+                    <div class="d-flex gap-2 flex-wrap">
+                        <button type="button" id="btnRefreshManifiestosCg" class="cg-btn cg-btn--ghost cg-btn--sm">
+                            <i class="fa fa-refresh"></i> Actualizar
+                        </button>
+                    </div>
+                </div>
+                <div class="cg-mf-split">
+                    <section class="cg-mf-col cg-mf-col--manif">
+                        <header class="cg-mf-col-head">
+                            <span class="cg-mf-badge cg-mf-badge--manif">Manifiestos</span>
+                            <strong id="cgMfManifCount">0</strong>
+                        </header>
+                        <div id="cgTabManifiestosList" class="cg-manifiestos-list">
+                            <div class="cg-hub-stock-empty">Sin manifiestos registrados.</div>
+                        </div>
+                    </section>
+                    <section class="cg-mf-col cg-mf-col--cert">
+                        <header class="cg-mf-col-head">
+                            <span class="cg-mf-badge cg-mf-badge--cert">Certificados</span>
+                            <strong id="cgMfCertCount">0</strong>
+                        </header>
+                        <div id="cgTabCertificadosList" class="cg-manifiestos-list">
+                            <div class="cg-hub-stock-empty">Sin certificados registrados.</div>
+                        </div>
+                    </section>
+                </div>
+            </div>
+        </div>
+    }
 
     @if (incluirStock)
     {

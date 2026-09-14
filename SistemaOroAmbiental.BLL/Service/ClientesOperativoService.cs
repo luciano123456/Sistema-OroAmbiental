@@ -85,5 +85,16 @@ namespace SistemaOroAmbiental.BLL.Service
                     "duplicado");
             }
         }
+
+        public async Task<ServiceResult> VaciarAbonosMes(int idCliente, int anio, int mes, int? idEstablecimiento, int idUsuario)
+        {
+            if (idCliente <= 0 || anio < 2000 || mes is < 1 or > 12)
+                return ServiceResult.Error("Cliente, año y mes son obligatorios.", "validacion");
+
+            var ok = await _repo.VaciarAbonosMes(idCliente, anio, mes, idEstablecimiento, idUsuario);
+            return ok
+                ? ServiceResult.Success("Se pusieron en cero los montos de efectivo y transferencia de ese mes.")
+                : ServiceResult.Error("No se pudieron vaciar los montos del mes.");
+        }
     }
 }

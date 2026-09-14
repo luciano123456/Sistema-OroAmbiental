@@ -29,6 +29,9 @@ namespace SistemaOroAmbiental.BLL.Service
         public Task<Dictionary<int, decimal>> SumarCobrosPorEntregas(IEnumerable<int> idsEntrega)
             => _repo.SumarCobrosPorEntregas(idsEntrega?.ToList() ?? new List<int>());
 
+        public Task<Dictionary<int, int>> ContarProductosPorEntregas(IEnumerable<int> idsEntrega)
+            => _repo.ContarProductosPorEntregas(idsEntrega?.ToList() ?? new List<int>());
+
         public async Task<ServiceResult> Insertar(
             ClientesEntrega entrega,
             List<ClientesEntregasProducto> lineas,

@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.ResponseCaching;
 using SistemaOroAmbiental.Application.Models.ViewModels;
 using SistemaOroAmbiental.BLL.Service;
 using SistemaOroAmbiental.Models;
@@ -18,6 +19,7 @@ namespace SistemaOroAmbiental.Application.Controllers
 
         [AllowAnonymous]
         [HttpGet]
+        [ResponseCache(Duration = 600, Location = ResponseCacheLocation.Any)]
         public async Task<IActionResult> Lista()
         {
             var items = (await _service.ObtenerTodos())
@@ -29,6 +31,7 @@ namespace SistemaOroAmbiental.Application.Controllers
 
         [AllowAnonymous]
         [HttpGet]
+        [ResponseCache(Duration = 600, Location = ResponseCacheLocation.Any, VaryByQueryKeys = new[] { "idProvincia" })]
         public async Task<IActionResult> ListaPorProvincia(int idProvincia)
         {
             var items = (await _service.ObtenerPorProvincia(idProvincia))

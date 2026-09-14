@@ -44,7 +44,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Hoja de ruta - @Model.Titulo</title>
-    <link href="~/css/HojaRuta.css?v=4.9" rel="stylesheet" asp-append-version="true" />
+    <link href="~/css/HojaRuta.css?v=5.1" rel="stylesheet" asp-append-version="true" />
 </head>
 <body class="hr-page@(multiplesHojas ? " hr-page--multi" : "")">
     <div class="hr-toolbar no-print">
@@ -109,6 +109,13 @@
                                     {
                                         <span class="hr-badge-reprogramado">REPROGRAMADO</span>
                                     }
+                                    @if (p.IdCliente > 0)
+                                    {
+                                        var hrefStock = p.IdEstablecimiento > 0
+                                            ? $"/Clientes/Gestion?id={p.IdCliente}&est={p.IdEstablecimiento}&tab=stock"
+                                            : $"/Clientes/Gestion?id={p.IdCliente}&tab=pagos";
+                                        <a class="hr-link-stock no-print" href="@hrefStock" target="_blank" rel="noopener">Pagos y stock</a>
+                                    }
                                 </span>
                                 <div class="hr-stop-abono">
                                     <span class="hr-abono-label">Abono: $</span>
@@ -119,17 +126,20 @@
                             <div class="hr-stop-grid">
                                 <div class="hr-cell hr-cell-domicilio @ToneClass(p.Posicion)">
                                     <div class="hr-cell-label">Domicilio</div>
-                                    <div class="hr-cell-value">@p.Domicilio</div>
+                                    <div class="hr-cell-value hr-cell-value--domicilio">@p.Domicilio</div>
                                 </div>
 
-                                <div class="hr-cell hr-cell-contacto">
+                                <div class="hr-cell hr-cell-localidad">
                                     <div class="hr-cell-label">Localidad</div>
                                     <div class="hr-cell-value">@p.Localidad</div>
-                                    <div class="hr-cell-label hr-cell-label--stack">Tel&#233;fono</div>
+                                </div>
+
+                                <div class="hr-cell hr-cell-telefono">
+                                    <div class="hr-cell-label">Tel&#233;fono</div>
                                     <div class="hr-cell-value hr-cell-value--tel">@p.Telefono</div>
                                 </div>
 
-                                <div class="hr-cell">
+                                <div class="hr-cell hr-cell-horario">
                                     <div class="hr-cell-label">Horario</div>
                                     <div class="hr-cell-value">@p.Horario</div>
                                 </div>

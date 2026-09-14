@@ -50,6 +50,8 @@ public class ClientesRecorridoDto
     public string Cliente { get; set; } = "";
     public int? IdEstablecimiento { get; set; }
     public string? Establecimiento { get; set; }
+    /// <summary>N° de establecimiento OPDS del generador (Nº manifiesto cliente).</summary>
+    public string? CodigoOpds { get; set; }
     public string? Domicilio { get; set; }
     public string? Localidad { get; set; }
     public int IdCamion { get; set; }
@@ -385,6 +387,8 @@ public class HojaRutaParadaProductoDto
 public static class ManifiestoDatosEmpresa
 {
     public const string TransportistaCuit = "30-71529832/1";
+    /// <summary>N° de establecimiento OPDS del transportista (N°Estable. al ingresar al manifiesto electrónico).</summary>
+    public const string TransportistaIdEstablecimiento = "";
     public const string TransportistaRazonSocial = "ORO AMBIENTAL GROUP SRL";
     public const string TransportistaDomicilio = "L.M. CAMPOS Nº : 333 Piso: 1";
     public const string TransportistaTelefono = "01144038835";
@@ -403,12 +407,20 @@ public static class ManifiestoDatosEmpresa
     public const string EstadoFisico = "Solido";
     public const string IntercambioEmail = "info@oroambientalgroup.com";
 
+    // Códigos del instructivo OPDS de manifiesto patogénico por lotes
+    public const string LoteCategoriaY1 = "002";
+    public const string LotePeligrosidadH62 = "008";
+    public const string LoteEstadoFisicoSolido = "01";
+    public const string LoteOrigenGenerador = "01";
+    public const string LoteDestinoTratador = "02";
+
     // Certificado de tratamiento de residuos patogénicos
     public const string CertificadoTratadorRazonSocial = "HABITAT ECOLOGICO S.A.";
+    public const string CertificadoTratadorChe = "11";
     public const string CertificadoTratadorCalle = "BLANCO ENCALADA";
     public const string CertificadoTratadorNumero = "3040";
     public const string CertificadoTratadorLocalidad = "LANUS";
-    public const string CertificadoNombreResiduo = "Residuos Patogenicos";
+    public const string CertificadoNombreResiduo = "Y1";
     public const string CertificadoTipoResiduo = "Y1";
     public const string CertificadoPeligrosidad = "H6.2";
     public const string CertificadoEstadoFisico = "Solido";
@@ -514,6 +526,9 @@ public class ManifiestosHojaDto
     public string Nombre { get; set; } = "";
     public DateTime FechaProgramacion { get; set; }
     public int NumeroInicial { get; set; }
+    public string? ChoferNombre { get; set; }
+    public string? ChoferDni { get; set; }
+    public byte[]? ChoferFirmaPng { get; set; }
     public List<ManifiestoItemDto> Items { get; set; } = new();
 }
 

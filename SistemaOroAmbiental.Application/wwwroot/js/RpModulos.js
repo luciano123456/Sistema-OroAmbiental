@@ -19,7 +19,7 @@
             key: "Transporte",
             label: "Transporte",
             url: "/Recorridos",
-            prefixes: ["/camiones", "/recorridos"]
+            prefixes: ["/camiones", "/recorridos", "/choferes"]
         },
         {
             key: "Proveedores",

@@ -29,8 +29,11 @@ namespace SistemaOroAmbiental.DAL.Repository
 
         Task<bool> Eliminar(int id);
 
+        Task<bool> EliminarSinTransaccion(int id);
+
         Task<(decimal importeTotal, List<ProveedoresPago> pagos, Dictionary<int, int> movimientosCcPorPago)> ObtenerPagosCompra(int idCompra);
 
         Task<Dictionary<int, decimal>> SumarPagosPorCompras(IReadOnlyList<int> idsCompra);
+        Task<Dictionary<int, int>> ContarProductosPorCompras(IReadOnlyList<int> idsCompra);
     }
 }

@@ -9,8 +9,8 @@
     <link href="~/css/Productora.css?v=7.2" rel="stylesheet" />
     <link href="~/css/disenopantallas.css?v=8.1" rel="stylesheet" />
     <link href="~/css/M_Generico.css?v=7.2" rel="stylesheet" />
-    <link href="~/css/Camiones.css?v=6.3" rel="stylesheet" />
-    <link href="~/css/Recorridos.css?v=9.5" rel="stylesheet" />
+    <link href="~/css/Camiones.css?v=6.5" rel="stylesheet" />
+    <link href="~/css/Recorridos.css?v=10.1" rel="stylesheet" />
 }
 
 <div class="rec-page rec-sin-unidad">
@@ -164,8 +164,24 @@
                         <i class="fa fa-times"></i> Cancelar
                     </button>
                 </div>
+                <button type="button" class="rec-action rec-action--mf" id="btnMfSeleccionarRecorrido" disabled
+                        title="Elegir clientes de esta hoja para armar manifiestos">
+                    <i class="fa fa-check-square-o"></i> Seleccionar manifiesto
+                </button>
+                <div class="rec-mf-sel-bar d-none" id="barMfSeleccionRecorrido">
+                    <span class="rec-mf-sel-count" id="lblMfSeleccionRecorrido">0 seleccionados</span>
+                    <button type="button" class="rec-action rec-action--ghost" id="btnMfSelTodosRecorrido">
+                        <i class="fa fa-check-square-o"></i> Todos
+                    </button>
+                    <button type="button" class="rec-action rec-action--mf" id="btnMfSelGenerarRecorrido" disabled>
+                        <i class="fa fa-file-text-o"></i> Armar manifiestos
+                    </button>
+                    <button type="button" class="rec-action rec-action--cancel" id="btnMfSelCancelarRecorrido">
+                        <i class="fa fa-times"></i> Cancelar
+                    </button>
+                </div>
                 <button type="button" class="rec-action rec-action--mf" id="btnManifiestosRecorrido" disabled>
-                    <i class="fa fa-file-text-o"></i> Manifiestos
+                    <i class="fa fa-file-text-o"></i> Manifiestos por lote
                 </button>
                 <button type="button" class="rec-action rec-action--add" id="btnNuevoClienteRecorrido" disabled>
                     <i class="fa fa-plus"></i> Agregar cliente
@@ -198,6 +214,46 @@
         </div>
     </div>
 
+</div>
+
+<div id="recStockOverlay" class="rec-stock-overlay" hidden>
+    <div class="rec-stock-scrim" data-rs-close="1"></div>
+    <aside class="rec-stock-drawer" role="dialog" aria-modal="true" aria-labelledby="recStockTitle">
+        <header class="rec-stock-head">
+            <div class="rec-stock-head-copy">
+                <span class="rec-stock-kicker"><i class="fa fa-cubes"></i> Stock y visita</span>
+                <h3 class="rec-stock-title" id="recStockTitle">Cliente</h3>
+                <p class="rec-stock-sub" id="recStockSub">Mes actual</p>
+            </div>
+            <div class="rec-stock-head-tools">
+                <label class="rec-stock-month">
+                    <span>Mes</span>
+                    <input type="month" id="recStockMes" class="form-control rec-input" />
+                </label>
+                <a class="rec-stock-full" id="recStockGestionLink" href="/Clientes/Gestion" target="_blank" rel="noopener">
+                    Abrir gestión completa <i class="fa fa-external-link"></i>
+                </a>
+                <button type="button" class="rec-stock-close" data-rs-close="1" aria-label="Cerrar">
+                    <i class="fa fa-times"></i>
+                </button>
+            </div>
+            <label class="rec-stock-est">
+                <span>Establecimiento</span>
+                <select id="recStockEst" class="form-control rec-input"></select>
+            </label>
+        </header>
+        <div class="rec-stock-loading" id="recStockLoading" hidden>
+            <i class="fa fa-spinner fa-spin"></i>
+            <span id="recStockLoadingMsg">Cargando…</span>
+        </div>
+        <div class="rec-stock-body" id="recStockBody"></div>
+        <footer class="rec-stock-foot">
+            <button type="button" class="rec-modal-btn rec-modal-btn--ghost" data-rs-close="1">Cerrar</button>
+            <button type="button" class="rec-modal-btn rec-modal-btn--ok" id="btnRsGuardarVisita">
+                <i class="fa fa-check"></i> Guardar visita
+            </button>
+        </footer>
+    </aside>
 </div>
 
 @await Html.PartialAsync("~/Views/Entities/M_Camiones.cshtml")
@@ -282,7 +338,7 @@
 </div>
 
 <div class="modal fade rp-modal" id="modalManifiestoRecorrido" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" id="mfModalDialog">
         <div class="modal-content rec-modal">
             <div class="modal-header rec-modal-header">
                 <h5 class="modal-title m-0" id="modalManifiestoRecorridoTitulo">Generar manifiestos</h5>
@@ -297,13 +353,64 @@
                         <input type="text" id="mfNombreManifiesto" class="form-control rec-input" maxlength="120"
                                placeholder="Nombre del recorrido o del cliente" />
                     </div>
-                    <div class="col-12">
-                        <label class="form-label" for="mfNumeroManifiesto">Manifiesto Nº</label>
+                    <div class="col-md-6">
+                        <label class="form-label" for="mfNumeroManifiesto">Manifiesto Nº inicial</label>
                         <input type="number" id="mfNumeroManifiesto" class="form-control rec-input" min="1" step="1" />
                     </div>
-                    <div class="col-12">
+                    <div class="col-md-6">
                         <label class="form-label" for="mfFechaIntercambio">Fecha de programación</label>
                         <input type="date" id="mfFechaIntercambio" class="form-control rec-input" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="mfIdChofer">Chofer</label>
+                        <select id="mfIdChofer" class="form-control rec-input"></select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="mfChoferAclaracion">Aclaración</label>
+                        <input type="text" id="mfChoferAclaracion" class="form-control rec-input" maxlength="120"
+                               placeholder="Se completa con el chofer; podés cambiarla" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="mfChoferDni">DNI</label>
+                        <input type="text" id="mfChoferDni" class="form-control rec-input" maxlength="20" />
+                    </div>
+                    <div class="col-12 d-none" id="mfLotePreviewWrap">
+                        <div class="mf-lote-caption">Previsualización del lote — la última columna es el número que se imprime</div>
+                        <div class="mf-lote-table-wrap">
+                            <table class="mf-lote-table">
+                                <thead>
+                                    <tr>
+                                        <th>Nombre</th>
+                                        <th class="mf-lote-th-copias">
+                                            Copias
+                                            <input type="number" id="mfCopiasTodas" class="form-control rec-input mf-lote-copias mf-lote-copias-todas"
+                                                   min="0" max="50" step="1" inputmode="numeric" placeholder="Todas"
+                                                   title="Aplicar este valor a todos. Después podés cambiar cada fila." />
+                                        </th>
+                                        <th>Nº manifiesto cliente</th>
+                                        <th class="mf-lote-th-num">Manifiesto Nº</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="mfLotePreviewBody"></tbody>
+                            </table>
+                        </div>
+                        <div class="mf-lote-total" id="mfLotePreviewTotal"></div>
+                    </div>
+                    <div class="col-12 d-none" id="mfLoteOpdsWrap">
+                        <label class="form-label" for="mfIdTransportistaOpds">N° estable. OPDS del transportista</label>
+                        <input type="text" id="mfIdTransportistaOpds" class="form-control rec-input" maxlength="10"
+                               inputmode="numeric" placeholder="El N°Estable. al entrar al manifiesto electrónico" />
+                        <div class="form-text text-muted">Es el N°Estable. del instructivo OPDS (Idtransportista, 10 dígitos). Se guarda en este equipo.</div>
+                        <label class="oa-check mt-2" for="mfGenerarLoteOpds">
+                            <input type="checkbox" id="mfGenerarLoteOpds" />
+                            <span class="oa-check-box" aria-hidden="true">
+                                <i class="fa fa-check"></i>
+                            </span>
+                            <span class="oa-check-text">
+                                <strong>También generar archivo de lote OPDS</strong>
+                                <small>TXT del instructivo: un renglón por manifiesto, campos con ceros a la izquierda y ; para Enviar Archivo en Manifiesto por Lotes. Cada generador tiene que tener Id del ministerio.</small>
+                            </span>
+                        </label>
                     </div>
                     <div class="col-12">
                         <label class="oa-check" for="mfGenerarCertificados">
@@ -354,7 +461,8 @@
 
 @section Scripts {
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-    <script src="~/js/CamionesManifiestos.js?v=6.7"></script>
+                <script src="~/js/CamionesManifiestos.js?v=7.4"></script>
     <script src="~/js/Entities/M_Camiones.js?v=8.2"></script>
-    <script src="~/js/Recorridos.js?v=11.0"></script>
+    <script src="~/js/Recorridos.js?v=13.6"></script>
+    <script src="~/js/RecorridosStock.js?v=1.1"></script>
 }

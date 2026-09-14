@@ -103,6 +103,25 @@ namespace SistemaOroAmbiental.Application.Controllers
             });
         }
 
+        [HttpPost]
+        public async Task<IActionResult> VaciarAbonosMes([FromBody] VMClienteControlMensual model)
+        {
+            int idUsuario = int.Parse(User.FindFirst("Id")!.Value);
+            var result = await _service.VaciarAbonosMes(
+                model.IdCliente,
+                model.Anio,
+                model.Mes,
+                model.IdEstablecimiento is > 0 ? model.IdEstablecimiento : null,
+                idUsuario);
+
+            return Ok(new
+            {
+                valor = result.Ok,
+                mensaje = result.Mensaje,
+                tipo = result.Tipo
+            });
+        }
+
         private static List<int> ParseCsvEnteros(string? csv)
         {
             if (string.IsNullOrWhiteSpace(csv))

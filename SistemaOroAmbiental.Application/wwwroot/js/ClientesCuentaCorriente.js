@@ -113,9 +113,9 @@ function wireEventos() {
         renderClientes();
     });
 
-    $("#txtBuscarCliente").on("input", function () {
-        renderClientes();
-    });
+    $("#txtBuscarCliente").on("input", typeof rpDebounce === "function"
+        ? rpDebounce(renderClientes, 300)
+        : renderClientes);
 
     $("#fClienteSaldoActivo").on("change", function () {
         renderClientes();

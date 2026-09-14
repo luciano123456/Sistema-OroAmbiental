@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using SistemaOroAmbiental.DAL.Common;
 using SistemaOroAmbiental.DAL.DataContext;
 using SistemaOroAmbiental.Models;
 
@@ -44,10 +45,8 @@ namespace SistemaOroAmbiental.DAL.Repository
                 _ => Task.FromResult(InfoVacio())
             };
 
-        public async Task EliminarEnCascadaAsync<T>(int id) where T : class
-        {
-            await using var trx = await _db.Database.BeginTransactionAsync();
-            try
+        public Task EliminarEnCascadaAsync<T>(int id) where T : class
+            => _db.ExecuteInTransactionAsync(async () =>
             {
                 switch (typeof(T).Name)
                 {
@@ -79,15 +78,7 @@ namespace SistemaOroAmbiental.DAL.Repository
                     default:
                         throw new InvalidOperationException("Este catálogo no tiene eliminación en cascada.");
                 }
-
-                await trx.CommitAsync();
-            }
-            catch
-            {
-                await trx.RollbackAsync();
-                throw;
-            }
-        }
+            });
 
         #region Días / Semanas
 

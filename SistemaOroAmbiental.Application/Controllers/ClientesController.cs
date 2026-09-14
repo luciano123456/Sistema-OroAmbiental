@@ -59,6 +59,34 @@ namespace SistemaOroAmbiental.Application.Controllers
             return Ok(clientes.Select(MapVm).ToList());
         }
 
+        [HttpPost]
+        public async Task<IActionResult> ListaPaginada([FromBody] GrillaServerRequest req)
+        {
+            var consulta = GrillaServerHelper.ToConsulta(req);
+            var result = await _service.ListarPaginado(consulta);
+            var data = result.Items.Select(MapVm).ToList();
+            return Ok(GrillaServerHelper.Respuesta(req, result.Total, result.Filtered, data));
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> PaginaDeId([FromBody] GrillaServerRequest req, int id)
+        {
+            if (id <= 0)
+                return NotFound();
+
+            var consulta = GrillaServerHelper.ToConsulta(req);
+            var indice = await _service.ObtenerIndiceEnLista(id, consulta);
+            if (indice < 0)
+                return NotFound();
+
+            var pageSize = Math.Clamp(consulta.Length, 1, 200);
+            return Ok(new GrillaPaginaDeIdResponse
+            {
+                Page = GrillaServerHelper.CalcularPagina(indice, pageSize),
+                Start = GrillaServerHelper.CalcularPagina(indice, pageSize) * pageSize
+            });
+        }
+
         [HttpGet]
         public async Task<IActionResult> Combo(string? q, int take = 40, int? id = null)
         {
@@ -545,12 +573,12 @@ namespace SistemaOroAmbiental.Application.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> ManifiestosDocumentos(int idCliente)
+        public async Task<IActionResult> ManifiestosDocumentos(int idCliente, int? idEstablecimiento = null)
         {
             if (idCliente <= 0)
                 return BadRequest();
 
-            var data = await _certRepo.ListarDocumentosPorCliente(idCliente);
+            var data = await _certRepo.ListarDocumentosPorCliente(idCliente, idEstablecimiento);
             return Ok(data);
         }
 
@@ -582,9 +610,17 @@ namespace SistemaOroAmbiental.Application.Controllers
             if (model == null)
                 return NotFound();
 
-            var header = Path.Combine(_env.WebRootPath, "Imagenes", "manifiesto-header.jpg");
-            var bytes = ManifiestoPdfGenerator.Generar(model, header);
-            return File(bytes, "application/pdf", ManifiestoPdfGenerator.NombreArchivo(model));
+            try
+            {
+                var header = Path.Combine(_env.WebRootPath, "Imagenes", "manifiesto-header.jpg");
+                var bytes = ManifiestoPdfGenerator.Generar(model, header);
+                return File(bytes, "application/pdf", ManifiestoPdfGenerator.NombreArchivo(model));
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine("[Manifiesto PDF] " + ex);
+                return StatusCode(500, "No se pudo generar el PDF del manifiesto.");
+            }
         }
 
         [HttpGet]

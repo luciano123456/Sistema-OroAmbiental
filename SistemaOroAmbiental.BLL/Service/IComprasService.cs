@@ -17,6 +17,7 @@ namespace SistemaOroAmbiental.BLL.Service
         Task<bool> TienePagos(int idCompra);
 
         Task<Dictionary<int, decimal>> SumarPagosPorCompras(IEnumerable<int> idsCompra);
+        Task<Dictionary<int, int>> ContarProductosPorCompras(IEnumerable<int> idsCompra);
 
         Task<ServiceResult> Insertar(
             Compra compra,

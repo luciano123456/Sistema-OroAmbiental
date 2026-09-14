@@ -48,6 +48,7 @@ public static class IntercambioTxtCampos
     {
         model.IdEstablecimientoCliente = RecortarOpcional(model.IdEstablecimientoCliente, CodigoOpds);
         model.Calle = RecortarOpcional(model.Calle, Calle);
+        model.Descripcion = RecortarOpcional(model.Descripcion, 200);
         model.Numero = RecortarOpcional(model.Numero, Numero);
         model.PisoDepartamento = RecortarOpcional(model.PisoDepartamento, Adicional);
         model.CodPostal = RecortarOpcional(model.CodPostal, CodigoPostal);

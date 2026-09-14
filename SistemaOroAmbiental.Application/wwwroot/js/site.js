@@ -2,6 +2,80 @@ function obtenerTokenJwt() {
     return localStorage.getItem("JwtToken");
 }
 
+/** Retrasa ejecuciones frecuentes (filtros de grilla, búsquedas). */
+function rpDebounce(fn, delayMs) {
+    let timer = null;
+    return function (...args) {
+        const ctx = this;
+        clearTimeout(timer);
+        timer = setTimeout(() => fn.apply(ctx, args), delayMs);
+    };
+}
+
+const RP_FILTER_DEBOUNCE_MS = 300;
+
+/** Opciones AJAX para DataTables server-side (ASP.NET MVC). */
+window.crearOpcionesAjaxGrillaServer = function (url, tableSelector, extraPayloadFn) {
+    return {
+        url: url,
+        type: "POST",
+        contentType: "application/json",
+        headers: {
+            Authorization: "Bearer " + (window.token || obtenerTokenJwt())
+        },
+        data: function (d) {
+            const filters = {};
+            (d.columns || []).forEach((col) => {
+                const val = col.search?.value;
+                if (val) filters[col.data || String(col.name || "")] = val;
+            });
+
+            const payload = {
+                draw: d.draw,
+                start: d.start,
+                length: d.length,
+                search: d.search?.value || "",
+                sortColumn: d.order?.length ? (d.columns[d.order[0].column]?.data || null) : null,
+                sortDesc: d.order?.length ? d.order[0].dir === "desc" : false,
+                filters: filters,
+                activoModo: $(tableSelector).data("rpActivoModo") || "todos"
+            };
+
+            if (typeof extraPayloadFn === "function") {
+                Object.assign(payload, extraPayloadFn(d) || {});
+            }
+
+            return JSON.stringify(payload);
+        },
+        dataSrc: function (json) {
+            const $table = $(tableSelector);
+            const filtered = json.recordsFiltered ?? json.RecordsFiltered ?? 0;
+            const total = json.recordsTotal ?? json.RecordsTotal ?? filtered;
+            $table.data("rpRecordsFiltered", filtered);
+            $table.data("rpRecordsTotal", total);
+            return json.data ?? json.Data ?? [];
+        }
+    };
+};
+
+window.esGrillaServerSide = function (api) {
+    try {
+        return !!api?.settings?.()[0]?.oFeatures?.bServerSide;
+    } catch {
+        return false;
+    }
+};
+
+window.recargarGrillaServer = function (grid) {
+    if (grid && typeof grid.ajax?.reload === "function") {
+        grid.ajax.reload(null, false);
+        return;
+    }
+    if (grid && typeof grid.draw === "function") {
+        grid.draw(false);
+    }
+};
+
 const token = obtenerTokenJwt();
 window.token = token;
 window.obtenerTokenJwt = obtenerTokenJwt;
@@ -180,7 +254,7 @@ function rpToastMeta(tipo) {
         case "success":
             return { icon: "fa-check", title: "Listo" };
         case "error":
-            return { icon: "fa-times", title: "Ups" };
+            return { icon: "fa-times", title: "Error" };
         case "warning":
             return { icon: "fa-exclamation", title: "Atencion" };
         default:
@@ -467,7 +541,8 @@ window.exitoModal = exitoModal;
 window.errorModal = errorModal;
 window.advertenciaModal = advertenciaModal;
 
-function confirmarModal(mensaje) {
+function confirmarModal(mensaje, opciones) {
+    const opts = opciones || {};
     return new Promise((resolve) => {
         const modalEl = document.getElementById('modalConfirmar');
         const mensajeEl = document.getElementById('modalConfirmarMensaje');
@@ -490,9 +565,11 @@ function confirmarModal(mensaje) {
         const nuevoBtnAceptar = document.getElementById('btnModalConfirmarAceptar');
         const nuevoTitulo = document.getElementById('modalConfirmarLabel');
         const nuevoMensaje = document.getElementById('modalConfirmarMensaje');
+        const nuevoBtnCancelar = nuevoModalEl.querySelector('.modal-footer [data-bs-dismiss="modal"]');
 
-        if (nuevoTitulo) nuevoTitulo.textContent = TEXTOS_MODAL.confirmacionTitulo;
-        if (nuevoBtnAceptar) nuevoBtnAceptar.textContent = TEXTOS_MODAL.confirmacionBtn;
+        if (nuevoTitulo) nuevoTitulo.textContent = opts.titulo || TEXTOS_MODAL.confirmacionTitulo;
+        if (nuevoBtnAceptar) nuevoBtnAceptar.textContent = opts.aceptar || TEXTOS_MODAL.confirmacionBtn;
+        if (nuevoBtnCancelar) nuevoBtnCancelar.textContent = opts.cancelar || "Cancelar";
         if (nuevoMensaje) nuevoMensaje.textContent = mensaje;
 
         const nuevoModal = new bootstrap.Modal(nuevoModalEl, {
@@ -1435,9 +1512,9 @@ async function finalizarFiltrosGridLista(api, tableSelector) {
 
     await montarControlFiltroTheadGrilla(tableSelector, 1, async () => {
         const $input = $(`<input type="text" class="rp-filter-input rp-filter-thead rp-filter-id" placeholder="Id..." autocomplete="off">`);
-        $input.on("keyup change", function () {
+        $input.on("keyup change", rpDebounce(function () {
             api.column(1).search(this.value.trim()).draw(false);
-        });
+        }, RP_FILTER_DEBOUNCE_MS));
         return $input;
     });
 
@@ -1448,7 +1525,8 @@ const RP_URL_CAMBIAR_ACTIVO = {
     Clientes: "/Clientes/CambiarActivo",
     Productos: "/Productos/CambiarActivo",
     Proveedores: "/Proveedores/CambiarActivo",
-    Camiones: "/Camiones/CambiarActivo"
+    Camiones: "/Camiones/CambiarActivo",
+    Choferes: "/Choferes/CambiarActivo"
 };
 
 /** Ultima columna: switch activo/inactivo en grillas maestras. */
@@ -1490,9 +1568,12 @@ function createdRowEstiloActivoGrilla(row, data) {
     }
 }
 
-function crearFiltroActivoDataTable(tableSelector, initialModo = "activos") {
+function crearFiltroActivoDataTable(tableSelector, initialModo = "activos", options = {}) {
     const tableId = $(tableSelector).attr("id") || tableSelector;
     const state = { modo: initialModo || "activos" };
+    const serverSide = options.serverSide === true;
+
+    $(tableSelector).data("rpActivoModo", state.modo);
 
     const fn = function (settings, data, dataIndex) {
         const api = new $.fn.dataTable.Api(settings);
@@ -1508,11 +1589,17 @@ function crearFiltroActivoDataTable(tableSelector, initialModo = "activos") {
         return true;
     };
 
-    $.fn.dataTable.ext.search.push(fn);
+    if (!serverSide) {
+        $.fn.dataTable.ext.search.push(fn);
+    }
 
     return {
+        getModo() {
+            return state.modo;
+        },
         setModo(modo) {
             state.modo = modo || "activos";
+            $(tableSelector).data("rpActivoModo", state.modo);
         },
         destroy() {
             const idx = $.fn.dataTable.ext.search.indexOf(fn);
@@ -1573,9 +1660,10 @@ function setModoFiltroActivoUI($wrap, modo) {
 
 function inicializarFiltroActivoGrilla(api, tableSelector, colIndex, defaultModo = "activos") {
     const modo = defaultModo || "activos";
+    const serverSide = typeof esGrillaServerSide === "function" && esGrillaServerSide(api);
     let filtro = $(tableSelector).data("rpFiltroActivo");
     if (!filtro) {
-        filtro = crearFiltroActivoDataTable(tableSelector, modo);
+        filtro = crearFiltroActivoDataTable(tableSelector, modo, { serverSide });
         $(tableSelector).data("rpFiltroActivo", filtro);
     } else if (filtro.setModo) {
         filtro.setModo(modo);
@@ -1587,7 +1675,7 @@ function inicializarFiltroActivoGrilla(api, tableSelector, colIndex, defaultModo
             api.draw(false);
         })
     ).then(() => {
-        if (modo !== "activos") api.draw(false);
+        if (!serverSide && modo !== "activos") api.draw(false);
     });
 }
 
@@ -1781,9 +1869,9 @@ async function buildTheadFilterControl(api, tableSelector, config, options) {
 
     const inputType = config.filterType === "number" ? "number" : "text";
     const $input = $(`<input type="${inputType}" ${inputType === "number" ? 'step="0.01"' : ""} class="rp-filter-input rp-filter-thead" data-col="${colIndex}" placeholder="${placeholder}..." autocomplete="off">`);
-    $input.on("keyup change", function () {
+    $input.on("keyup change", rpDebounce(function () {
         api.column(colIndex).search(this.value || "").draw(false);
-    });
+    }, RP_FILTER_DEBOUNCE_MS));
     return $input;
 }
 
@@ -2158,10 +2246,10 @@ async function montarPanelFiltrosGrillaLista(api, tableSelector, columnConfig, o
                 <div class="rp-filter-label">Buscar en todo</div>
                 <input type="text" class="rp-filter-input rp-grid-panel-search-global" placeholder="Texto libre en cualquier campo..." autocomplete="off">
             </div>`);
-        $panel.find(".rp-grid-panel-search-global").on("keyup change", function () {
+        $panel.find(".rp-grid-panel-search-global").on("keyup change", rpDebounce(function () {
             api.search(this.value || "").draw(false);
             refrescarBadgeFiltrosPanel($panel);
-        });
+        }, RP_FILTER_DEBOUNCE_MS));
     }
 
     if (opts.includeIdFilter) {
@@ -2170,10 +2258,10 @@ async function montarPanelFiltrosGrillaLista(api, tableSelector, columnConfig, o
                 <div class="rp-filter-label">Id</div>
                 <input type="text" class="rp-filter-input rp-grid-panel-search-id" placeholder="Id..." autocomplete="off">
             </div>`);
-        $panel.find(".rp-grid-panel-search-id").on("keyup change", function () {
+        $panel.find(".rp-grid-panel-search-id").on("keyup change", rpDebounce(function () {
             api.column(1).search($(this).val()?.trim() || "").draw(false);
             refrescarBadgeFiltrosPanel($panel);
-        });
+        }, RP_FILTER_DEBOUNCE_MS));
     }
 
     if (idxActivo !== undefined && idxActivo !== null && opts.includeActivo !== false && !opts.usarFilaColumnas) {
@@ -3396,6 +3484,10 @@ async function prepararFiltroSucursalDataTable($select, api, columnIndex, initSe
         let foundIdx = buscarIndiceFilaGrillaPorId(api, targetId, "applied");
 
         if (foundIdx < 0 && opts.limpiarFiltros) {
+            if (api.settings()[0].oFeatures.bServerSide && opts.paginaDeIdUrl) {
+                return irAFilaGrillaServerAsync(api, tableSelector, targetId, opts);
+            }
+
             const idxAll = buscarIndiceFilaGrillaPorId(api, targetId, "all");
             if (idxAll >= 0) {
                 api.search("");
@@ -3422,6 +3514,54 @@ async function prepararFiltroSucursalDataTable($select, api, columnIndex, initSe
 
         return $tr.length > 0 || irACardGrilla(tableId, targetId, opts);
     };
+
+    async function irAFilaGrillaServerAsync(api, tableSelector, targetId, opts) {
+        try {
+            const payload = {
+                draw: 1,
+                start: 0,
+                length: api.page.len(),
+                search: "",
+                sortColumn: api.settings()[0].aoColumns[api.order()[0]?.[0] || 1]?.data || "Id",
+                sortDesc: api.order()[0]?.[1] === "desc",
+                filters: {},
+                activoModo: $(tableSelector).data("rpActivoModo") || "todos"
+            };
+
+            const response = await fetch(`${opts.paginaDeIdUrl}?id=${targetId}`, {
+                method: "POST",
+                headers: {
+                    Authorization: "Bearer " + (window.token || obtenerTokenJwt()),
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) return false;
+
+            const info = await response.json();
+            const page = info.page ?? info.Page ?? 0;
+            api.search("");
+            api.columns().search("");
+            if (api.page() !== page) api.page(page);
+            api.draw(false);
+
+            await new Promise(resolve => setTimeout(resolve, 350));
+
+            const foundIdx = buscarIndiceFilaGrillaPorId(api, targetId, "applied");
+            if (foundIdx < 0) return false;
+
+            guardarIdSeleccionGrilla($(tableSelector), targetId, foundIdx);
+            aplicarSeleccionVisualGrilla($(tableSelector), { id: targetId, rowIdx: foundIdx });
+            const $tr = $(api.row(foundIdx).node());
+            if (opts.scroll !== false) scrollAFilaGrilla($tr, $(tableSelector));
+            if (opts.flash !== false) flashFilaGrilla($tr);
+            return true;
+        } catch (e) {
+            console.warn("irAFilaGrillaServerAsync", e);
+            return false;
+        }
+    }
 
     window.registrarGrillaDobleClick = function (tableId, fn) {
         if (tableId && typeof fn === "function") {

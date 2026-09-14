@@ -198,12 +198,14 @@ namespace SistemaOroAmbiental.BLL.Service
             IReadOnlyList<(int IdSemana, int IdDia)> recorridos,
             int numeroInicial,
             IReadOnlyCollection<int>? idsRecorridoExcluir = null,
-            int? idRecorrido = null)
+            int? idRecorrido = null,
+            IReadOnlyCollection<int>? idsRecorridoIncluir = null)
         {
             if (idCamion <= 0 || recorridos == null || recorridos.Count == 0)
                 return Task.FromResult<ManifiestosHojaDto?>(null);
 
-            return _repo.ObtenerManifiestos(idCamion, recorridos, numeroInicial, idsRecorridoExcluir, idRecorrido);
+            return _repo.ObtenerManifiestos(
+                idCamion, recorridos, numeroInicial, idsRecorridoExcluir, idRecorrido, idsRecorridoIncluir);
         }
 
         public Task<ArchivoIntercambioDto?> ObtenerArchivoIntercambio(

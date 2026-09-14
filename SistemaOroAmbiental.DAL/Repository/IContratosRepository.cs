@@ -20,6 +20,8 @@ namespace SistemaOroAmbiental.DAL.Repository
 
         Task<bool> Eliminar(int id);
 
+        Task<bool> EliminarSinTransaccion(int id);
+
         Task<bool> ActualizarVencimientoSiMayor(int idContrato, DateTime fechaVencimiento);
     }
 }

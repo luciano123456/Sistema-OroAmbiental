@@ -947,6 +947,38 @@ namespace SistemaOroAmbiental.DAL.Repository
             }
         }
 
+        public async Task<bool> VaciarAbonosMes(int idCliente, int anio, int mes, int? idEstablecimiento, int idUsuario)
+        {
+            try
+            {
+                var query = _db.ClientesControlMensuales
+                    .Where(x => x.IdCliente == idCliente && x.Anio == anio && x.Mes == mes);
+
+                if (idEstablecimiento is > 0)
+                    query = query.Where(x => x.IdEstablecimiento == idEstablecimiento);
+
+                var rows = await query.ToListAsync();
+                if (rows.Count == 0)
+                    return true;
+
+                var ahora = DateTime.Now;
+                foreach (var entity in rows)
+                {
+                    entity.AbonoEfectivo = 0;
+                    entity.AbonoTransferencia = 0;
+                    entity.IdUsuarioModifica = idUsuario;
+                    entity.FechaUsuarioModifica = ahora;
+                }
+
+                await _db.SaveChangesAsync();
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
         private async Task<decimal> CalcularStockUnidadesCliente(int idCliente, IReadOnlyList<int>? idsEstablecimiento = null)
         {
             var query = _db.ClientesEntregasProductos

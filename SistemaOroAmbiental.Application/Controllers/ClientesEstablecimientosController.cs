@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using SistemaOroAmbiental.Application.Helpers;
 using SistemaOroAmbiental.Application.Models.ViewModels;
 using SistemaOroAmbiental.BLL.Common;
 using SistemaOroAmbiental.BLL.Service;
@@ -46,9 +47,9 @@ namespace SistemaOroAmbiental.Application.Controllers
             if (idCliente <= 0)
                 return Ok(new List<object>());
 
-            var items = await (await _service.ObtenerTodos())
-                .Where(x => x.IdCliente == idCliente)
-                .OrderBy(x => x.Nombre)
+            var items = await _service.ListarPorCliente(idCliente);
+
+            var lista = items
                 .Select(e => new
                 {
                     e.Id,
@@ -57,17 +58,47 @@ namespace SistemaOroAmbiental.Application.Controllers
                     Etiqueta = e.Nombre,
                     e.OrdenRecorrido
                 })
-                .ToListAsync();
+                .ToList();
 
-            return Ok(items);
+            return Ok(lista);
         }
 
         [HttpGet]
         public async Task<IActionResult> Lista()
         {
             var items = (await _service.ObtenerTodos()).ToList();
+            return Ok(items.Select(MapEstablecimientoVm).ToList());
+        }
 
-            var lista = items.Select(e => new VMClienteEstablecimiento
+        [HttpPost]
+        public async Task<IActionResult> ListaPaginada([FromBody] GrillaServerRequest req)
+        {
+            var consulta = GrillaServerHelper.ToConsulta(req);
+            var result = await _service.ListarPaginado(consulta);
+            var data = result.Items.Select(MapEstablecimientoVm).ToList();
+            return Ok(GrillaServerHelper.Respuesta(req, result.Total, result.Filtered, data));
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> PaginaDeId([FromBody] GrillaServerRequest req, int id)
+        {
+            if (id <= 0)
+                return NotFound();
+
+            var consulta = GrillaServerHelper.ToConsulta(req);
+            var indice = await _service.ObtenerIndiceEnLista(id, consulta);
+            if (indice < 0)
+                return NotFound();
+
+            var pageSize = Math.Clamp(consulta.Length, 1, 200);
+            return Ok(new GrillaPaginaDeIdResponse
+            {
+                Page = GrillaServerHelper.CalcularPagina(indice, pageSize),
+                Start = GrillaServerHelper.CalcularPagina(indice, pageSize) * pageSize
+            });
+        }
+
+        private static VMClienteEstablecimiento MapEstablecimientoVm(ClientesEstablecimiento e) => new()
             {
                 Id = e.Id,
                 IdCliente = e.IdCliente,
@@ -77,6 +108,7 @@ namespace SistemaOroAmbiental.Application.Controllers
                 IdCondicionIva = e.IdCondicionIva,
                 Domicilio = DomicilioHelper.Componer(e.Calle, e.Numero, e.PisoDepartamento, e.Domicilio),
                 Calle = e.Calle,
+                Descripcion = e.Descripcion,
                 Numero = e.Numero,
                 PisoDepartamento = e.PisoDepartamento,
                 IdTipoGenerador = e.IdTipoGenerador,
@@ -118,10 +150,7 @@ namespace SistemaOroAmbiental.Application.Controllers
                 IdUsuarioModifica = e.IdUsuarioModifica,
                 FechaUsuarioModifica = e.FechaUsuarioModifica,
                 UsuarioModifica = e.IdUsuarioModificaNavigation?.Usuario ?? ""
-            }).ToList();
-
-            return Ok(lista);
-        }
+        };
 
         [HttpGet]
         public async Task<IActionResult> EditarInfo(int id)
@@ -138,6 +167,7 @@ namespace SistemaOroAmbiental.Application.Controllers
                 e.Cuit,
                 e.IdCondicionIva,
                 e.Calle,
+                e.Descripcion,
                 e.Numero,
                 e.PisoDepartamento,
                 Domicilio = DomicilioHelper.Componer(e.Calle, e.Numero, e.PisoDepartamento, e.Domicilio),
@@ -234,6 +264,10 @@ namespace SistemaOroAmbiental.Application.Controllers
             }));
 
             var calle = DomicilioHelper.Componer(e.Calle, e.Numero, e.PisoDepartamento, e.Domicilio);
+            if (!string.IsNullOrWhiteSpace(e.Descripcion))
+                calle = string.IsNullOrWhiteSpace(calle)
+                    ? e.Descripcion.Trim()
+                    : $"{calle} ({e.Descripcion.Trim()})";
             var localidad = !string.IsNullOrWhiteSpace(e.Localidad)
                 ? e.Localidad.Trim()
                 : (e.IdLocalidadNavigation?.Nombre ?? "").Trim();
@@ -410,6 +444,7 @@ namespace SistemaOroAmbiental.Application.Controllers
         private static ClientesEstablecimiento MapearEntidad(VMClienteEstablecimiento model, int idUsuario, bool esNuevo)
         {
             var calle = string.IsNullOrWhiteSpace(model.Calle) ? null : model.Calle.Trim();
+            var descripcion = string.IsNullOrWhiteSpace(model.Descripcion) ? null : model.Descripcion.Trim();
             var numero = string.IsNullOrWhiteSpace(model.Numero) ? null : model.Numero.Trim();
             var piso = string.IsNullOrWhiteSpace(model.PisoDepartamento) ? null : model.PisoDepartamento.Trim();
 
@@ -422,6 +457,7 @@ namespace SistemaOroAmbiental.Application.Controllers
                 Cuit = model.Cuit,
                 IdCondicionIva = model.IdCondicionIva,
                 Calle = calle,
+                Descripcion = descripcion,
                 Numero = numero,
                 PisoDepartamento = piso,
                 Domicilio = DomicilioHelper.Componer(calle, numero, piso, model.Domicilio),

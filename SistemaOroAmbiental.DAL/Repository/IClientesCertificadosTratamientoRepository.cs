@@ -16,6 +16,6 @@ namespace SistemaOroAmbiental.DAL.Repository
 
         Task ActualizarContador(int ultimoCertificado, int ultimoOrden, int idUsuario);
 
-        Task<List<ClienteDocumentoManifiestoDto>> ListarDocumentosPorCliente(int idCliente);
+        Task<List<ClienteDocumentoManifiestoDto>> ListarDocumentosPorCliente(int idCliente, int? idEstablecimiento = null);
     }
 }

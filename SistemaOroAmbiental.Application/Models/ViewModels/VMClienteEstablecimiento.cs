@@ -10,6 +10,7 @@ namespace SistemaOroAmbiental.Application.Models.ViewModels
         public int? IdCondicionIva { get; set; }
         public string? Domicilio { get; set; }
         public string? Calle { get; set; }
+        public string? Descripcion { get; set; }
         public string? Numero { get; set; }
         public string? PisoDepartamento { get; set; }
         public int? IdTipoGenerador { get; set; }

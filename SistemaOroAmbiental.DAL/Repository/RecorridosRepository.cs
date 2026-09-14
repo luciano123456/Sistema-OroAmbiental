@@ -315,7 +315,7 @@ namespace SistemaOroAmbiental.DAL.Repository
                 return null;
 
             var semanasOrden = await _db.Semanas.AsNoTracking().OrderBy(s => s.Id).Select(s => s.Id).ToListAsync();
-            var diasOrden = await _db.Dias.AsNoTracking().OrderBy(d => d.Id).Select(d => d.Id).ToListAsync();
+            var diasOrden = await ObtenerIdsDiasOrdenSemana();
 
             var recorridosOrdenados = recorridos
                 .Distinct()
@@ -387,6 +387,7 @@ namespace SistemaOroAmbiental.DAL.Repository
             var salida = matriz?.HorarioSalida?.Trim();
 
             var items = await _db.ClientesRecorridos.AsNoTracking()
+                .AsSplitQuery()
                 .Include(r => r.IdClienteNavigation)
                     .ThenInclude(c => c!.IdEstadoNavigation)
                 .Include(r => r.IdEstablecimientoNavigation)
@@ -607,14 +608,8 @@ namespace SistemaOroAmbiental.DAL.Repository
                 establecimiento?.Calle ?? cliente.Calle,
                 establecimiento?.Numero ?? cliente.Numero,
                 establecimiento?.PisoDepartamento ?? cliente.PisoDepartamento,
-                establecimiento?.Domicilio ?? cliente.Domicilio);
-            if (!string.IsNullOrWhiteSpace(establecimiento?.Nombre) &&
-                !string.Equals(establecimiento.Nombre.Trim(), cliente.Nombre.Trim(), StringComparison.OrdinalIgnoreCase))
-            {
-                domicilio = string.IsNullOrWhiteSpace(domicilio)
-                    ? establecimiento.Nombre.Trim()
-                    : establecimiento.Nombre.Trim() + " — " + domicilio;
-            }
+                establecimiento?.Domicilio ?? cliente.Domicilio,
+                establecimiento?.Descripcion);
 
             var localidad = (establecimiento?.Localidad ?? "").Trim();
             var telefono = ObtenerTelefonoParada(cliente, establecimiento);
@@ -1038,6 +1033,7 @@ namespace SistemaOroAmbiental.DAL.Repository
                     Cliente = c.Nombre,
                     Establecimiento = e.Nombre,
                     e.Calle,
+                    e.Descripcion,
                     e.Numero,
                     e.PisoDepartamento,
                     DomicilioEst = e.Domicilio,
@@ -1054,7 +1050,7 @@ namespace SistemaOroAmbiental.DAL.Repository
                 IdCliente = x.IdCliente,
                 Cliente = x.Cliente,
                 Establecimiento = x.Establecimiento,
-                Domicilio = ComponerDomicilio(x.Calle, x.Numero, x.PisoDepartamento, x.DomicilioEst ?? x.DomicilioCli),
+                Domicilio = ComponerDomicilio(x.Calle, x.Numero, x.PisoDepartamento, x.DomicilioEst ?? x.DomicilioCli, x.Descripcion),
                 Localidad = x.Localidad,
                 Horario = !string.IsNullOrWhiteSpace(x.DiasHorarios)
                     ? x.DiasHorarios.Trim()
@@ -1221,6 +1217,7 @@ namespace SistemaOroAmbiental.DAL.Repository
                        Cliente = cl.Nombre,
                        IdEstablecimiento = r.IdEstablecimiento,
                        Establecimiento = e != null ? e.Nombre : null,
+                       CodigoOpds = e != null ? e.IdEstablecimientoCliente : null,
                        Domicilio = (e != null ? e.Domicilio : null) ?? cl.Domicilio,
                        Localidad = e != null ? e.Localidad : null,
                        IdCamion = r.IdCamion,
@@ -1637,7 +1634,8 @@ namespace SistemaOroAmbiental.DAL.Repository
             IReadOnlyList<(int IdSemana, int IdDia)> recorridos,
             int numeroInicial,
             IReadOnlyCollection<int>? idsRecorridoExcluir = null,
-            int? idRecorrido = null)
+            int? idRecorrido = null,
+            IReadOnlyCollection<int>? idsRecorridoIncluir = null)
         {
             if (recorridos == null || recorridos.Count == 0)
                 return null;
@@ -1647,7 +1645,7 @@ namespace SistemaOroAmbiental.DAL.Repository
                 return null;
 
             var semanasOrden = await _db.Semanas.AsNoTracking().OrderBy(s => s.Id).Select(s => s.Id).ToListAsync();
-            var diasOrden = await _db.Dias.AsNoTracking().OrderBy(d => d.Id).Select(d => d.Id).ToListAsync();
+            var diasOrden = await ObtenerIdsDiasOrdenSemana();
 
             var recorridosOrdenados = recorridos
                 .Distinct()
@@ -1679,7 +1677,12 @@ namespace SistemaOroAmbiental.DAL.Repository
                 if (excluir != null)
                     filas = filas.Where(r => !excluir.Contains(r.Id)).ToList();
 
-                if (idRecorrido is > 0)
+                if (idsRecorridoIncluir is { Count: > 0 })
+                {
+                    var incluir = idsRecorridoIncluir as HashSet<int> ?? new HashSet<int>(idsRecorridoIncluir);
+                    filas = filas.Where(r => incluir.Contains(r.Id)).ToList();
+                }
+                else if (idRecorrido is > 0)
                     filas = filas.Where(r => r.Id == idRecorrido.Value).ToList();
 
                 foreach (var r in filas)
@@ -1688,6 +1691,21 @@ namespace SistemaOroAmbiental.DAL.Repository
 
             if (items.Count == 0)
                 return null;
+
+            if (idsRecorridoIncluir is { Count: > 0 })
+            {
+                var orden = new Dictionary<int, int>();
+                var i = 0;
+                foreach (var id in idsRecorridoIncluir)
+                {
+                    if (id > 0 && !orden.ContainsKey(id))
+                        orden[id] = i++;
+                }
+                items = items
+                    .OrderBy(x => orden.TryGetValue(x.IdRecorrido, out var idx) ? idx : int.MaxValue)
+                    .ThenBy(x => x.Posicion)
+                    .ToList();
+            }
 
             var numero = numeroInicial > 0 ? numeroInicial : 1;
             foreach (var item in items)
@@ -1726,7 +1744,7 @@ namespace SistemaOroAmbiental.DAL.Repository
                 return null;
 
             var semanasOrden = await _db.Semanas.AsNoTracking().OrderBy(s => s.Id).Select(s => s.Id).ToListAsync();
-            var diasOrden = await _db.Dias.AsNoTracking().OrderBy(d => d.Id).Select(s => s.Id).ToListAsync();
+            var diasOrden = await ObtenerIdsDiasOrdenSemana();
 
             List<(int IdSemana, int IdDia)> recorridosOrdenados;
             if (mesCompleto)
@@ -1878,7 +1896,9 @@ namespace SistemaOroAmbiental.DAL.Repository
                 var ahora = DateTime.Now;
                 var entidades = new List<RecorridoManifiesto>();
 
-                foreach (var item in model.Items)
+                foreach (var item in model.Items
+                    .GroupBy(x => x.IdRecorrido > 0 ? x.IdRecorrido : x.Numero)
+                    .Select(g => g.First()))
                 {
                     zonas.TryGetValue((item.IdSemana, item.IdDia), out var zona);
                     var nombreItem = loteNombre;
@@ -2080,7 +2100,7 @@ namespace SistemaOroAmbiental.DAL.Repository
                 return new List<RecorridoOpcionManifiestoDto>();
 
             var semanas = await _db.Semanas.AsNoTracking().OrderBy(s => s.Id).ToListAsync();
-            var dias = await _db.Dias.AsNoTracking().OrderBy(d => d.Id).ToListAsync();
+            var dias = await ObtenerDiasOrdenSemana();
             var semanaNom = semanas.ToDictionary(s => s.Id, s => s.Nombre ?? "");
             var diaNom = dias.ToDictionary(d => d.Id, d => d.Nombre ?? "");
 
@@ -2375,17 +2395,41 @@ namespace SistemaOroAmbiental.DAL.Repository
                 || msg.Contains("RecorridosManifiestos", StringComparison.OrdinalIgnoreCase);
         }
 
-        private static string ComponerDomicilio(string? calle, string? numero, string? pisoDepartamento, string? legacy)
+        private async Task<List<int>> ObtenerIdsDiasOrdenSemana()
+        {
+            var dias = await _db.Dias.AsNoTracking()
+                .Select(d => new { d.Id, d.Nombre })
+                .ToListAsync();
+            return OrdenDiasSemana.Ordenar(dias, d => d.Nombre).Select(d => d.Id).ToList();
+        }
+
+        private async Task<List<Dia>> ObtenerDiasOrdenSemana()
+        {
+            var dias = await _db.Dias.AsNoTracking().ToListAsync();
+            return OrdenDiasSemana.Ordenar(dias, d => d.Nombre);
+        }
+
+        private static string ComponerDomicilio(
+            string? calle,
+            string? numero,
+            string? pisoDepartamento,
+            string? legacy,
+            string? descripcion = null)
         {
             var partes = new List<string>();
             if (!string.IsNullOrWhiteSpace(calle)) partes.Add(calle.Trim());
             if (!string.IsNullOrWhiteSpace(numero)) partes.Add(numero.Trim());
             if (!string.IsNullOrWhiteSpace(pisoDepartamento)) partes.Add(pisoDepartamento.Trim());
 
-            if (partes.Count > 0)
-                return string.Join(" ", partes);
+            var domicilio = partes.Count > 0
+                ? string.Join(" ", partes)
+                : (string.IsNullOrWhiteSpace(legacy) ? "" : legacy.Trim());
 
-            return string.IsNullOrWhiteSpace(legacy) ? "" : legacy.Trim();
+            if (string.IsNullOrWhiteSpace(descripcion))
+                return domicilio;
+
+            var desc = descripcion.Trim();
+            return string.IsNullOrWhiteSpace(domicilio) ? desc : $"{domicilio} ({desc})";
         }
     }
 }

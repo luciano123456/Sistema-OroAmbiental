@@ -60,7 +60,8 @@ namespace SistemaOroAmbiental.BLL.Service
             IReadOnlyList<(int IdSemana, int IdDia)> recorridos,
             int numeroInicial,
             IReadOnlyCollection<int>? idsRecorridoExcluir = null,
-            int? idRecorrido = null);
+            int? idRecorrido = null,
+            IReadOnlyCollection<int>? idsRecorridoIncluir = null);
 
         Task<ArchivoIntercambioDto?> ObtenerArchivoIntercambio(
             int idCamion,

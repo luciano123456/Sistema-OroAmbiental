@@ -143,8 +143,7 @@ namespace SistemaOroAmbiental.DAL.Repository
 
             var movQuery = _db.CajasMovimientos
                 .AsNoTracking()
-                .Include(x => x.IdCajaNavigation)
-                    .ThenInclude(c => c.IdCuentaNavigation)
+                .Where(x => x.IdCajaNavigation.IdCuentaNavigation != null)
                 .AsQueryable();
 
             if (fechaDesde.HasValue)
@@ -162,20 +161,24 @@ namespace SistemaOroAmbiental.DAL.Repository
             if (!string.IsNullOrWhiteSpace(texto))
                 movQuery = movQuery.Where(x => x.Concepto.Contains(texto));
 
-            var movimientos = await movQuery.ToListAsync();
-
-            var ingresosEfectivo = movimientos
-                .Where(x => EsTipoCuenta(x.IdCajaNavigation.IdCuentaNavigation.TipoCuenta, "Efectivo"))
-                .Sum(x => x.Ingreso);
-            var egresosEfectivo = movimientos
-                .Where(x => EsTipoCuenta(x.IdCajaNavigation.IdCuentaNavigation.TipoCuenta, "Efectivo"))
-                .Sum(x => x.Egreso);
-            var ingresosBanco = movimientos
-                .Where(x => EsTipoCuenta(x.IdCajaNavigation.IdCuentaNavigation.TipoCuenta, "Banco"))
-                .Sum(x => x.Ingreso);
-            var egresosBanco = movimientos
-                .Where(x => EsTipoCuenta(x.IdCajaNavigation.IdCuentaNavigation.TipoCuenta, "Banco"))
-                .Sum(x => x.Egreso);
+            var ingresosEfectivo = await movQuery
+                .Where(x => x.IdCajaNavigation.IdCuentaNavigation.TipoCuenta == null
+                    || x.IdCajaNavigation.IdCuentaNavigation.TipoCuenta == ""
+                    || x.IdCajaNavigation.IdCuentaNavigation.TipoCuenta.ToLower() == "efectivo")
+                .SumAsync(x => x.Ingreso);
+            var egresosEfectivo = await movQuery
+                .Where(x => x.IdCajaNavigation.IdCuentaNavigation.TipoCuenta == null
+                    || x.IdCajaNavigation.IdCuentaNavigation.TipoCuenta == ""
+                    || x.IdCajaNavigation.IdCuentaNavigation.TipoCuenta.ToLower() == "efectivo")
+                .SumAsync(x => x.Egreso);
+            var ingresosBanco = await movQuery
+                .Where(x => x.IdCajaNavigation.IdCuentaNavigation.TipoCuenta != null
+                    && x.IdCajaNavigation.IdCuentaNavigation.TipoCuenta.ToLower() == "banco")
+                .SumAsync(x => x.Ingreso);
+            var egresosBanco = await movQuery
+                .Where(x => x.IdCajaNavigation.IdCuentaNavigation.TipoCuenta != null
+                    && x.IdCajaNavigation.IdCuentaNavigation.TipoCuenta.ToLower() == "banco")
+                .SumAsync(x => x.Egreso);
 
             return (saldoEfectivo, saldoBanco, ingresosEfectivo, egresosEfectivo, ingresosBanco, egresosBanco);
         }

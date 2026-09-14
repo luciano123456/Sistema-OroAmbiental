@@ -243,27 +243,57 @@ namespace SistemaOroAmbiental.Application.Controllers
             int? mesRef,
             int? idEstablecimiento)
         {
-            var concepto = (conceptoRaw ?? "").Trim();
+            var concepto = QuitarTagsConceptoInteres(conceptoRaw);
 
             if (anioRef is >= 2000 and <= 2100 && mesRef is >= 1 and <= 12)
             {
                 var tag = $"ref:{anioRef.Value}-{mesRef.Value:D2}";
-                if (!concepto.Contains(tag, StringComparison.OrdinalIgnoreCase))
-                    concepto = string.IsNullOrWhiteSpace(concepto)
-                        ? $"Interés · {tag}"
-                        : $"{concepto} · {tag}";
+                concepto = string.IsNullOrWhiteSpace(concepto)
+                    ? $"Interés · {tag}"
+                    : $"{concepto} · {tag}";
             }
 
             if (idEstablecimiento is > 0)
             {
                 var estTag = $"est:{idEstablecimiento.Value}";
-                if (!concepto.Contains(estTag, StringComparison.OrdinalIgnoreCase))
-                    concepto = string.IsNullOrWhiteSpace(concepto)
-                        ? $"Interés · {estTag}"
-                        : $"{concepto} · {estTag}";
+                concepto = string.IsNullOrWhiteSpace(concepto)
+                    ? $"Interés · {estTag}"
+                    : $"{concepto} · {estTag}";
             }
 
+            if (concepto.Length > 400)
+                concepto = concepto[..400];
+
             return concepto;
+        }
+
+        private static string QuitarTagsConceptoInteres(string? conceptoRaw)
+        {
+            var concepto = (conceptoRaw ?? "").Trim();
+            if (concepto.Length == 0)
+                return "";
+
+            concepto = System.Text.RegularExpressions.Regex.Replace(
+                concepto,
+                @"\s*·\s*ref:\d{4}-\d{2}",
+                "",
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            concepto = System.Text.RegularExpressions.Regex.Replace(
+                concepto,
+                @"\s*·\s*est:\d+",
+                "",
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            concepto = System.Text.RegularExpressions.Regex.Replace(
+                concepto,
+                @"\s*ref:\d{4}-\d{2}",
+                "",
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            concepto = System.Text.RegularExpressions.Regex.Replace(
+                concepto,
+                @"\s*est:\d+",
+                "",
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            return concepto.Trim(' ', '·', '-', '–');
         }
 
         private static string EtiquetaTipoMov(string tipo) => tipo switch
