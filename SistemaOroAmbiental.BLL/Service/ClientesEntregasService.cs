@@ -9,10 +9,12 @@ namespace SistemaOroAmbiental.BLL.Service
     public class ClientesEntregasService : IClientesEntregasService
     {
         private readonly IClientesEntregasRepository _repo;
+        private readonly IEntidadCascadeRepository _cascadeRepo;
 
-        public ClientesEntregasService(IClientesEntregasRepository repo)
+        public ClientesEntregasService(IClientesEntregasRepository repo, IEntidadCascadeRepository cascadeRepo)
         {
             _repo = repo;
+            _cascadeRepo = cascadeRepo;
         }
 
         public Task<List<ClientesEntrega>> ListarFiltrado(
@@ -126,16 +128,27 @@ namespace SistemaOroAmbiental.BLL.Service
             }
         }
 
-        public Task<ServiceResult> Eliminar(int id)
+        public Task<DependenciasEliminacionInfo> ObtenerDependenciasEliminar(int id)
+            => _cascadeRepo.ObtenerDependenciasEntregaAsync(id);
+
+        public Task<ServiceResult> Eliminar(int id, bool cascada = false)
         {
             if (id <= 0)
                 return Task.FromResult(ServiceResult.Error("Registro inválido.", "validacion"));
 
-            return DeleteOperationHelper.ExecuteAsync(
-                () => _repo.Eliminar(id),
+            return DeleteOperationHelper.ExecuteCascadeAsync(
+                id,
+                cascada,
                 "la entrega",
+                () => _cascadeRepo.ObtenerDependenciasEntregaAsync(id),
+                () => _cascadeRepo.EliminarEntregaEnCascadaAsync(id),
+                () => DeleteOperationHelper.ExecuteAsync(
+                    () => _repo.Eliminar(id),
+                    "la entrega",
+                    "Entrega eliminada. Se revirtieron stock, deuda en cuenta corriente, cobros y movimientos de caja.",
+                    id),
                 "Entrega eliminada. Se revirtieron stock, deuda en cuenta corriente, cobros y movimientos de caja.",
-                id);
+                "Error inesperado al eliminar la entrega en cascada.");
         }
 
         private static string FormatoDecimal(decimal valor)

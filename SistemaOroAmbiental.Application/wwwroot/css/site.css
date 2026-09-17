@@ -1300,6 +1300,9 @@ table.dt-dark tbody tr {
     align-items: flex-end;
     gap: 0.75rem;
     width: min(24rem, calc(100vw - 2rem));
+    max-height: calc(100vh - 2rem);
+    overflow-x: hidden;
+    overflow-y: auto;
     pointer-events: none;
 }
 
@@ -1349,7 +1352,7 @@ table.dt-dark tbody tr {
     display: grid;
     grid-template-columns: auto 1fr auto;
     gap: 0.85rem;
-    align-items: center;
+    align-items: flex-start;
     padding: 0.95rem 1rem 0.95rem 0.85rem;
     border-radius: 14px;
     background: linear-gradient(135deg, rgba(38, 46, 58, 0.97) 0%, rgba(24, 29, 38, 0.98) 100%);
@@ -1465,6 +1468,58 @@ table.dt-dark tbody tr {
     line-height: 1.4;
     color: #f1f5f9;
     word-break: break-word;
+    white-space: pre-wrap;
+    max-height: min(40vh, 16rem);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+.rp-mensaje-detalle {
+    max-height: none;
+    overflow: visible;
+    text-align: left;
+    white-space: normal;
+    line-height: 1.5;
+    padding-right: 0.35rem;
+    padding-bottom: 0.75rem;
+}
+
+.rp-mensaje-detalle-ol {
+    padding-left: 1.35rem;
+    white-space: normal;
+    margin-bottom: 0;
+}
+
+.rp-mensaje-detalle-ol li {
+    margin-bottom: 0.7rem;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+}
+
+.rp-dep-item-title {
+    font-weight: 600;
+}
+
+.rp-dep-item-acc {
+    margin-top: 0.15rem;
+    font-size: 0.88rem;
+    opacity: 0.78;
+    line-height: 1.35;
+}
+
+#modalMensajeDetalle .modal-content {
+    max-height: calc(100vh - 3rem);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+#modalMensajeDetalle .modal-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto !important;
+    max-height: none !important;
+    padding-bottom: 1.25rem;
 }
 
 .rp-toast-close {

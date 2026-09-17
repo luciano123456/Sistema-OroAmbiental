@@ -165,6 +165,8 @@ public partial class SistemaOroAmbientalContext : DbContext
 
     public virtual DbSet<UsuariosConexion> UsuariosConexiones { get; set; }
 
+    public virtual DbSet<EliminacionLog> EliminacionesLogs { get; set; }
+
     public virtual DbSet<UsuariosEstado> UsuariosEstados { get; set; }
 
     public virtual DbSet<UsuariosModulo> UsuariosModulos { get; set; }
@@ -614,6 +616,12 @@ public partial class SistemaOroAmbientalContext : DbContext
                 .IsUnicode(false);
             entity.Property(e => e.FechaUsuarioModifica).HasColumnType("datetime");
             entity.Property(e => e.FechaUsuarioRegistra).HasColumnType("datetime");
+            entity.Property(e => e.FechaInicio).HasColumnType("date");
+            entity.Property(e => e.FechaLicenciaDesde).HasColumnType("date");
+            entity.Property(e => e.FechaLicenciaHasta).HasColumnType("date");
+            entity.Property(e => e.MotivoDetalle)
+                .HasMaxLength(500)
+                .IsUnicode(false);
             entity.Property(e => e.HorarioRecoleccionDesde).HasPrecision(0);
             entity.Property(e => e.HorarioRecoleccionHasta).HasPrecision(0);
             entity.Property(e => e.DiasHorarios)
@@ -651,9 +659,20 @@ public partial class SistemaOroAmbientalContext : DbContext
                 .HasForeignKey(d => d.IdActividad)
                 .HasConstraintName("FK_ClientesEstablecimientos_ClientesActividades");
 
+            entity.HasOne(d => d.IdEstadoNavigation).WithMany(p => p.ClientesEstablecimientos)
+                .HasForeignKey(d => d.IdEstado)
+                .HasConstraintName("FK_ClientesEstablecimientos_ClientesEstados");
+
+            entity.HasOne(d => d.IdMotivoNavigation).WithMany(p => p.ClientesEstablecimientos)
+                .HasForeignKey(d => d.IdMotivo)
+                .HasConstraintName("FK_ClientesEstablecimientos_ClientesMotivos");
+
+            entity.HasOne(d => d.IdCalificacionNavigation).WithMany(p => p.ClientesEstablecimientos)
+                .HasForeignKey(d => d.IdCalificacion)
+                .HasConstraintName("FK_ClientesEstablecimientos_ClientesCalificaciones");
+
             entity.HasOne(d => d.IdDiaRecoleccionNavigation).WithMany(p => p.ClientesEstablecimientos)
                 .HasForeignKey(d => d.IdDiaRecoleccion)
-                .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_ClientesEstablecimientos_Dias");
 
             entity.HasOne(d => d.IdListaPrecioNavigation).WithMany(p => p.ClientesEstablecimientos)
@@ -679,7 +698,6 @@ public partial class SistemaOroAmbientalContext : DbContext
 
             entity.HasOne(d => d.IdSemanaRecoleccionNavigation).WithMany(p => p.ClientesEstablecimientos)
                 .HasForeignKey(d => d.IdSemanaRecoleccion)
-                .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_ClientesEstablecimientos_Semanas");
 
             entity.HasOne(d => d.IdUsuarioModificaNavigation).WithMany(p => p.ClientesEstablecimientoIdUsuarioModificaNavigations)
@@ -2095,6 +2113,18 @@ public partial class SistemaOroAmbientalContext : DbContext
                 .HasForeignKey(d => d.IdUsuario)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_UsuariosConexiones_Usuarios");
+        });
+
+        modelBuilder.Entity<EliminacionLog>(entity =>
+        {
+            entity.ToTable("EliminacionesLog");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Fecha).HasDefaultValueSql("(sysdatetime())");
+            entity.Property(e => e.UsuarioNombre).HasMaxLength(100);
+            entity.Property(e => e.Entidad).HasMaxLength(120);
+            entity.Property(e => e.NombreEntidad).HasMaxLength(250);
+            entity.Property(e => e.Tipo).HasMaxLength(20);
+            entity.Property(e => e.Ip).HasMaxLength(64);
         });
 
         modelBuilder.Entity<UsuariosEstado>(entity =>

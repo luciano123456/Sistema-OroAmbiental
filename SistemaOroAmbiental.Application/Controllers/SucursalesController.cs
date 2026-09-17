@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SistemaOroAmbiental.Application.Models.ViewModels;
 using SistemaOroAmbiental.BLL.Service;
+using SistemaOroAmbiental.DAL.Common;
 using SistemaOroAmbiental.DAL.DataContext;
 using SistemaOroAmbiental.DAL.Repository;
 using SistemaOroAmbiental.Models;
@@ -120,8 +121,14 @@ namespace SistemaOroAmbiental.Application.Controllers
                 if (entity == null)
                     return Ok(new { valor = false, mensaje = "No se encontró la sucursal.", tipo = "validacion" });
 
+                var nombre = entity.Nombre;
                 _db.Sucursales.Remove(entity);
                 await _db.SaveChangesAsync();
+                await EliminacionLogAmbient.TryRegistrarAsync(
+                    nameof(Sucursal),
+                    id,
+                    EliminacionLog.TipoSimple,
+                    nombreEntidad: nombre);
                 return Ok(new { valor = true, mensaje = "Sucursal eliminada correctamente.", tipo = "success" });
             }
             catch (InvalidOperationException ex)

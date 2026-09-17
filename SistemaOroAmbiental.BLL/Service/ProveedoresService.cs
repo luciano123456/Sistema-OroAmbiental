@@ -1,4 +1,3 @@
-using Microsoft.EntityFrameworkCore;
 using SistemaOroAmbiental.BLL.Common;
 using SistemaOroAmbiental.DAL.Repository;
 using SistemaOroAmbiental.Models;
@@ -63,53 +62,20 @@ namespace SistemaOroAmbiental.BLL.Service
         public Task<DependenciasEliminacionInfo> ObtenerDependenciasEliminar(int id)
             => _cascadeRepo.ObtenerDependenciasProveedorAsync(id);
 
-        public async Task<ServiceResult> Eliminar(int id, bool cascada = false)
-        {
-            var deps = await _cascadeRepo.ObtenerDependenciasProveedorAsync(id);
-
-            if (deps.TieneDependencias && !cascada)
-            {
-                return new ServiceResult
-                {
-                    Ok = false,
-                    Mensaje = deps.MensajeResumen,
-                    Tipo = "dependencias",
-                    IdReferencia = id,
-                    Dependencias = deps,
-                    InstruccionesPasoAPaso = deps.InstruccionesPasoAPaso
-                };
-            }
-
-            if (deps.TieneDependencias && cascada)
-            {
-                try
-                {
-                    await _cascadeRepo.EliminarProveedorEnCascadaAsync(id);
-                    return ServiceResult.Success(
-                        "Proveedor y todos sus registros asociados fueron eliminados correctamente.");
-                }
-                catch (InvalidOperationException ex)
-                {
-                    return ServiceResult.Error(ex.Message, "relacion", id);
-                }
-                catch (DbUpdateException ex)
-                {
-                    var msg = DeleteOperationHelper.MapDbUpdateMessage(ex, "el proveedor")
-                        ?? "No se pudo eliminar el proveedor en cascada por registros relacionados.";
-                    return ServiceResult.Error(msg, "relacion", id);
-                }
-                catch (Exception)
-                {
-                    return ServiceResult.Error("Error inesperado al eliminar el proveedor en cascada.", "error", id);
-                }
-            }
-
-            return await DeleteOperationHelper.ExecuteAsync(
-                () => _repo.Eliminar(id),
+        public Task<ServiceResult> Eliminar(int id, bool cascada = false)
+            => DeleteOperationHelper.ExecuteCascadeAsync(
+                id,
+                cascada,
                 "el proveedor",
-                "Proveedor eliminado correctamente",
-                id);
-        }
+                () => _cascadeRepo.ObtenerDependenciasProveedorAsync(id),
+                () => _cascadeRepo.EliminarProveedorEnCascadaAsync(id),
+                () => DeleteOperationHelper.ExecuteAsync(
+                    () => _repo.Eliminar(id),
+                    "el proveedor",
+                    "Proveedor eliminado correctamente",
+                    id),
+                "Proveedor y todos sus registros asociados fueron eliminados correctamente.",
+                "Error inesperado al eliminar el proveedor en cascada.");
 
         public Task<Proveedore?> Obtener(int id)
             => _repo.Obtener(id);

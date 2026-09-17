@@ -1,3 +1,4 @@
+using SistemaOroAmbiental.BLL.Common;
 using SistemaOroAmbiental.DAL.Repository;
 using SistemaOroAmbiental.Models;
 
@@ -6,10 +7,12 @@ namespace SistemaOroAmbiental.BLL.Service
     public class GastosService : IGastosService
     {
         private readonly IGastosRepository _repo;
+        private readonly IEntidadCascadeRepository _cascadeRepo;
 
-        public GastosService(IGastosRepository repo)
+        public GastosService(IGastosRepository repo, IEntidadCascadeRepository cascadeRepo)
         {
             _repo = repo;
+            _cascadeRepo = cascadeRepo;
         }
 
         public Task<bool> Insertar(Gasto model, int idUsuario)
@@ -28,7 +31,23 @@ namespace SistemaOroAmbiental.BLL.Service
             return _repo.Actualizar(model, idUsuario);
         }
 
-        public Task<bool> Eliminar(int id) => _repo.Eliminar(id);
+        public Task<DependenciasEliminacionInfo> ObtenerDependenciasEliminar(int id)
+            => _cascadeRepo.ObtenerDependenciasGastoAsync(id);
+
+        public Task<ServiceResult> Eliminar(int id, bool cascada = false)
+            => DeleteOperationHelper.ExecuteCascadeAsync(
+                id,
+                cascada,
+                "el gasto",
+                () => _cascadeRepo.ObtenerDependenciasGastoAsync(id),
+                () => _cascadeRepo.EliminarGastoEnCascadaAsync(id),
+                () => DeleteOperationHelper.ExecuteAsync(
+                    () => _repo.Eliminar(id),
+                    "el gasto",
+                    "Gasto eliminado. Se revirtió el movimiento en caja.",
+                    id),
+                "Gasto eliminado. Se revirtió el movimiento en caja.",
+                "Error inesperado al eliminar el gasto en cascada.");
 
         public Task<Gasto?> Obtener(int id) => _repo.Obtener(id);
 

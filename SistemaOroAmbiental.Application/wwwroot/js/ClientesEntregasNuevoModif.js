@@ -2013,24 +2013,21 @@ window.__OA_ENTREGA_BUILD = "precio-entrega-lista-20260811";
     async function eliminarEntregaActual() {
         if (CM.id <= 0) return;
 
-        const tieneCobros = (CM.cobrosLineas || []).some(p => p.IdCobro > 0) || cobrosActivos().length > 0;
-        const msgCobros = tieneCobros
-            ? " Tambien se revertiran los cobros (egresos de caja y cuenta corriente)."
-            : "";
-        const confirmado = await confirmarModal(
-            `¿Eliminar esta entrega? Se revertira stock y deuda del contrato.${msgCobros}`);
-        if (!confirmado) return;
-
-        const r = await fetch(API.eliminar(CM.id), { method: "DELETE", headers: authHeaders() });
-        const result = await r.json();
-        const exito = result.valor === true || result.valor === "true" || result.ok === true;
-
-        if (exito) {
-            exitoModal(result.mensaje || "Entrega eliminada correctamente.");
-            window.location.href = "/ClientesEntregas";
-        } else {
-            errorModal(result.mensaje || "No se pudo eliminar.");
+        if (typeof ejecutarEliminacionEntidad !== "function") {
+            errorModal("No está disponible el asistente de eliminación.");
+            return;
         }
+
+        const resultado = await ejecutarEliminacionEntidad({
+            entidadLabel: "esta entrega",
+            urlDependencias: `/ClientesEntregas/DependenciasEliminar?id=${CM.id}`,
+            urlEliminar: cascada => `/ClientesEntregas/Eliminar?id=${CM.id}&cascada=${cascada ? "true" : "false"}`,
+            headers: authHeaders()
+        });
+
+        if (resultado.accion !== "ok") return;
+        exitoModal(resultado.data?.mensaje || "Entrega eliminada correctamente.");
+        window.location.href = "/ClientesEntregas";
     }
 
     function fmtMoney(n) {

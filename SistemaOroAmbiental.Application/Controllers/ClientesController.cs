@@ -88,16 +88,17 @@ namespace SistemaOroAmbiental.Application.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> Combo(string? q, int take = 40, int? id = null)
+        public async Task<IActionResult> Combo(string? q, int take = 40, int? id = null, bool incluirInactivos = false)
         {
             take = Math.Clamp(take, 1, 80);
-            var query = await _service.ObtenerTodos(true);
+            var query = await _service.ObtenerTodos(!incluirInactivos);
             var texto = (q ?? "").Trim();
             if (texto.Length > 0)
             {
                 if (int.TryParse(texto, out var nro))
                 {
                     query = query.Where(c =>
+                        c.Id == nro ||
                         c.Nombre.Contains(texto) ||
                         (c.Cuit != null && c.Cuit.Contains(texto)) ||
                         c.NumeroCliente == nro);
@@ -113,14 +114,28 @@ namespace SistemaOroAmbiental.Application.Controllers
             var list = await query
                 .OrderBy(c => c.Nombre)
                 .Take(take)
-                .Select(c => new { c.Id, c.Nombre })
+                .Select(c => new
+                {
+                    c.Id,
+                    c.Nombre,
+                    c.Cuit,
+                    c.NumeroCliente,
+                    c.Activo
+                })
                 .ToListAsync();
 
             if (id is > 0 && list.All(x => x.Id != id.Value))
             {
                 var extra = await (await _service.ObtenerTodos(false))
                     .Where(c => c.Id == id.Value)
-                    .Select(c => new { c.Id, c.Nombre })
+                    .Select(c => new
+                    {
+                        c.Id,
+                        c.Nombre,
+                        c.Cuit,
+                        c.NumeroCliente,
+                        c.Activo
+                    })
                     .FirstOrDefaultAsync();
                 if (extra != null)
                     list.Insert(0, extra);
@@ -223,15 +238,15 @@ namespace SistemaOroAmbiental.Application.Controllers
             }
 
             var diasAdicionales = await _establecimientosRepo.ObtenerDiasAdicionales(est.Id);
-            var diasSemana = ConstruirDiasSemana(est.IdDiaRecoleccion, est.IdCamion, diasAdicionales);
+            var diasSemana = ConstruirDiasSemana(est.IdDiaRecoleccion ?? 0, est.IdCamion, diasAdicionales);
 
             return Ok(new VMClienteRecoleccionPrincipal
             {
                 IdCliente = idCliente,
                 IdEstablecimiento = est.Id,
                 IdEstablecimientoCliente = est.IdEstablecimientoCliente,
-                IdDiaRecoleccion = est.IdDiaRecoleccion,
-                IdSemanaRecoleccion = est.IdSemanaRecoleccion,
+                IdDiaRecoleccion = est.IdDiaRecoleccion ?? 0,
+                IdSemanaRecoleccion = est.IdSemanaRecoleccion ?? 0,
                 IdCamion = est.IdCamion,
                 IdListaPrecio = est.IdListaPrecio,
                 HorarioRecoleccionDesde = FormatearHoraRec(est.HorarioRecoleccionDesde),
@@ -298,8 +313,8 @@ namespace SistemaOroAmbiental.Application.Controllers
                     IdDiaRecoleccion = idDia,
                     IdSemanaRecoleccion = idSemana,
                     IdListaPrecio = null,
-                    HorarioRecoleccionDesde = new TimeSpan(8, 0, 0),
-                    HorarioRecoleccionHasta = new TimeSpan(18, 0, 0),
+                    HorarioRecoleccionDesde = TimeSpan.Zero,
+                    HorarioRecoleccionHasta = TimeSpan.Zero,
                     IdUsuarioRegistra = idUsuario,
                     FechaUsuarioRegistra = DateTime.Now
                 };
@@ -320,12 +335,8 @@ namespace SistemaOroAmbiental.Application.Controllers
             est.IdCamion = idCamionPrincipal;
             est.DiasHorarios = string.IsNullOrWhiteSpace(model.DiasHorarios) ? null : model.DiasHorarios.Trim();
             est.IdEstablecimientoCliente = NormalizarIdEstablecimientoClienteRec(model.IdEstablecimientoCliente);
-
-            if (est.HorarioRecoleccionHasta <= est.HorarioRecoleccionDesde)
-            {
-                est.HorarioRecoleccionDesde = new TimeSpan(8, 0, 0);
-                est.HorarioRecoleccionHasta = new TimeSpan(18, 0, 0);
-            }
+            est.HorarioRecoleccionDesde = ParseHoraRec(model.HorarioRecoleccionDesde);
+            est.HorarioRecoleccionHasta = ParseHoraRec(model.HorarioRecoleccionHasta);
 
             est.OrdenRecorrido = model.OrdenRecorrido is > 0 ? model.OrdenRecorrido : null;
             est.Kilos = model.Kilos;
@@ -337,16 +348,19 @@ namespace SistemaOroAmbiental.Application.Controllers
                 var semana = est.IdSemanaRecoleccion;
                 var orden = est.OrdenRecorrido.Value;
                 var slots = new HashSet<(int Camion, int Dia)>();
-                if (est.IdCamion is > 0 && est.IdDiaRecoleccion > 0)
-                    slots.Add((est.IdCamion.Value, est.IdDiaRecoleccion));
+                if (est.IdCamion is > 0 && est.IdDiaRecoleccion is > 0)
+                    slots.Add((est.IdCamion.Value, est.IdDiaRecoleccion.Value));
                 foreach (var d in diasEntrada)
                 {
                     if (d.IdCamion is > 0 && d.IdDia > 0)
                         slots.Add((d.IdCamion.Value, d.IdDia));
                 }
 
-                foreach (var (camion, dia) in slots)
-                    await _establecimientosRepo.DesplazarOrdenRecorridoSiOcupado(camion, dia, semana, orden, idExcluir);
+                if (semana is > 0)
+                {
+                    foreach (var (camion, dia) in slots)
+                        await _establecimientosRepo.DesplazarOrdenRecorridoSiOcupado(camion, dia, semana.Value, orden, idExcluir);
+                }
             }
 
             ServiceResult result = esNuevo
@@ -458,7 +472,7 @@ namespace SistemaOroAmbiental.Application.Controllers
         }
 
         private static string FormatearHoraRec(TimeSpan t)
-            => $"{(int)t.TotalHours:D2}:{t.Minutes:D2}";
+            => t == default ? "" : $"{(int)t.TotalHours:D2}:{t.Minutes:D2}";
 
         private static string? NormalizarIdEstablecimientoClienteRec(string? valor)
         {
@@ -478,50 +492,67 @@ namespace SistemaOroAmbiental.Application.Controllers
             return TimeSpan.Zero;
         }
 
-        private static VMCliente MapVm(Cliente c) => new()
+        private static VMCliente MapVm(Cliente c)
         {
-            Id = c.Id,
-            Activo = c.Activo,
-            IdSucursal = c.IdSucursal,
-            Nombre = c.Nombre,
-            Telefono = c.Telefono,
-            TelefonoAlt = c.TelefonoAlt,
-            Cuit = c.Cuit ?? "",
-            Domicilio = c.Domicilio,
-            Calle = c.Calle,
-            Numero = c.Numero,
-            PisoDepartamento = c.PisoDepartamento,
-            IdTipoGenerador = c.IdTipoGenerador,
-            TipoGenerador = c.IdTipoGeneradorNavigation != null
-                ? c.IdTipoGeneradorNavigation.Codigo + " - " + c.IdTipoGeneradorNavigation.Nombre
-                : null,
-            IdProvincia = c.IdProvincia,
-            CodPostal = c.CodPostal,
-            IdCondicionIva = c.IdCondicionIva,
-            Email = c.Email,
-            IdProfesion = c.IdProfesion,
-            IdEstado = c.IdEstado,
-            IdMotivo = c.IdMotivo,
-            MotivoDetalle = c.MotivoDetalle,
-            IdCalificacion = c.IdCalificacion,
-            Sucursal = c.IdSucursalNavigation?.Nombre ?? "",
-            Provincia = c.IdProvinciaNavigation?.Nombre ?? "",
-            CondicionIva = c.IdCondicionIvaNavigation?.Nombre ?? "",
-            Profesion = c.IdProfesionNavigation?.Nombre ?? "",
-            Estado = c.IdEstadoNavigation?.Nombre,
-            Motivo = c.IdMotivoNavigation?.Nombre,
-            Calificacion = c.IdCalificacionNavigation?.Nombre,
-            NumeroCliente = c.NumeroCliente,
-            FechaInicio = c.FechaInicio,
-            FechaLicenciaDesde = c.FechaLicenciaDesde,
-            FechaLicenciaHasta = c.FechaLicenciaHasta,
-            IdUsuarioRegistra = c.IdUsuarioRegistra,
-            FechaUsuarioRegistra = c.FechaUsuarioRegistra,
-            UsuarioRegistra = c.IdUsuarioRegistraNavigation?.Usuario ?? "",
-            IdUsuarioModifica = c.IdUsuarioModifica,
-            FechaUsuarioModifica = c.FechaUsuarioModifica,
-            UsuarioModifica = c.IdUsuarioModificaNavigation?.Usuario ?? ""
-        };
+            var vm = new VMCliente
+            {
+                Id = c.Id,
+                Activo = c.Activo,
+                IdSucursal = c.IdSucursal,
+                Nombre = c.Nombre,
+                Telefono = c.Telefono,
+                TelefonoAlt = c.TelefonoAlt,
+                Cuit = c.Cuit ?? "",
+                Domicilio = c.Domicilio,
+                Calle = c.Calle,
+                Numero = c.Numero,
+                PisoDepartamento = c.PisoDepartamento,
+                IdTipoGenerador = c.IdTipoGenerador,
+                TipoGenerador = c.IdTipoGeneradorNavigation != null
+                    ? c.IdTipoGeneradorNavigation.Codigo + " - " + c.IdTipoGeneradorNavigation.Nombre
+                    : null,
+                IdProvincia = c.IdProvincia,
+                CodPostal = c.CodPostal,
+                IdCondicionIva = c.IdCondicionIva,
+                Email = c.Email,
+                IdProfesion = c.IdProfesion,
+                IdEstado = c.IdEstado,
+                IdMotivo = c.IdMotivo,
+                MotivoDetalle = c.MotivoDetalle,
+                IdCalificacion = c.IdCalificacion,
+                Sucursal = c.IdSucursalNavigation?.Nombre ?? "",
+                Provincia = c.IdProvinciaNavigation?.Nombre ?? "",
+                CondicionIva = c.IdCondicionIvaNavigation?.Nombre ?? "",
+                Profesion = c.IdProfesionNavigation?.Nombre ?? "",
+                Estado = c.IdEstadoNavigation?.Nombre,
+                Motivo = c.IdMotivoNavigation?.Nombre,
+                Calificacion = c.IdCalificacionNavigation?.Nombre,
+                NumeroCliente = c.NumeroCliente,
+                FechaInicio = c.FechaInicio,
+                FechaLicenciaDesde = c.FechaLicenciaDesde,
+                FechaLicenciaHasta = c.FechaLicenciaHasta,
+                IdUsuarioRegistra = c.IdUsuarioRegistra,
+                FechaUsuarioRegistra = c.FechaUsuarioRegistra,
+                UsuarioRegistra = c.IdUsuarioRegistraNavigation?.Usuario ?? "",
+                IdUsuarioModifica = c.IdUsuarioModifica,
+                FechaUsuarioModifica = c.FechaUsuarioModifica,
+                UsuarioModifica = c.IdUsuarioModificaNavigation?.Usuario ?? ""
+            };
+
+            CompletarLicenciaDesdeEstablecimientos(c, vm);
+            return vm;
+        }
+
+        private static void CompletarLicenciaDesdeEstablecimientos(Cliente c, VMCliente vm)
+        {
+            var src = LicenciaPeriodo.EstablecimientoLicenciaDisplay(c, DateTime.Today);
+            if (src == null) return;
+
+            vm.FechaLicenciaDesde = src.FechaLicenciaDesde ?? vm.FechaLicenciaDesde;
+            vm.FechaLicenciaHasta = src.FechaLicenciaHasta ?? vm.FechaLicenciaHasta;
+            if (!string.IsNullOrWhiteSpace(src.IdEstadoNavigation?.Nombre))
+                vm.Estado = src.IdEstadoNavigation.Nombre;
+        }
 
         private static Cliente MapEntidad(VMCliente model, int idUsuario, bool esNuevo)
         {

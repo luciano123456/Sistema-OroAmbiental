@@ -49,11 +49,23 @@ window.crearOpcionesAjaxGrillaServer = function (url, tableSelector, extraPayloa
         },
         dataSrc: function (json) {
             const $table = $(tableSelector);
-            const filtered = json.recordsFiltered ?? json.RecordsFiltered ?? 0;
-            const total = json.recordsTotal ?? json.RecordsTotal ?? filtered;
+            const data = json.data ?? json.Data ?? [];
+            const filteredNum = Number(json.recordsFiltered ?? json.RecordsFiltered);
+            const totalNum = Number(json.recordsTotal ?? json.RecordsTotal);
+            const filtered = Number.isFinite(filteredNum)
+                ? filteredNum
+                : (Array.isArray(data) ? data.length : 0);
+            const total = Number.isFinite(totalNum) ? totalNum : filtered;
+
+            // DataTables espera camelCase; la API MVC serializa PascalCase.
+            json.data = data;
+            json.draw = json.draw ?? json.Draw;
+            json.recordsFiltered = filtered;
+            json.recordsTotal = total;
+
             $table.data("rpRecordsFiltered", filtered);
             $table.data("rpRecordsTotal", total);
-            return json.data ?? json.Data ?? [];
+            return data;
         }
     };
 };
@@ -354,6 +366,67 @@ function showToast(texto, tipo = "success", duracionMs) {
 
 window.showToast = showToast;
 
+function esMensajeLargoRp(texto) {
+    const t = String(texto ?? "");
+    return t.length > 280 || (t.match(/\n/g) || []).length >= 2;
+}
+
+function ensureModalMensajeDetalle() {
+    let el = document.getElementById("modalMensajeDetalle");
+    if (el) return el;
+    el = document.createElement("div");
+    el.id = "modalMensajeDetalle";
+    el.className = "modal fade";
+    el.tabIndex = -1;
+    el.setAttribute("aria-hidden", "true");
+    el.innerHTML = `
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content text-white" style="background:#323844">
+                <div class="modal-header border-0">
+                    <h5 class="modal-title text-white fw-bold" id="modalMensajeDetalleTitulo">Detalle</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="modalMensajeDetalleCuerpo" class="rp-mensaje-detalle"></div>
+                </div>
+                <div class="modal-footer border-0 justify-content-center">
+                    <button type="button" class="btn btn-primary px-4" data-bs-dismiss="modal">Entendido</button>
+                </div>
+            </div>
+        </div>`;
+    document.body.appendChild(el);
+    return el;
+}
+
+function mostrarDetalleModal(titulo, texto, htmlInner) {
+    const modalEl = ensureModalMensajeDetalle();
+    const tituloEl = document.getElementById("modalMensajeDetalleTitulo");
+    const cuerpo = document.getElementById("modalMensajeDetalleCuerpo");
+    if (tituloEl) tituloEl.textContent = titulo || "Detalle";
+    if (cuerpo) {
+        if (htmlInner) cuerpo.innerHTML = htmlInner;
+        else cuerpo.textContent = texto || "";
+    }
+
+    const abrir = () => {
+        if (window.bootstrap?.Modal) {
+            bootstrap.Modal.getOrCreateInstance(modalEl).show();
+        }
+        if (cuerpo) cuerpo.scrollTop = 0;
+        const body = modalEl.querySelector(".modal-body");
+        if (body) body.scrollTop = 0;
+    };
+
+    const abierto = document.querySelector(".modal.show");
+    if (abierto && abierto !== modalEl) {
+        abierto.addEventListener("hidden.bs.modal", () => window.setTimeout(abrir, 50), { once: true });
+        return;
+    }
+    window.setTimeout(abrir, 280);
+}
+
+window.mostrarDetalleModal = mostrarDetalleModal;
+
 /* =========================================================
    Busy lock (anti doble-submit) — estilo Mercado Pago
    Uso:
@@ -528,7 +601,12 @@ function exitoModal(texto) {
 
 /** @deprecated Usar showToast - alias global para compatibilidad */
 function errorModal(texto) {
-    showToast(texto || "No se pudo completar la operacion.", "error");
+    const t = String(texto || "No se pudo completar la operacion.");
+    if (typeof mostrarDetalleModal === "function" && esMensajeLargoRp(t)) {
+        mostrarDetalleModal("Atención", t);
+        return;
+    }
+    showToast(t, "error");
 }
 
 /** @deprecated Usar showToast - alias global para compatibilidad */
@@ -828,16 +906,25 @@ async function ejecutarEliminacionEntidad(opts) {
     if (eleccion === "cancelar") return { accion: "cancelar" };
 
     if (eleccion === "manual") {
-        const pasos = depInfo?.instruccionesPasoAPaso || depInfo?.InstruccionesPasoAPaso || "";
-        const detalle = items.map((it, i) => {
-            const acc = it.accionManual || it.AccionManual || "";
-            return `${i + 1}. ${acc}`;
-        }).join("\n");
+        const intro = depInfo?.mensajeResumen || depInfo?.MensajeResumen
+            || "Estos registros están asociados. Podés ir resolviéndolos uno por uno.";
+        const lis = items.map(it => {
+            const etiq = it.etiqueta || it.Etiqueta || "Registro";
+            const cant = Number(it.cantidad ?? it.Cantidad ?? 0);
+            const acc = String(it.accionManual || it.AccionManual || "").trim();
+            return `<li>
+                <div class="rp-dep-item-title"><strong>${cant}</strong> ${escapeHtmlRpToast(etiq)}</div>
+                ${acc ? `<div class="rp-dep-item-acc">${escapeHtmlRpToast(acc)}</div>` : ""}
+            </li>`;
+        }).join("");
+        const html = `<p class="mb-3">${escapeHtmlRpToast(intro)}</p>`
+            + (lis ? `<ol class="rp-mensaje-detalle-ol mb-0">${lis}</ol>` : "");
 
-        const msg = (pasos || depInfo?.mensajeResumen || depInfo?.MensajeResumen || "Tiene registros asociados.")
-            + (detalle ? `\n\n${detalle}` : "");
-
-        if (typeof errorModal === "function") errorModal(msg);
+        if (typeof mostrarDetalleModal === "function") {
+            mostrarDetalleModal("Cómo continuar", "", html);
+        } else if (typeof errorModal === "function") {
+            errorModal(intro);
+        }
         return { accion: "cancelar" };
     }
 

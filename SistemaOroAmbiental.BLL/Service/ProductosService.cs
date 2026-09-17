@@ -7,12 +7,12 @@ namespace SistemaOroAmbiental.BLL.Service
     public class ProductosService : IProductosService
     {
         private readonly IProductosRepository _repo;
-        private readonly IDeleteConflictChecker _deleteChecker;
+        private readonly IEntidadCascadeRepository _cascadeRepo;
 
-        public ProductosService(IProductosRepository repo, IDeleteConflictChecker deleteChecker)
+        public ProductosService(IProductosRepository repo, IEntidadCascadeRepository cascadeRepo)
         {
             _repo = repo;
-            _deleteChecker = deleteChecker;
+            _cascadeRepo = cascadeRepo;
         }
 
         public async Task<ServiceResult> Insertar(Producto model, bool reemplazarDescartadorHojaRuta = false)
@@ -106,13 +106,23 @@ namespace SistemaOroAmbiental.BLL.Service
             return null;
         }
 
-        public Task<ServiceResult> Eliminar(int id)
-            => DeleteOperationHelper.ExecuteAsync(
-                () => _repo.Eliminar(id),
-                "el producto",
-                "Producto eliminado correctamente",
+        public Task<DependenciasEliminacionInfo> ObtenerDependenciasEliminar(int id)
+            => _cascadeRepo.ObtenerDependenciasProductoAsync(id);
+
+        public Task<ServiceResult> Eliminar(int id, bool cascada = false)
+            => DeleteOperationHelper.ExecuteCascadeAsync(
                 id,
-                () => _deleteChecker.ProductoAsync(id));
+                cascada,
+                "el producto",
+                () => _cascadeRepo.ObtenerDependenciasProductoAsync(id),
+                () => _cascadeRepo.EliminarProductoEnCascadaAsync(id),
+                () => DeleteOperationHelper.ExecuteAsync(
+                    () => _repo.Eliminar(id),
+                    "el producto",
+                    "Producto eliminado correctamente",
+                    id),
+                "Producto y todos sus registros asociados fueron eliminados correctamente.",
+                "Error inesperado al eliminar el producto en cascada.");
 
         public Task<Producto?> Obtener(int id)
             => _repo.Obtener(id);

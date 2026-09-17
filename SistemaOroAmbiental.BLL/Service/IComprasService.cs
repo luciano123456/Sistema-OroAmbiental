@@ -31,7 +31,9 @@ namespace SistemaOroAmbiental.BLL.Service
             List<CompraPagoRegistrar> pagos,
             int idUsuario);
 
-        Task<ServiceResult> Eliminar(int id);
+        Task<ServiceResult> Eliminar(int id, bool cascada = false);
+
+        Task<DependenciasEliminacionInfo> ObtenerDependenciasEliminar(int id);
 
         Task<CompraPagosResumen?> ObtenerPagos(int idCompra);
 

@@ -10,16 +10,16 @@ namespace SistemaOroAmbiental.BLL.Service
     {
         private readonly IContratosRepository _repo;
         private readonly SistemaOroAmbientalContext _db;
-        private readonly IDeleteConflictChecker _deleteChecker;
+        private readonly IEntidadCascadeRepository _cascadeRepo;
 
         public ContratosService(
             IContratosRepository repo,
             SistemaOroAmbientalContext db,
-            IDeleteConflictChecker deleteChecker)
+            IEntidadCascadeRepository cascadeRepo)
         {
             _repo = repo;
             _db = db;
-            _deleteChecker = deleteChecker;
+            _cascadeRepo = cascadeRepo;
         }
 
         public Task<List<Contrato>> ListarFiltrado(int? idCliente, bool? soloVigentes, string? texto)
@@ -76,13 +76,23 @@ namespace SistemaOroAmbiental.BLL.Service
                 : ServiceResult.Error("No se pudo guardar el contrato.");
         }
 
-        public Task<ServiceResult> Eliminar(int id)
-            => DeleteOperationHelper.ExecuteAsync(
-                () => _repo.Eliminar(id),
-                "el contrato",
-                "Contrato eliminado correctamente",
+        public Task<DependenciasEliminacionInfo> ObtenerDependenciasEliminar(int id)
+            => _cascadeRepo.ObtenerDependenciasContratoAsync(id);
+
+        public Task<ServiceResult> Eliminar(int id, bool cascada = false)
+            => DeleteOperationHelper.ExecuteCascadeAsync(
                 id,
-                () => _deleteChecker.ContratoAsync(id));
+                cascada,
+                "el contrato",
+                () => _cascadeRepo.ObtenerDependenciasContratoAsync(id),
+                () => _cascadeRepo.EliminarContratoEnCascadaAsync(id),
+                () => DeleteOperationHelper.ExecuteAsync(
+                    () => _repo.Eliminar(id),
+                    "el contrato",
+                    "Contrato eliminado correctamente",
+                    id),
+                "Contrato y todos sus registros asociados fueron eliminados correctamente.",
+                "Error inesperado al eliminar el contrato en cascada.");
 
         private async Task<ServiceResult?> Validar(Contrato model)
         {

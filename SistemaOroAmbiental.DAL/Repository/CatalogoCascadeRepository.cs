@@ -45,8 +45,10 @@ namespace SistemaOroAmbiental.DAL.Repository
                 _ => Task.FromResult(InfoVacio())
             };
 
-        public Task EliminarEnCascadaAsync<T>(int id) where T : class
-            => _db.ExecuteInTransactionAsync(async () =>
+        public async Task EliminarEnCascadaAsync<T>(int id) where T : class
+        {
+            var deps = await ObtenerDependenciasAsync<T>(id);
+            await _db.ExecuteInTransactionAsync(async () =>
             {
                 switch (typeof(T).Name)
                 {
@@ -79,6 +81,13 @@ namespace SistemaOroAmbiental.DAL.Repository
                         throw new InvalidOperationException("Este catálogo no tiene eliminación en cascada.");
                 }
             });
+
+            await EliminacionLogAmbient.TryRegistrarAsync(
+                typeof(T).Name,
+                id,
+                EliminacionLog.TipoDesvincular,
+                deps);
+        }
 
         #region Días / Semanas
 
@@ -276,40 +285,67 @@ namespace SistemaOroAmbiental.DAL.Repository
         }
 
         private async Task<DependenciasEliminacionInfo> ClienteEstadoDeps(int id)
-            => await DepsSetNull("este estado de cliente",
-                await _db.Clientes.CountAsync(x => x.IdEstado == id),
-                "Clientes", "Se quitará el estado de cada cliente.");
+        {
+            var nCli = await _db.Clientes.CountAsync(x => x.IdEstado == id);
+            var nEst = await _db.ClientesEstablecimientos.CountAsync(x => x.IdEstado == id);
+            var items = new List<DependenciaEliminacionItem>();
+            if (nCli > 0)
+                items.Add(Item("clientes", "Clientes", nCli, "Se quitará el estado de cada cliente."));
+            if (nEst > 0)
+                items.Add(Item("establecimientos", "Establecimientos", nEst, "Se quitará el estado de cada establecimiento."));
+            return items.Count == 0 ? InfoVacio() : Armar("este estado de cliente", items, true);
+        }
 
         private async Task ClienteEstadoCascada(int id)
         {
             foreach (var c in await _db.Clientes.Where(x => x.IdEstado == id).ToListAsync())
                 c.IdEstado = null;
+            foreach (var e in await _db.ClientesEstablecimientos.Where(x => x.IdEstado == id).ToListAsync())
+                e.IdEstado = null;
             await _db.SaveChangesAsync();
             await BorrarCatalogo(_db.ClientesEstados, id, "el estado");
         }
 
         private async Task<DependenciasEliminacionInfo> ClienteMotivoDeps(int id)
-            => await DepsSetNull("este motivo",
-                await _db.Clientes.CountAsync(x => x.IdMotivo == id),
-                "Clientes", "Se quitará el motivo de cada cliente.");
+        {
+            var nCli = await _db.Clientes.CountAsync(x => x.IdMotivo == id);
+            var nEst = await _db.ClientesEstablecimientos.CountAsync(x => x.IdMotivo == id);
+            var items = new List<DependenciaEliminacionItem>();
+            if (nCli > 0)
+                items.Add(Item("clientes", "Clientes", nCli, "Se quitará el motivo de cada cliente."));
+            if (nEst > 0)
+                items.Add(Item("establecimientos", "Establecimientos", nEst, "Se quitará el motivo de cada establecimiento."));
+            return items.Count == 0 ? InfoVacio() : Armar("este motivo", items, true);
+        }
 
         private async Task ClienteMotivoCascada(int id)
         {
             foreach (var c in await _db.Clientes.Where(x => x.IdMotivo == id).ToListAsync())
                 c.IdMotivo = null;
+            foreach (var e in await _db.ClientesEstablecimientos.Where(x => x.IdMotivo == id).ToListAsync())
+                e.IdMotivo = null;
             await _db.SaveChangesAsync();
             await BorrarCatalogo(_db.ClientesMotivos, id, "el motivo");
         }
 
         private async Task<DependenciasEliminacionInfo> ClienteCalificacionDeps(int id)
-            => await DepsSetNull("esta calificación",
-                await _db.Clientes.CountAsync(x => x.IdCalificacion == id),
-                "Clientes", "Se quitará la calificación de cada cliente.");
+        {
+            var nCli = await _db.Clientes.CountAsync(x => x.IdCalificacion == id);
+            var nEst = await _db.ClientesEstablecimientos.CountAsync(x => x.IdCalificacion == id);
+            var items = new List<DependenciaEliminacionItem>();
+            if (nCli > 0)
+                items.Add(Item("clientes", "Clientes", nCli, "Se quitará la calificación de cada cliente."));
+            if (nEst > 0)
+                items.Add(Item("establecimientos", "Establecimientos", nEst, "Se quitará la calificación de cada establecimiento."));
+            return items.Count == 0 ? InfoVacio() : Armar("esta calificación", items, true);
+        }
 
         private async Task ClienteCalificacionCascada(int id)
         {
             foreach (var c in await _db.Clientes.Where(x => x.IdCalificacion == id).ToListAsync())
                 c.IdCalificacion = null;
+            foreach (var e in await _db.ClientesEstablecimientos.Where(x => x.IdCalificacion == id).ToListAsync())
+                e.IdCalificacion = null;
             await _db.SaveChangesAsync();
             await BorrarCatalogo(_db.ClientesCalificaciones, id, "la calificación");
         }
@@ -977,7 +1013,8 @@ namespace SistemaOroAmbiental.DAL.Repository
                 return InfoVacio();
 
             var partes = items.Select(i => $"{i.Cantidad} {i.Etiqueta.ToLower()}");
-            var pasos = string.Join("\n", items.Select((i, n) => $"{n + 1}. {i.AccionManual}"));
+            var pasos = string.Join("\n", items.Select((i, n) =>
+                $"{n + 1}. {i.Etiqueta} ({i.Cantidad}): {i.AccionManual}"));
 
             var resumen = permiteCascada
                 ? $"Tenés asociados: {string.Join(", ", partes)}. ¿Querés desvincularlos o reasignarlos y eliminar {entidad}?"

@@ -251,16 +251,20 @@ async function guardarChofer() {
 }
 
 async function eliminarChofer(id) {
-    const ok = typeof confirmarModal === "function"
-        ? await confirmarModal("¿Eliminar este chofer?")
-        : confirm("¿Eliminar este chofer?");
-    if (!ok) return;
-    const response = await fetch(`/Choferes/Eliminar?id=${id}`, { method: "DELETE", headers: authChf() });
-    const data = await response.json();
-    if (!data?.valor) {
-        errorModal(data?.mensaje || "No se pudo eliminar.");
+    if (typeof ejecutarEliminacionEntidad !== "function") {
+        errorModal("No está disponible el asistente de eliminación.");
         return;
     }
-    if (typeof exitoModal === "function") exitoModal(data.mensaje || "Chofer eliminado.");
+
+    const resultado = await ejecutarEliminacionEntidad({
+        entidadLabel: "este chofer",
+        urlDependencias: `/Choferes/DependenciasEliminar?id=${id}`,
+        urlEliminar: cascada => `/Choferes/Eliminar?id=${id}&cascada=${cascada ? "true" : "false"}`,
+        headers: authChf()
+    });
+
+    if (resultado.accion !== "ok") return;
+    const data = resultado.data || {};
+    if (typeof exitoModal === "function") exitoModal(data.mensaje || data.Mensaje || "Chofer eliminado.");
     await listaChoferes();
 }

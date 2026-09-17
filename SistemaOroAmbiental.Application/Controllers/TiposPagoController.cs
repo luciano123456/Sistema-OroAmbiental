@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.ResponseCaching;
 using SistemaOroAmbiental.Application.Models.ViewModels;
 using SistemaOroAmbiental.BLL.Service;
+using SistemaOroAmbiental.DAL.Common;
 using SistemaOroAmbiental.DAL.Repository;
 using SistemaOroAmbiental.Models;
 
@@ -126,6 +127,13 @@ namespace SistemaOroAmbiental.Application.Controllers
                 }
 
                 var ok = await _service.Eliminar(id);
+                if (ok)
+                {
+                    await EliminacionLogAmbient.TryRegistrarAsync(
+                        nameof(TiposPago),
+                        id,
+                        EliminacionLog.TipoSimple);
+                }
                 return Ok(new
                 {
                     valor = ok,

@@ -11,8 +11,8 @@
     <link href="~/css/Productora.css?v=6.2" rel="stylesheet" />
     <link href="~/css/disenopantallas.css?v=6.2" rel="stylesheet" />
     <link href="~/css/M_Generico.css?v=6.3" rel="stylesheet" />
-    <link href="~/css/ClientesGestion.css?v=22.7" rel="stylesheet" />
-    <link href="~/css/ClientesEstablecimientos.css?v=6.8" rel="stylesheet" />
+    <link href="~/css/ClientesGestion.css?v=22.9" rel="stylesheet" />
+    <link href="~/css/ClientesEstablecimientos.css?v=6.9" rel="stylesheet" />
     <link href="~/css/ContratosModal.css?v=5.4" rel="stylesheet" />
 }
 
@@ -36,8 +36,18 @@
                 <i class="fa fa-user"></i>
             </span>
 
-            <div class="flex-grow-1 min-w-0">
-                <h2 class="m-0 fw-800 text-truncate" id="cgTituloCliente">@(id > 0 ? "Cargando..." : "Nuevo cliente")</h2>
+            <div class="flex-grow-1 min-w-0 cg-switcher-wrap">
+                <label class="cg-switcher-label" for="cgClienteSwitcher">Cliente</label>
+                <div class="cg-switcher-row">
+                    <button type="button" id="btnClientePrevCg" class="cg-switcher-nav" title="Cliente anterior" hidden>
+                        <i class="fa fa-chevron-left"></i>
+                    </button>
+                    <select id="cgClienteSwitcher" class="form-control" aria-label="Buscar y cambiar de cliente"></select>
+                    <button type="button" id="btnClienteNextCg" class="cg-switcher-nav" title="Cliente siguiente" hidden>
+                        <i class="fa fa-chevron-right"></i>
+                    </button>
+                </div>
+                <h2 class="visually-hidden" id="cgTituloCliente">@(id > 0 ? "Cargando..." : "Nuevo cliente")</h2>
                 <small class="text-muted-cc d-none" id="cgSubtituloCliente"></small>
             </div>
 
@@ -152,59 +162,15 @@
                                     </button>
                                 </div>
                             </div>
-
                             <div class="col-md-4">
-                                <label class="form-label">Estado comercial</label>
+                                <label class="form-label">Tipo generador</label>
                                 <div class="rp-select-plus">
-                                    <select id="cgEstado" class="form-control"></select>
-                                    <button type="button" class="rp-btn-plus" title="Agregar estado"
-                                            data-config-nombre="Estados de clientes" data-config-controller="ClientesEstados">
+                                    <select id="cgTipoGenerador" class="form-control"></select>
+                                    <button type="button" class="rp-btn-plus" title="Agregar tipo generador"
+                                            data-config-nombre="Tipos de generador" data-config-controller="ClientesTiposGenerador">
                                         <i class="fa fa-plus"></i>
                                     </button>
                                 </div>
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label">Calificacion</label>
-                                <div class="rp-select-plus">
-                                    <select id="cgCalificacion" class="form-control"></select>
-                                    <button type="button" class="rp-btn-plus" title="Agregar calificacion"
-                                            data-config-nombre="Calificaciones de clientes" data-config-controller="ClientesCalificaciones">
-                                        <i class="fa fa-plus"></i>
-                                    </button>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label">Motivo</label>
-                                <div class="rp-select-plus">
-                                    <select id="cgMotivo" class="form-control"></select>
-                                    <button type="button" class="rp-btn-plus" title="Agregar motivo"
-                                            data-config-nombre="Motivos de clientes" data-config-controller="ClientesMotivos">
-                                        <i class="fa fa-plus"></i>
-                                    </button>
-                                </div>
-                            </div>
-                            <div class="col-12" id="wrapMotivoDetalle" hidden>
-                                <label class="form-label">Detalle del motivo</label>
-                                <textarea id="cgMotivoDetalle" class="form-control" rows="2"></textarea>
-                            </div>
-
-                            <div class="col-md-3">
-                                <label class="form-label">Fecha inicio</label>
-                                <input type="date" id="cgFechaInicio" class="form-control" />
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label">Licencia desde</label>
-                                <input type="date" id="cgFechaLicenciaDesde" class="form-control" />
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label">Licencia hasta</label>
-                                <input type="date" id="cgFechaLicenciaHasta" class="form-control" />
-                            </div>
-                            <div class="col-12">
-                                <small class="text-muted">
-                                    Si hoy cae entre las fechas de licencia, el cliente cuenta en <strong>Licencia</strong> del tablero
-                                    (aunque el estado comercial siga en Activo). Las <strong>Alertas</strong> avisan licencias que vencen en los proximos 30 dias.
-                                </small>
                             </div>
                         </div>
                         </div>
@@ -214,7 +180,7 @@
                         <div class="cg-form-section-toggle"
                              data-cg-collapse-target="#cgSecDomicilio" aria-expanded="true"
                              aria-controls="cgSecDomicilio">
-                            <div class="cg-form-section-title mb-0">Domicilio y ubicacion</div>
+                            <div class="cg-form-section-title mb-0">Domicilio particular</div>
                             <div class="cg-sec-actions">
                                 <div class="cg-sec-reorder" >
                                     <button type="button" class="cg-sec-move" data-dir="up" title="Subir seccion"><i class="fa fa-arrow-up"></i></button>
@@ -344,11 +310,11 @@
                         </div>
                     </div>
 
-                    <div class="col-12 cg-form-section cg-form-section--recoleccion" data-cg-section="recoleccion" data-cg-sortable="1">
+                    <div class="col-12 cg-form-section cg-form-section--recorridos" data-cg-section="recoleccion" data-cg-sortable="1">
                         <div class="cg-form-section-toggle"
                              data-cg-collapse-target="#cgRecoleccionBody" aria-expanded="true"
                              aria-controls="cgRecoleccionBody">
-                            <div class="cg-form-section-title mb-0">Recoleccion y recorrido</div>
+                            <div class="cg-form-section-title mb-0">Recorridos asignados</div>
                             <div class="cg-sec-actions">
                                 <div class="cg-sec-reorder" >
                                     <button type="button" class="cg-sec-move" data-dir="up" title="Subir seccion"><i class="fa fa-arrow-up"></i></button>
@@ -358,107 +324,10 @@
                             </div>
                         </div>
                         <div id="cgRecoleccionBody" class="collapse show">
-                        <div class="row g-3 cg-form-section-body">
-                            <input type="hidden" id="cgEstId" />
-                            <div class="col-md-3">
-                                <label class="form-label">Id establecimiento</label>
-                                <input id="cgIdEstablecimientoCliente" class="form-control" maxlength="@IntercambioTxtCampos.CodigoOpds" />
+                            <div class="cg-form-section-body">
+                                <p class="cg-recorridos-hint">Solo consulta. Los dias, horarios y unidades se cargan en cada establecimiento o en Recorridos.</p>
+                                <div id="cgRecorridosAsignados" class="cg-recorridos-asignados"></div>
                             </div>
-                            <div class="col-md-9">
-                                <label class="form-label">Tipo generador</label>
-                                <div class="rp-select-plus">
-                                    <select id="cgTipoGenerador" class="form-control"></select>
-                                    <button type="button" class="rp-btn-plus" title="Agregar tipo generador"
-                                            data-config-nombre="Tipos de generador" data-config-controller="ClientesTiposGenerador">
-                                        <i class="fa fa-plus"></i>
-                                    </button>
-                                </div>
-                            </div>
-
-                            <div class="col-12">
-                                <label class="form-label">Dias y horarios</label>
-                                <textarea id="cgDiasHorarios" class="form-control cg-dias-horarios-text" rows="4"
-                                          maxlength="1000"></textarea>
-                            </div>
-
-                            <div class="col-12">
-                                <label class="form-label mb-2">Dias de recoleccion / unidad</label>
-                                <div class="cg-rec-dias-table">
-                                    <div class="cg-rec-dias-head-row">
-                                        <span>Dia</span>
-                                        <span>Unidad / Camion</span>
-                                        <span>En ruta</span>
-                                    </div>
-                                    <div class="cg-rec-dia-row" data-dia="1">
-                                        <span class="cg-rec-dia-label"><span class="cg-rec-row-num">1</span> Lunes</span>
-                                        <select id="cgRecCamion1" class="form-control"></select>
-                                        <span class="cg-rec-en-ruta" id="cgRecEnRuta1">-</span>
-                                    </div>
-                                    <div class="cg-rec-dia-row" data-dia="2">
-                                        <span class="cg-rec-dia-label"><span class="cg-rec-row-num">2</span> Martes</span>
-                                        <select id="cgRecCamion2" class="form-control"></select>
-                                        <span class="cg-rec-en-ruta" id="cgRecEnRuta2">-</span>
-                                    </div>
-                                    <div class="cg-rec-dia-row" data-dia="3">
-                                        <span class="cg-rec-dia-label"><span class="cg-rec-row-num">3</span> Miercoles</span>
-                                        <select id="cgRecCamion3" class="form-control"></select>
-                                        <span class="cg-rec-en-ruta" id="cgRecEnRuta3">-</span>
-                                    </div>
-                                    <div class="cg-rec-dia-row" data-dia="4">
-                                        <span class="cg-rec-dia-label"><span class="cg-rec-row-num">4</span> Jueves</span>
-                                        <select id="cgRecCamion4" class="form-control"></select>
-                                        <span class="cg-rec-en-ruta" id="cgRecEnRuta4">-</span>
-                                    </div>
-                                    <div class="cg-rec-dia-row" data-dia="5">
-                                        <span class="cg-rec-dia-label"><span class="cg-rec-row-num">5</span> Viernes</span>
-                                        <select id="cgRecCamion5" class="form-control"></select>
-                                        <span class="cg-rec-en-ruta" id="cgRecEnRuta5">-</span>
-                                    </div>
-                                    <div class="cg-rec-dia-row" data-dia="6">
-                                        <span class="cg-rec-dia-label"><span class="cg-rec-row-num">6</span> Sabado</span>
-                                        <select id="cgRecCamion6" class="form-control"></select>
-                                        <span class="cg-rec-en-ruta" id="cgRecEnRuta6">-</span>
-                                    </div>
-                                    <div class="cg-rec-dia-row" data-dia="7">
-                                        <span class="cg-rec-dia-label"><span class="cg-rec-row-num">7</span> Domingo</span>
-                                        <select id="cgRecCamion7" class="form-control"></select>
-                                        <span class="cg-rec-en-ruta" id="cgRecEnRuta7">-</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="col-md-4">
-                                <label class="form-label">Semana recoleccion</label>
-                                <select id="cgRecSemana" class="form-control"></select>
-                            </div>
-                            <div class="col-md-2">
-                                <label class="form-label">Nº recorrido</label>
-                                <input id="cgOrdenRecorrido" class="form-control" type="number" min="0" step="1" placeholder="Auto" title="Posición en la hoja de ruta. Vacío o 0 = al final." />
-                                <div class="form-text text-muted" style="font-size:0.72rem;line-height:1.25;">Vacío/0 = último</div>
-                                <div id="avisoOrdenRecorridoCg" class="rp-orden-aviso" hidden>
-                                    <div class="rp-orden-aviso-text"></div>
-                                    <div class="rp-orden-aviso-actions">
-                                        <button type="button" class="btn btn-warning" data-orden-aviso="si">Sí, reemplazar y desplazar</button>
-                                        <button type="button" class="btn btn-outline-light" data-orden-aviso="no">No</button>
-                                    </div>
-                                    <div class="rp-orden-aviso-estado" hidden></div>
-                                </div>
-                            </div>
-                            <div class="col-md-2">
-                                <label class="form-label">Kilos</label>
-                                <input id="cgEstKilos" class="form-control" type="number" min="0" step="0.01" />
-                            </div>
-
-                            <div class="col-12">
-                                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
-                                    <label class="form-label mb-0">Recorridos asignados</label>
-                                    <a href="/Recorridos/Index" class="btn btn-outline-light btn-sm" target="_blank">
-                                        <i class="fa fa-external-link me-1"></i> Gestionar recorridos
-                                    </a>
-                                </div>
-                                <div id="cgRecorridosAsignados" class="cg-recorridos-inline"></div>
-                            </div>
-                        </div>
                         </div>
                     </div>
 
@@ -1198,11 +1067,11 @@
     </script>
     <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-    <script src="~/js/Entities/M_ClientesEstablecimientos.js?v=7.5" asp-append-version="true"></script>
+    <script src="~/js/Entities/M_ClientesEstablecimientos.js?v=7.6" asp-append-version="true"></script>
     <script src="~/js/ClientesEstablecimientosReclamo.js?v=1.9" asp-append-version="true"></script>
     <script src="~/js/ContratosDocumentos.js?v=5.4"></script>
     <script src="~/js/Entities/M_Contratos.js?v=5.4"></script>
-    <script src="~/js/ClientesGestion.js?v=44.9" asp-append-version="true"></script>
+    <script src="~/js/ClientesGestion.js?v=45.4" asp-append-version="true"></script>
     <script>
         /* Guardia inline: corre aunque el .js esté cacheado viejo */
         (function () {

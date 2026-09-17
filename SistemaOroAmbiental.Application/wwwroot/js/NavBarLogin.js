@@ -349,6 +349,23 @@ function limpiarCamposGeoConfiguracion() {
     }
 }
 
+function valorSelectAtajo(ids) {
+    const btn = window._rpUltimoAtajoConfigBtn;
+    const roots = [];
+    if (btn) {
+        const modal = btn.closest("[data-establecimiento-modal], .modal, form");
+        if (modal) roots.push(modal);
+    }
+    roots.push(document);
+    for (const root of roots) {
+        for (const id of ids) {
+            const el = root.querySelector ? root.querySelector("#" + id) : document.getElementById(id);
+            if (el?.value) return el.value;
+        }
+    }
+    return "";
+}
+
 function aplicarPrefillGeoAtajo() {
     if (!window.esModoAtajo) return Promise.resolve();
 
@@ -356,18 +373,14 @@ function aplicarPrefillGeoAtajo() {
     if (!perfil) return Promise.resolve();
 
     if (perfil.provincia) {
-        const idProvincia = document.getElementById("cmbProvinciaEst")?.value
-            || document.getElementById("cgProvincia")?.value
-            || "";
+        const idProvincia = valorSelectAtajo(["cmbProvinciaEst", "cgProvincia"]) || "";
         const cmbProvincia = document.getElementById("cmbConfiguracion");
         if (cmbProvincia && idProvincia) {
             cmbProvincia.value = idProvincia;
             if (perfil.partido) {
                 return llenarComboPartidoConfiguracion(
                     idProvincia,
-                    document.getElementById("cmbPartidoEst")?.value
-                        || document.getElementById("cgPartido")?.value
-                        || null
+                    valorSelectAtajo(["cmbPartidoEst", "cgPartido"]) || null
                 );
             }
         }
@@ -809,13 +822,15 @@ function guardarCambiosConfiguracion() {
 
             exitoModal(mensaje);
 
-            const nuevoId = dataJson?.id ?? null;
+            const nuevoId = dataJson?.id ?? dataJson?.Id ?? null;
 
             document.dispatchEvent(new CustomEvent("configuracionActualizada", {
                 detail: {
                     tipo: controllerConfiguracion,
                     nuevoId: nuevoId,
-                    accion: esNuevo ? "insertar" : "actualizar"
+                    accion: esNuevo ? "insertar" : "actualizar",
+                    idProvincia: nuevoModelo?.IdProvincia ?? null,
+                    idPartido: nuevoModelo?.IdPartido ?? null
                 }
             }));
 

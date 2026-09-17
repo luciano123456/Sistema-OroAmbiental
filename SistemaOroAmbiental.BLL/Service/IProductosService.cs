@@ -9,7 +9,9 @@ namespace SistemaOroAmbiental.BLL.Service
 
         Task<ServiceResult> Actualizar(Producto model, bool reemplazarDescartadorHojaRuta = false);
 
-        Task<ServiceResult> Eliminar(int id);
+        Task<ServiceResult> Eliminar(int id, bool cascada = false);
+
+        Task<DependenciasEliminacionInfo> ObtenerDependenciasEliminar(int id);
 
         Task<Producto?> Obtener(int id);
 

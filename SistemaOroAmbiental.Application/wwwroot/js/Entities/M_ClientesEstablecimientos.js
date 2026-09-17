@@ -30,6 +30,9 @@
                     camiones: "/Camiones/Lista?soloActivos=true",
                     tiposGenerador: "/ClientesTiposGenerador/Lista",
                     actividades: "/ClientesActividades/Lista",
+                    estados: "/ClientesEstados/Lista",
+                    motivos: "/ClientesMotivos/Lista",
+                    calificaciones: "/ClientesCalificaciones/Lista",
                     contactosLista: "/ClientesEstablecimientosContactos/ListaPorEstablecimiento?idEstablecimiento={idEstablecimiento}",
                     contactosInsertar: "/ClientesEstablecimientosContactos/Insertar",
                     contactosActualizar: "/ClientesEstablecimientosContactos/Actualizar",
@@ -80,16 +83,14 @@
             this._localidadLegacy = null;
 
             this._camposObligatorios = [
-                "cmbClienteEst", "txtNombreEst", "cmbDiaEst", "cmbSemanaEst"
+                "cmbClienteEst", "txtNombreEst"
             ];
             this._validacion = new ValidacionModalAbm({
                 modalEl: this.modalEl,
                 getPanel: () => this._id("errorCamposEst"),
                 campos: [
                     { id: "cmbClienteEst", nombre: "Cliente" },
-                    { id: "txtNombreEst", nombre: "Nombre establecimiento" },
-                    { id: "cmbDiaEst", nombre: "D\u00EDa recolecci\u00F3n" },
-                    { id: "cmbSemanaEst", nombre: "Semana recolecci\u00F3n" }
+                    { id: "txtNombreEst", nombre: "Nombre establecimiento" }
                 ],
                 esCampoValido: (el) => this._valorCampoValido(el),
                 isSoloLectura: () => this.isSoloLectura(),
@@ -106,6 +107,9 @@
                 ListasPrecios: { selectId: "cmbListaPrecioProdEst", url: this.options.endpoints.listasPrecios },
                 ClientesTiposGenerador: { selectId: "cmbTipoGeneradorEst", url: this.options.endpoints.tiposGenerador, textField: "Etiqueta" },
                 ClientesActividades: { selectId: "cmbActividadEst", url: this.options.endpoints.actividades },
+                ClientesEstados: { selectId: "cmbEstadoEst", url: this.options.endpoints.estados },
+                ClientesMotivos: { selectId: "cmbMotivoEst", url: this.options.endpoints.motivos },
+                ClientesCalificaciones: { selectId: "cmbCalificacionEst", url: this.options.endpoints.calificaciones },
                 Camiones: { selectId: "cmbCamionEst", url: this.options.endpoints.camiones }
             };
 
@@ -136,7 +140,8 @@
         }
 
         async _fetchJson(url, options = {}) {
-            const response = await fetch(url, options);
+            const opts = Object.assign({ cache: "no-store" }, options);
+            const response = await fetch(url, opts);
             if (!response.ok) throw new Error(`Error HTTP ${response.status}`);
             return await response.json();
         }
@@ -179,7 +184,7 @@
                 if (id === "chkImpuestoIvaEst") this._syncIvaCardUI();
                 return;
             }
-            el.value = value ?? "";
+            el.value = value === null || value === undefined ? "" : String(value);
             if (refreshSelect2) this._refreshSelect2Field(id);
         }
 
@@ -261,6 +266,7 @@
             [
                 "cmbClienteEst", "cmbCondicionIvaEst", "cmbProvinciaEst", "cmbPartidoEst",
                 "cmbLocalidadEst", "cmbTipoGeneradorEst", "cmbActividadEst",
+                "cmbEstadoEst", "cmbCalificacionEst", "cmbMotivoEst",
                 "cmbDiaEst", "cmbSemanaEst", "cmbCamionEst",
                 "cmbProductoEst", "cmbListaPrecioProdEst"
             ].forEach(id => {
@@ -1093,6 +1099,8 @@
                 }
 
                 this._syncIvaCardUI();
+                this._syncMotivoDetalle();
+                this._syncAvisoRecoleccion();
 
                 this._id("modalEstablecimientoLabel").textContent = "Nuevo Establecimiento";
                 this._id("btnGuardarEst").innerHTML = `<i class="fa fa-check"></i> Registrar establecimiento`;
@@ -1204,7 +1212,11 @@
             this._setFieldValue("txtPisoDeptoEst", modelo.PisoDepartamento || "");
             this._setFieldValue("txtCodPostalEst", modelo.CodPostal || "");
             this._setFieldValue("chkImpuestoIvaEst", !!modelo.ImpuestoIva);
-                this._setFieldValue("txtDiasHorariosEst", modelo.DiasHorarios || "");
+            this._setFieldValue("txtDiasHorariosEst", modelo.DiasHorarios || "");
+            this._setFieldValue("txtMotivoDetalleEst", modelo.MotivoDetalle || "");
+            this._setFieldValue("txtFechaInicioEst", this._fechaInput(modelo.FechaInicio));
+            this._setFieldValue("txtFechaLicenciaDesdeEst", this._fechaInput(modelo.FechaLicenciaDesde));
+            this._setFieldValue("txtFechaLicenciaHastaEst", this._fechaInput(modelo.FechaLicenciaHasta));
 
             if (modelo.IdCliente) this._setFieldValue("cmbClienteEst", modelo.IdCliente, true);
             if (modelo.IdCondicionIva) this._setFieldValue("cmbCondicionIvaEst", modelo.IdCondicionIva, true);
@@ -1220,6 +1232,12 @@
             }
             if (modelo.IdTipoGenerador) this._setFieldValue("cmbTipoGeneradorEst", modelo.IdTipoGenerador, true);
             if (modelo.IdActividad) this._setFieldValue("cmbActividadEst", modelo.IdActividad, true);
+            if (modelo.IdEstado) this._setFieldValue("cmbEstadoEst", modelo.IdEstado, true);
+            if (modelo.IdCalificacion) this._setFieldValue("cmbCalificacionEst", modelo.IdCalificacion, true);
+            if (modelo.IdMotivo) {
+                this._setFieldValue("cmbMotivoEst", modelo.IdMotivo, true);
+                this._syncMotivoDetalle();
+            }
             if (modelo.IdDiaRecoleccion) this._setFieldValue("cmbDiaEst", modelo.IdDiaRecoleccion, true);
             if (modelo.IdSemanaRecoleccion) this._setFieldValue("cmbSemanaEst", modelo.IdSemanaRecoleccion, true);
             if (modelo.IdCamion) this._setFieldValue("cmbCamionEst", modelo.IdCamion, true);
@@ -1248,6 +1266,7 @@
             this._mostrarUi();
             this.setModalSoloLectura(soloLectura);
             this._verificarOrdenRecorrido();
+            this._syncAvisoRecoleccion();
 
             if (typeof this.options.onOpen === "function") {
                 await this.options.onOpen(soloLectura ? "ver" : "editar", this, modelo);
@@ -1305,6 +1324,7 @@
                 select.append(option);
             });
             if (selectedPartidoId) this._setFieldValue("cmbPartidoEst", selectedPartidoId, true);
+            this.ensureSelect2(window.jQuery(select));
             await this.cargarLocalidades(selectedPartidoId, selectedLocalidadId);
             if (seq !== this._cargarPartidosSeq) return;
             this._actualizarCodigosGeo();
@@ -1335,6 +1355,7 @@
                     select.append(option);
                 });
                 if (selectedLocalidadId) this._setFieldValue("cmbLocalidadEst", selectedLocalidadId, true);
+                this.ensureSelect2(window.jQuery(select));
                 this._actualizarCodigosGeo();
             } finally {
                 if (seq === this._cargarLocalidadesSeq) {
@@ -1367,6 +1388,16 @@
             if (c.IdCondicionIva) this._setFieldValue("cmbCondicionIvaEst", c.IdCondicionIva, true);
             if (c.IdProvincia) this._setFieldValue("cmbProvinciaEst", c.IdProvincia, true);
             if (c.IdTipoGenerador) this._setFieldValue("cmbTipoGeneradorEst", c.IdTipoGenerador, true);
+            if (c.IdEstado) this._setFieldValue("cmbEstadoEst", c.IdEstado, true);
+            if (c.IdCalificacion) this._setFieldValue("cmbCalificacionEst", c.IdCalificacion, true);
+            if (c.IdMotivo) {
+                this._setFieldValue("cmbMotivoEst", c.IdMotivo, true);
+                this._setFieldValue("txtMotivoDetalleEst", c.MotivoDetalle || "");
+                this._syncMotivoDetalle();
+            }
+            this._setFieldValue("txtFechaInicioEst", this._fechaInput(c.FechaInicio));
+            this._setFieldValue("txtFechaLicenciaDesdeEst", this._fechaInput(c.FechaLicenciaDesde));
+            this._setFieldValue("txtFechaLicenciaHastaEst", this._fechaInput(c.FechaLicenciaHasta));
             await this.limpiarGeoEspecifico();
             this.actualizarBadgeEstablecimiento();
         }
@@ -1401,6 +1432,9 @@
             this.resetSelect("cmbLocalidadEst", "Seleccionar");
             this.resetSelect("cmbTipoGeneradorEst", "Seleccionar");
             this.resetSelect("cmbActividadEst", "Seleccionar");
+            this.resetSelect("cmbEstadoEst", "Seleccionar");
+            this.resetSelect("cmbCalificacionEst", "Seleccionar");
+            this.resetSelect("cmbMotivoEst", "Seleccionar");
             this.resetSelect("cmbDiaEst", "Seleccionar");
             this.resetSelect("cmbSemanaEst", "Seleccionar");
             this.resetSelect("cmbCamionEst", "Seleccionar");
@@ -1414,6 +1448,9 @@
                 this._llenarCombo("cmbProvinciaEst", this.options.endpoints.provincias, seq),
                 this._llenarComboTiposGenerador(seq),
                 this._llenarCombo("cmbActividadEst", this.options.endpoints.actividades, seq),
+                this._llenarCombo("cmbEstadoEst", this.options.endpoints.estados, seq),
+                this._llenarCombo("cmbMotivoEst", this.options.endpoints.motivos, seq),
+                this._llenarCombo("cmbCalificacionEst", this.options.endpoints.calificaciones, seq),
                 this._llenarCombo("cmbDiaEst", this.options.endpoints.dias, seq),
                 this._llenarCombo("cmbSemanaEst", this.options.endpoints.semanas, seq),
                 this._llenarCombo("cmbCamionEst", this.options.endpoints.camiones, seq),
@@ -1457,6 +1494,13 @@
                 PisoDepartamento: (this._getFieldValue("txtPisoDeptoEst") || "").trim() || null,
                 IdTipoGenerador: this._getIntOrNull("cmbTipoGeneradorEst"),
                 IdActividad: this._getIntOrNull("cmbActividadEst"),
+                IdEstado: this._getIntOrNull("cmbEstadoEst"),
+                IdMotivo: this._getIntOrNull("cmbMotivoEst"),
+                MotivoDetalle: (this._getFieldValue("txtMotivoDetalleEst") || "").trim() || null,
+                IdCalificacion: this._getIntOrNull("cmbCalificacionEst"),
+                FechaInicio: this._parseFecha(this._getFieldValue("txtFechaInicioEst")),
+                FechaLicenciaDesde: this._parseFecha(this._getFieldValue("txtFechaLicenciaDesdeEst")),
+                FechaLicenciaHasta: this._parseFecha(this._getFieldValue("txtFechaLicenciaHastaEst")),
                 IdProvincia: this._getIntOrNull("cmbProvinciaEst"),
                 IdPartido: this._getIntOrNull("cmbPartidoEst"),
                 IdLocalidad: this._getIntOrNull("cmbLocalidadEst"),
@@ -1464,8 +1508,8 @@
                     ? (this._id("cmbLocalidadEst")?.selectedOptions?.[0]?.text || "").trim() || null
                     : this._localidadLegacy,
                 CodPostal: this._getFieldValue("txtCodPostalEst") || null,
-                IdDiaRecoleccion: this._getIntOrNull("cmbDiaEst") ?? 0,
-                IdSemanaRecoleccion: this._getIntOrNull("cmbSemanaEst") ?? 0,
+                IdDiaRecoleccion: this._getIntOrNull("cmbDiaEst"),
+                IdSemanaRecoleccion: this._getIntOrNull("cmbSemanaEst"),
                 IdListaPrecio: null,
                 IdCamion: this._getIntOrNull("cmbCamionEst"),
                 OrdenRecorrido: (() => {
@@ -1549,53 +1593,35 @@
         }
 
         async eliminar(id) {
-            const confirmado = typeof confirmarModal === "function"
-                ? await confirmarModal("\u00BFDesea eliminar este establecimiento?")
-                : window.confirm("\u00BFDesea eliminar este establecimiento?");
-
-            if (!confirmado) return false;
-
-            try {
-                const url = this._replaceUrl(this.options.endpoints.eliminar, { id });
-                const data = await this._fetchJson(url, {
-                    method: "DELETE",
-                    headers: this._headers(false)
-                });
-
-                const ok = !!(data?.valor ?? data?.Valor);
-                const mensaje = data?.mensaje ?? data?.Mensaje ?? "No se pudo eliminar.";
-
-                if (!ok) {
-                    if (typeof errorModal === "function") {
-                        errorModal(mensaje);
-                    } else {
-                        this.mostrarErrorCampos(
-                            mensaje,
-                            data?.idReferencia ?? data?.IdReferencia ?? null,
-                            data?.tipo ?? data?.Tipo ?? "error"
-                        );
-                    }
-                    return false;
-                }
-
-                if (typeof exitoModal === "function") {
-                    exitoModal(data?.mensaje ?? data?.Mensaje ?? "Establecimiento eliminado correctamente");
-                }
-
-                if (typeof this.options.onDeleted === "function") {
-                    await this.options.onDeleted(data, id, this);
-                }
-
-                if (this.mode === "inline") {
-                    this.cerrar();
-                }
-
-                return true;
-            } catch (e) {
-                console.error(e);
-                if (typeof errorModal === "function") errorModal("Ha ocurrido un error.");
+            if (typeof ejecutarEliminacionEntidad !== "function") {
+                errorModal("No está disponible el asistente de eliminación.");
                 return false;
             }
+
+            const resultado = await ejecutarEliminacionEntidad({
+                entidadLabel: "este establecimiento",
+                urlDependencias: `/ClientesEstablecimientos/DependenciasEliminar?id=${id}`,
+                urlEliminar: cascada => `/ClientesEstablecimientos/Eliminar?id=${id}&cascada=${cascada ? "true" : "false"}`,
+                headers: this._headers(false),
+                fetchJson: (url, options) => this._fetchJson(url, options)
+            });
+
+            if (resultado.accion !== "ok") return false;
+
+            const data = resultado.data || {};
+            if (typeof exitoModal === "function") {
+                exitoModal(data.mensaje || data.Mensaje || "Establecimiento eliminado correctamente");
+            }
+
+            if (typeof this.options.onDeleted === "function") {
+                await this.options.onDeleted(data, id, this);
+            }
+
+            if (this.mode === "inline") {
+                this.cerrar();
+            }
+
+            return true;
         }
 
         limpiarModal() {
@@ -1615,6 +1641,8 @@
             this.prepararContactosNuevo();
             this.prepararProductosNuevo();
             this._syncIvaCardUI();
+            this._syncMotivoDetalle();
+            this._syncAvisoRecoleccion();
             if (typeof rpOcultarAvisoOrdenRecorrido === "function") {
                 rpOcultarAvisoOrdenRecorrido(this._id("avisoOrdenRecorridoEst"));
             }
@@ -1641,37 +1669,55 @@
             el.innerHTML = "";
             el.append(new Option("Seleccionar", ""));
 
-            const data = await this._fetchJson(url, { headers: this._headers(false) });
-            (data || []).forEach(x => el.append(new Option(x[textField] || x.Nombre, x.Id)));
+            const data = await this._fetchJson(url, { headers: this._headers(false), cache: "no-store" });
+            (data || []).forEach(x => el.append(new Option(x[textField] || x.Nombre, String(x.Id))));
 
-            this._refreshSelect2Field(selectId);
+            this.ensureSelect2(window.jQuery(el));
 
-            if (valorActual && Array.from(el.options).some(o => o.value === valorActual)) {
+            if (valorActual && Array.from(el.options).some(o => o.value === String(valorActual))) {
                 this._setFieldValue(selectId, valorActual, true);
             }
         }
 
         async _onConfiguracionActualizada(detail) {
-            const cfg = this._comboPorController[detail?.tipo];
+            const tipo = detail?.tipo;
+            const cfg = this._comboPorController[tipo];
             if (!cfg) return;
 
-            if (detail?.tipo === "Partidos") {
+            const nuevoId = detail.nuevoId != null ? String(detail.nuevoId) : "";
+
+            if (tipo === "Partidos") {
                 this._localidadLegacy = null;
-                await this.cargarPartidos(this._getIntOrNull("cmbProvinciaEst"), detail.nuevoId || null);
+                const idProv = detail.idProvincia || this._getIntOrNull("cmbProvinciaEst");
+                if (idProv && String(this._getFieldValue("cmbProvinciaEst") || "") !== String(idProv)) {
+                    this._setFieldValue("cmbProvinciaEst", idProv, true);
+                }
+                await this.cargarPartidos(idProv, nuevoId || null);
+                this._actualizarCodigosGeo();
                 return;
             }
-            if (detail?.tipo === "Localidades") {
+            if (tipo === "Localidades") {
                 this._localidadLegacy = null;
-                await this.cargarLocalidades(this._getIntOrNull("cmbPartidoEst"), detail.nuevoId || null);
+                if (detail.idProvincia) this._setFieldValue("cmbProvinciaEst", detail.idProvincia, true);
+                const idPartido = detail.idPartido || this._getIntOrNull("cmbPartidoEst");
+                if (idPartido && String(this._getFieldValue("cmbPartidoEst") || "") !== String(idPartido)) {
+                    await this.cargarPartidos(this._getIntOrNull("cmbProvinciaEst") || detail.idProvincia, idPartido, nuevoId || null);
+                    return;
+                }
+                await this.cargarLocalidades(idPartido, nuevoId || null);
+                this._actualizarCodigosGeo();
                 return;
             }
 
             await this._recargarCombo(cfg.selectId, cfg.url, cfg.textField || "Nombre");
 
-            if (detail.nuevoId) {
-                this._setFieldValue(cfg.selectId, detail.nuevoId, true);
+            if (nuevoId) {
+                this._setFieldValue(cfg.selectId, nuevoId, true);
                 const el = this._id(cfg.selectId);
                 if (el) this._validacion?.onSelect2Change(el);
+                if (tipo === "Provincias") {
+                    this.cargarPartidos(this._getIntOrNull("cmbProvinciaEst")).catch(console.error);
+                }
             }
         }
 
@@ -1752,6 +1798,61 @@
             return this._modeloActual;
         }
 
+        _fechaInput(f) {
+            if (!f) return "";
+            try {
+                const s = String(f);
+                if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+                const d = new Date(f);
+                if (Number.isNaN(d.getTime())) return "";
+                const y = d.getFullYear();
+                const m = String(d.getMonth() + 1).padStart(2, "0");
+                const day = String(d.getDate()).padStart(2, "0");
+                return `${y}-${m}-${day}`;
+            } catch {
+                return "";
+            }
+        }
+
+        _parseFecha(val) {
+            const s = (val || "").toString().trim();
+            return s || null;
+        }
+
+        _syncMotivoDetalle() {
+            const wrap = this._id("wrapMotivoDetalleEst");
+            if (!wrap) return;
+            wrap.hidden = !this._getIntOrNull("cmbMotivoEst");
+        }
+
+        _syncAvisoRecoleccion() {
+            const aviso = this._id("avisoRecoleccionEst");
+            if (!aviso) return;
+            const falta = !this._getIntOrNull("cmbDiaEst") || !this._getIntOrNull("cmbSemanaEst");
+            aviso.classList.toggle("is-on", falta);
+        }
+
+        _aplicarEstadoLicencia() {
+            const desde = this._getFieldValue("txtFechaLicenciaDesdeEst");
+            const hasta = this._getFieldValue("txtFechaLicenciaHastaEst");
+            if (!desde && !hasta) return;
+
+            const hoy = new Date();
+            hoy.setHours(0, 0, 0, 0);
+            const d = desde ? new Date(`${desde}T00:00:00`) : null;
+            const h = hasta ? new Date(`${hasta}T00:00:00`) : null;
+            let enPeriodo = false;
+            if (d && h) enPeriodo = hoy >= d && hoy <= h;
+            else if (d) enPeriodo = hoy >= d;
+            else if (h) enPeriodo = hoy <= h;
+            if (!enPeriodo) return;
+
+            const sel = this._id("cmbEstadoEst");
+            if (!sel) return;
+            const opt = Array.from(sel.options).find(o => String(o.text).toLowerCase().includes("licencia"));
+            if (opt?.value) this._setFieldValue("cmbEstadoEst", opt.value, true);
+        }
+
         _bindEvents() {
             const guardarBtn = this._id("btnGuardarEst");
             if (guardarBtn) {
@@ -1771,6 +1872,15 @@
             if (chkIva) {
                 chkIva.addEventListener("change", () => this._syncIvaCardUI());
             }
+
+            const motivo = this._id("cmbMotivoEst");
+            if (motivo && window.jQuery) {
+                window.jQuery(motivo).off("change.motivoEst").on("change.motivoEst", () => this._syncMotivoDetalle());
+            }
+            ["txtFechaLicenciaDesdeEst", "txtFechaLicenciaHastaEst"].forEach(id => {
+                const el = this._id(id);
+                if (el) el.addEventListener("change", () => this._aplicarEstadoLicencia());
+            });
 
             const btnCli = this._id("btnAgregarClienteEst");
             if (btnCli) {
@@ -1843,7 +1953,10 @@
             ["cmbDiaEst", "cmbSemanaEst", "cmbCamionEst"].forEach(id => {
                 const el = this._id(id);
                 if (!el || !window.jQuery) return;
-                window.jQuery(el).off("change.ordenRec").on("change.ordenRec", () => this._verificarOrdenRecorrido());
+                window.jQuery(el).off("change.ordenRec").on("change.ordenRec", () => {
+                    this._verificarOrdenRecorrido();
+                    if (id === "cmbDiaEst" || id === "cmbSemanaEst") this._syncAvisoRecoleccion();
+                });
             });
         }
 

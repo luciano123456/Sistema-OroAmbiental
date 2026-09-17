@@ -7,10 +7,12 @@ namespace SistemaOroAmbiental.BLL.Service
     public class ChoferesService : IChoferesService
     {
         private readonly IChoferesRepository _repo;
+        private readonly IEntidadCascadeRepository _cascadeRepo;
 
-        public ChoferesService(IChoferesRepository repo)
+        public ChoferesService(IChoferesRepository repo, IEntidadCascadeRepository cascadeRepo)
         {
             _repo = repo;
+            _cascadeRepo = cascadeRepo;
         }
 
         public async Task<ServiceResult> Insertar(Chofer model)
@@ -38,14 +40,23 @@ namespace SistemaOroAmbiental.BLL.Service
                 : ServiceResult.Error("No se pudo guardar.");
         }
 
-        public async Task<ServiceResult> Eliminar(int id)
-        {
-            return await DeleteOperationHelper.ExecuteAsync(
-                () => _repo.Eliminar(id),
+        public Task<DependenciasEliminacionInfo> ObtenerDependenciasEliminar(int id)
+            => _cascadeRepo.ObtenerDependenciasChoferAsync(id);
+
+        public Task<ServiceResult> Eliminar(int id, bool cascada = false)
+            => DeleteOperationHelper.ExecuteCascadeAsync(
+                id,
+                cascada,
                 "el chofer",
-                "Chofer eliminado correctamente",
-                id);
-        }
+                () => _cascadeRepo.ObtenerDependenciasChoferAsync(id),
+                () => _cascadeRepo.EliminarChoferEnCascadaAsync(id),
+                () => DeleteOperationHelper.ExecuteAsync(
+                    () => _repo.Eliminar(id),
+                    "el chofer",
+                    "Chofer eliminado correctamente",
+                    id),
+                "Chofer eliminado correctamente.",
+                "Error inesperado al eliminar el chofer en cascada.");
 
         public Task<Chofer?> Obtener(int id)
             => _repo.Obtener(id);

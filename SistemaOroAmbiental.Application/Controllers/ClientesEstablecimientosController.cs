@@ -121,6 +121,16 @@ namespace SistemaOroAmbiental.Application.Controllers
                     : (e.IdLocalidadNavigation?.Nombre ?? ""),
                 CodPostal = e.CodPostal,
                 ImpuestoIva = e.ImpuestoIva,
+                IdEstado = e.IdEstado,
+                IdMotivo = e.IdMotivo,
+                MotivoDetalle = e.MotivoDetalle,
+                IdCalificacion = e.IdCalificacion,
+                FechaInicio = e.FechaInicio,
+                FechaLicenciaDesde = e.FechaLicenciaDesde,
+                FechaLicenciaHasta = e.FechaLicenciaHasta,
+                Estado = e.IdEstadoNavigation?.Nombre ?? "",
+                Motivo = e.IdMotivoNavigation?.Nombre ?? "",
+                Calificacion = e.IdCalificacionNavigation?.Nombre ?? "",
                 IdDiaRecoleccion = e.IdDiaRecoleccion,
                 IdSemanaRecoleccion = e.IdSemanaRecoleccion,
                 IdListaPrecio = e.IdListaPrecio,
@@ -182,6 +192,13 @@ namespace SistemaOroAmbiental.Application.Controllers
                 CodigoLocalidad = e.IdLocalidadNavigation?.Codigo,
                 e.CodPostal,
                 e.ImpuestoIva,
+                e.IdEstado,
+                e.IdMotivo,
+                e.MotivoDetalle,
+                e.IdCalificacion,
+                e.FechaInicio,
+                e.FechaLicenciaDesde,
+                e.FechaLicenciaHasta,
                 e.IdDiaRecoleccion,
                 e.IdSemanaRecoleccion,
                 e.IdListaPrecio,
@@ -427,17 +444,26 @@ namespace SistemaOroAmbiental.Application.Controllers
             });
         }
 
-        [HttpDelete]
-        public async Task<IActionResult> Eliminar(int id)
+        [HttpGet]
+        public async Task<IActionResult> DependenciasEliminar(int id)
         {
-            ServiceResult result = await _service.Eliminar(id);
+            var info = await _service.ObtenerDependenciasEliminar(id);
+            return Ok(info);
+        }
+
+        [HttpDelete]
+        public async Task<IActionResult> Eliminar(int id, bool cascada = false)
+        {
+            ServiceResult result = await _service.Eliminar(id, cascada);
 
             return Ok(new
             {
                 valor = result.Ok,
                 mensaje = result.Mensaje,
                 tipo = result.Tipo,
-                idReferencia = result.IdReferencia
+                idReferencia = result.IdReferencia,
+                dependencias = result.Dependencias?.Items,
+                instruccionesPasoAPaso = result.InstruccionesPasoAPaso
             });
         }
 
@@ -469,8 +495,15 @@ namespace SistemaOroAmbiental.Application.Controllers
                 Localidad = string.IsNullOrWhiteSpace(model.Localidad) ? null : model.Localidad.Trim(),
                 CodPostal = model.CodPostal,
                 ImpuestoIva = model.ImpuestoIva,
-                IdDiaRecoleccion = model.IdDiaRecoleccion,
-                IdSemanaRecoleccion = model.IdSemanaRecoleccion,
+                IdEstado = model.IdEstado,
+                IdMotivo = model.IdMotivo,
+                MotivoDetalle = string.IsNullOrWhiteSpace(model.MotivoDetalle) ? null : model.MotivoDetalle.Trim(),
+                IdCalificacion = model.IdCalificacion,
+                FechaInicio = model.FechaInicio,
+                FechaLicenciaDesde = model.FechaLicenciaDesde,
+                FechaLicenciaHasta = model.FechaLicenciaHasta,
+                IdDiaRecoleccion = model.IdDiaRecoleccion is > 0 ? model.IdDiaRecoleccion : null,
+                IdSemanaRecoleccion = model.IdSemanaRecoleccion is > 0 ? model.IdSemanaRecoleccion : null,
                 IdListaPrecio = model.IdListaPrecio is > 0 ? model.IdListaPrecio : null,
                 IdCamion = model.IdCamion,
                 OrdenRecorrido = model.OrdenRecorrido,
@@ -535,7 +568,7 @@ namespace SistemaOroAmbiental.Application.Controllers
         }
 
         private static string FormatearHora(TimeSpan t)
-            => $"{(int)t.TotalHours:D2}:{t.Minutes:D2}";
+            => t == default ? "" : $"{(int)t.TotalHours:D2}:{t.Minutes:D2}";
 
         private static TimeSpan ParseHora(string? valor)
         {
@@ -549,20 +582,10 @@ namespace SistemaOroAmbiental.Application.Controllers
         }
 
         private static TimeSpan ResolverHorarioDesde(VMClienteEstablecimiento model)
-        {
-            var desde = ParseHora(model.HorarioRecoleccionDesde);
-            var hasta = ParseHora(model.HorarioRecoleccionHasta);
-            if (hasta > desde) return desde;
-            return new TimeSpan(8, 0, 0);
-        }
+            => ParseHora(model.HorarioRecoleccionDesde);
 
         private static TimeSpan ResolverHorarioHasta(VMClienteEstablecimiento model)
-        {
-            var desde = ParseHora(model.HorarioRecoleccionDesde);
-            var hasta = ParseHora(model.HorarioRecoleccionHasta);
-            if (hasta > desde) return hasta;
-            return new TimeSpan(18, 0, 0);
-        }
+            => ParseHora(model.HorarioRecoleccionHasta);
 
         private static string? NormalizarIdEstablecimientoCliente(string? valor)
         {

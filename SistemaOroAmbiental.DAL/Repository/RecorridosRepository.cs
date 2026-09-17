@@ -149,7 +149,7 @@ namespace SistemaOroAmbiental.DAL.Repository
 
             var hoy = DateTime.Today;
             foreach (var item in list)
-                item.EnLicencia = EstaEnLicencia(item.FechaLicenciaDesde, item.FechaLicenciaHasta, item.EstadoNombre, hoy);
+                item.EnLicencia = LicenciaPeriodo.EstaEnRango(item.FechaLicenciaDesde, item.FechaLicenciaHasta, item.EstadoNombre, hoy);
 
             await CargarProductosEnClientesRecorrido(list);
             return list;
@@ -194,13 +194,36 @@ namespace SistemaOroAmbiental.DAL.Repository
 
         public async Task<List<ClientesRecorridoDto>> ListarPorCliente(int idCliente)
         {
-            return await QueryClientesRecorridoDto()
+            var list = await QueryClientesRecorridoDto()
                 .Where(x => x.IdCliente == idCliente)
-                .OrderBy(x => x.IdCamion)
-                .ThenBy(x => x.IdSemana)
+                .OrderBy(x => x.Establecimiento)
                 .ThenBy(x => x.IdDia)
                 .ThenBy(x => x.Posicion)
                 .ToListAsync();
+
+            var idsEst = list
+                .Where(x => x.IdEstablecimiento is > 0)
+                .Select(x => x.IdEstablecimiento!.Value)
+                .Distinct()
+                .ToList();
+
+            if (idsEst.Count == 0)
+                return list;
+
+            var establecimientos = await _db.ClientesEstablecimientos.AsNoTracking()
+                .Where(e => idsEst.Contains(e.Id))
+                .ToDictionaryAsync(e => e.Id);
+
+            foreach (var item in list)
+            {
+                if (item.IdEstablecimiento is > 0
+                    && establecimientos.TryGetValue(item.IdEstablecimiento.Value, out var est))
+                {
+                    item.Horario = FormatearHorarioRecoleccion(est);
+                }
+            }
+
+            return list;
         }
 
         public async Task<bool> InsertarClientesRecorrido(ClientesRecorrido model, bool desplazarSiOcupada = true)
@@ -390,6 +413,8 @@ namespace SistemaOroAmbiental.DAL.Repository
                 .AsSplitQuery()
                 .Include(r => r.IdClienteNavigation)
                     .ThenInclude(c => c!.IdEstadoNavigation)
+                .Include(r => r.IdEstablecimientoNavigation)
+                    .ThenInclude(e => e!.IdEstadoNavigation)
                 .Include(r => r.IdEstablecimientoNavigation)
                     .ThenInclude(e => e!.ClientesEstablecimientosContactos)
                 .Include(r => r.IdEstablecimientoNavigation)
@@ -627,7 +652,13 @@ namespace SistemaOroAmbiental.DAL.Repository
                 alertaTipo = "alerta";
             }
 
-            var enLicencia = cliente != null && EstaEnLicencia(cliente, fecha.Date);
+            var enLicencia = establecimiento != null
+                ? LicenciaPeriodo.EstaEnRango(
+                    establecimiento.FechaLicenciaDesde ?? cliente?.FechaLicenciaDesde,
+                    establecimiento.FechaLicenciaHasta ?? cliente?.FechaLicenciaHasta,
+                    establecimiento.IdEstadoNavigation?.Nombre ?? cliente?.IdEstadoNavigation?.Nombre,
+                    fecha.Date)
+                : cliente != null && LicenciaPeriodo.ClienteEnLicencia(cliente, fecha.Date);
             if (enLicencia)
             {
                 observacion = string.IsNullOrWhiteSpace(observacion)
@@ -786,30 +817,6 @@ namespace SistemaOroAmbiental.DAL.Repository
                && (codigo.Contains("transf", StringComparison.OrdinalIgnoreCase)
                    || codigo.Contains("banco", StringComparison.OrdinalIgnoreCase));
 
-        /// <summary>
-        /// Misma regla que ClientesOperativoRepository: fechas ganan; si no hay fechas, estado "Licencia".
-        /// </summary>
-        private static bool EstaEnLicencia(Cliente cliente, DateTime fecha)
-            => EstaEnLicencia(cliente.FechaLicenciaDesde, cliente.FechaLicenciaHasta, cliente.IdEstadoNavigation?.Nombre, fecha);
-
-        private static bool EstaEnLicencia(DateTime? desde, DateTime? hasta, string? estadoNombre, DateTime fecha)
-        {
-            var porEstado = (estadoNombre ?? "").Contains("Licencia", StringComparison.OrdinalIgnoreCase);
-            var d = desde?.Date;
-            var h = hasta?.Date;
-
-            if (d.HasValue && h.HasValue)
-                return fecha >= d.Value && fecha <= h.Value;
-
-            if (d.HasValue && !h.HasValue)
-                return fecha >= d.Value;
-
-            if (!d.HasValue && h.HasValue)
-                return fecha <= h.Value;
-
-            return porEstado;
-        }
-
         private static decimal ResolverPrecioLista(
             int idProducto,
             int? idLista,
@@ -956,11 +963,34 @@ namespace SistemaOroAmbiental.DAL.Repository
             if (!string.IsNullOrWhiteSpace(establecimiento.DiasHorarios))
                 return establecimiento.DiasHorarios.Trim();
 
-            if (establecimiento.HorarioRecoleccionDesde == default
-                && establecimiento.HorarioRecoleccionHasta == default)
+            return FormatearRangoHorarioRecoleccion(
+                establecimiento.HorarioRecoleccionDesde,
+                establecimiento.HorarioRecoleccionHasta);
+        }
+
+        private static string FormatearRangoHorarioRecoleccion(TimeSpan desde, TimeSpan hasta)
+        {
+            if (!TieneHorarioRecoleccionCargado(desde, hasta))
                 return "";
 
-            return $"{establecimiento.HorarioRecoleccionDesde:hh\\:mm} a {establecimiento.HorarioRecoleccionHasta:hh\\:mm}";
+            return $"{desde:hh\\:mm} a {hasta:hh\\:mm}";
+        }
+
+        /// <summary>
+        /// 00:00 o el default histórico 08:00-18:00 se consideran "sin horario" en la hoja.
+        /// Un rango real (p. ej. 9:30-17) sí se imprime.
+        /// </summary>
+        private static bool TieneHorarioRecoleccionCargado(TimeSpan desde, TimeSpan hasta)
+        {
+            if (desde == default && hasta == default)
+                return false;
+
+            var ocho = new TimeSpan(8, 0, 0);
+            var dieciocho = new TimeSpan(18, 0, 0);
+            if (desde == ocho && hasta == dieciocho)
+                return false;
+
+            return true;
         }
 
         private async Task<(decimal grande, decimal chico)> ObtenerPreciosDescartadoresReferencia()
@@ -1054,9 +1084,7 @@ namespace SistemaOroAmbiental.DAL.Repository
                 Localidad = x.Localidad,
                 Horario = !string.IsNullOrWhiteSpace(x.DiasHorarios)
                     ? x.DiasHorarios.Trim()
-                    : (x.HorarioRecoleccionDesde == default && x.HorarioRecoleccionHasta == default
-                        ? ""
-                        : $"{x.HorarioRecoleccionDesde:hh\\:mm} a {x.HorarioRecoleccionHasta:hh\\:mm}"),
+                    : FormatearRangoHorarioRecoleccion(x.HorarioRecoleccionDesde, x.HorarioRecoleccionHasta),
                 YaEnRecorrido = false
             }).ToList();
         }
@@ -1210,6 +1238,8 @@ namespace SistemaOroAmbiental.DAL.Repository
                    from e in ej.DefaultIfEmpty()
                    join est in _db.ClientesEstados on cl.IdEstado equals est.Id into estj
                    from est in estj.DefaultIfEmpty()
+                   join estEst in _db.ClientesEstados on e.IdEstado equals estEst.Id into estEstj
+                   from estEst in estEstj.DefaultIfEmpty()
                    select new ClientesRecorridoDto
                    {
                        Id = r.Id,
@@ -1230,12 +1260,12 @@ namespace SistemaOroAmbiental.DAL.Repository
                        Posicion = r.Posicion,
                        Activo = r.Activo,
                        Reprogramado = r.Reprogramado,
-                       FechaLicenciaDesde = cl.FechaLicenciaDesde,
-                       FechaLicenciaHasta = cl.FechaLicenciaHasta,
+                       FechaLicenciaDesde = e != null ? (e.FechaLicenciaDesde ?? cl.FechaLicenciaDesde) : cl.FechaLicenciaDesde,
+                       FechaLicenciaHasta = e != null ? (e.FechaLicenciaHasta ?? cl.FechaLicenciaHasta) : cl.FechaLicenciaHasta,
                        Observacion = r.Observacion,
                        RecorridoTexto = s.Nombre + " " + d.Nombre,
                        EnLicencia = false,
-                       EstadoNombre = est != null ? est.Nombre : null
+                       EstadoNombre = (estEst != null ? estEst.Nombre : null) ?? (est != null ? est.Nombre : null)
                    };
         }
 
@@ -1255,10 +1285,10 @@ namespace SistemaOroAmbiental.DAL.Repository
                 var orden = est.OrdenRecorrido;
                 var desired = new List<(int IdCamion, int IdSemana, int IdDia)>();
 
-                if (idSemana > 0)
+                if (idSemana is > 0)
                 {
-                    if (est.IdCamion is > 0 && est.IdDiaRecoleccion > 0)
-                        desired.Add((est.IdCamion.Value, idSemana, est.IdDiaRecoleccion));
+                    if (est.IdCamion is > 0 && est.IdDiaRecoleccion is > 0)
+                        desired.Add((est.IdCamion.Value, idSemana.Value, est.IdDiaRecoleccion.Value));
 
                     var diasExtra = await _db.ClientesEstablecimientosDias.AsNoTracking()
                         .Where(d =>
@@ -1273,10 +1303,10 @@ namespace SistemaOroAmbiental.DAL.Repository
                     {
                         if (!desired.Any(x =>
                                 x.IdCamion == d.IdCamion &&
-                                x.IdSemana == idSemana &&
+                                x.IdSemana == idSemana.Value &&
                                 x.IdDia == d.IdDia))
                         {
-                            desired.Add((d.IdCamion, idSemana, d.IdDia));
+                            desired.Add((d.IdCamion, idSemana.Value, d.IdDia));
                         }
                     }
                 }

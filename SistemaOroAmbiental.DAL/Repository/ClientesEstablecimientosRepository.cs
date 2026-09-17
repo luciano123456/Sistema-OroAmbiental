@@ -53,8 +53,15 @@ namespace SistemaOroAmbiental.DAL.Repository
                 entity.Localidad = model.Localidad;
                 entity.CodPostal = model.CodPostal;
                 entity.ImpuestoIva = model.ImpuestoIva;
-                entity.IdDiaRecoleccion = model.IdDiaRecoleccion;
-                entity.IdSemanaRecoleccion = model.IdSemanaRecoleccion;
+                entity.IdEstado = model.IdEstado;
+                entity.IdMotivo = model.IdMotivo;
+                entity.MotivoDetalle = string.IsNullOrWhiteSpace(model.MotivoDetalle) ? null : model.MotivoDetalle.Trim();
+                entity.IdCalificacion = model.IdCalificacion;
+                entity.FechaInicio = model.FechaInicio;
+                entity.FechaLicenciaDesde = model.FechaLicenciaDesde;
+                entity.FechaLicenciaHasta = model.FechaLicenciaHasta;
+                entity.IdDiaRecoleccion = model.IdDiaRecoleccion is > 0 ? model.IdDiaRecoleccion : null;
+                entity.IdSemanaRecoleccion = model.IdSemanaRecoleccion is > 0 ? model.IdSemanaRecoleccion : null;
                 entity.IdListaPrecio = model.IdListaPrecio;
                 entity.IdCamion = model.IdCamion;
                 entity.OrdenRecorrido = model.OrdenRecorrido is > 0 ? model.OrdenRecorrido : null;
@@ -143,6 +150,9 @@ namespace SistemaOroAmbiental.DAL.Repository
                 .Include(x => x.IdCondicionIvaNavigation)
                 .Include(x => x.IdTipoGeneradorNavigation)
                 .Include(x => x.IdActividadNavigation)
+                .Include(x => x.IdEstadoNavigation)
+                .Include(x => x.IdMotivoNavigation)
+                .Include(x => x.IdCalificacionNavigation)
                 .Include(x => x.IdDiaRecoleccionNavigation)
                 .Include(x => x.IdSemanaRecoleccionNavigation)
                 .Include(x => x.IdListaPrecioNavigation)
@@ -164,6 +174,9 @@ namespace SistemaOroAmbiental.DAL.Repository
                 .Include(x => x.IdCondicionIvaNavigation)
                 .Include(x => x.IdTipoGeneradorNavigation)
                 .Include(x => x.IdActividadNavigation)
+                .Include(x => x.IdEstadoNavigation)
+                .Include(x => x.IdMotivoNavigation)
+                .Include(x => x.IdCalificacionNavigation)
                 .Include(x => x.IdDiaRecoleccionNavigation)
                 .Include(x => x.IdSemanaRecoleccionNavigation)
                 .Include(x => x.IdListaPrecioNavigation)
@@ -204,6 +217,9 @@ namespace SistemaOroAmbiental.DAL.Repository
                 .Include(x => x.IdCondicionIvaNavigation)
                 .Include(x => x.IdTipoGeneradorNavigation)
                 .Include(x => x.IdActividadNavigation)
+                .Include(x => x.IdEstadoNavigation)
+                .Include(x => x.IdMotivoNavigation)
+                .Include(x => x.IdCalificacionNavigation)
                 .Include(x => x.IdDiaRecoleccionNavigation)
                 .Include(x => x.IdSemanaRecoleccionNavigation)
                 .Include(x => x.IdListaPrecioNavigation)

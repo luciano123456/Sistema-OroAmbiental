@@ -7,9 +7,11 @@ using System.IO.Compression;
 using SistemaOroAmbiental.Application.Configuration;
 using SistemaOroAmbiental.Application.Helpers;
 using SistemaOroAmbiental.BLL.Service;
+using SistemaOroAmbiental.DAL.Common;
 using SistemaOroAmbiental.DAL.DataContext;
 using SistemaOroAmbiental.DAL.Repository;
 using SistemaOroAmbiental.Models;
+using System.IdentityModel.Tokens.Jwt;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -60,6 +62,7 @@ builder.Services.AddScoped(typeof(IConfiguracionNombreService<>), typeof(Configu
 builder.Services.AddScoped<IDeleteConflictChecker, DeleteConflictChecker>();
 builder.Services.AddScoped<IEntidadCascadeRepository, EntidadCascadeRepository>();
 builder.Services.AddScoped<ICatalogoCascadeRepository, CatalogoCascadeRepository>();
+builder.Services.AddScoped<IEliminacionesLogRepository, EliminacionesLogRepository>();
 
 builder.Services.AddScoped<IUsuariosRepository<User>, UsuariosRepository>();
 builder.Services.AddScoped<IUsuariosService, UsuariosService>();
@@ -295,6 +298,40 @@ app.UseRouting();
 
 app.UseAuthentication();
 app.UseAuthorization();
+
+app.Use(async (context, next) =>
+{
+    if (context.User.Identity?.IsAuthenticated == true)
+    {
+        int? uid = null;
+        if (int.TryParse(context.User.FindFirst("Id")?.Value, out var parsed) && parsed > 0)
+            uid = parsed;
+
+        var forwarded = context.Request.Headers["X-Forwarded-For"].FirstOrDefault();
+        var ip = !string.IsNullOrWhiteSpace(forwarded)
+            ? forwarded.Split(',')[0].Trim()
+            : context.Connection.RemoteIpAddress?.ToString();
+
+        EliminacionLogAmbient.Actor.Value = new EliminacionLogActor
+        {
+            IdUsuario = uid,
+            UsuarioNombre = context.User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value
+                ?? context.User.Identity?.Name,
+            Ip = ip
+        };
+        EliminacionLogAmbient.Repo.Value = context.RequestServices.GetService<IEliminacionesLogRepository>();
+    }
+
+    try
+    {
+        await next();
+    }
+    finally
+    {
+        EliminacionLogAmbient.Actor.Value = null;
+        EliminacionLogAmbient.Repo.Value = null;
+    }
+});
 
 app.MapControllerRoute(
     name: "default",

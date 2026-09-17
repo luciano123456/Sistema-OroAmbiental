@@ -900,43 +900,27 @@
 
         async eliminar(id) {
             if (!id) return;
-            const ok = typeof confirmarModal === "function"
-                ? await confirmarModal("¿Eliminar este contrato? No debe tener entregas asociadas.")
-                : window.confirm("¿Eliminar este contrato?");
-            if (!ok) return;
+            if (typeof ejecutarEliminacionEntidad !== "function") {
+                errorModal("No está disponible el asistente de eliminación.");
+                return;
+            }
 
-            try {
-                const r = await fetch(this._replaceUrl(this.options.endpoints.eliminar, { id }), {
-                    method: "DELETE",
-                    headers: this._headers(false)
-                });
-                const res = await r.json();
-                const okDel = !!(res?.valor ?? res?.Valor);
-                const msgDel = res?.mensaje ?? res?.Mensaje ?? "No se pudo eliminar.";
+            const resultado = await ejecutarEliminacionEntidad({
+                entidadLabel: "este contrato",
+                urlDependencias: `/Contratos/DependenciasEliminar?id=${id}`,
+                urlEliminar: cascada => `/Contratos/Eliminar?id=${id}&cascada=${cascada ? "true" : "false"}`,
+                headers: this._headers(false)
+            });
 
-                if (!okDel) {
-                    if (typeof errorModal === "function") {
-                        errorModal(msgDel);
-                    } else {
-                        this.mostrarErrorCampos(
-                            msgDel,
-                            res?.idReferencia ?? res?.IdReferencia ?? null,
-                            res?.tipo ?? res?.Tipo ?? "error"
-                        );
-                    }
-                    return;
-                }
+            if (resultado.accion !== "ok") return;
 
-                if (typeof exitoModal === "function") {
-                    exitoModal(res?.mensaje ?? res?.Mensaje ?? "Contrato eliminado correctamente");
-                }
-                this.bsModal.hide();
-                if (typeof this.options.onDeleted === "function") {
-                    await this.options.onDeleted(res, id, this);
-                }
-            } catch (e) {
-                console.error(e);
-                if (typeof errorModal === "function") errorModal("Ha ocurrido un error al eliminar.");
+            const res = resultado.data || {};
+            if (typeof exitoModal === "function") {
+                exitoModal(res.mensaje || res.Mensaje || "Contrato eliminado correctamente");
+            }
+            this.bsModal.hide();
+            if (typeof this.options.onDeleted === "function") {
+                await this.options.onDeleted(res, id, this);
             }
         }
 

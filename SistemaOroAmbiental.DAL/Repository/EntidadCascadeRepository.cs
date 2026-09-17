@@ -5,7 +5,7 @@ using SistemaOroAmbiental.Models;
 
 namespace SistemaOroAmbiental.DAL.Repository
 {
-    public class EntidadCascadeRepository : IEntidadCascadeRepository
+    public partial class EntidadCascadeRepository : IEntidadCascadeRepository
     {
         private readonly SistemaOroAmbientalContext _db;
         private readonly IClientesEntregasRepository _entregasRepo;
@@ -16,6 +16,9 @@ namespace SistemaOroAmbiental.DAL.Repository
         private readonly IProveedoresRepository _proveedoresRepo;
         private readonly IProveedoresCuentaCorrienteRepository _provCcRepo;
         private readonly IClientesCuentaCorrienteRepository _cliCcRepo;
+        private readonly IGastosRepository _gastosRepo;
+        private readonly IChoferesRepository _choferesRepo;
+        private readonly IUsuariosRepository<User> _usuariosRepo;
 
         public EntidadCascadeRepository(
             SistemaOroAmbientalContext db,
@@ -26,7 +29,10 @@ namespace SistemaOroAmbiental.DAL.Repository
             IClientesRepository clientesRepo,
             IProveedoresRepository proveedoresRepo,
             IProveedoresCuentaCorrienteRepository provCcRepo,
-            IClientesCuentaCorrienteRepository cliCcRepo)
+            IClientesCuentaCorrienteRepository cliCcRepo,
+            IGastosRepository gastosRepo,
+            IChoferesRepository choferesRepo,
+            IUsuariosRepository<User> usuariosRepo)
         {
             _db = db;
             _entregasRepo = entregasRepo;
@@ -37,6 +43,9 @@ namespace SistemaOroAmbiental.DAL.Repository
             _proveedoresRepo = proveedoresRepo;
             _provCcRepo = provCcRepo;
             _cliCcRepo = cliCcRepo;
+            _gastosRepo = gastosRepo;
+            _choferesRepo = choferesRepo;
+            _usuariosRepo = usuariosRepo;
         }
 
         public async Task<DependenciasEliminacionInfo> ObtenerDependenciasClienteAsync(int idCliente)
@@ -370,19 +379,29 @@ namespace SistemaOroAmbiental.DAL.Repository
                 AccionManual = accionManual
             };
 
-        private static DependenciasEliminacionInfo ArmarInfo(string entidad, List<DependenciaEliminacionItem> items)
+        private static DependenciasEliminacionInfo ArmarInfo(
+            string entidad,
+            List<DependenciaEliminacionItem> items,
+            string tipoCascada = "eliminar",
+            bool permiteCascada = true)
         {
             if (items.Count == 0)
-                return new DependenciasEliminacionInfo();
+                return new DependenciasEliminacionInfo { TipoCascada = tipoCascada, PermiteCascada = permiteCascada };
 
             var partes = items.Select(i => $"{i.Cantidad} {i.Etiqueta.ToLower()}");
-            var pasos = string.Join("\n", items.Select((i, n) => $"{n + 1}. {i.AccionManual}"));
+            var pasos = string.Join("\n", items.Select((i, n) =>
+                $"{n + 1}. {i.Etiqueta} ({i.Cantidad}): {i.AccionManual}"));
+            var resumen = tipoCascada == "desvincular"
+                ? $"Hay registros asociados a {entidad}: {string.Join(", ", partes)}."
+                : $"No se puede eliminar {entidad} porque tiene: {string.Join(", ", partes)}.";
 
             return new DependenciasEliminacionInfo
             {
                 Items = items,
-                MensajeResumen = $"No se puede eliminar {entidad} porque tiene: {string.Join(", ", partes)}.",
-                InstruccionesPasoAPaso = $"Podés eliminar {entidad} paso a paso:\n" + pasos
+                MensajeResumen = resumen,
+                InstruccionesPasoAPaso = $"Podés eliminar {entidad} paso a paso:\n" + pasos,
+                TipoCascada = tipoCascada,
+                PermiteCascada = permiteCascada
             };
         }
     }

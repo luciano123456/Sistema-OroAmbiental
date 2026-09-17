@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using SistemaOroAmbiental.Application.Helpers;
 using SistemaOroAmbiental.Application.Models;
 using SistemaOroAmbiental.Application.Models.ViewModels;
+using SistemaOroAmbiental.BLL.Common;
 using SistemaOroAmbiental.BLL.Service;
 using SistemaOroAmbiental.Models;
 using System.Diagnostics;
@@ -518,12 +519,27 @@ namespace SistemaOroAmbiental.Application.Controllers
             });
         }
 
-        [HttpDelete]
-        public async Task<IActionResult> Eliminar(int id)
+        [HttpGet]
+        public async Task<IActionResult> DependenciasEliminar(int id)
         {
-            bool respuesta = await _Usuarioservice.Eliminar(id);
+            var info = await _Usuarioservice.ObtenerDependenciasEliminar(id);
+            return Ok(info);
+        }
 
-            return StatusCode(StatusCodes.Status200OK, new { valor = respuesta });
+        [HttpDelete]
+        public async Task<IActionResult> Eliminar(int id, bool cascada = false)
+        {
+            ServiceResult result = await _Usuarioservice.Eliminar(id, cascada);
+
+            return StatusCode(StatusCodes.Status200OK, new
+            {
+                valor = result.Ok,
+                mensaje = result.Mensaje,
+                tipo = result.Tipo,
+                idReferencia = result.IdReferencia,
+                dependencias = result.Dependencias?.Items,
+                instruccionesPasoAPaso = result.InstruccionesPasoAPaso
+            });
         }
 
         [HttpGet]

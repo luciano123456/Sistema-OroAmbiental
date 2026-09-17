@@ -266,29 +266,24 @@ window.editarUsuario = function editarUsuario(id) {
 async function eliminarUsuario(id) {
     $('.rp-actions-dropdown').hide();
 
-    const confirmado = await confirmarModal("¿Desea eliminar este usuario?");
-    if (!confirmado) return;
-
-    try {
-        const response = await fetch("/Usuarios/Eliminar?id=" + id, {
-            method: "DELETE",
-            headers: {
-                'Authorization': 'Bearer ' + token,
-                'Content-Type': 'application/json'
-            }
-        });
-
-        if (!response.ok) throw new Error("Error al eliminar el Usuario.");
-
-        const dataJson = await response.json();
-        if (dataJson.valor) {
-            recargarGrillaServer(gridUsuarios);
-            exitoModal("Usuario eliminado correctamente");
-        }
-    } catch (e) {
-        console.error("Ha ocurrido un error:", e);
-        errorModal("Ha ocurrido un error.");
+    if (typeof ejecutarEliminacionEntidad !== "function") {
+        errorModal("No está disponible el asistente de eliminación.");
+        return;
     }
+
+    const resultado = await ejecutarEliminacionEntidad({
+        entidadLabel: "este usuario",
+        urlDependencias: `/Usuarios/DependenciasEliminar?id=${id}`,
+        urlEliminar: cascada => `/Usuarios/Eliminar?id=${id}&cascada=${cascada ? "true" : "false"}`,
+        headers: {
+            'Authorization': 'Bearer ' + token,
+            'Content-Type': 'application/json'
+        }
+    });
+
+    if (resultado.accion !== "ok") return;
+    recargarGrillaServer(gridUsuarios);
+    exitoModal(resultado.data?.mensaje || "Usuario eliminado correctamente");
 }
 
 /* =========================

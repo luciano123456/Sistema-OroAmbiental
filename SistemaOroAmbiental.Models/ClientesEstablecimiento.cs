@@ -39,9 +39,23 @@ public partial class ClientesEstablecimiento
 
     public bool ImpuestoIva { get; set; }
 
-    public int IdDiaRecoleccion { get; set; }
+    public int? IdEstado { get; set; }
 
-    public int IdSemanaRecoleccion { get; set; }
+    public int? IdMotivo { get; set; }
+
+    public string? MotivoDetalle { get; set; }
+
+    public int? IdCalificacion { get; set; }
+
+    public DateTime? FechaInicio { get; set; }
+
+    public DateTime? FechaLicenciaDesde { get; set; }
+
+    public DateTime? FechaLicenciaHasta { get; set; }
+
+    public int? IdDiaRecoleccion { get; set; }
+
+    public int? IdSemanaRecoleccion { get; set; }
 
     public int? IdListaPrecio { get; set; }
 
@@ -89,7 +103,13 @@ public partial class ClientesEstablecimiento
 
     public virtual ClientesActividad? IdActividadNavigation { get; set; }
 
-    public virtual Dia IdDiaRecoleccionNavigation { get; set; } = null!;
+    public virtual ClientesEstado? IdEstadoNavigation { get; set; }
+
+    public virtual ClientesMotivo? IdMotivoNavigation { get; set; }
+
+    public virtual ClientesCalificacion? IdCalificacionNavigation { get; set; }
+
+    public virtual Dia? IdDiaRecoleccionNavigation { get; set; }
 
     public virtual ListasPrecio IdListaPrecioNavigation { get; set; } = null!;
 
@@ -101,7 +121,7 @@ public partial class ClientesEstablecimiento
 
     public virtual Partido? IdPartidoNavigation { get; set; }
 
-    public virtual Semana IdSemanaRecoleccionNavigation { get; set; } = null!;
+    public virtual Semana? IdSemanaRecoleccionNavigation { get; set; }
 
     public virtual User? IdUsuarioModificaNavigation { get; set; }
 

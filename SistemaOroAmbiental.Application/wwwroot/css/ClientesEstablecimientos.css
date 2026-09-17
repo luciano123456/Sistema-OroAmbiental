@@ -1113,3 +1113,19 @@
 [data-establecimiento-modal] .cg-ctr-card-foot button {
     font-family: inherit;
 }
+
+[data-establecimiento-modal] .rp-recoleccion-warn {
+    display: none;
+    margin: 0;
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(230, 184, 76, .45);
+    background: rgba(230, 184, 76, .12);
+    color: #f0d27a;
+    font-size: 0.78rem;
+    line-height: 1.35;
+}
+
+[data-establecimiento-modal] .rp-recoleccion-warn.is-on {
+    display: block;
+}

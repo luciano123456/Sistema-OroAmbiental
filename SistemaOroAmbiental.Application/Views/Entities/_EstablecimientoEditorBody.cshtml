@@ -214,6 +214,59 @@
                 </div>
             </div>
 
+            <div class="col-md-4">
+                <label class="form-label">Estado comercial</label>
+                <div class="rp-select-plus">
+                    <select id="cmbEstadoEst" class="form-control"></select>
+                    <button type="button" class="rp-btn-plus" title="Agregar estado"
+                            data-config-nombre="Estados de clientes" data-config-controller="ClientesEstados">
+                        <i class="fa fa-plus"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Calificacion</label>
+                <div class="rp-select-plus">
+                    <select id="cmbCalificacionEst" class="form-control"></select>
+                    <button type="button" class="rp-btn-plus" title="Agregar calificacion"
+                            data-config-nombre="Calificaciones de clientes" data-config-controller="ClientesCalificaciones">
+                        <i class="fa fa-plus"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Motivo</label>
+                <div class="rp-select-plus">
+                    <select id="cmbMotivoEst" class="form-control"></select>
+                    <button type="button" class="rp-btn-plus" title="Agregar motivo"
+                            data-config-nombre="Motivos de clientes" data-config-controller="ClientesMotivos">
+                        <i class="fa fa-plus"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="col-12" id="wrapMotivoDetalleEst" hidden>
+                <label class="form-label">Detalle del motivo</label>
+                <textarea id="txtMotivoDetalleEst" class="form-control" rows="2" maxlength="500"></textarea>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Fecha inicio</label>
+                <input type="date" id="txtFechaInicioEst" class="form-control" />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Licencia desde</label>
+                <input type="date" id="txtFechaLicenciaDesdeEst" class="form-control" />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Licencia hasta</label>
+                <input type="date" id="txtFechaLicenciaHastaEst" class="form-control" />
+            </div>
+            <div class="col-12">
+                <small class="text-muted">
+                    Si hoy cae entre las fechas de licencia, este establecimiento cuenta en <strong>Licencia</strong>
+                    (aunque el estado comercial siga en Activo). Las alertas avisan licencias que vencen en los proximos 30 dias.
+                </small>
+            </div>
+
             <div class="col-12 rp-recoleccion-block">
                 <div class="rp-recoleccion-block-title">
                     <i class="fa fa-truck"></i> Recoleccion
@@ -222,18 +275,21 @@
                     <div class="col-md-4">
                         <label class="form-label">Dia recoleccion</label>
                         <div class="rp-select-plus">
-                            <select id="cmbDiaEst" class="form-control" required></select>
+                            <select id="cmbDiaEst" class="form-control"></select>
                             <button type="button" class="rp-btn-plus" data-config-nombre="Dias" data-config-controller="Dias"><i class="fa fa-plus"></i></button>
                         </div>
-                        <div class="invalid-feedback">Campo obligatorio</div>
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Semana recoleccion</label>
                         <div class="rp-select-plus">
-                            <select id="cmbSemanaEst" class="form-control" required></select>
+                            <select id="cmbSemanaEst" class="form-control"></select>
                             <button type="button" class="rp-btn-plus" data-config-nombre="Semanas" data-config-controller="Semanas"><i class="fa fa-plus"></i></button>
                         </div>
-                        <div class="invalid-feedback">Campo obligatorio</div>
+                    </div>
+                    <div class="col-12">
+                        <div id="avisoRecoleccionEst" class="rp-recoleccion-warn">
+                            Sin día o semana de recolección, este establecimiento no entra en recorridos ni en la hoja de ruta.
+                        </div>
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Unidad / Camion</label>

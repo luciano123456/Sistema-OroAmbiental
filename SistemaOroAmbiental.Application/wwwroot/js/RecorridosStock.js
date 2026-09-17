@@ -842,12 +842,10 @@ async function rsGuardarVisita() {
                 errorModal(dataEnt?.mensaje || "No se pudo guardar la entrega.");
                 return;
             }
-            if (cobros.length && idEntrega <= 0) {
+            if (cobros.length) {
                 const { efectivo, transferencia } = rsClasificarAbonos(cobros);
-                const prevEf = rsNum($("#rsAbonoEf").val());
-                const prevTr = rsNum($("#rsAbonoTr").val());
-                $("#rsAbonoEf").val(rsMoney(prevEf + efectivo));
-                $("#rsAbonoTr").val(rsMoney(prevTr + transferencia));
+                $("#rsAbonoEf").val(rsMoney(efectivo));
+                $("#rsAbonoTr").val(rsMoney(transferencia));
                 if (transferencia > 0 && !$("#rsFechaTr").val()) $("#rsFechaTr").val(cobros.find(c => c.Fecha)?.Fecha || fecha);
                 rsBindMiles("#rsAbonoEf, #rsAbonoTr");
             }

@@ -491,31 +491,27 @@
         }
 
         async eliminar(id) {
-            const ok = typeof confirmarModal === "function"
-                ? await confirmarModal("¿Desea eliminar este gasto? Se revertira el movimiento en caja.")
-                : window.confirm("¿Desea eliminar este gasto?");
-
-            if (!ok) return false;
-
-            try {
-                const url = this._replaceUrl(this.options.endpoints.eliminar, { id });
-                const data = await this._fetchJson(url, { method: "DELETE", headers: this._headers(false) });
-
-                if (!data?.valor) {
-                    errorModal("No se pudo eliminar el gasto.");
-                    return false;
-                }
-
-                exitoModal("Gasto eliminado correctamente.");
-                if (typeof this.options.onDeleted === "function") {
-                    await this.options.onDeleted(data, id, this);
-                }
-                return true;
-            } catch (e) {
-                console.error(e);
-                errorModal("Error al eliminar.");
+            if (typeof ejecutarEliminacionEntidad !== "function") {
+                errorModal("No está disponible el asistente de eliminación.");
                 return false;
             }
+
+            const resultado = await ejecutarEliminacionEntidad({
+                entidadLabel: "este gasto",
+                urlDependencias: `/Gastos/DependenciasEliminar?id=${id}`,
+                urlEliminar: cascada => `/Gastos/Eliminar?id=${id}&cascada=${cascada ? "true" : "false"}`,
+                headers: this._headers(false),
+                fetchJson: (url, options) => this._fetchJson(url, options)
+            });
+
+            if (resultado.accion !== "ok") return false;
+
+            const data = resultado.data || {};
+            exitoModal(data.mensaje || data.Mensaje || "Gasto eliminado correctamente.");
+            if (typeof this.options.onDeleted === "function") {
+                await this.options.onDeleted(data, id, this);
+            }
+            return true;
         }
 
         async _recargarCombo(selectId, url, esCuenta) {
