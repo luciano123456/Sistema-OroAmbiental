@@ -73,6 +73,8 @@ public class ClientesRecorridoDto
     public bool NoExportarHoja { get; set; }
     public string? Observacion { get; set; }
     public string RecorridoTexto { get; set; } = "";
+    /// <summary>Horario de recoleccion del establecimiento (texto o rango).</summary>
+    public string Horario { get; set; } = "";
     public List<HojaRutaParadaProductoDto> Productos { get; set; } = new();
 
     [System.Text.Json.Serialization.JsonIgnore]

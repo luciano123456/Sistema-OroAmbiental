@@ -108,24 +108,11 @@ public class AnalisisDatosRepository : IAnalisisDatosRepository
         => !string.IsNullOrWhiteSpace(nombre) &&
            nombre.Contains(patron, StringComparison.OrdinalIgnoreCase);
 
-    private static bool EsBaja(Cliente c) => EstadoContiene(c.IdEstadoNavigation?.Nombre, "Baja");
-    private static bool EsSuspendido(Cliente c) => EstadoContiene(c.IdEstadoNavigation?.Nombre, "SUSPEND");
+    private static bool EsBaja(Cliente c) => LicenciaPeriodo.ClienteEsBaja(c);
+    private static bool EsSuspendido(Cliente c) => LicenciaPeriodo.ClienteEsSuspendido(c);
 
     private static bool EstaEnLicencia(Cliente cliente, DateTime fecha)
-    {
-        var estado = cliente.IdEstadoNavigation?.Nombre ?? "";
-        var porEstado = estado.Contains("Licencia", StringComparison.OrdinalIgnoreCase);
-        var desde = cliente.FechaLicenciaDesde?.Date;
-        var hasta = cliente.FechaLicenciaHasta?.Date;
-
-        if (desde.HasValue && hasta.HasValue)
-            return fecha >= desde.Value && fecha <= hasta.Value;
-        if (desde.HasValue && !hasta.HasValue)
-            return fecha >= desde.Value;
-        if (!desde.HasValue && hasta.HasValue)
-            return fecha <= hasta.Value;
-        return porEstado;
-    }
+        => LicenciaPeriodo.ClienteEnLicencia(cliente, fecha);
 
     private static bool EsActivoOperativo(Cliente cliente, DateTime hoy)
     {
@@ -157,6 +144,8 @@ public class AnalisisDatosRepository : IAnalisisDatosRepository
             .Include(c => c.IdEstadoNavigation)
             .Include(c => c.IdTipoGeneradorNavigation)
             .Include(c => c.ClientesCuentaCorrientes)
+            .Include(c => c.ClientesEstablecimientos)
+                .ThenInclude(e => e.IdEstadoNavigation)
             .AsQueryable();
 
         if (FiltraSucursal(filtro))
@@ -175,9 +164,9 @@ public class AnalisisDatosRepository : IAnalisisDatosRepository
             Licencia = clientes.Count(c => EstaEnLicencia(c, hoy)),
             LicenciasPorVencer = clientes.Count(c =>
                 EstaEnLicencia(c, hoy) &&
-                c.FechaLicenciaHasta.HasValue &&
-                c.FechaLicenciaHasta.Value.Date >= hoy &&
-                c.FechaLicenciaHasta.Value.Date <= limiteLicencia),
+                LicenciaPeriodo.FechaLicenciaHastaAlerta(c) is DateTime hastaLic &&
+                hastaLic >= hoy &&
+                hastaLic <= limiteLicencia),
             BajasMesActual = clientes.Count(c =>
                 EsBaja(c) &&
                 c.FechaUsuarioModifica.HasValue &&
@@ -254,20 +243,21 @@ public class AnalisisDatosRepository : IAnalisisDatosRepository
             .ToList();
 
         dto.AlertasLicencia = clientes
-            .Where(c =>
-                EstaEnLicencia(c, hoy) &&
-                c.FechaLicenciaHasta.HasValue &&
-                c.FechaLicenciaHasta.Value.Date >= hoy &&
-                c.FechaLicenciaHasta.Value.Date <= limiteLicencia)
-            .OrderBy(c => c.FechaLicenciaHasta)
+            .Select(c => new { c, Hasta = LicenciaPeriodo.FechaLicenciaHastaAlerta(c) })
+            .Where(x =>
+                EstaEnLicencia(x.c, hoy) &&
+                x.Hasta.HasValue &&
+                x.Hasta.Value >= hoy &&
+                x.Hasta.Value <= limiteLicencia)
+            .OrderBy(x => x.Hasta)
             .Take(20)
-            .Select(c => new AnalisisAlertaItem
+            .Select(x => new AnalisisAlertaItem
             {
-                Id = c.Id,
-                Titulo = c.Nombre,
-                Detalle = $"Licencia vence {(c.FechaLicenciaHasta!.Value.Date - hoy).Days} día(s) — {c.FechaLicenciaHasta:dd/MM/yyyy}",
+                Id = x.c.Id,
+                Titulo = x.c.Nombre,
+                Detalle = $"Licencia vence {(x.Hasta!.Value.Date - hoy).Days} día(s) — {x.Hasta:dd/MM/yyyy}",
                 Severidad = "warn",
-                Url = $"/Clientes/Gestion/{c.Id}"
+                Url = $"/Clientes/Gestion/{x.c.Id}"
             })
             .ToList();
 

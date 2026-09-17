@@ -1,0 +1,84 @@
+@{
+    ViewData["Title"] = "Log de eliminaciones";
+    Layout = "_LayoutModulo";
+}
+
+@section Estilos {
+    <link href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css" rel="stylesheet" />
+    <link href="https://cdn.datatables.net/fixedheader/3.2.2/css/fixedHeader.dataTables.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link href="~/css/Productora.css?v=5.2" rel="stylesheet" />
+    <link href="~/css/disenopantallas.css?v=8.1" rel="stylesheet" />
+}
+
+<div class="container-fluid mt-4 ventas-index">
+    <div class="vi-header cc-header shadow-lg rounded-4 p-3 mb-3">
+        <div class="d-flex align-items-center gap-3 flex-wrap">
+            <span class="cc-badge"><i class="fa fa-history"></i></span>
+            <div>
+                <h2 class="m-0 fw-800">Log de eliminaciones</h2>
+                <div class="text-white-50">Quien borro, que se borro y que se llevo en cascada</div>
+            </div>
+            <div class="ms-auto">
+                <button id="btnRefreshEliminacionesLog" class="btn btn-outline-light vi-btn" type="button">
+                    <i class="fa fa-refresh me-2"></i> Actualizar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="cc-card">
+        <div class="cc-card-body">
+            <table id="grdEliminacionesLog" class="display nowrap" style="width:100%">
+                <thead>
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Usuario</th>
+                        <th>Entidad</th>
+                        <th>Id</th>
+                        <th>Nombre</th>
+                        <th>Tipo</th>
+                        <th>Detalle</th>
+                        <th>IP</th>
+                    </tr>
+                </thead>
+            </table>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/fixedheader/3.2.2/js/dataTables.fixedHeader.min.js"></script>
+    <script>
+        (function () {
+            const tabla = $("#grdEliminacionesLog").DataTable({
+                ajax: {
+                    url: "/EliminacionesLog/Lista",
+                    dataSrc: "",
+                    headers: {
+                        Authorization: "Bearer " + (window.token || (localStorage.getItem("JwtToken") || ""))
+                    }
+                },
+                columns: [
+                    { data: "Fecha" },
+                    { data: "UsuarioNombre", defaultContent: "" },
+                    { data: "Entidad" },
+                    { data: "IdEntidad", defaultContent: "" },
+                    { data: "NombreEntidad", defaultContent: "" },
+                    { data: "Tipo" },
+                    { data: "Detalle", defaultContent: "" },
+                    { data: "Ip", defaultContent: "" }
+                ],
+                order: [[0, "desc"]],
+                pageLength: 25,
+                scrollX: true,
+                language: { url: "https://cdn.datatables.net/plug-ins/1.11.5/i18n/es-ES.json" }
+            });
+
+            $("#btnRefreshEliminacionesLog").on("click", function () {
+                tabla.ajax.reload(null, false);
+            });
+        })();
+    </script>
+}

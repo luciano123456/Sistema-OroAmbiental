@@ -1,3 +1,4 @@
+using SistemaOroAmbiental.BLL.Common;
 using SistemaOroAmbiental.Models;
 
 namespace SistemaOroAmbiental.BLL.Service
@@ -8,7 +9,9 @@ namespace SistemaOroAmbiental.BLL.Service
 
         Task<bool> Actualizar(Gasto model, int idUsuario);
 
-        Task<bool> Eliminar(int id);
+        Task<ServiceResult> Eliminar(int id, bool cascada = false);
+
+        Task<DependenciasEliminacionInfo> ObtenerDependenciasEliminar(int id);
 
         Task<Gasto?> Obtener(int id);
 

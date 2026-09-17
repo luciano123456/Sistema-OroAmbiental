@@ -56,7 +56,9 @@ namespace SistemaOroAmbiental.BLL.Service
             List<EntregaCobroRegistrar> cobros,
             int idUsuario);
 
-        Task<ServiceResult> Eliminar(int id);
+        Task<ServiceResult> Eliminar(int id, bool cascada = false);
+
+        Task<DependenciasEliminacionInfo> ObtenerDependenciasEliminar(int id);
 
         Task<EntregaCobrosResumen?> ObtenerCobros(int idEntrega);
     }

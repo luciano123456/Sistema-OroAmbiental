@@ -1,9 +1,69 @@
 using Microsoft.EntityFrameworkCore;
+using SistemaOroAmbiental.DAL.Common;
+using SistemaOroAmbiental.Models;
 
 namespace SistemaOroAmbiental.BLL.Common
 {
     public static class DeleteOperationHelper
     {
+        public static async Task<ServiceResult> ExecuteCascadeAsync(
+            int id,
+            bool cascada,
+            string entidad,
+            Func<Task<DependenciasEliminacionInfo>> obtenerDeps,
+            Func<Task> eliminarEnCascada,
+            Func<Task<ServiceResult>> eliminarSimple,
+            string mensajeExitoCascada,
+            string mensajeErrorCascada)
+        {
+            var deps = await obtenerDeps();
+
+            if (deps.TieneDependencias && !cascada)
+            {
+                return new ServiceResult
+                {
+                    Ok = false,
+                    Mensaje = deps.MensajeResumen,
+                    Tipo = "dependencias",
+                    IdReferencia = id,
+                    Dependencias = deps,
+                    InstruccionesPasoAPaso = deps.InstruccionesPasoAPaso
+                };
+            }
+
+            if (deps.TieneDependencias && cascada)
+            {
+                if (!deps.PermiteCascada)
+                    return ServiceResult.Error(deps.MensajeResumen, "relacion", id);
+
+                try
+                {
+                    await eliminarEnCascada();
+                    await EliminacionLogAmbient.TryRegistrarAsync(
+                        entidad,
+                        id,
+                        EliminacionLogAmbient.TipoDesdeDeps(deps),
+                        deps);
+                    return ServiceResult.Success(mensajeExitoCascada);
+                }
+                catch (InvalidOperationException ex)
+                {
+                    return ServiceResult.Error(ex.Message, "relacion", id);
+                }
+                catch (DbUpdateException ex)
+                {
+                    var msg = MapDbUpdateMessage(ex, "el registro") ?? mensajeErrorCascada;
+                    return ServiceResult.Error(msg, "relacion", id);
+                }
+                catch (Exception)
+                {
+                    return ServiceResult.Error(mensajeErrorCascada, "error", id);
+                }
+            }
+
+            return await eliminarSimple();
+        }
+
         public static async Task<ServiceResult> ExecuteAsync(
             Func<Task<bool>> delete,
             string entidad,
@@ -24,6 +84,10 @@ namespace SistemaOroAmbiental.BLL.Common
                 if (!ok)
                     return ServiceResult.Error($"No se encontró {entidad}.", "validacion", idReferencia);
 
+                await EliminacionLogAmbient.TryRegistrarAsync(
+                    entidad,
+                    idReferencia,
+                    EliminacionLog.TipoSimple);
                 return ServiceResult.Success(mensajeExito);
             }
             catch (InvalidOperationException ex)

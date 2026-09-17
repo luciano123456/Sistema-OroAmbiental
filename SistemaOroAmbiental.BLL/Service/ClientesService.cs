@@ -78,47 +78,20 @@ namespace SistemaOroAmbiental.BLL.Service
         public Task<DependenciasEliminacionInfo> ObtenerDependenciasEliminar(int id)
             => _cascadeRepo.ObtenerDependenciasClienteAsync(id);
 
-        public async Task<ServiceResult> Eliminar(int id, bool cascada = false)
-        {
-            var deps = await _cascadeRepo.ObtenerDependenciasClienteAsync(id);
-
-            if (deps.TieneDependencias && !cascada)
-            {
-                return new ServiceResult
-                {
-                    Ok = false,
-                    Mensaje = deps.MensajeResumen,
-                    Tipo = "dependencias",
-                    IdReferencia = id,
-                    Dependencias = deps,
-                    InstruccionesPasoAPaso = deps.InstruccionesPasoAPaso
-                };
-            }
-
-            if (deps.TieneDependencias && cascada)
-            {
-                try
-                {
-                    await _cascadeRepo.EliminarClienteEnCascadaAsync(id);
-                    return ServiceResult.Success(
-                        "Cliente y todos sus registros asociados fueron eliminados correctamente.");
-                }
-                catch (InvalidOperationException ex)
-                {
-                    return ServiceResult.Error(ex.Message, "relacion", id);
-                }
-                catch (Exception)
-                {
-                    return ServiceResult.Error("Error inesperado al eliminar el cliente en cascada.", "error", id);
-                }
-            }
-
-            return await DeleteOperationHelper.ExecuteAsync(
-                () => _repo.Eliminar(id),
+        public Task<ServiceResult> Eliminar(int id, bool cascada = false)
+            => DeleteOperationHelper.ExecuteCascadeAsync(
+                id,
+                cascada,
                 "el cliente",
-                "Cliente eliminado correctamente",
-                id);
-        }
+                () => _cascadeRepo.ObtenerDependenciasClienteAsync(id),
+                () => _cascadeRepo.EliminarClienteEnCascadaAsync(id),
+                () => DeleteOperationHelper.ExecuteAsync(
+                    () => _repo.Eliminar(id),
+                    "el cliente",
+                    "Cliente eliminado correctamente",
+                    id),
+                "Cliente y todos sus registros asociados fueron eliminados correctamente.",
+                "Error inesperado al eliminar el cliente en cascada.");
 
         public Task<Cliente?> Obtener(int id)
             => _repo.Obtener(id);

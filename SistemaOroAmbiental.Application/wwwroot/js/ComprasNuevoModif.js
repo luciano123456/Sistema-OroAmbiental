@@ -972,24 +972,21 @@
     async function eliminarCompraActual() {
         if (CM.id <= 0) return;
 
-        const tienePagos = (CM.pagosLineas || []).some(p => p.IdPago > 0) || pagosActivos().length > 0;
-        const msgPagos = tienePagos
-            ? " Tambien se revertiran los pagos (egresos de caja y cuenta corriente)."
-            : "";
-        const confirmado = await confirmarModal(
-            `Eliminar esta compra? Se revertira stock y deuda del proveedor.${msgPagos}`);
-        if (!confirmado) return;
-
-        const r = await fetch(API.eliminar(CM.id), { method: "DELETE", headers: authHeaders() });
-        const result = await r.json();
-        const exito = result.valor === true || result.valor === "true" || result.ok === true;
-
-        if (exito) {
-            exitoModal(result.mensaje || "Compra eliminada correctamente.");
-            window.location.href = "/Compras";
-        } else {
-            errorModal(result.mensaje || "No se pudo eliminar.");
+        if (typeof ejecutarEliminacionEntidad !== "function") {
+            errorModal("No está disponible el asistente de eliminación.");
+            return;
         }
+
+        const resultado = await ejecutarEliminacionEntidad({
+            entidadLabel: "esta compra",
+            urlDependencias: `/Compras/DependenciasEliminar?id=${CM.id}`,
+            urlEliminar: cascada => `/Compras/Eliminar?id=${CM.id}&cascada=${cascada ? "true" : "false"}`,
+            headers: authHeaders()
+        });
+
+        if (resultado.accion !== "ok") return;
+        exitoModal(resultado.data?.mensaje || "Compra eliminada correctamente.");
+        window.location.href = "/Compras";
     }
 
     function fmtMoney(n) {

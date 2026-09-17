@@ -1,4 +1,5 @@
-﻿using SistemaOroAmbiental.DAL.Repository;
+﻿using SistemaOroAmbiental.BLL.Common;
+using SistemaOroAmbiental.DAL.Repository;
 using SistemaOroAmbiental.Models;
 
 namespace SistemaOroAmbiental.BLL.Service
@@ -7,20 +8,35 @@ namespace SistemaOroAmbiental.BLL.Service
     {
 
         private readonly IUsuariosRepository<User> _contactRepo;
+        private readonly IEntidadCascadeRepository _cascadeRepo;
 
-        public UsuariosService(IUsuariosRepository<User> contactRepo)
+        public UsuariosService(IUsuariosRepository<User> contactRepo, IEntidadCascadeRepository cascadeRepo)
         {
             _contactRepo = contactRepo;
+            _cascadeRepo = cascadeRepo;
         }
         public async Task<bool> Actualizar(User model)
         {
             return await _contactRepo.Actualizar(model);
         }
 
-        public async Task<bool> Eliminar(int id)
-        {
-            return await _contactRepo.Eliminar(id);
-        }
+        public Task<DependenciasEliminacionInfo> ObtenerDependenciasEliminar(int id)
+            => _cascadeRepo.ObtenerDependenciasUsuarioAsync(id);
+
+        public Task<ServiceResult> Eliminar(int id, bool cascada = false)
+            => DeleteOperationHelper.ExecuteCascadeAsync(
+                id,
+                cascada,
+                "el usuario",
+                () => _cascadeRepo.ObtenerDependenciasUsuarioAsync(id),
+                () => _cascadeRepo.EliminarUsuarioEnCascadaAsync(id),
+                () => DeleteOperationHelper.ExecuteAsync(
+                    () => _contactRepo.Eliminar(id),
+                    "el usuario",
+                    "Usuario eliminado correctamente",
+                    id),
+                "Usuario eliminado. Se desvinculó la auditoría; no se borraron datos de negocio.",
+                "Error inesperado al eliminar el usuario en cascada.");
 
         public async Task<bool> Insertar(User model)
         {

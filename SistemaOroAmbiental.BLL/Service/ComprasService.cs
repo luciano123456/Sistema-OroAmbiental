@@ -9,13 +9,16 @@ namespace SistemaOroAmbiental.BLL.Service
     {
         private readonly IComprasRepository _repo;
         private readonly IProveedoresCuentaCorrienteService _ccService;
+        private readonly IEntidadCascadeRepository _cascadeRepo;
 
         public ComprasService(
             IComprasRepository repo,
-            IProveedoresCuentaCorrienteService ccService)
+            IProveedoresCuentaCorrienteService ccService,
+            IEntidadCascadeRepository cascadeRepo)
         {
             _repo = repo;
             _ccService = ccService;
+            _cascadeRepo = cascadeRepo;
         }
 
         public Task<List<Compra>> ListarFiltrado(
@@ -112,16 +115,27 @@ namespace SistemaOroAmbiental.BLL.Service
             }
         }
 
-        public Task<ServiceResult> Eliminar(int id)
+        public Task<DependenciasEliminacionInfo> ObtenerDependenciasEliminar(int id)
+            => _cascadeRepo.ObtenerDependenciasCompraAsync(id);
+
+        public Task<ServiceResult> Eliminar(int id, bool cascada = false)
         {
             if (id <= 0)
                 return Task.FromResult(ServiceResult.Error("Registro inválido.", "validacion"));
 
-            return DeleteOperationHelper.ExecuteAsync(
-                () => _repo.Eliminar(id),
+            return DeleteOperationHelper.ExecuteCascadeAsync(
+                id,
+                cascada,
                 "la compra",
+                () => _cascadeRepo.ObtenerDependenciasCompraAsync(id),
+                () => _cascadeRepo.EliminarCompraEnCascadaAsync(id),
+                () => DeleteOperationHelper.ExecuteAsync(
+                    () => _repo.Eliminar(id),
+                    "la compra",
+                    "Compra eliminada. Se revirtieron stock, deuda en cuenta corriente, pagos y movimientos de caja.",
+                    id),
                 "Compra eliminada. Se revirtieron stock, deuda en cuenta corriente, pagos y movimientos de caja.",
-                id);
+                "Error inesperado al eliminar la compra en cascada.");
         }
 
         private static bool Validar(Compra compra, List<ComprasProducto>? lineas, out string error)

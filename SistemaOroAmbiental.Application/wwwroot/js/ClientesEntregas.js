@@ -318,27 +318,22 @@ window.editarEntrega = function editarEntrega(id) {
     window.location.href = API.nuevoModif(id);
 };
 
-async function eliminarEntrega(id, tieneCobros) {
-    const msgCobros = tieneCobros === true || tieneCobros === "true"
-        ? " Tambien se revertiran los cobros al contrato (caja y cuenta corriente)."
-        : "";
-    const ok = await confirmarModal(
-        `¿Eliminar esta entrega? Se revertira el stock y la deuda en cuenta corriente del contrato.${msgCobros}`);
-    if (!ok) return;
+async function eliminarEntrega(id) {
+    if (typeof ejecutarEliminacionEntidad !== "function") {
+        errorModal("No está disponible el asistente de eliminación.");
+        return;
+    }
 
-    const response = await fetch(API.eliminar(id), {
-        method: "DELETE",
+    const resultado = await ejecutarEliminacionEntidad({
+        entidadLabel: "esta entrega",
+        urlDependencias: `/ClientesEntregas/DependenciasEliminar?id=${id}`,
+        urlEliminar: cascada => `/ClientesEntregas/Eliminar?id=${id}&cascada=${cascada ? "true" : "false"}`,
         headers: authHeaders()
     });
 
-    const result = await response.json();
-
-    if (result.valor) {
-        exitoModal(result.mensaje || "Entrega eliminada correctamente.");
-        await cargarEntregas();
-    } else {
-        errorModal(result.mensaje || "No se pudo eliminar.");
-    }
+    if (resultado.accion !== "ok") return;
+    exitoModal(resultado.data?.mensaje || "Entrega eliminada correctamente.");
+    await cargarEntregas();
 }
 
 function fmtMoneyEntregas(n) {

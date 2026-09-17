@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using SistemaOroAmbiental.Application.Models.ViewModels;
 using SistemaOroAmbiental.BLL.Service;
 using SistemaOroAmbiental.Models;
@@ -73,32 +72,30 @@ namespace SistemaOroAmbiental.Application.Controllers
             return Ok(new { valor = ok });
         }
 
+        [HttpGet]
+        public async Task<IActionResult> DependenciasEliminar(int id)
+        {
+            var info = await _service.ObtenerDependenciasEliminar(id);
+            return Ok(info);
+        }
+
         [HttpDelete]
-        public async Task<IActionResult> Eliminar(int id)
+        public async Task<IActionResult> Eliminar(int id, bool cascada = false)
         {
             var entity = await _service.Obtener(id);
             if (entity == null)
                 return Ok(new { valor = false, mensaje = "No se encontró el gasto.", tipo = "validacion" });
 
-            try
+            var result = await _service.Eliminar(id, cascada);
+            return Ok(new
             {
-                bool ok = await _service.Eliminar(id);
-                return Ok(new
-                {
-                    valor = ok,
-                    mensaje = ok ? "Gasto eliminado correctamente." : "No se pudo eliminar el gasto.",
-                    tipo = ok ? "success" : "error"
-                });
-            }
-            catch (DbUpdateException)
-            {
-                return Ok(new
-                {
-                    valor = false,
-                    mensaje = "No se pudo eliminar el gasto porque tiene movimientos de caja u otros registros vinculados.",
-                    tipo = "relacion"
-                });
-            }
+                valor = result.Ok,
+                mensaje = result.Mensaje,
+                tipo = result.Tipo,
+                idReferencia = result.IdReferencia,
+                dependencias = result.Dependencias?.Items,
+                instruccionesPasoAPaso = result.InstruccionesPasoAPaso
+            });
         }
 
         private static VMGasto MapToVm(Gasto g) => new()

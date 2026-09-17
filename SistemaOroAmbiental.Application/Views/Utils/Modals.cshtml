@@ -125,6 +125,25 @@
     </div>
 </div>
 
+<!-- Mensajes largos (pasos de eliminación, etc.) con scroll -->
+<div class="modal fade" id="modalMensajeDetalle" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content text-white" style="background: #323844">
+            <div class="modal-header border-0 bg-danger bg-opacity-10 colorEncabezado">
+                <i class="fa fa-info-circle text-info fs-2 me-2"></i>
+                <h5 class="modal-title text-white fw-bold" id="modalMensajeDetalleTitulo">Detalle</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <div id="modalMensajeDetalleCuerpo" class="rp-mensaje-detalle"></div>
+            </div>
+            <div class="modal-footer border-0 justify-content-center">
+                <button type="button" class="btn btn-primary px-4" data-bs-dismiss="modal">Entendido</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="modal fade" id="modalExportar" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered modal-md">
         <div class="modal-content export-modal">

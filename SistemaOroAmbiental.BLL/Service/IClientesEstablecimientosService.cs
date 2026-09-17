@@ -7,7 +7,9 @@ namespace SistemaOroAmbiental.BLL.Service
     {
         Task<ServiceResult> Insertar(ClientesEstablecimiento model, bool desplazarOrdenRecorrido = false);
         Task<ServiceResult> Actualizar(ClientesEstablecimiento model, bool desplazarOrdenRecorrido = false);
-        Task<ServiceResult> Eliminar(int id);
+        Task<ServiceResult> Eliminar(int id, bool cascada = false);
+
+        Task<DependenciasEliminacionInfo> ObtenerDependenciasEliminar(int id);
         Task<ClientesEstablecimiento?> Obtener(int id);
         Task<IQueryable<ClientesEstablecimiento>> ObtenerTodos();
         Task<List<ClientesEstablecimiento>> ListarPorCliente(int idCliente);

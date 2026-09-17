@@ -27,30 +27,13 @@ namespace SistemaOroAmbiental.DAL.Repository
                nombre.Contains(patron, StringComparison.OrdinalIgnoreCase);
 
         private static bool EsBaja(Cliente cliente)
-            => EstadoContiene(cliente.IdEstadoNavigation?.Nombre, "Baja");
+            => LicenciaPeriodo.ClienteEsBaja(cliente);
 
         private static bool EsSuspendido(Cliente cliente)
-            => EstadoContiene(cliente.IdEstadoNavigation?.Nombre, "SUSPEND");
+            => LicenciaPeriodo.ClienteEsSuspendido(cliente);
 
         private static bool EstaEnLicencia(Cliente cliente, DateTime fecha)
-        {
-            var estado = cliente.IdEstadoNavigation?.Nombre ?? "";
-            var porEstado = estado.Contains("Licencia", StringComparison.OrdinalIgnoreCase);
-
-            var desde = cliente.FechaLicenciaDesde?.Date;
-            var hasta = cliente.FechaLicenciaHasta?.Date;
-
-            if (desde.HasValue && hasta.HasValue)
-                return fecha >= desde.Value && fecha <= hasta.Value;
-
-            if (desde.HasValue && !hasta.HasValue)
-                return fecha >= desde.Value;
-
-            if (!desde.HasValue && hasta.HasValue)
-                return fecha <= hasta.Value;
-
-            return porEstado;
-        }
+            => LicenciaPeriodo.ClienteEnLicencia(cliente, fecha);
 
         private static bool EsActivoOperativo(Cliente cliente, DateTime hoy)
         {
@@ -61,16 +44,19 @@ namespace SistemaOroAmbiental.DAL.Repository
         }
 
         private static bool LicenciaPorVencer(Cliente cliente, DateTime hoy, DateTime limite)
-            => EstaEnLicencia(cliente, hoy) &&
-               cliente.FechaLicenciaHasta.HasValue &&
-               cliente.FechaLicenciaHasta.Value.Date >= hoy &&
-               cliente.FechaLicenciaHasta.Value.Date <= limite;
+        {
+            if (!EstaEnLicencia(cliente, hoy)) return false;
+            var hasta = LicenciaPeriodo.FechaLicenciaHastaAlerta(cliente);
+            return hasta.HasValue && hasta.Value >= hoy && hasta.Value <= limite;
+        }
 
         public async Task<ClientesDashboardDto> ObtenerDashboard()
         {
             var clientes = await _db.Clientes
                 .AsNoTracking()
                 .Include(c => c.IdEstadoNavigation)
+                .Include(c => c.ClientesEstablecimientos)
+                    .ThenInclude(e => e.IdEstadoNavigation)
                 .ToListAsync();
 
             var hoy = DateTime.Today;
@@ -122,8 +108,8 @@ namespace SistemaOroAmbiental.DAL.Repository
                 {
                     Id = c.Id,
                     Nombre = c.Nombre,
-                    FechaLicenciaHasta = c.FechaLicenciaHasta,
-                    DiasRestantes = (c.FechaLicenciaHasta!.Value.Date - hoy).Days
+                    FechaLicenciaHasta = LicenciaPeriodo.FechaLicenciaHastaAlerta(c),
+                    DiasRestantes = (LicenciaPeriodo.FechaLicenciaHastaAlerta(c)!.Value.Date - hoy).Days
                 })
                 .OrderBy(x => x.FechaLicenciaHasta)
                 .ToList();
@@ -221,6 +207,42 @@ namespace SistemaOroAmbiental.DAL.Repository
                 }
 
                 entregas = await queryEntregas.ToListAsync();
+            }
+            catch
+            {
+                datosParciales = true;
+            }
+
+            // Cobros reales (caja efectivo vs banco), para las columnas de la planilla.
+            List<ClientesCobro> cobros = new();
+            try
+            {
+                var idsEntregaAnio = entregas.Select(e => e.Id).Distinct().ToList();
+                var queryCobros = _db.ClientesCobros
+                    .AsNoTracking()
+                    .Include(c => c.IdCuentaNavigation)
+                    .Where(c => c.IdCliente == idCliente);
+
+                if (filtrarEst)
+                {
+                    if (idsEntregaAnio.Count == 0)
+                    {
+                        cobros = new List<ClientesCobro>();
+                    }
+                    else
+                    {
+                        cobros = await queryCobros.Where(c =>
+                            c.IdEntrega != null && idsEntregaAnio.Contains(c.IdEntrega.Value))
+                            .ToListAsync();
+                    }
+                }
+                else
+                {
+                    cobros = await queryCobros.Where(c =>
+                        aniosNorm.Contains(c.Fecha.Year)
+                        || (c.IdEntrega != null && idsEntregaAnio.Contains(c.IdEntrega.Value)))
+                        .ToListAsync();
+                }
             }
             catch
             {
@@ -356,7 +378,8 @@ namespace SistemaOroAmbiental.DAL.Repository
                     p.Mes,
                     entregas,
                     overrides,
-                    movimientosCc));
+                    movimientosCc,
+                    cobros));
             }
 
             decimal saldoAcumulado = 0;
@@ -646,12 +669,24 @@ namespace SistemaOroAmbiental.DAL.Repository
             return precio * l.Cantidad;
         }
 
+        private static bool EsCuentaEfectivo(string? tipoCuenta)
+        {
+            if (string.IsNullOrWhiteSpace(tipoCuenta))
+                return true;
+            var tipo = tipoCuenta.Trim();
+            if (tipo.Contains("banco", StringComparison.OrdinalIgnoreCase)
+                || tipo.Contains("transf", StringComparison.OrdinalIgnoreCase))
+                return false;
+            return true;
+        }
+
         private ClienteControlMensualDto ConstruirFilaControlMensual(
             int anio,
             int mes,
             List<ClientesEntrega> entregas,
             Dictionary<(int Anio, int Mes), ClientesControlMensual> overrides,
-            List<ClientesCuentaCorrienteMovimiento> movimientosCc)
+            List<ClientesCuentaCorrienteMovimiento> movimientosCc,
+            List<ClientesCobro> cobros)
         {
             var entregasMes = entregas
                 .Where(e => e.Fecha.Year == anio && e.Fecha.Month == mes)
@@ -703,15 +738,31 @@ namespace SistemaOroAmbiental.DAL.Repository
                 .Where(m => m.TipoMovimiento == ClientesCuentaCorrienteRepository.TIPO_AJUSTE_CLIENTE)
                 .Sum(m => m.Haber);
 
+            var cobrosMes = cobros
+                .Where(c => c.Fecha.Year == anio && c.Fecha.Month == mes)
+                .ToList();
+            var cobrosEf = cobrosMes.Where(c => EsCuentaEfectivo(c.IdCuentaNavigation?.TipoCuenta)).Sum(c => c.Importe);
+            var cobrosTr = cobrosMes.Where(c => !EsCuentaEfectivo(c.IdCuentaNavigation?.TipoCuenta)).Sum(c => c.Importe);
+            var cobrosTotal = cobrosEf + cobrosTr;
+            if (cobrosTotal > cobrosCc)
+                cobrosCc = cobrosTotal;
+
             var debe = subtotalEntregas + subtotalRetiros + subtotalNoRetiros + ajustesDebe;
             var haber = Math.Max(abonosPlanilla, cobrosCc) + ajustesHaber;
 
-            // Si no hay abonos en la planilla del est pero sí cobros de la entrega, mostrarlos en columnas.
-            var abonoEfMostrar = abonoEfectivo;
-            var abonoTrMostrar = abonoTransferencia;
-            if (abonosPlanilla <= 0 && cobrosCc > 0)
+            // Columnas Efectivo/Transf.: cobros reales de caja (cuenta Efectivo vs Banco).
+            // Si no hay cobros, se muestran los abonos cargados a mano en la planilla.
+            decimal abonoEfMostrar;
+            decimal abonoTrMostrar;
+            if (cobrosTotal > 0)
             {
-                abonoTrMostrar = cobrosCc;
+                abonoEfMostrar = cobrosEf;
+                abonoTrMostrar = cobrosTr;
+            }
+            else
+            {
+                abonoEfMostrar = abonoEfectivo;
+                abonoTrMostrar = abonoTransferencia;
             }
 
             DateTime? fechaVisita = ov?.FechaVisita;

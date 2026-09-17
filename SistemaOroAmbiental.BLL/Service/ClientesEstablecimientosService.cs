@@ -7,16 +7,16 @@ namespace SistemaOroAmbiental.BLL.Service
     public class ClientesEstablecimientosService : IClientesEstablecimientosService
     {
         private readonly IClientesEstablecimientosRepository _repo;
-        private readonly IDeleteConflictChecker _deleteChecker;
+        private readonly IEntidadCascadeRepository _cascadeRepo;
         private readonly IRecorridosRepository _recorridosRepo;
 
         public ClientesEstablecimientosService(
             IClientesEstablecimientosRepository repo,
-            IDeleteConflictChecker deleteChecker,
+            IEntidadCascadeRepository cascadeRepo,
             IRecorridosRepository recorridosRepo)
         {
             _repo = repo;
-            _deleteChecker = deleteChecker;
+            _cascadeRepo = cascadeRepo;
             _recorridosRepo = recorridosRepo;
         }
 
@@ -71,13 +71,23 @@ namespace SistemaOroAmbiental.BLL.Service
             return ServiceResult.Success("Establecimiento modificado correctamente");
         }
 
-        public Task<ServiceResult> Eliminar(int id)
-            => DeleteOperationHelper.ExecuteAsync(
-                () => _repo.Eliminar(id),
-                "el establecimiento",
-                "Establecimiento eliminado correctamente",
+        public Task<DependenciasEliminacionInfo> ObtenerDependenciasEliminar(int id)
+            => _cascadeRepo.ObtenerDependenciasEstablecimientoAsync(id);
+
+        public Task<ServiceResult> Eliminar(int id, bool cascada = false)
+            => DeleteOperationHelper.ExecuteCascadeAsync(
                 id,
-                () => _deleteChecker.EstablecimientoAsync(id));
+                cascada,
+                "el establecimiento",
+                () => _cascadeRepo.ObtenerDependenciasEstablecimientoAsync(id),
+                () => _cascadeRepo.EliminarEstablecimientoEnCascadaAsync(id),
+                () => DeleteOperationHelper.ExecuteAsync(
+                    () => _repo.Eliminar(id),
+                    "el establecimiento",
+                    "Establecimiento eliminado correctamente",
+                    id),
+                "Establecimiento y todos sus registros asociados fueron eliminados correctamente.",
+                "Error inesperado al eliminar el establecimiento en cascada.");
 
         public Task<ClientesEstablecimiento?> Obtener(int id) => _repo.Obtener(id);
 
@@ -97,13 +107,14 @@ namespace SistemaOroAmbiental.BLL.Service
 
         private Task DesplazarSiCorresponde(ClientesEstablecimiento model, int? idExcluir)
         {
-            if (model.OrdenRecorrido is not > 0 || model.IdCamion is not > 0)
+            if (model.OrdenRecorrido is not > 0 || model.IdCamion is not > 0
+                || model.IdDiaRecoleccion is not > 0 || model.IdSemanaRecoleccion is not > 0)
                 return Task.CompletedTask;
 
             return _repo.DesplazarOrdenRecorridoSiOcupado(
                 model.IdCamion.Value,
-                model.IdDiaRecoleccion,
-                model.IdSemanaRecoleccion,
+                model.IdDiaRecoleccion.Value,
+                model.IdSemanaRecoleccion.Value,
                 model.OrdenRecorrido.Value,
                 idExcluir);
         }
@@ -131,10 +142,10 @@ namespace SistemaOroAmbiental.BLL.Service
             if (string.IsNullOrWhiteSpace(model.Nombre))
                 return ServiceResult.Error("El nombre es obligatorio.", "validacion");
 
-            if (model.IdDiaRecoleccion <= 0 || model.IdSemanaRecoleccion <= 0)
-                return ServiceResult.Error("Día y semana de recolección son obligatorios.", "validacion");
-
+            var sinHorario = model.HorarioRecoleccionDesde == default
+                && model.HorarioRecoleccionHasta == default;
             if (string.IsNullOrWhiteSpace(model.DiasHorarios)
+                && !sinHorario
                 && model.HorarioRecoleccionHasta <= model.HorarioRecoleccionDesde)
                 return ServiceResult.Error("El horario hasta debe ser mayor al horario desde.", "validacion");
 

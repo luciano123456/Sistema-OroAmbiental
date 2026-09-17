@@ -15,6 +15,8 @@ namespace SistemaOroAmbiental.BLL.Service
 
         Task<ServiceResult> Actualizar(Contrato model);
 
-        Task<ServiceResult> Eliminar(int id);
+        Task<ServiceResult> Eliminar(int id, bool cascada = false);
+
+        Task<DependenciasEliminacionInfo> ObtenerDependenciasEliminar(int id);
     }
 }

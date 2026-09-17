@@ -281,27 +281,22 @@ window.editarCompra = function editarCompra(id) {
     window.location.href = API.nuevoModif(id);
 };
 
-async function eliminarCompra(id, tienePagos) {
-    const msgPagos = tienePagos === true || tienePagos === "true"
-        ? " Tambien se revertiran los pagos al proveedor (caja y cuenta corriente)."
-        : "";
-    const ok = await confirmarModal(
-        `Eliminar esta compra? Se revertira el stock y la deuda en cuenta corriente del proveedor.${msgPagos}`);
-    if (!ok) return;
+async function eliminarCompra(id) {
+    if (typeof ejecutarEliminacionEntidad !== "function") {
+        errorModal("No está disponible el asistente de eliminación.");
+        return;
+    }
 
-    const response = await fetch(API.eliminar(id), {
-        method: "DELETE",
+    const resultado = await ejecutarEliminacionEntidad({
+        entidadLabel: "esta compra",
+        urlDependencias: `/Compras/DependenciasEliminar?id=${id}`,
+        urlEliminar: cascada => `/Compras/Eliminar?id=${id}&cascada=${cascada ? "true" : "false"}`,
         headers: authHeaders()
     });
 
-    const result = await response.json();
-
-    if (result.valor) {
-        exitoModal(result.mensaje || "Compra eliminada correctamente.");
-        await cargarCompras();
-    } else {
-        errorModal(result.mensaje || "No se pudo eliminar.");
-    }
+    if (resultado.accion !== "ok") return;
+    exitoModal(resultado.data?.mensaje || "Compra eliminada correctamente.");
+    await cargarCompras();
 }
 
 function fmtMoneyCompras(n) {

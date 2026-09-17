@@ -49,6 +49,7 @@ const CG = {
     viewPref: "auto",
     listMeta: {},
     geoCache: { provincias: [] },
+    switcherNav: [],
     idDiaRecoleccionLegacy: 0,
     hubActivo: "cliente",
     hubActivoLock: null,
@@ -218,6 +219,7 @@ const API_CG = {
     contactosActualizar: "/ClientesContactos/Actualizar",
     contactosEliminar: id => `/ClientesContactos/Eliminar?id=${id}`,
     establecimientosLista: "/ClientesEstablecimientos/Lista",
+    combo: "/Clientes/Combo",
     establecimientosPorCliente: idCliente => `/ClientesEstablecimientos/ListaPorCliente?idCliente=${idCliente}`,
     contratosLista: id => `/Contratos/Lista?idCliente=${id}`,
     entregasLista: "/ClientesEntregas/ListaFiltrada",
@@ -318,15 +320,15 @@ $(document).ready(async () => {
     initModalesCg();
     wireEventosCg();
     initSelect2Cg();
+    initClienteSwitcherCg();
     initSeccionesPlegablesCg();
 
     await withCgLoading(CG.id > 0 ? "Cargando cliente y planilla…" : "Preparando formulario…", async () => {
         await cargarCombosDatosCg();
-        await cargarCombosRecoleccionCg();
 
         if (CG.id > 0) {
             await cargarClienteCg(CG.id);
-            await cargarRecoleccionPrincipalCg();
+            await cargarRecorridosAsignadosCg();
             habilitarTabsRelacionados(true);
             await cargarHubDatosCg(true);
             aplicarDeepLinkGestionCg();
@@ -413,14 +415,20 @@ function aplicarDeepLinkGestionCg() {
     const q = new URLSearchParams(window.location.search);
     const est = Number(q.get("est") || 0);
     const tab = (q.get("tab") || "").toLowerCase();
-    if (!(est > 0) && tab !== "stock" && tab !== "pagos") return;
+    const tabsOk = ["datos", "establecimientos", "contratos", "cuentaCorriente", "entregas"];
+    if (!(est > 0) && tab !== "stock" && tab !== "pagos" && !tabsOk.includes(tab)) return;
+
+    let mainTab = "datos";
+    if (est > 0) mainTab = "establecimientos";
+    else if (tab === "stock" || tab === "pagos") mainTab = "datos";
+    else if (tabsOk.includes(tab)) mainTab = tab;
 
     const st = {
         v: 1,
         idCliente: CG.id,
-        mainTab: est > 0 ? "establecimientos" : "datos",
+        mainTab,
         estIds: est > 0 ? [est] : [],
-        estTab: est > 0 ? "stock" : null,
+        estTab: est > 0 ? (tab === "pagos" ? "pagos" : "stock") : null,
         hubActivo: est > 0 ? "est" : "cliente",
         mesCliente: null,
         mesEst: null
@@ -770,8 +778,7 @@ function toggleSeccionCollapseCg($toggle) {
     }
 
     if (abrir && targetSel === "#cgRecoleccionBody") {
-        ["#cgTipoGenerador", ...CG_REC_CAMION_SELECTORS, "#cgRecSemana"]
-            .forEach(sel => refreshSelect2Cg($(sel)));
+        cargarRecorridosAsignadosCg();
     }
 }
 
@@ -787,6 +794,7 @@ function initModalesCg() {
                 CG.tabsLoaded.contratos = false;
                 const idGuardado = Number(modelo?.Id || data?.id || 0);
                 await cargarTabEstablecimientos();
+                await cargarRecorridosAsignadosCg();
                 if (idGuardado > 0) {
                     CG.establecimientoSelId = idGuardado;
                     resaltarListaEstablecimientoCg(idGuardado);
@@ -879,19 +887,12 @@ function wireEventosCg() {
     $("#btnCerrarErrorCg").on("click", cerrarErrorCg);
 
     const avisoOrdenCg = document.getElementById("avisoOrdenRecorridoCg");
-    if (typeof rpBindAvisoOrdenRecorrido === "function") {
+    if (avisoOrdenCg && typeof rpBindAvisoOrdenRecorrido === "function") {
         rpBindAvisoOrdenRecorrido(avisoOrdenCg);
     }
-    $("#cgOrdenRecorrido").on("input change", verificarOrdenRecorridoCg);
-    $("#cgRecSemana").on("change", verificarOrdenRecorridoCg);
-    CG_REC_CAMION_SELECTORS.forEach(sel => $(sel).on("change", verificarOrdenRecorridoCg));
 
     $("#cgActivo").on("change", function () {
         $("#lblActivoCg").text(this.checked ? "Activo" : "Inactivo");
-    });
-
-    $("#cgMotivo").on("change", function () {
-        $("#wrapMotivoDetalle").prop("hidden", !$(this).val());
     });
 
     $("#cgProvincia").on("change", actualizarCodigoProvinciaCg);
@@ -1372,9 +1373,6 @@ function wireEventosCg() {
             Provincias: "#cgProvincia",
             ClientesProfesiones: "#cgProfesion",
             CondicionesIva: "#cgCondicionIva",
-            ClientesEstados: "#cgEstado",
-            ClientesMotivos: "#cgMotivo",
-            ClientesCalificaciones: "#cgCalificacion",
             ClientesTiposGenerador: "#cgTipoGenerador"
         };
         const sel = map[tipo];
@@ -1388,7 +1386,7 @@ function wireEventosCg() {
 function initSelect2Cg() {
     const opts = { width: "100%", allowClear: true, placeholder: "Seleccionar" };
     ["#cgSucursal", "#cgProvincia", "#cgProfesion",
-        "#cgCondicionIva", "#cgEstado", "#cgMotivo", "#cgCalificacion", "#cgTipoGenerador", "#cgCobroCuenta",
+        "#cgCondicionIva", "#cgTipoGenerador", "#cgCobroCuenta",
         ...CG_REC_CAMION_SELECTORS,
         "#cgRecSemana"].forEach(sel => {
         ensureSelect2Cg($(sel), opts);
@@ -1408,7 +1406,8 @@ function ensureSelect2Cg($el, opts) {
 }
 
 async function fetchJsonCg(url, options = {}) {
-    const r = await fetch(url, options);
+    const opts = Object.assign({ cache: "no-store" }, options);
+    const r = await fetch(url, opts);
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
     return await r.json();
 }
@@ -1449,9 +1448,6 @@ async function recargarComboCg(selector, nuevoId, textField = "Nombre") {
         "#cgProvincia": API_CG.provincias,
         "#cgProfesion": API_CG.profesiones,
         "#cgCondicionIva": API_CG.condicionesIva,
-        "#cgEstado": API_CG.estados,
-        "#cgMotivo": API_CG.motivos,
-        "#cgCalificacion": API_CG.calificaciones,
         "#cgTipoGenerador": API_CG.tiposGenerador
     };
     const url = mapUrl[selector];
@@ -1651,18 +1647,15 @@ function marcarDiasEnRutaCg(items) {
 
 async function cargarRecorridosAsignadosCg() {
     if (CG.id <= 0) {
-        marcarDiasEnRutaCg([]);
         renderRecorridosCg([], false, "#cgRecorridosAsignados");
         return;
     }
 
     try {
         const items = await fetchJsonCg(API_CG.recorridosPorCliente(CG.id), { headers: authCg() });
-        marcarDiasEnRutaCg(items || []);
         renderRecorridosCg(items || [], false, "#cgRecorridosAsignados");
     } catch (e) {
         console.warn("Recorridos asignados no disponibles:", e);
-        marcarDiasEnRutaCg([]);
         renderRecorridosCg([], true, "#cgRecorridosAsignados");
     }
 }
@@ -1705,9 +1698,6 @@ async function cargarCombosDatosCg() {
         llenarComboCg("#cgProvincia", API_CG.provincias, null, "Nombre", "provincias"),
         llenarComboCg("#cgProfesion", API_CG.profesiones),
         llenarComboCg("#cgCondicionIva", API_CG.condicionesIva),
-        llenarComboCg("#cgEstado", API_CG.estados),
-        llenarComboCg("#cgMotivo", API_CG.motivos),
-        llenarComboCg("#cgCalificacion", API_CG.calificaciones),
         llenarComboCg("#cgTipoGenerador", API_CG.tiposGenerador, null, "Etiqueta")
     ]);
 
@@ -1748,23 +1738,13 @@ async function cargarClienteCg(id) {
         $("#cgNumero").val(m.Numero || "");
         $("#cgPisoDepto").val(m.PisoDepartamento || "");
         $("#cgCodPostal").val(m.CodPostal || "");
-        $("#cgMotivoDetalle").val(m.MotivoDetalle || "");
         $("#cgNumeroCliente").val(m.NumeroCliente ?? "");
-        $("#cgFechaInicio").val(fechaInputCg(m.FechaInicio));
-        $("#cgFechaLicenciaDesde").val(fechaInputCg(m.FechaLicenciaDesde));
-        $("#cgFechaLicenciaHasta").val(fechaInputCg(m.FechaLicenciaHasta));
         $("#cgActivo").prop("checked", m.Activo !== false);
         $("#lblActivoCg").text(m.Activo !== false ? "Activo" : "Inactivo");
 
         if (m.IdSucursal) $("#cgSucursal").val(String(m.IdSucursal)).trigger("change");
         if (m.IdProfesion) $("#cgProfesion").val(String(m.IdProfesion)).trigger("change");
         if (m.IdCondicionIva) $("#cgCondicionIva").val(String(m.IdCondicionIva)).trigger("change");
-        if (m.IdEstado) $("#cgEstado").val(String(m.IdEstado)).trigger("change");
-        if (m.IdMotivo) {
-            $("#cgMotivo").val(String(m.IdMotivo)).trigger("change");
-            $("#wrapMotivoDetalle").prop("hidden", false);
-        }
-        if (m.IdCalificacion) $("#cgCalificacion").val(String(m.IdCalificacion)).trigger("change");
         if (m.IdTipoGenerador) $("#cgTipoGenerador").val(String(m.IdTipoGenerador)).trigger("change");
 
         if (m.IdProvincia) {
@@ -1794,6 +1774,154 @@ function actualizarHeaderCg(titulo, subtitulo) {
     } else {
         $sub.text("").addClass("d-none");
     }
+    sincronizarSwitcherClienteCg(titulo);
+}
+
+function textoClienteComboCg(c) {
+    if (!c) return "Cliente";
+    const nro = c.NumeroCliente ? `#${c.NumeroCliente} · ` : "";
+    const inact = c.Activo === false ? " (inactivo)" : "";
+    return `${nro}${c.Nombre || "Cliente"}${inact}`;
+}
+
+function tabActualCg() {
+    return document.querySelector("#cgTabsNav button.nav-link.active[data-cg-tab]")
+        ?.getAttribute("data-cg-tab") || "";
+}
+
+function irAClienteGestionCg(id) {
+    const dest = Number(id) || 0;
+    if (!(dest > 0) || dest === Number(CG.id)) return;
+    const tab = tabActualCg();
+    const qs = tab && tab !== "datos" ? `&tab=${encodeURIComponent(tab)}` : "";
+    window.location.href = `/Clientes/Gestion?id=${dest}${qs}`;
+}
+
+function sincronizarSwitcherClienteCg(titulo) {
+    const $sel = $("#cgClienteSwitcher");
+    if (!$sel.length || !(CG.id > 0)) return;
+    const nro = $("#cgNumeroCliente").val();
+    const activo = $("#cgActivo").prop("checked") !== false;
+    const cuit = ($("#cgCuit").val() || "").trim();
+    const desdeLista = (CG.switcherNav || []).find(c => Number(c.Id) === Number(CG.id));
+    const txt = textoClienteComboCg(desdeLista || {
+        Nombre: titulo || "Cliente",
+        NumeroCliente: nro ? Number(nro) : null,
+        Activo: activo
+    });
+    const data = {
+        id: CG.id,
+        text: txt,
+        cuit: (desdeLista && desdeLista.Cuit) || cuit,
+        activo
+    };
+    $sel.find("option").remove();
+    const opt = new Option(txt, String(CG.id), true, true);
+    $.data(opt, "data", data);
+    $sel.append(opt).val(String(CG.id));
+    if ($sel.data("select2")) $sel.trigger("change.select2");
+    $sel.next(".select2-container").find(".select2-selection__rendered").text(txt).attr("title", txt);
+}
+
+function actualizarNavClienteCg() {
+    const list = Array.isArray(CG.switcherNav) ? CG.switcherNav : [];
+    const idx = list.findIndex(c => Number(c.Id) === Number(CG.id));
+    const $prev = $("#btnClientePrevCg");
+    const $next = $("#btnClienteNextCg");
+    const show = CG.id > 0 && list.length > 1;
+    $prev.prop("hidden", !show);
+    $next.prop("hidden", !show);
+    $prev.prop("disabled", idx <= 0);
+    $next.prop("disabled", idx < 0 || idx >= list.length - 1);
+}
+
+function moverClienteSwitcherCg(dir) {
+    const list = Array.isArray(CG.switcherNav) ? CG.switcherNav : [];
+    const idx = list.findIndex(c => Number(c.Id) === Number(CG.id));
+    const dest = list[idx + dir];
+    if (!dest) return;
+    irAClienteGestionCg(dest.Id);
+}
+
+async function cargarNavClienteSwitcherCg() {
+    try {
+        const idQs = CG.id > 0 ? `&id=${CG.id}` : "";
+        const data = await fetchJsonCg(`${API_CG.combo}?q=&take=80&incluirInactivos=true${idQs}`, { headers: authCg() });
+        const rows = Array.isArray(data) ? data : [];
+        CG.switcherNav = rows.slice().sort((a, b) =>
+            String(a.Nombre || "").localeCompare(String(b.Nombre || ""), "es", { sensitivity: "base" }));
+        actualizarNavClienteCg();
+        if (CG.id > 0) {
+            const actual = CG.switcherNav.find(c => Number(c.Id) === Number(CG.id));
+            sincronizarSwitcherClienteCg(actual?.Nombre || $("#cgTituloCliente").text());
+        }
+    } catch (e) {
+        console.warn("No se pudo cargar lista de clientes del encabezado:", e);
+    }
+}
+
+function initClienteSwitcherCg() {
+    const $sel = $("#cgClienteSwitcher");
+    if (!$sel.length || $sel.data("select2")) return;
+
+    if (CG.id > 0) {
+        $sel.append(new Option("Cargando…", CG.id, true, true));
+    }
+
+    $sel.select2({
+        width: "100%",
+        allowClear: false,
+        placeholder: "Buscar cliente…",
+        minimumInputLength: 0,
+        dropdownParent: $(".cg-page"),
+        ajax: {
+            delay: 220,
+            transport: function (params, success, failure) {
+                const q = (params.data.term || "").trim();
+                const idQs = CG.id > 0 ? `&id=${CG.id}` : "";
+                fetchJsonCg(`${API_CG.combo}?q=${encodeURIComponent(q)}&take=40&incluirInactivos=true${idQs}`, { headers: authCg() })
+                    .then(data => {
+                        const rows = Array.isArray(data) ? data : [];
+                        if (!q) {
+                            CG.switcherNav = rows.slice().sort((a, b) =>
+                                String(a.Nombre || "").localeCompare(String(b.Nombre || ""), "es", { sensitivity: "base" }));
+                            actualizarNavClienteCg();
+                        }
+                        success({
+                            results: rows.map(c => ({
+                                id: c.Id,
+                                text: textoClienteComboCg(c),
+                                cuit: c.Cuit || "",
+                                activo: c.Activo !== false
+                            }))
+                        });
+                    })
+                    .catch(failure);
+            }
+        },
+        templateResult: function (item) {
+            if (!item.id) return item.text;
+            const $el = $("<span class='cg-switcher-opt'/>");
+            $el.append($("<span/>").text(item.text));
+            if (item.cuit) {
+                $el.append($("<small class='d-block'/>").css("opacity", 0.65).text("CUIT " + item.cuit));
+            }
+            return $el;
+        },
+        templateSelection: function (item) {
+            const fromEl = item && item.element ? (item.element.textContent || "").trim() : "";
+            if (fromEl && fromEl !== "Cargando…") return fromEl;
+            return (item.text && item.text !== "Cargando…") ? item.text : (fromEl || "Cliente");
+        }
+    });
+
+    $sel.on("select2:select", function (e) {
+        irAClienteGestionCg(e.params?.data?.id);
+    });
+
+    $("#btnClientePrevCg").on("click", () => moverClienteSwitcherCg(-1));
+    $("#btnClienteNextCg").on("click", () => moverClienteSwitcherCg(1));
+    cargarNavClienteSwitcherCg();
 }
 
 function actualizarEnlacesAccionCg() {
@@ -1862,35 +1990,6 @@ function parseFechaCg(val) {
     return val;
 }
 
-function estaEnPeriodoLicenciaCg(desdeStr, hastaStr) {
-    const hoy = new Date();
-    hoy.setHours(0, 0, 0, 0);
-
-    const desde = desdeStr ? new Date(`${desdeStr}T00:00:00`) : null;
-    const hasta = hastaStr ? new Date(`${hastaStr}T00:00:00`) : null;
-
-    if (desde && hasta) return hoy >= desde && hoy <= hasta;
-    if (desde) return hoy >= desde;
-    if (hasta) return hoy <= hasta;
-    return false;
-}
-
-function aplicarEstadoLicenciaCg() {
-    const desde = $("#cgFechaLicenciaDesde").val();
-    const hasta = $("#cgFechaLicenciaHasta").val();
-    if (!desde && !hasta) return;
-    if (!estaEnPeriodoLicenciaCg(desde, hasta)) return;
-
-    const $est = $("#cgEstado");
-    const opt = $est.find("option").filter(function () {
-        return String($(this).text()).toLowerCase().includes("licencia");
-    }).first();
-
-    if (opt.length) {
-        $est.val(opt.val()).trigger("change");
-    }
-}
-
 function obtenerModeloCg() {
     return {
         Id: CG.id || 0,
@@ -1908,14 +2007,7 @@ function obtenerModeloCg() {
         IdProvincia: intOrNullCg("#cgProvincia"),
         IdProfesion: intOrNullCg("#cgProfesion"),
         IdCondicionIva: intOrNullCg("#cgCondicionIva"),
-        IdEstado: intOrNullCg("#cgEstado"),
-        IdMotivo: intOrNullCg("#cgMotivo"),
-        MotivoDetalle: ($("#cgMotivoDetalle").val() || "").trim() || null,
-        IdCalificacion: intOrNullCg("#cgCalificacion"),
         NumeroCliente: intOrNullCg("#cgNumeroCliente"),
-        FechaInicio: parseFechaCg($("#cgFechaInicio").val()),
-        FechaLicenciaDesde: parseFechaCg($("#cgFechaLicenciaDesde").val()),
-        FechaLicenciaHasta: parseFechaCg($("#cgFechaLicenciaHasta").val()),
         Activo: $("#cgActivo").is(":checked")
     };
 }
@@ -1938,7 +2030,6 @@ function validarDatosCg() {
 
 async function guardarClienteCg() {
     if (!validarDatosCg()) return;
-    aplicarEstadoLicenciaCg();
     const m = obtenerModeloCg();
     const esNuevo = !m.Id;
     const url = esNuevo ? API_CG.insertar : API_CG.actualizar;
@@ -1960,13 +2051,11 @@ async function guardarClienteCg() {
 
         if (esNuevo && data.id) {
             CG.id = data.id;
-            await guardarRecoleccionPrincipalCg();
             window.location.href = `/Clientes/Gestion?id=${data.id}`;
             return;
         }
 
         await cargarClienteCg(m.Id);
-        await guardarRecoleccionPrincipalCg();
         await cargarRecorridosAsignadosCg();
 
         if (typeof modalGuardadoConSalida === "function") {
@@ -3745,11 +3834,9 @@ function renderListaDocsMf(selector, items, esCert) {
 async function cargarTabRecorridos() {
     try {
         const items = await fetchJsonCg(API_CG.recorridosPorCliente(CG.id), { headers: authCg() });
-        marcarDiasEnRutaCg(items || []);
         renderRecorridosCg(items || [], false, "#cgRecorridosAsignados");
     } catch (e) {
         console.warn("Recorridos no disponibles:", e);
-        marcarDiasEnRutaCg([]);
         renderRecorridosCg([], true, "#cgRecorridosAsignados");
     }
     CG.tabsLoaded.recorridos = true;
@@ -3773,45 +3860,59 @@ function renderRecorridosCg(items, huboError, containerSelector) {
             <div class="cg-empty-state">
                 <span class="cg-empty-icon"><i class="fa fa-road"></i></span>
                 <p class="cg-empty-title">Sin recorridos asignados</p>
-                <p class="cg-empty-hint">Este cliente aun no esta en ninguna ruta de recoleccion. Use <strong>Gestionar recorridos</strong> para asignarlo a una unidad, dia y posicion.</p>
+                <p class="cg-empty-hint">Este cliente todavia no esta en ninguna ruta. Se asigna desde el establecimiento o desde el modulo Recorridos.</p>
             </div>`);
         return;
     }
 
-    cont.html(items.map(r => `
-        <div class="cg-recorrido-item ${r.Activo ? "" : "cg-recorrido-inactivo"}${r.Reprogramado ? " cg-recorrido-reprogramado" : ""}" data-id="${r.Id}">
-            <div class="cg-recorrido-main">
-                <i class="fa fa-truck me-2"></i>
-                <strong>${escapeCg(r.RecorridoTexto || `${r.Camion} ${r.Semana} ${r.Dia}`)}</strong>
-                <span class="badge bg-info ms-2">Pos. ${r.Posicion ?? "-"}</span>
-                ${r.Reprogramado ? `<span class="badge bg-danger ms-2">Reprogramado</span>` : ""}
-                ${r.Establecimiento ? `<small class="text-muted ms-2">${escapeCg(r.Establecimiento)}</small>` : ""}
-            </div>
-            <div class="cg-recorrido-meta">
-                ${r.Zona ? `<span class="badge bg-secondary">${escapeCg(r.Zona)}</span>` : ""}
-                ${r.Activo ? "" : `<span class="badge bg-dark">Inactivo</span>`}
-            </div>
-            <div class="cg-recorrido-obs">
-                <label class="cg-recorrido-obs-label">Observacion hoja de ruta</label>
-                <textarea class="form-control form-control-sm cg-recorrido-obs-input"
-                          rows="2"
-                          maxlength="500"
-                          data-id="${r.Id}"
-                          data-id-cliente="${r.IdCliente}"
-                          data-id-establecimiento="${r.IdEstablecimiento ?? ""}"
-                          data-id-camion="${r.IdCamion}"
-                          data-id-semana="${r.IdSemana}"
-                          data-id-dia="${r.IdDia}"
-                          data-posicion="${r.Posicion ?? 1}"
-                          data-activo="${r.Activo ? "1" : "0"}"
-                          data-reprogramado="${r.Reprogramado ? "1" : "0"}"
-                          placeholder="Indicaciones para el chofer (se ven en la hoja de ruta)">${escapeCg(r.Observacion || "")}</textarea>
-            </div>
-        </div>`).join(""));
-
-    cont.find(".cg-recorrido-obs-input").off("blur.cgObs").on("blur.cgObs", function () {
-        guardarObservacionRecorridoCg(this);
+    const grupos = [];
+    const mapa = {};
+    items.forEach(r => {
+        const key = String(r.IdEstablecimiento || 0) + "|" + (r.Establecimiento || "Sin establecimiento");
+        if (!mapa[key]) {
+            mapa[key] = {
+                nombre: r.Establecimiento || "Sin establecimiento",
+                domicilio: r.Domicilio || "",
+                localidad: r.Localidad || "",
+                items: []
+            };
+            grupos.push(mapa[key]);
+        }
+        mapa[key].items.push(r);
     });
+
+    cont.html(grupos.map(g => {
+        const filas = g.items.map(r => {
+            const horario = (r.Horario || "").trim();
+            const obs = (r.Observacion || "").trim();
+            return `<div class="cg-ra-row ${r.Activo ? "" : "is-inactivo"}${r.Reprogramado ? " is-reprog" : ""}">
+                <div class="cg-ra-dia"><i class="fa fa-calendar"></i> ${escapeCg(r.Dia || "-")}</div>
+                <div class="cg-ra-meta">
+                    <span><i class="fa fa-truck"></i> ${escapeCg(r.Camion || "-")}</span>
+                    <span><i class="fa fa-repeat"></i> ${escapeCg(r.Semana || "-")}</span>
+                    <span><i class="fa fa-sort-numeric-asc"></i> Pos. ${r.Posicion ?? "-"}</span>
+                    ${horario ? `<span><i class="fa fa-clock-o"></i> ${escapeCg(horario)}</span>` : `<span class="text-muted"><i class="fa fa-clock-o"></i> Sin horario</span>`}
+                    ${r.Zona ? `<span><i class="fa fa-map-marker"></i> ${escapeCg(r.Zona)}</span>` : ""}
+                </div>
+                <div class="cg-ra-flags">
+                    ${r.Reprogramado ? `<span class="badge bg-danger">Reprogramado</span>` : ""}
+                    ${r.Activo ? "" : `<span class="badge bg-dark">Inactivo</span>`}
+                </div>
+                ${obs ? `<div class="cg-ra-obs">${escapeCg(obs)}</div>` : ""}
+            </div>`;
+        }).join("");
+        const sub = [g.domicilio, g.localidad].filter(Boolean).join(" · ");
+        return `<article class="cg-ra-card">
+            <header class="cg-ra-head">
+                <div>
+                    <div class="cg-ra-est">${escapeCg(g.nombre)}</div>
+                    ${sub ? `<div class="cg-ra-sub">${escapeCg(sub)}</div>` : ""}
+                </div>
+                <span class="cg-ra-count">${g.items.length} ${g.items.length === 1 ? "ruta" : "rutas"}</span>
+            </header>
+            ${filas}
+        </article>`;
+    }).join(""));
 }
 
 async function guardarObservacionRecorridoCg(el) {
@@ -5631,6 +5732,20 @@ function clasificarAbonosDesdeCobrosWsCg(cobros) {
     return { efectivo, transferencia };
 }
 
+function cobrosMesParaPlanillaCg(cobrosAcc, uidAcc) {
+    const lista = [];
+    entregasMesListaCg().forEach(e => {
+        if (uidAcc && e.uid === uidAcc) return;
+        (e.Cobros || []).forEach(c => {
+            if (Number(c.Importe) > 0 && Number(c.IdCuenta) > 0) lista.push(c);
+        });
+    });
+    (cobrosAcc || []).forEach(c => {
+        if (Number(c.Importe) > 0 && Number(c.IdCuenta) > 0) lista.push(c);
+    });
+    return lista;
+}
+
 async function guardarVisitaUnificadaCg(el) {
     if (!CG.id) return;
     let $acc = $wsAccFromCg(el);
@@ -5760,14 +5875,14 @@ async function guardarVisitaUnificadaCg(el) {
         return;
     }
 
-    if (cobros.length && idEntrega <= 0) {
-        const { efectivo, transferencia } = clasificarAbonosDesdeCobrosWsCg(cobros);
-        const prevEf = leerImporteInputCg("#" + mapHubDomIdCg("cgCmAbonoEfectivo"));
-        const prevTr = leerImporteInputCg("#" + mapHubDomIdCg("cgCmAbonoTransferencia"));
-        setImporteInputCg("#cgCmAbonoEfectivo", prevEf + efectivo);
-        setImporteInputCg("#cgCmAbonoTransferencia", prevTr + transferencia);
+    const cobrosMesPlanilla = cobrosMesParaPlanillaCg(cobros, ent?.uid);
+    if (cobrosMesPlanilla.length) {
+        const { efectivo, transferencia } = clasificarAbonosDesdeCobrosWsCg(cobrosMesPlanilla);
+        setImporteInputCg("#cgCmAbonoEfectivo", efectivo);
+        setImporteInputCg("#cgCmAbonoTransferencia", transferencia);
         if (transferencia > 0 && !$h("cgCmFechaTransferencia").val()) {
-            $h("cgCmFechaTransferencia").val(cobros.find(c => c.Fecha)?.Fecha || $h("cgCmFechaVisita").val() || "");
+            $h("cgCmFechaTransferencia").val(
+                cobrosMesPlanilla.find(c => c.Fecha)?.Fecha || $h("cgCmFechaVisita").val() || "");
         }
     }
 
@@ -5803,24 +5918,18 @@ async function eliminarEntregaAccCg(el) {
     if (!ent) return;
     const id = Number(ent.Id) || 0;
     if (id > 0) {
-        const ok = typeof confirmarModal === "function"
-            ? await confirmarModal(`¿Eliminar la entrega #${id}? Se revierten stock y cuenta corriente.`)
-            : window.confirm(`¿Eliminar la entrega #${id}?`);
-        if (!ok) return;
-        try {
-            const data = await fetchJsonCg(API_CG.entregaEliminar(id), {
-                method: "DELETE",
-                headers: authCg()
-            });
-            if (!data?.valor) {
-                errorModal(data?.mensaje || "No se pudo eliminar la entrega.");
-                return;
-            }
-        } catch (e) {
-            console.error(e);
-            errorModal("No se pudo eliminar la entrega.");
+        if (typeof ejecutarEliminacionEntidad !== "function") {
+            errorModal("No está disponible el asistente de eliminación.");
             return;
         }
+        const resultado = await ejecutarEliminacionEntidad({
+            entidadLabel: `la entrega #${id}`,
+            urlDependencias: `/ClientesEntregas/DependenciasEliminar?id=${id}`,
+            urlEliminar: cascada => `/ClientesEntregas/Eliminar?id=${id}&cascada=${cascada ? "true" : "false"}`,
+            headers: authCg(),
+            fetchJson: fetchJsonCg
+        });
+        if (resultado.accion !== "ok") return;
     } else {
         setHubPropCg("wsEntregasMes", entregasMesListaCg().filter(x => x.uid !== ent.uid));
         if (!entregasMesListaCg().length) {

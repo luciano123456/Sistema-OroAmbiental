@@ -1,10 +1,13 @@
-﻿using SistemaOroAmbiental.Models;
+﻿using SistemaOroAmbiental.BLL.Common;
+using SistemaOroAmbiental.Models;
 
 namespace SistemaOroAmbiental.BLL.Service
 {
     public interface IUsuariosService
     {
-        Task<bool> Eliminar(int id);
+        Task<ServiceResult> Eliminar(int id, bool cascada = false);
+
+        Task<DependenciasEliminacionInfo> ObtenerDependenciasEliminar(int id);
         Task<bool> Actualizar(User model);
         Task<bool> Insertar(User model);
 

@@ -62,14 +62,7 @@ namespace SistemaOroAmbiental.DAL.Repository
                 entity.Email = model.Email;
                 entity.IdProfesion = model.IdProfesion;
                 entity.Activo = model.Activo;
-                entity.IdEstado = model.IdEstado;
-                entity.IdMotivo = model.IdMotivo;
-                entity.MotivoDetalle = model.MotivoDetalle;
-                entity.IdCalificacion = model.IdCalificacion;
                 entity.NumeroCliente = model.NumeroCliente;
-                entity.FechaInicio = model.FechaInicio;
-                entity.FechaLicenciaDesde = model.FechaLicenciaDesde;
-                entity.FechaLicenciaHasta = model.FechaLicenciaHasta;
                 entity.IdUsuarioModifica = model.IdUsuarioModifica;
                 entity.FechaUsuarioModifica = model.FechaUsuarioModifica;
 
@@ -136,6 +129,8 @@ namespace SistemaOroAmbiental.DAL.Repository
                 .Include(x => x.IdMotivoNavigation)
                 .Include(x => x.IdCalificacionNavigation)
                 .Include(x => x.IdTipoGeneradorNavigation)
+                .Include(x => x.ClientesEstablecimientos)
+                    .ThenInclude(e => e.IdEstadoNavigation)
                 .Include(x => x.IdUsuarioRegistraNavigation)
                 .Include(x => x.IdUsuarioModificaNavigation)
                 .FirstOrDefaultAsync(x => x.Id == id);
@@ -154,6 +149,8 @@ namespace SistemaOroAmbiental.DAL.Repository
                 .Include(x => x.IdMotivoNavigation)
                 .Include(x => x.IdCalificacionNavigation)
                 .Include(x => x.IdTipoGeneradorNavigation)
+                .Include(x => x.ClientesEstablecimientos)
+                    .ThenInclude(e => e.IdEstadoNavigation)
                 .Include(x => x.IdUsuarioRegistraNavigation)
                 .Include(x => x.IdUsuarioModificaNavigation)
                 .AsQueryable();
@@ -187,6 +184,8 @@ namespace SistemaOroAmbiental.DAL.Repository
                 .Include(x => x.IdMotivoNavigation)
                 .Include(x => x.IdCalificacionNavigation)
                 .Include(x => x.IdTipoGeneradorNavigation)
+                .Include(x => x.ClientesEstablecimientos)
+                    .ThenInclude(e => e.IdEstadoNavigation)
                 .Include(x => x.IdUsuarioRegistraNavigation)
                 .Include(x => x.IdUsuarioModificaNavigation)
                 .Skip(consulta.Start)

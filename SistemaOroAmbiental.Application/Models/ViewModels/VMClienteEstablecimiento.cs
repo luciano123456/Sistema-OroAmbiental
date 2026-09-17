@@ -23,8 +23,18 @@ namespace SistemaOroAmbiental.Application.Models.ViewModels
         public string? Localidad { get; set; }
         public string? CodPostal { get; set; }
         public bool ImpuestoIva { get; set; }
-        public int IdDiaRecoleccion { get; set; }
-        public int IdSemanaRecoleccion { get; set; }
+        public int? IdEstado { get; set; }
+        public int? IdMotivo { get; set; }
+        public string? MotivoDetalle { get; set; }
+        public int? IdCalificacion { get; set; }
+        public DateTime? FechaInicio { get; set; }
+        public DateTime? FechaLicenciaDesde { get; set; }
+        public DateTime? FechaLicenciaHasta { get; set; }
+        public string? Estado { get; set; }
+        public string? Motivo { get; set; }
+        public string? Calificacion { get; set; }
+        public int? IdDiaRecoleccion { get; set; }
+        public int? IdSemanaRecoleccion { get; set; }
         public int? IdListaPrecio { get; set; }
         public int? IdCamion { get; set; }
         public int? OrdenRecorrido { get; set; }
