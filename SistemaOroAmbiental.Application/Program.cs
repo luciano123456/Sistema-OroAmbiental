@@ -12,6 +12,7 @@ using SistemaOroAmbiental.DAL.DataContext;
 using SistemaOroAmbiental.DAL.Repository;
 using SistemaOroAmbiental.Models;
 using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -94,6 +95,8 @@ builder.Services.AddScoped<IClientesEstablecimientosService, ClientesEstablecimi
 
 builder.Services.AddScoped<IClientesEstablecimientosContactosRepository, ClientesEstablecimientosContactosRepository>();
 builder.Services.AddScoped<IClientesEstablecimientosContactosService, ClientesEstablecimientosContactosService>();
+builder.Services.AddScoped<IClientesEstablecimientosTercerosRepository, ClientesEstablecimientosTercerosRepository>();
+builder.Services.AddScoped<IClientesEstablecimientosTercerosService, ClientesEstablecimientosTercerosService>();
 
 builder.Services.AddScoped<IClientesEstablecimientosProductosRepository, ClientesEstablecimientosProductosRepository>();
 builder.Services.AddScoped<IClientesEstablecimientosProductosService, ClientesEstablecimientosProductosService>();
@@ -165,6 +168,9 @@ builder.Services.AddScoped<ICamionesService, CamionesService>();
 builder.Services.AddScoped<IChoferesRepository, ChoferesRepository>();
 builder.Services.AddScoped<IChoferesService, ChoferesService>();
 builder.Services.AddScoped<ChoferesFirmaStorage>();
+builder.Services.AddScoped<IFirmasRepository, FirmasRepository>();
+builder.Services.AddScoped<IFirmasService, FirmasService>();
+builder.Services.AddScoped<FirmasFirmaStorage>();
 
 builder.Services.AddScoped<IRecorridosRepository, RecorridosRepository>();
 builder.Services.AddScoped<IRecorridosService, RecorridosService>();
@@ -312,12 +318,36 @@ app.Use(async (context, next) =>
             ? forwarded.Split(',')[0].Trim()
             : context.Connection.RemoteIpAddress?.ToString();
 
+        var principal = context.User;
+        var nombre = FirstClaim(principal, "NombreCompleto", ClaimTypes.Name, "unique_name");
+        if (string.IsNullOrWhiteSpace(nombre))
+        {
+            nombre = EliminacionLogAmbient.NombreUsuario(
+                FirstClaim(principal, "Nombre"),
+                FirstClaim(principal, "Apellido"),
+                FirstClaim(principal, ClaimTypes.NameIdentifier, JwtRegisteredClaimNames.Sub)
+                    ?? principal.Identity?.Name);
+        }
+
+        if (string.IsNullOrWhiteSpace(nombre) && uid is > 0)
+        {
+            try
+            {
+                var usuarios = context.RequestServices.GetService<IUsuariosService>();
+                var user = usuarios == null ? null : await usuarios.Obtener(uid.Value);
+                nombre = EliminacionLogAmbient.NombreUsuario(user?.Nombre, user?.Apellido, user?.Usuario);
+            }
+            catch
+            {
+                // El log no debe romper el request.
+            }
+        }
+
         EliminacionLogAmbient.Actor.Value = new EliminacionLogActor
         {
             IdUsuario = uid,
-            UsuarioNombre = context.User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value
-                ?? context.User.Identity?.Name,
-            Ip = ip
+            UsuarioNombre = nombre,
+            Ip = EliminacionLogAmbient.NormalizarIp(ip)
         };
         EliminacionLogAmbient.Repo.Value = context.RequestServices.GetService<IEliminacionesLogRepository>();
     }
@@ -338,3 +368,14 @@ app.MapControllerRoute(
     pattern: "{controller=Login}/{action=Index}/{id?}");
 
 app.Run();
+
+static string? FirstClaim(ClaimsPrincipal user, params string[] types)
+{
+    foreach (var t in types)
+    {
+        var v = user.FindFirst(t)?.Value;
+        if (!string.IsNullOrWhiteSpace(v))
+            return v.Trim();
+    }
+    return null;
+}

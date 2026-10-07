@@ -86,11 +86,16 @@ namespace SistemaOroAmbiental.DAL.Repository
                 .Where(x => x.IdProducto == idProducto)
                 .ToListAsync();
 
-        public async Task<List<ListasPrecio>> ObtenerListasPrecios()
-            => await _db.ListasPrecios
-                .AsNoTracking()
-                .OrderBy(x => x.Nombre)
-                .ToListAsync();
+        public async Task<List<ListasPrecio>> ObtenerListasPrecios(int idProducto)
+        {
+            var query = _db.ListasPrecios.AsNoTracking().AsQueryable();
+            if (idProducto > 0)
+                query = query.Where(x => x.IdProducto == null || x.IdProducto == idProducto);
+            else
+                query = query.Where(x => x.IdProducto == null);
+
+            return await query.OrderBy(x => x.Nombre).ToListAsync();
+        }
 
         public async Task<bool> GuardarPorProducto(int idProducto, IEnumerable<ProductosPrecio> precios, int idUsuario)
         {

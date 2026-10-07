@@ -254,9 +254,11 @@
             const $modal = window.jQuery(this.modalEl);
             ["cmbClienteContrato", "cmbEstablecimientoContrato", "cmbTipoContrato", "cmbTipoRenovContrato"].forEach(id => {
                 const $el = $modal.find(`#${id}`);
-                if ($el.length) {
-                    this.ensureSelect2($el, { dropdownParent: $modal, placeholder: "Seleccionar" });
+                if (!$el.length) return;
+                if (id === "cmbTipoContrato") {
+                    $el.prop("disabled", this.isSoloLectura());
                 }
+                this.ensureSelect2($el, { dropdownParent: $modal, placeholder: "Seleccionar" });
             });
         }
 
@@ -382,6 +384,9 @@
                 return;
             }
 
+            const eleccion = await this._elegirFirmaContrato();
+            if (eleccion === null) return;
+
             const tabDoc = this._id("tabBtnDocContrato");
             if (tabDoc && window.bootstrap?.Tab) {
                 bootstrap.Tab.getOrCreateInstance(tabDoc).show();
@@ -395,6 +400,7 @@
                     idContrato: id,
                     idTipoContrato: idTipo,
                     formato: "word",
+                    idFirma: eleccion,
                     sinModalExito: true,
                     onProgress: (txt) => this._setEstadoDocumentos("loading", txt)
                 });
@@ -408,6 +414,84 @@
             } finally {
                 this.habilitarSeccionDocumentos(!this.isSoloLectura() && this.getId() > 0);
             }
+        }
+
+        async _elegirFirmaContrato() {
+            let lista = [];
+            try {
+                const jwt = window.token || localStorage.getItem("JwtToken") || "";
+                const r = await fetch("/Firmas/Lista?soloActivos=true", {
+                    headers: { Authorization: "Bearer " + jwt }
+                });
+                if (r.ok) lista = await r.json();
+            } catch (e) {
+                console.error(e);
+            }
+            if (!Array.isArray(lista) || lista.length === 0)
+                return 0;
+
+            lista = lista.filter((f) => f.FirmaArchivo || f.firmaArchivo || f.FirmaUrl);
+            if (lista.length === 0)
+                return 0;
+
+            const modalEl = document.getElementById("modalFirmaContrato");
+            const listaEl = document.getElementById("listaFirmaContrato");
+            const hid = document.getElementById("cmbFirmaContrato");
+            const btnOk = document.getElementById("btnConfirmarFirmaContrato");
+            if (!modalEl || !listaEl || !hid || !btnOk || !window.bootstrap?.Modal)
+                return 0;
+
+            const esc = (s) => String(s || "")
+                .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;");
+
+            const itemSin = `<button type="button" class="frm-pick-item is-selected" data-id="0">
+                <span class="frm-pick-preview frm-pick-preview--empty">Sin imagen</span>
+                <span class="frm-pick-name">Sin firma</span>
+            </button>`;
+            const items = lista.map((f) => {
+                const idF = Number(f.Id ?? f.id ?? 0);
+                if (idF <= 0) return "";
+                const nom = f.Nombre || f.nombre || ("Firma #" + idF);
+                const url = f.FirmaUrl || f.firmaUrl || `/Firmas/Firma?id=${idF}`;
+                return `<button type="button" class="frm-pick-item" data-id="${idF}">
+                    <img class="frm-pick-preview" src="${esc(url)}" alt="${esc(nom)}" />
+                    <span class="frm-pick-name">${esc(nom)}</span>
+                </button>`;
+            }).join("");
+            listaEl.innerHTML = itemSin + items;
+            hid.value = "0";
+
+            const marcar = (id) => {
+                hid.value = String(id);
+                listaEl.querySelectorAll(".frm-pick-item").forEach((el) => {
+                    el.classList.toggle("is-selected", String(el.getAttribute("data-id")) === String(id));
+                });
+            };
+            listaEl.onclick = (ev) => {
+                const btn = ev.target.closest(".frm-pick-item");
+                if (!btn) return;
+                marcar(parseInt(btn.getAttribute("data-id"), 10) || 0);
+            };
+
+            return await new Promise((resolve) => {
+                const modal = bootstrap.Modal.getOrCreateInstance(modalEl, {
+                    backdrop: "static",
+                    keyboard: false
+                });
+                let resuelto = false;
+                const terminar = (valor) => {
+                    if (resuelto) return;
+                    resuelto = true;
+                    btnOk.onclick = null;
+                    listaEl.onclick = null;
+                    modal.hide();
+                    resolve(valor);
+                };
+                btnOk.onclick = () => terminar(parseInt(hid.value, 10) || 0);
+                modalEl.addEventListener("hidden.bs.modal", () => terminar(null), { once: true });
+                modal.show();
+            });
         }
 
         async _cargarDocumentosAdjuntos(idDestacar) {
@@ -751,8 +835,18 @@
 
             const dis = this.isSoloLectura() || !habilitar;
             if (btnW) btnW.disabled = dis;
+
+            // El tipo se elige al registrar. No seguir el bloqueo de la solapa Documentos.
             const cmbTipo = this._id("cmbTipoContrato");
-            if (cmbTipo) cmbTipo.disabled = dis;
+            if (!cmbTipo) return;
+            const bloquearTipo = this.isSoloLectura();
+            if (window.jQuery) {
+                const $tipo = window.jQuery(cmbTipo);
+                $tipo.prop("disabled", bloquearTipo);
+                if ($tipo.data("select2")) $tipo.trigger("change.select2");
+            } else {
+                cmbTipo.disabled = bloquearTipo;
+            }
         }
 
         prepararRenovacionesNuevo() {

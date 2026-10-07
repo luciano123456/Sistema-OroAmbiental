@@ -45,6 +45,11 @@ namespace SistemaOroAmbiental.DAL.Repository
                 items.Add(Item("precios", "Precios en listas", precios,
                     "Eliminá los precios desde Lista de precios."));
 
+            var listasEsp = await _db.ListasPrecios.CountAsync(x => x.IdProducto == idProducto);
+            if (listasEsp > 0)
+                items.Add(Item("listasProducto", "Listas de precio de este producto", listasEsp,
+                    "Se eliminan las listas exclusivas de este producto (no las generales)."));
+
             var inv = await _db.Inventarios.CountAsync(x => x.IdProducto == idProducto);
             if (inv > 0)
                 items.Add(Item("inventario", "Saldos de inventario", inv,
@@ -158,6 +163,21 @@ namespace SistemaOroAmbiental.DAL.Repository
                 var precios = await _db.ProductosPrecios.Where(x => x.IdProducto == idProducto).ToListAsync();
                 _db.ProductosPrecios.RemoveRange(precios);
 
+                var listasEsp = await _db.ListasPrecios.Where(x => x.IdProducto == idProducto).ToListAsync();
+                foreach (var lista in listasEsp)
+                {
+                    var idLista = lista.Id;
+                    foreach (var e in await _db.ClientesEstablecimientos.Where(x => x.IdListaPrecio == idLista).ToListAsync())
+                        e.IdListaPrecio = null;
+                    foreach (var p in await _db.ClientesEstablecimientosProductos.Where(x => x.IdListaPrecio == idLista).ToListAsync())
+                        p.IdListaPrecio = null;
+                    foreach (var p in await _db.ClientesEntregasProductos.Where(x => x.IdListaPrecio == idLista).ToListAsync())
+                        p.IdListaPrecio = null;
+                    foreach (var p in await _db.ClientesEntregasProductosRecuperados.Where(x => x.IdListaPrecio == idLista).ToListAsync())
+                        p.IdListaPrecio = null;
+                }
+                _db.ListasPrecios.RemoveRange(listasEsp);
+
                 var historial = await _db.ProductosCostoHistorials.Where(x => x.IdProducto == idProducto).ToListAsync();
                 _db.ProductosCostoHistorials.RemoveRange(historial);
 
@@ -195,6 +215,10 @@ namespace SistemaOroAmbiental.DAL.Repository
             var cont = await _db.ClientesEstablecimientosContactos.CountAsync(x => x.IdEstablecimiento == idEstablecimiento);
             if (cont > 0)
                 items.Add(Item("contactos", "Contactos", cont, "Quitá los contactos del establecimiento."));
+
+            var terc = await _db.ClientesEstablecimientosTerceros.CountAsync(x => x.IdEstablecimiento == idEstablecimiento);
+            if (terc > 0)
+                items.Add(Item("terceros", "Pagadores de terceros", terc, "Quitá los pagadores del establecimiento."));
 
             var rec = await _db.ClientesRecorridos.CountAsync(x => x.IdEstablecimiento == idEstablecimiento);
             if (rec > 0)
@@ -286,6 +310,15 @@ namespace SistemaOroAmbiental.DAL.Repository
         {
             if (!await _choferesRepo.Eliminar(idChofer))
                 throw new InvalidOperationException("No se encontró el chofer.");
+        }
+
+        public Task<DependenciasEliminacionInfo> ObtenerDependenciasFirmaAsync(int idFirma)
+            => Task.FromResult(new DependenciasEliminacionInfo());
+
+        public async Task EliminarFirmaEnCascadaAsync(int idFirma)
+        {
+            if (!await _firmasRepo.Eliminar(idFirma))
+                throw new InvalidOperationException("No se encontró la firma.");
         }
 
         public async Task<DependenciasEliminacionInfo> ObtenerDependenciasUsuarioAsync(int idUsuario)

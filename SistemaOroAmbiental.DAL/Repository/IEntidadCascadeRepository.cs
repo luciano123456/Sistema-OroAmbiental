@@ -10,6 +10,7 @@ namespace SistemaOroAmbiental.DAL.Repository
         Task<DependenciasEliminacionInfo> ObtenerDependenciasEstablecimientoAsync(int idEstablecimiento);
         Task<DependenciasEliminacionInfo> ObtenerDependenciasContratoAsync(int idContrato);
         Task<DependenciasEliminacionInfo> ObtenerDependenciasChoferAsync(int idChofer);
+        Task<DependenciasEliminacionInfo> ObtenerDependenciasFirmaAsync(int idFirma);
         Task<DependenciasEliminacionInfo> ObtenerDependenciasUsuarioAsync(int idUsuario);
         Task<DependenciasEliminacionInfo> ObtenerDependenciasCompraAsync(int idCompra);
         Task<DependenciasEliminacionInfo> ObtenerDependenciasEntregaAsync(int idEntrega);
@@ -21,6 +22,7 @@ namespace SistemaOroAmbiental.DAL.Repository
         Task EliminarEstablecimientoEnCascadaAsync(int idEstablecimiento);
         Task EliminarContratoEnCascadaAsync(int idContrato);
         Task EliminarChoferEnCascadaAsync(int idChofer);
+        Task EliminarFirmaEnCascadaAsync(int idFirma);
         Task EliminarUsuarioEnCascadaAsync(int idUsuario);
         Task EliminarCompraEnCascadaAsync(int idCompra);
         Task EliminarEntregaEnCascadaAsync(int idEntrega);

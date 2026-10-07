@@ -21,6 +21,6 @@ namespace SistemaOroAmbiental.BLL.Service
 
         Task<ServiceResult> GuardarControlMensual(ClientesControlMensual model, int idUsuario);
 
-        Task<ServiceResult> VaciarAbonosMes(int idCliente, int anio, int mes, int? idEstablecimiento, int idUsuario);
+        Task<ServiceResult> VaciarAbonosMes(int idCliente, int anio, int mes, IReadOnlyList<int>? idsEstablecimiento, int idUsuario, bool vaciarPlata, bool eliminarEntregas);
     }
 }

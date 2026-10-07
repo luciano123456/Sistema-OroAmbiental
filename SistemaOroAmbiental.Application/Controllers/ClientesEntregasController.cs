@@ -232,7 +232,10 @@ namespace SistemaOroAmbiental.Application.Controllers
                     Importe = c.Importe,
                     Cuenta = c.Cuenta,
                     Sucursal = c.Sucursal,
-                    Usuario = c.Usuario
+                    Usuario = c.Usuario,
+                    IdTercero = c.IdTercero,
+                    EsPagoTercero = c.EsPagoTercero,
+                    TerceroNombre = c.TerceroNombre
                 }).ToList()
             });
         }
@@ -400,7 +403,9 @@ namespace SistemaOroAmbiental.Application.Controllers
                     IdCuenta = x.IdCuenta,
                     Fecha = x.Fecha == default ? DateTime.Now : x.Fecha,
                     Concepto = x.Concepto?.Trim() ?? "",
-                    Importe = x.Importe
+                    Importe = x.Importe,
+                    IdTercero = x.EsPagoTercero && x.IdTercero > 0 ? x.IdTercero : null,
+                    EsPagoTercero = x.EsPagoTercero || x.IdTercero > 0
                 })
                 .ToList();
         }

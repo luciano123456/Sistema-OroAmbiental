@@ -20,6 +20,6 @@ namespace SistemaOroAmbiental.DAL.Repository
 
         Task<bool> GuardarControlMensual(ClientesControlMensual model, bool esNuevo, int idUsuario);
 
-        Task<bool> VaciarAbonosMes(int idCliente, int anio, int mes, int? idEstablecimiento, int idUsuario);
+        Task<bool> VaciarAbonosMes(int idCliente, int anio, int mes, IReadOnlyList<int>? idsEstablecimiento, int idUsuario, bool vaciarPlata, bool eliminarEntregas);
     }
 }

@@ -85,6 +85,8 @@ public partial class ClientesEstablecimiento
 
     public virtual ICollection<ClientesEstablecimientosContacto> ClientesEstablecimientosContactos { get; set; } = new List<ClientesEstablecimientosContacto>();
 
+    public virtual ICollection<ClientesEstablecimientosTercero> ClientesEstablecimientosTerceros { get; set; } = new List<ClientesEstablecimientosTercero>();
+
     public virtual ICollection<ClientesEstablecimientosDia> ClientesEstablecimientosDia { get; set; } = new List<ClientesEstablecimientosDia>();
 
     public virtual ICollection<ClientesEstablecimientosExcepcione> ClientesEstablecimientosExcepciones { get; set; } = new List<ClientesEstablecimientosExcepcione>();

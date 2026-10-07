@@ -13,15 +13,18 @@ namespace SistemaOroAmbiental.Application.Controllers
     {
         private readonly IContratosDocumentosRepository _repo;
         private readonly IContratosRepository _contratosRepo;
+        private readonly FirmasFirmaStorage _firmasStorage;
         private readonly IWebHostEnvironment _env;
 
         public ContratosDocumentosController(
             IContratosDocumentosRepository repo,
             IContratosRepository contratosRepo,
+            FirmasFirmaStorage firmasStorage,
             IWebHostEnvironment env)
         {
             _repo = repo;
             _contratosRepo = contratosRepo;
+            _firmasStorage = firmasStorage;
             _env = env;
         }
 
@@ -45,7 +48,7 @@ namespace SistemaOroAmbiental.Application.Controllers
 
         /// <summary>Genera Word en el servidor (no bloquea el navegador).</summary>
         [HttpPost]
-        public async Task<IActionResult> Generar(int idContrato, int idTipoContrato, string formato, CancellationToken cancellationToken)
+        public async Task<IActionResult> Generar(int idContrato, int idTipoContrato, string formato, int idFirma = 0, CancellationToken cancellationToken = default)
         {
             if (idContrato <= 0)
                 return Ok(new { valor = false, mensaje = "Contrato inválido.", tipo = "validacion" });
@@ -76,6 +79,11 @@ namespace SistemaOroAmbiental.Application.Controllers
 
                 var plantillaBytes = await System.IO.File.ReadAllBytesAsync(plantillaPath, cancellationToken);
                 var docxBytes = ContratoDocxGenerator.CompletarPlantilla(plantillaBytes, campos);
+
+                byte[]? pngFirma = null;
+                if (idFirma > 0)
+                    pngFirma = _firmasStorage.LeerBytes(idFirma);
+                docxBytes = ContratoDocxFirmaInserter.Aplicar(docxBytes, pngFirma);
 
                 var pendientes = ContratoDocxGenerator.ListarEtiquetasPendientes(docxBytes);
                 if (pendientes.Count > 0)

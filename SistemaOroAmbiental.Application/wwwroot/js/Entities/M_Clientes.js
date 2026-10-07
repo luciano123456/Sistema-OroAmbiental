@@ -47,6 +47,7 @@
             this._modeloActual = null;
             this._contactosCache = [];
             this._contactoSeleccionadoId = 0;
+            this._cargarLocalidadesSeq = 0;
 
             this._camposObligatorios = ["txtNombre", "txtCuit", "cmbSucursal"];
             this._validacion = new ValidacionModalAbm({
@@ -177,7 +178,7 @@
                 allowClear: true,
                 placeholder: "Seleccionar"
             };
-            ["cmbSucursal", "cmbProvincia", "cmbProfesion", "cmbCondicionIva"].forEach(id => {
+            ["cmbSucursal", "cmbProvincia", "cmbLocalidad", "cmbProfesion", "cmbCondicionIva"].forEach(id => {
                 this.ensureSelect2(window.jQuery(this._id(id)), opts);
             });
         }
@@ -617,6 +618,7 @@
 
             if (modelo.IdSucursal) this._setFieldValue("cmbSucursal", modelo.IdSucursal, true);
             if (modelo.IdProvincia) this._setFieldValue("cmbProvincia", modelo.IdProvincia, true);
+            await this.cargarLocalidades(modelo.IdProvincia, modelo.IdLocalidad);
             if (modelo.IdProfesion) this._setFieldValue("cmbProfesion", modelo.IdProfesion, true);
             if (modelo.IdCondicionIva) this._setFieldValue("cmbCondicionIva", modelo.IdCondicionIva, true);
 
@@ -667,6 +669,7 @@
 
             this.resetSelect("cmbSucursal", phSuc);
             this.resetSelect("cmbProvincia", "Seleccionar");
+            this.resetSelect("cmbLocalidad", "Seleccionar");
             this.resetSelect("cmbProfesion", "Seleccionar");
             this.resetSelect("cmbCondicionIva", "Seleccionar");
 
@@ -713,6 +716,7 @@
                 Domicilio: this._getFieldValue("txtDomicilio"),
                 CodPostal: this._getFieldValue("txtCodPostal"),
                 IdProvincia: this._getIntOrNull("cmbProvincia"),
+                IdLocalidad: this._getIntOrNull("cmbLocalidad"),
                 IdProfesion: this._getIntOrNull("cmbProfesion"),
                 IdCondicionIva: this._getIntOrNull("cmbCondicionIva"),
                 Activo: this._id("chkActivoCliente") ? this._id("chkActivoCliente").checked : true
@@ -837,7 +841,40 @@
             }
         }
 
+        async cargarLocalidades(idProvincia, selectedId = null) {
+            const seq = ++this._cargarLocalidadesSeq;
+            const select = this._id("cmbLocalidad");
+            if (!select) return;
+
+            select.innerHTML = "";
+            select.append(new Option("Seleccionar", ""));
+
+            if (idProvincia) {
+                const data = await this._fetchJson(
+                    `/Localidades/ListaPorProvincia?idProvincia=${idProvincia}`,
+                    { headers: this._headers(false) }
+                );
+                if (seq !== this._cargarLocalidadesSeq) return;
+                (data || []).forEach(x => select.append(new Option(x.Nombre, x.Id)));
+            }
+
+            if (seq !== this._cargarLocalidadesSeq) return;
+            if (selectedId && Array.from(select.options).some(o => o.value === String(selectedId))) {
+                this._setFieldValue("cmbLocalidad", selectedId, true);
+            } else {
+                this._refreshSelect2Field("cmbLocalidad");
+            }
+        }
+
         async _onConfiguracionActualizada(detail) {
+            if (detail?.tipo === "Localidades") {
+                await this.cargarLocalidades(
+                    this._getIntOrNull("cmbProvincia"),
+                    detail.nuevoId || this._getIntOrNull("cmbLocalidad")
+                );
+                return;
+            }
+
             const cfg = this._comboPorController[detail?.tipo];
             if (!cfg) return;
 
@@ -847,6 +884,10 @@
                 this._setFieldValue(cfg.selectId, detail.nuevoId, true);
                 const el = this._id(cfg.selectId);
                 if (el) this._validacion?.onSelect2Change(el);
+            }
+
+            if (detail?.tipo === "Provincias") {
+                await this.cargarLocalidades(this._getIntOrNull("cmbProvincia"), this._getIntOrNull("cmbLocalidad"));
             }
         }
 
@@ -938,6 +979,13 @@
             if (cerrarErrorBtn) {
                 cerrarErrorBtn.removeAttribute("onclick");
                 cerrarErrorBtn.addEventListener("click", () => this.cerrarErrorCampos());
+            }
+
+            const cmbProvincia = this._id("cmbProvincia");
+            if (cmbProvincia) {
+                cmbProvincia.addEventListener("change", () => {
+                    this.cargarLocalidades(this._getIntOrNull("cmbProvincia")).catch(console.error);
+                });
             }
 
             const chkActivo = this._id("chkActivoCliente");

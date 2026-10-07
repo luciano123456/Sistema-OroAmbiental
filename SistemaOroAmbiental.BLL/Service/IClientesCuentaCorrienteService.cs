@@ -31,7 +31,9 @@ namespace SistemaOroAmbiental.BLL.Service
             DateTime fecha,
             string concepto,
             decimal importe,
-            int idUsuario);
+            int idUsuario,
+            int? idTercero = null,
+            bool esPagoTercero = false);
 
         Task<ServiceResult> RegistrarAjuste(
             int idCliente,

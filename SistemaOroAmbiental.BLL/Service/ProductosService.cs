@@ -110,7 +110,14 @@ namespace SistemaOroAmbiental.BLL.Service
             => _cascadeRepo.ObtenerDependenciasProductoAsync(id);
 
         public Task<ServiceResult> Eliminar(int id, bool cascada = false)
-            => DeleteOperationHelper.ExecuteCascadeAsync(
+        {
+            async Task<string?> NombreProducto()
+            {
+                var p = await _repo.Obtener(id);
+                return string.IsNullOrWhiteSpace(p?.Nombre) ? null : p!.Nombre.Trim();
+            }
+
+            return DeleteOperationHelper.ExecuteCascadeAsync(
                 id,
                 cascada,
                 "el producto",
@@ -120,9 +127,12 @@ namespace SistemaOroAmbiental.BLL.Service
                     () => _repo.Eliminar(id),
                     "el producto",
                     "Producto eliminado correctamente",
-                    id),
+                    id,
+                    obtenerNombre: NombreProducto),
                 "Producto y todos sus registros asociados fueron eliminados correctamente.",
-                "Error inesperado al eliminar el producto en cascada.");
+                "Error inesperado al eliminar el producto en cascada.",
+                NombreProducto);
+        }
 
         public Task<Producto?> Obtener(int id)
             => _repo.Obtener(id);

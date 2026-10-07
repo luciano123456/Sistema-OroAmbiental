@@ -14,8 +14,10 @@ namespace SistemaOroAmbiental.BLL.Common
             Func<Task> eliminarEnCascada,
             Func<Task<ServiceResult>> eliminarSimple,
             string mensajeExitoCascada,
-            string mensajeErrorCascada)
+            string mensajeErrorCascada,
+            Func<Task<string?>>? obtenerNombre = null)
         {
+            var nombreEntidad = obtenerNombre == null ? null : await obtenerNombre();
             var deps = await obtenerDeps();
 
             if (deps.TieneDependencias && !cascada)
@@ -43,7 +45,8 @@ namespace SistemaOroAmbiental.BLL.Common
                         entidad,
                         id,
                         EliminacionLogAmbient.TipoDesdeDeps(deps),
-                        deps);
+                        deps,
+                        nombreEntidad);
                     return ServiceResult.Success(mensajeExitoCascada);
                 }
                 catch (InvalidOperationException ex)
@@ -69,7 +72,8 @@ namespace SistemaOroAmbiental.BLL.Common
             string entidad,
             string mensajeExito,
             int? idReferencia = null,
-            Func<Task<string?>>? preCheck = null)
+            Func<Task<string?>>? preCheck = null,
+            Func<Task<string?>>? obtenerNombre = null)
         {
             try
             {
@@ -80,6 +84,7 @@ namespace SistemaOroAmbiental.BLL.Common
                         return ServiceResult.Error(bloqueo, "relacion", idReferencia);
                 }
 
+                var nombreEntidad = obtenerNombre == null ? null : await obtenerNombre();
                 var ok = await delete();
                 if (!ok)
                     return ServiceResult.Error($"No se encontró {entidad}.", "validacion", idReferencia);
@@ -87,7 +92,8 @@ namespace SistemaOroAmbiental.BLL.Common
                 await EliminacionLogAmbient.TryRegistrarAsync(
                     entidad,
                     idReferencia,
-                    EliminacionLog.TipoSimple);
+                    EliminacionLog.TipoSimple,
+                    nombreEntidad: nombreEntidad);
                 return ServiceResult.Success(mensajeExito);
             }
             catch (InvalidOperationException ex)

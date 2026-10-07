@@ -16,7 +16,7 @@ namespace SistemaOroAmbiental.DAL.Repository
 
         Task<List<ProductosPrecio>> ObtenerPorProducto(int idProducto);
 
-        Task<List<ListasPrecio>> ObtenerListasPrecios();
+        Task<List<ListasPrecio>> ObtenerListasPrecios(int idProducto);
 
         Task<bool> GuardarPorProducto(int idProducto, IEnumerable<ProductosPrecio> precios, int idUsuario);
     }

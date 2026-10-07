@@ -80,6 +80,9 @@ namespace SistemaOroAmbiental.DAL.Repository
             var cont = await _db.ClientesEstablecimientosContactos.CountAsync(x => x.IdEstablecimiento == id);
             if (cont > 0) partes.Add($"{cont} contacto(s)");
 
+            var terc = await _db.ClientesEstablecimientosTerceros.CountAsync(x => x.IdEstablecimiento == id);
+            if (terc > 0) partes.Add($"{terc} pagador(es) de terceros");
+
             return Mensaje("este establecimiento", partes);
         }
 
@@ -294,6 +297,8 @@ namespace SistemaOroAmbiental.DAL.Repository
             var partes = new List<string>();
             var est = await _db.ClientesEstablecimientos.CountAsync(x => x.IdLocalidad == id);
             if (est > 0) partes.Add($"{est} establecimiento(s)");
+            var cli = await _db.Clientes.CountAsync(x => x.IdLocalidad == id);
+            if (cli > 0) partes.Add($"{cli} cliente(s)");
             return Mensaje("esta localidad", partes);
         }
 

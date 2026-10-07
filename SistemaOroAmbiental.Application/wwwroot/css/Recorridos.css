@@ -2532,8 +2532,80 @@ body.rec-stock-open .rp-navbar-shell {
     grid-template-columns: minmax(0, 1.3fr) 7rem minmax(0, 1fr) 5.2rem 6.2rem auto auto;
 }
 
+.rec-rs-cobro-origen {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    min-width: 0;
+}
+
+.rs-cb-tercero-wrap[hidden] {
+    display: none !important;
+}
+
 .rec-rs-cobro {
-    grid-template-columns: 8.2rem minmax(0, 1fr) minmax(0, 1.1fr) 7rem auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.rec-rs-cobro-main {
+    display: grid;
+    grid-template-columns: 8.2rem minmax(0, 1fr) minmax(8.6rem, 0.95fr) minmax(0, 1.1fr) 7rem auto;
+    gap: 0.4rem;
+    align-items: end;
+}
+
+.rec-rs-origen-field,
+.rec-rs-cobro-pagador {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    min-width: 0;
+}
+
+.rec-rs-origen-field > span,
+.rec-rs-cobro-pagador > span {
+    font-size: 0.62rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #9fb0cc;
+}
+
+.rec-rs-cobro-pagador {
+    padding-top: 0.35rem;
+    border-top: 1px dashed rgba(148, 163, 184, 0.22);
+}
+
+.rec-rs-cobro-pagador[hidden] {
+    display: none !important;
+}
+
+.cg-origen-seg {
+    display: flex;
+    gap: 0.3rem;
+    width: 100%;
+}
+
+.cg-origen-btn {
+    flex: 1;
+    min-width: 0;
+    margin: 0;
+    padding: 0.38rem 0.4rem;
+    border-radius: 8px;
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    background: rgba(226, 232, 240, 0.12);
+    color: #cbd5e1;
+    font-size: 0.75rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.cg-origen-btn.is-on {
+    border-color: rgba(52, 211, 153, 0.7);
+    background: rgba(16, 185, 129, 0.22);
+    color: #d1fae5;
 }
 
 .rec-rs-ctrl {
@@ -2640,7 +2712,7 @@ body.rec-stock-open .rp-navbar-shell {
     .rec-stock-add,
     .rec-stock-row,
     .rec-rs-line,
-    .rec-rs-cobro {
+    .rec-rs-cobro-main {
         grid-template-columns: 1fr 1fr;
     }
 

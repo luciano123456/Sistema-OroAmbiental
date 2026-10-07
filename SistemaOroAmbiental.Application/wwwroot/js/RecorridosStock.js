@@ -15,6 +15,7 @@ const RS = {
     catalogo: [],
     listas: [],
     cuentas: [],
+    terceros: [],
     sugeridos: [],
     stock: [],
     productosRuta: [],
@@ -301,6 +302,13 @@ async function cargarPanelStockRecorrido() {
         RS.catalogo = Array.isArray(catalogo) ? catalogo : [];
         RS.listas = Array.isArray(listas) ? listas : (typeof listasPreciosRec !== "undefined" ? listasPreciosRec : []);
         RS.cuentas = Array.isArray(cuentas) ? cuentas : [];
+        RS.terceros = [];
+        if (RS.idEst > 0) {
+            try {
+                const terc = await rsAuthFetch(`/ClientesEstablecimientosTerceros/ListaPorEstablecimiento?idEstablecimiento=${RS.idEst}&soloActivos=true`);
+                RS.terceros = Array.isArray(terc) ? terc : [];
+            } catch { RS.terceros = []; }
+        }
         RS.stock = Array.isArray(stock) ? stock : [];
         RS.control = (control?.Filas || []).find(f => Number(f.Mes) === RS.mes && Number(f.Anio || RS.anio) === RS.anio) || control?.Filas?.[0] || {};
         RS.sugeridos = Array.isArray(sugeridos) ? sugeridos : [];
@@ -399,6 +407,8 @@ function rsMapCobro(c) {
         IdMovimientoCc: Number(c.IdMovimientoCc || c.idMovimientoCc) || 0,
         Fecha: rsIso(c.Fecha || c.fecha),
         IdCuenta: Number(c.IdCuenta || c.idCuenta) || 0,
+        EsPagoTercero: rsEsPagoTercero(c),
+        IdTercero: Number(c.IdTercero || c.idTercero) || 0,
         Concepto: c.Concepto || c.concepto || "Cobro visita",
         Importe: Number(c.Importe || c.importe) || 0
     };
@@ -446,6 +456,26 @@ function rsOptsListas(sel) {
             return `<option value="${id}" ${Number(sel) === Number(id) ? "selected" : ""}>${rsEsc(l.Nombre || l.nombre)}</option>`;
         })
     ).join("");
+}
+
+function rsOptsTerceros(sel) {
+    return [`<option value="">Seleccionar pagador</option>`].concat(
+        (RS.terceros || []).map(t => {
+            const id = t.Id || t.id;
+            const extra = [t.Cuit, t.Banco].filter(Boolean).join(" · ");
+            const lab = `${t.Nombre || "Pagador"}${extra ? ` (${extra})` : ""}`;
+            return `<option value="${id}" ${Number(sel) === Number(id) ? "selected" : ""}>${rsEsc(lab)}</option>`;
+        })
+    ).join("");
+}
+
+function rsEsPagoTercero(c) {
+    return c?.EsPagoTercero === true || c?.esPagoTercero === true || Number(c?.IdTercero || c?.idTercero) > 0;
+}
+
+function rsOptsOrigen(esTercero) {
+    return `<option value="cliente"${esTercero ? "" : " selected"}>Cliente</option>`
+        + `<option value="tercero"${esTercero ? " selected" : ""}>Pago de terceros</option>`;
 }
 
 function rsOptsCuentas(sel) {
@@ -660,14 +690,30 @@ function renderRsLineas(ent) {
 function renderRsCobros(ent) {
     const cobros = ent?.Cobros || [];
     if (!cobros.length) return `<div class="rec-stock-empty">Sin cobros de esta visita.</div>`;
-    return cobros.map(c => `
+    return cobros.map(c => {
+        const esTerc = rsEsPagoTercero(c);
+        return `
         <div class="rec-rs-cobro" data-key="${c._key}">
+            <div class="rec-rs-cobro-main">
             <label>Fecha<input type="date" class="form-control rs-cb-fecha" value="${rsEsc(c.Fecha || "")}"></label>
             <label>Cuenta<select class="form-control rs-cb-cuenta">${rsOptsCuentas(c.IdCuenta)}</select></label>
+            <div class="rec-rs-origen-field">
+                <span>Origen</span>
+                <div class="cg-origen-seg" role="group">
+                    <button type="button" class="cg-origen-btn${esTerc ? "" : " is-on"}" data-origen="cliente">Cliente</button>
+                    <button type="button" class="cg-origen-btn${esTerc ? " is-on" : ""}" data-origen="tercero">Terceros</button>
+                </div>
+            </div>
             <label>Concepto<input type="text" class="form-control rs-cb-concepto" value="${rsEsc(c.Concepto || "Cobro visita")}"></label>
             <label>Importe<input type="text" class="form-control Inputmiles rs-cb-imp" value="${rsMoney(c.Importe)}" inputmode="decimal"></label>
             <button type="button" class="rec-stock-iconbtn rs-cb-del" title="Quitar"><i class="fa fa-trash"></i></button>
-        </div>`).join("");
+            </div>
+            <div class="rec-rs-cobro-pagador"${esTerc ? "" : " hidden"}>
+                <span>¿Quién pagó?</span>
+                <select class="form-control rs-cb-tercero">${rsOptsTerceros(c.IdTercero)}</select>
+            </div>
+        </div>`;
+    }).join("");
 }
 
 function rsBindMiles(scope) {
@@ -703,6 +749,8 @@ function rsLeerCobrosDom() {
         if (!c) return;
         c.Fecha = $(this).find(".rs-cb-fecha").val() || c.Fecha;
         c.IdCuenta = Number($(this).find(".rs-cb-cuenta").val()) || 0;
+        c.EsPagoTercero = $(this).find(".cg-origen-btn.is-on").attr("data-origen") === "tercero";
+        c.IdTercero = c.EsPagoTercero ? (Number($(this).find(".rs-cb-tercero").val()) || 0) : 0;
         c.Concepto = ($(this).find(".rs-cb-concepto").val() || "").trim() || "Cobro visita";
         c.Importe = rsNum($(this).find(".rs-cb-imp").val());
     });
@@ -785,6 +833,10 @@ async function rsGuardarVisita() {
         errorModal("Los cobros de esta visita necesitan al menos un producto.");
         return;
     }
+    if (cobros.some(c => c.EsPagoTercero && !(Number(c.IdTercero) > 0))) {
+        errorModal("Si el origen es pago de terceros, seleccioná quién pagó. Si pagó el cliente, dejá Origen en Cliente.");
+        return;
+    }
     if (!hayProductos && idEntrega > 0) {
         errorModal("La entrega tiene que tener al menos un producto.");
         return;
@@ -830,6 +882,8 @@ async function rsGuardarVisita() {
                     IdCobro: Number(c.IdCobro) || 0,
                     IdMovimientoCc: Number(c.IdMovimientoCc) || 0,
                     IdCuenta: c.IdCuenta,
+                    EsPagoTercero: !!c.EsPagoTercero,
+                    IdTercero: c.EsPagoTercero && Number(c.IdTercero) ? Number(c.IdTercero) : null,
                     Fecha: c.Fecha || fecha,
                     Concepto: c.Concepto || "Cobro visita",
                     Importe: c.Importe
@@ -1129,6 +1183,16 @@ $(document).ready(() => {
         rsRefreshTotales();
     });
     $ov.on("input change", ".rs-ln-cant, .rs-ln-precio, .rs-ln-noret, .rs-cb-imp, .rs-cb-cuenta", rsRefreshTotales);
+    $ov.on("click", ".cg-origen-btn", function (e) {
+        e.preventDefault();
+        const $row = $(this).closest(".rec-rs-cobro");
+        const es = $(this).attr("data-origen") === "tercero";
+        $row.find(".cg-origen-btn").removeClass("is-on");
+        $(this).addClass("is-on");
+        $row.find(".rec-rs-cobro-pagador").prop("hidden", !es);
+        if (!es) $row.find(".rs-cb-tercero").val("");
+        rsLeerCobrosDom();
+    });
 
     $ov.on("click", "#btnRsAddCobro", function () {
         const ent = rsEntregaActiva();
@@ -1140,6 +1204,8 @@ $(document).ready(() => {
             IdMovimientoCc: 0,
             Fecha: $("#rsFecha").val() || rsIso(new Date()),
             IdCuenta: 0,
+            EsPagoTercero: false,
+            IdTercero: 0,
             Concepto: "Cobro visita",
             Importe: 0
         });

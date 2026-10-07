@@ -29,6 +29,8 @@ public partial class Cliente
 
     public int? IdProvincia { get; set; }
 
+    public int? IdLocalidad { get; set; }
+
     public string? CodPostal { get; set; }
 
     public int? IdCondicionIva { get; set; }
@@ -84,6 +86,8 @@ public partial class Cliente
     public virtual ClientesProfesion? IdProfesionNavigation { get; set; }
 
     public virtual Provincia? IdProvinciaNavigation { get; set; }
+
+    public virtual Localidad? IdLocalidadNavigation { get; set; }
 
     public virtual ClientesEstado? IdEstadoNavigation { get; set; }
 

@@ -255,7 +255,7 @@ $(document).ready(async () => {
     if (typeof rpBindAvisoOrdenRecorrido === "function") {
         rpBindAvisoOrdenRecorrido(avisoCr);
     }
-    $("#crPosicion").on("input change", actualizarAvisoPosicionRecorrido);
+    $(document).on("input change keyup", "#crPosicion", actualizarAvisoPosicionRecorrido);
 
     $("#crCliente").on("change", async function () {
         await cargarEstablecimientosCliente(parseInt($(this).val(), 10));
@@ -436,15 +436,19 @@ async function cargarEstablecimientosCliente(idCliente, selectedId) {
 }
 
 function aplicarOrdenRecorridoDesdeEstablecimiento() {
+    // En edicion la posicion es el lugar que se ve en la lista, no el OrdenRecorrido del establecimiento.
+    if ((parseInt($("#crId").val(), 10) || 0) > 0) return;
+
     const idEst = parseInt($("#crEstablecimiento").val(), 10);
     if (!idEst) return;
 
     const est = establecimientosClienteCache.find(x => Number(x.Id) === idEst);
-    if (est?.OrdenRecorrido != null && est.OrdenRecorrido > 0) {
-        $("#crPosicion").val(est.OrdenRecorrido);
-    } else {
-        $("#crPosicion").val(getSiguientePosicionRecorrido());
-    }
+    const siguiente = getSiguientePosicionRecorrido();
+    const orden = parseInt(est?.OrdenRecorrido, 10);
+    const pos = Number.isFinite(orden) && orden > 0
+        ? Math.max(orden, 1)
+        : siguiente;
+    $("#crPosicion").val(pos);
     actualizarAvisoPosicionRecorrido();
 }
 
@@ -1140,42 +1144,96 @@ function actualizarBarraMfSeleccion() {
     $("#btnMfSelGenerarRecorrido").prop("disabled", n === 0);
 }
 
-function getSiguientePosicionRecorrido() {
-    if (!clientesRecorridoActual.length) return 1;
-
-    const maxPos = clientesRecorridoActual.reduce((max, item) => {
-        const pos = parseInt(item.Posicion, 10);
-        return Number.isFinite(pos) && pos > max ? pos : max;
-    }, 0);
-
-    return maxPos + 1;
+function ordenarClientesRecorrido(lista) {
+    return [...(lista || [])].sort((a, b) => {
+        const pa = parseInt(a?.Posicion, 10) || 0;
+        const pb = parseInt(b?.Posicion, 10) || 0;
+        if (pa !== pb) return pa - pb;
+        return (Number(a?.Id) || 0) - (Number(b?.Id) || 0);
+    });
 }
 
-function actualizarLabelReprogramado(marcado) {
-    $("#lblCrReprogramado").text(marcado ? "Reprogramado" : "Normal");
+function getPosicionVisualCliente(item) {
+    const marcada = parseInt(item?.PosicionVisual, 10);
+    if (Number.isFinite(marcada) && marcada > 0) return marcada;
+
+    const id = Number(item?.Id) || 0;
+    if (id > 0) {
+        const idx = ordenarClientesRecorrido(clientesRecorridoActual)
+            .findIndex(x => Number(x.Id) === id);
+        if (idx >= 0) return idx + 1;
+    }
+
+    return 1;
+}
+
+function getSiguientePosicionRecorrido() {
+    const max = (clientesRecorridoActual || []).reduce((m, item) => {
+        const pos = parseInt(item?.Posicion, 10) || 0;
+        return pos > m ? pos : m;
+    }, 0);
+    return max + 1;
+}
+
+function posicionGuardadaCliente(item) {
+    const pos = parseInt(item?.Posicion ?? item?.posicion, 10);
+    return Number.isFinite(pos) && pos > 0 ? pos : 0;
 }
 
 function getClienteEnPosicion(posicion, idExcluir) {
     const pos = parseInt(posicion, 10);
     if (!Number.isFinite(pos) || pos <= 0) return null;
     const excluir = Number(idExcluir) || 0;
-    return (clientesRecorridoActual || []).find(x =>
-        parseInt(x.Posicion, 10) === pos && Number(x.Id) !== excluir
-    ) || null;
+
+    const enMemoria = (clientesRecorridoActual || []).find(x =>
+        posicionGuardadaCliente(x) === pos && (Number(x.Id) || 0) !== excluir
+    );
+    if (enMemoria) return enMemoria;
+
+    const cards = document.querySelectorAll("#listaClientesRecorrido .rec-cliente-item");
+    for (const card of cards) {
+        const id = Number(card.getAttribute("data-id")) || 0;
+        if (id === excluir) continue;
+        const badge = parseInt(card.querySelector(".rec-cliente-pos span")?.textContent, 10);
+        if (badge !== pos) continue;
+        const conocido = (clientesRecorridoActual || []).find(x => (Number(x.Id) || 0) === id);
+        if (conocido) return conocido;
+        const nombre = (card.querySelector(".rec-cliente-name")?.childNodes?.[0]?.textContent || "").trim();
+        return { Id: id, Cliente: nombre || "otro cliente", Posicion: pos };
+    }
+    return null;
+}
+
+function actualizarLabelReprogramado(marcado) {
+    $("#lblCrReprogramado").text(marcado ? "Reprogramado" : "Normal");
 }
 
 function actualizarAvisoPosicionRecorrido() {
     const root = document.getElementById("avisoOrdenRecorridoCr");
+    if (!root) return;
     const pos = parseInt($("#crPosicion").val(), 10);
     const id = parseInt($("#crId").val(), 10) || 0;
     const ocupante = getClienteEnPosicion(pos, id);
-    if (ocupante && typeof rpMostrarAvisoOrdenRecorrido === "function") {
-        rpMostrarAvisoOrdenRecorrido(root, {
-            posicion: pos,
-            nombre: ocupante.Cliente || ocupante.Establecimiento || "otro cliente"
-        });
-    } else if (typeof rpOcultarAvisoOrdenRecorrido === "function") {
+    if (ocupante) {
+        const nombre = ocupante.Cliente || ocupante.Establecimiento || "otro cliente";
+        if (typeof rpMostrarAvisoOrdenRecorrido === "function") {
+            rpMostrarAvisoOrdenRecorrido(root, { posicion: pos, nombre });
+        } else {
+            root.hidden = false;
+            root.removeAttribute("hidden");
+            const text = root.querySelector(".rp-orden-aviso-text");
+            const actions = root.querySelector(".rp-orden-aviso-actions");
+            if (text) {
+                text.textContent = `Ya tenés a ${nombre} en la ubicación ${pos}. ¿Querés reemplazarla y desplazar a todos los demás 1 ubicación?`;
+            }
+            if (actions) actions.hidden = false;
+        }
+        return;
+    }
+    if (typeof rpOcultarAvisoOrdenRecorrido === "function") {
         rpOcultarAvisoOrdenRecorrido(root);
+    } else {
+        root.hidden = true;
     }
 }
 
@@ -1188,7 +1246,8 @@ function payloadClienteRecorrido(item, extra) {
         IdCamion: activo?.idCamion,
         IdSemana: activo?.idSemana,
         IdDia: activo?.idDia,
-        Posicion: parseInt(item?.Posicion, 10) || 0,
+        Posicion: parseInt(item?.Posicion, 10) || getPosicionVisualCliente(item),
+        DesplazarSiOcupada: false,
         Activo: item?.Activo !== false,
         Reprogramado: !!item?.Reprogramado,
         Observacion: (item?.Observacion || "").trim() || null
@@ -1197,7 +1256,12 @@ function payloadClienteRecorrido(item, extra) {
 }
 
 function renderClientesRecorrido(data) {
-    clientesRecorridoActual = Array.isArray(data) ? data : [];
+    const ordenados = ordenarClientesRecorrido(Array.isArray(data) ? data : []);
+    ordenados.forEach((item) => {
+        const pos = parseInt(item.Posicion, 10) || 0;
+        item.PosicionVisual = pos > 0 ? pos : 0;
+    });
+    clientesRecorridoActual = ordenados;
     const $lista = $("#listaClientesRecorrido");
     $lista.empty();
 
@@ -1211,7 +1275,7 @@ function renderClientesRecorrido(data) {
         return;
     }
 
-    if (!Array.isArray(data) || !data.length) {
+    if (!ordenados.length) {
         $lista.html(`
             <div class="rec-empty" id="recEmptyClientes">
                 <i class="fa fa-users"></i>
@@ -1222,7 +1286,7 @@ function renderClientesRecorrido(data) {
         return;
     }
 
-    const html = data.map(item => {
+    const html = ordenados.map(item => {
         const enLicencia = !!item.EnLicencia;
         const noExportar = !!item.NoExportarHoja;
         const reprogramado = !!item.Reprogramado;
@@ -1293,7 +1357,7 @@ function renderClientesRecorrido(data) {
                      data-licencia="${enLicencia ? "1" : "0"}">
                 ${checkSel}
                 <div class="rec-cliente-pos" title="Posicion en la ruta">
-                    <span>${item.Posicion}</span>
+                    <span>${item.PosicionVisual || item.Posicion}</span>
                 </div>
                 <div class="rec-cliente-main">
                     <div class="rec-cliente-name">
@@ -1355,8 +1419,8 @@ function renderClientesRecorrido(data) {
 
     $lista.html(html);
 
-    const activos = data.filter(x => x.Activo).length;
-    const suffix = `${data.length} cliente${data.length === 1 ? "" : "s"}${activos !== data.length ? ` (${activos} activos)` : ""}`;
+    const activos = ordenados.filter(x => x.Activo).length;
+    const suffix = `${ordenados.length} cliente${ordenados.length === 1 ? "" : "s"}${activos !== ordenados.length ? ` (${activos} activos)` : ""}`;
     actualizarLabelRecorridoSeleccionado(suffix);
     syncBotonesTxtPlanta();
 }
@@ -1416,9 +1480,11 @@ function htmlCuerpoProductosRec(item) {
     }
 
     const rows = productos.map(p => {
-        const opts = (listasPreciosRec || []).map(l =>
-            `<option value="${l.Id}" ${Number(l.Id) === Number(p.IdListaPrecio) ? "selected" : ""}>${escapeHtml(l.Nombre)}</option>`
-        ).join("");
+        const opts = typeof htmlOpcionesListaPrecioCatalogo === "function"
+            ? htmlOpcionesListaPrecioCatalogo(listasPreciosRec, p.IdProducto, p.IdListaPrecio, escapeHtml)
+            : (listasPreciosRec || []).map(l =>
+                `<option value="${l.Id}" ${Number(l.Id) === Number(p.IdListaPrecio) ? "selected" : ""}>${escapeHtml(l.Nombre)}</option>`
+            ).join("");
         const abrev = (p.Abreviatura || "").trim();
         const listaNombre = (p.ListaPrecio || "").trim();
         const metaLine = [abrev || "Sin abreviatura", listaNombre].filter(Boolean).join(" · ");
@@ -2546,7 +2612,7 @@ async function abrirModalClienteRecorrido(modelo) {
 
     $("#crId").val(modelo?.Id || 0);
     sel.val(idCliente ? String(idCliente) : "").trigger("change");
-    $("#crPosicion").val(esEdicion ? (modelo?.Posicion ?? 1) : getSiguientePosicionRecorrido());
+    $("#crPosicion").val(esEdicion ? (parseInt(modelo?.Posicion, 10) || getPosicionVisualCliente(modelo)) : getSiguientePosicionRecorrido());
     $("#crObservacion").val(modelo?.Observacion || "");
     $("#crActivo").prop("checked", modelo?.Activo !== false);
     $("#lblCrActivo").text(modelo?.Activo === false ? "Inactivo" : "Activo");
@@ -2556,6 +2622,10 @@ async function abrirModalClienteRecorrido(modelo) {
     $("#modalClienteRecorridoSub").text($("#lblRecorridoSeleccionado").text());
 
     await cargarEstablecimientosCliente(parseInt(idCliente, 10), modelo?.IdEstablecimiento || null);
+    if (esEdicion) {
+        $("#crPosicion").val(parseInt(modelo?.Posicion, 10) || getPosicionVisualCliente(modelo));
+    }
+    $("#crPosicion").removeAttr("max").prop("max", "");
     actualizarAvisoPosicionRecorrido();
     modalClienteRecorrido.show();
 }
@@ -2610,9 +2680,11 @@ async function guardarClienteRecorrido() {
         return;
     }
 
+    if (!Number.isFinite(payload.Posicion) || payload.Posicion < 1) payload.Posicion = 1;
+    // Si el usuario escribe 50, se guarda 50. No se recorta al siguiente libre.
+
     const ocupante = getClienteEnPosicion(payload.Posicion, payload.Id);
     const aviso = document.getElementById("avisoOrdenRecorridoCr");
-    let desplazar = true;
     if (ocupante) {
         const decision = typeof rpDecisionAvisoOrdenRecorrido === "function"
             ? rpDecisionAvisoOrdenRecorrido(aviso)
@@ -2622,9 +2694,12 @@ async function guardarClienteRecorrido() {
             errorModal("Esa posición ya está ocupada. Indicá si querés reemplazar y desplazar a los demás.");
             return;
         }
-        desplazar = decision === true;
+        if (decision === false) {
+            errorModal("No se guardó. Elegiste no desplazar a los demás.");
+            return;
+        }
     }
-    payload.DesplazarSiOcupada = desplazar;
+    payload.DesplazarSiOcupada = true;
 
     const url = id > 0 ? "/Recorridos/ActualizarClienteRecorrido" : "/Recorridos/InsertarClienteRecorrido";
     const method = id > 0 ? "PUT" : "POST";

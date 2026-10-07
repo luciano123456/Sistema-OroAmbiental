@@ -804,3 +804,69 @@
     opacity: 0.45;
     cursor: not-allowed;
 }
+
+#modalFirmaContrato {
+    z-index: 1070;
+}
+
+#modalFirmaContrato .frm-pick-label {
+    color: #c1c9df;
+    font-size: 0.88rem;
+    margin-bottom: 0.65rem;
+}
+
+#modalFirmaContrato .frm-pick-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+    max-height: 360px;
+    overflow-y: auto;
+}
+
+#modalFirmaContrato .frm-pick-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    text-align: left;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 12px;
+    padding: 8px 10px;
+    color: #e8edf7;
+    cursor: pointer;
+}
+
+#modalFirmaContrato .frm-pick-item:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+#modalFirmaContrato .frm-pick-item.is-selected {
+    border-color: rgba(139, 92, 246, 0.75);
+    box-shadow: 0 0 0 1px rgba(139, 92, 246, 0.45);
+    background: rgba(139, 92, 246, 0.12);
+}
+
+#modalFirmaContrato .frm-pick-preview {
+    flex: 0 0 140px;
+    width: 140px;
+    height: 52px;
+    background: #fff;
+    border-radius: 8px;
+    object-fit: contain;
+    padding: 4px;
+}
+
+#modalFirmaContrato .frm-pick-preview--empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #7b8494;
+    font-size: 0.75rem;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+#modalFirmaContrato .frm-pick-name {
+    font-weight: 600;
+    min-width: 0;
+}

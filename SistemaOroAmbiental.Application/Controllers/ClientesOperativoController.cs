@@ -107,12 +107,21 @@ namespace SistemaOroAmbiental.Application.Controllers
         public async Task<IActionResult> VaciarAbonosMes([FromBody] VMClienteControlMensual model)
         {
             int idUsuario = int.Parse(User.FindFirst("Id")!.Value);
+            var idsEst = (model.IdsEstablecimiento ?? new List<int>())
+                .Where(x => x > 0)
+                .Distinct()
+                .ToList();
+            if (model.IdEstablecimiento is > 0 && !idsEst.Contains(model.IdEstablecimiento.Value))
+                idsEst.Add(model.IdEstablecimiento.Value);
+
             var result = await _service.VaciarAbonosMes(
                 model.IdCliente,
                 model.Anio,
                 model.Mes,
-                model.IdEstablecimiento is > 0 ? model.IdEstablecimiento : null,
-                idUsuario);
+                idsEst,
+                idUsuario,
+                model.VaciarPlata,
+                model.EliminarEntregas);
 
             return Ok(new
             {

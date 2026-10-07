@@ -30,6 +30,15 @@ window.crearOpcionesAjaxGrillaServer = function (url, tableSelector, extraPayloa
                 if (val) filters[col.data || String(col.name || "")] = val;
             });
 
+            const extra = $(tableSelector).data("rpFiltrosExtra");
+            if (extra && typeof extra === "object") {
+                Object.keys(extra).forEach((k) => {
+                    const v = extra[k];
+                    if (v !== null && v !== undefined && String(v).trim() !== "")
+                        filters[k] = String(v);
+                });
+            }
+
             const payload = {
                 draw: d.draw,
                 start: d.start,
@@ -1442,22 +1451,36 @@ function inicializarFilaFiltrosGrilla(api, tableSelector) {
     sincronizarFilaFiltrosScrollHeadGrilla(api, tableSelector);
 }
 
+/** Indice visible de una columna. -1 si esta oculta. Igual al indice de datos si todas estan visibles. */
+function indiceCeldaFiltroGrilla(api, colIndex) {
+    if (colIndex === undefined || colIndex === null) return -1;
+    if (!api) return colIndex;
+    try {
+        const vis = api.column(colIndex).index("visible");
+        if (vis === null || vis === undefined || vis < 0) return -1;
+        return vis;
+    } catch {
+        return colIndex;
+    }
+}
+
 /** Con scrollX, asegura fila de filtros en thead principal y scroll head. */
 function sincronizarFilaFiltrosScrollHeadGrilla(api, tableSelector) {
     const $table = $(tableSelector);
     if (!$table.length) return;
 
-    const colCount = api.columns().count();
     const $wrapper = $table.closest(".dataTables_wrapper");
     const $scrollThead = $wrapper.find(".dataTables_scrollHeadInner table thead");
 
     const ensureRow = ($thead) => {
         if (!$thead.length) return null;
-        const $headerRow = $thead.find("tr").first();
+        const $headerRow = $thead.children("tr").not(".filters").first();
+        const headerCount = $headerRow.children("th,td").length;
+        const colCount = headerCount > 0 ? headerCount : api.columns().count();
         $thead.find("tr.filters").remove();
         const $row = $('<tr class="filters"></tr>');
         for (let i = 0; i < colCount; i++) {
-            const $headerCell = $headerRow.find("th").eq(i);
+            const $headerCell = $headerRow.children("th,td").eq(i);
             const cls = ($headerCell.attr("class") || "").trim();
             let extra = "";
             if (i === 0) extra = "rp-col-acciones-h";
@@ -1488,8 +1511,13 @@ function celdasFiltroGrillaTodas(tableSelector) {
 
 /** Monta el control en la fila de filtros visible (scroll head con scrollX). */
 async function montarControlFiltroTheadGrilla(tableSelector, colIndex, buildControl) {
+    const $table = tableSelector ? $(tableSelector) : $();
+    const api = $table.length && $.fn.dataTable.isDataTable($table) ? $table.DataTable() : null;
+    const celda = indiceCeldaFiltroGrilla(api, colIndex);
+    if (celda < 0) return null;
+
     const $cells = celdasFiltroGrilla(tableSelector);
-    const $cell = $cells.eq(colIndex);
+    const $cell = $cells.eq(celda);
     if (!$cell.length) return null;
 
     $cell.empty();
@@ -1515,12 +1543,16 @@ function theadFiltrosGrillaIncompleto(tableSelector, api, configs, opts = {}) {
         if (config.index === 0 || config.index === 1) continue;
         if (opts.maxColumnIndex !== null && config.index > opts.maxColumnIndex) continue;
 
-        const $cell = $cells.eq(config.index);
+        const celda = indiceCeldaFiltroGrilla(api, config.index);
+        if (celda < 0) continue;
+        const $cell = $cells.eq(celda);
         if (!celdaFiltroGrillaTieneControl($cell)) return true;
     }
 
     if (idxActivo !== undefined && idxActivo !== null && opts.includeActivo !== false) {
-        const $cell = $cells.eq(idxActivo);
+        const celdaActivo = indiceCeldaFiltroGrilla(api, idxActivo);
+        if (celdaActivo < 0) return false;
+        const $cell = $cells.eq(celdaActivo);
         if (!celdaFiltroGrillaTieneControl($cell)) return true;
     }
 
@@ -1613,7 +1645,8 @@ const RP_URL_CAMBIAR_ACTIVO = {
     Productos: "/Productos/CambiarActivo",
     Proveedores: "/Proveedores/CambiarActivo",
     Camiones: "/Camiones/CambiarActivo",
-    Choferes: "/Choferes/CambiarActivo"
+    Choferes: "/Choferes/CambiarActivo",
+    Firmas: "/Firmas/CambiarActivo"
 };
 
 /** Ultima columna: switch activo/inactivo en grillas maestras. */
@@ -1815,7 +1848,9 @@ function initPanelFiltrosPersistido(panelId, collapseId) {
 
 function tituloColumnaGrilla(api, tableSelector, colIndex) {
     const $table = $(tableSelector);
-    const title = $table.find("thead tr").first().find("th").eq(colIndex).text().trim();
+    const vis = indiceCeldaFiltroGrilla(api, colIndex);
+    const idx = vis < 0 ? colIndex : vis;
+    const title = $table.find("thead tr").not(".filters").first().find("th").eq(idx).text().trim();
     if (title) return title;
     const col = api.settings()[0].aoColumns[colIndex];
     return col?.sTitle || col?.title || `Columna ${colIndex}`;
@@ -2157,6 +2192,8 @@ function contarFiltrosActivosPanel($panel) {
         const def = $el.data("defaultModo") || "activos";
         if (val && val !== def) n++;
     });
+    const extraCount = Number($panel.data("rpExtraCount"));
+    if (Number.isFinite(extraCount) && extraCount > 0) n += extraCount;
     return n;
 }
 
@@ -2165,6 +2202,12 @@ function refrescarBadgeFiltrosPanel($panel) {
 }
 
 function limpiarPanelFiltrosGrilla($panel, api, tableSelector) {
+    if (tableSelector) {
+        $(tableSelector).trigger("rp:filtros-limpiados");
+        $(tableSelector).removeData("rpFiltrosExtra");
+        $panel.removeData("rpExtraCount");
+    }
+
     $panel.find(".rp-grid-panel-search-global").val("");
     $panel.find(".rp-grid-panel-search-id").val("");
     $panel.find(".rp-grid-panel-field").not(".rp-grid-panel-activo").each(function () {
@@ -2903,6 +2946,28 @@ function tienePermiso() {
     return true;
 }
 
+/** Listas generales (sin IdProducto) + las exclusivas del producto indicado. */
+function listasPrecioParaProducto(listas, idProducto) {
+    const id = Number(idProducto || 0);
+    return (listas || []).filter(l => {
+        const idP = Number(l.IdProducto ?? l.idProducto ?? 0);
+        return !(idP > 0) || (id > 0 && idP === id);
+    });
+}
+
+function htmlOpcionesListaPrecioCatalogo(listas, idProducto, idSeleccionado, escapeFn) {
+    const idSel = Number(idSeleccionado || 0);
+    const esc = typeof escapeFn === "function"
+        ? escapeFn
+        : (typeof escapeHtml === "function" ? escapeHtml : (t) => String(t ?? ""));
+    return listasPrecioParaProducto(listas, idProducto).map(l => {
+        const id = Number(l.Id ?? l.id ?? 0);
+        const nom = l.Nombre || l.nombre || `Lista #${id}`;
+        const sel = id === idSel ? " selected" : "";
+        return `<option value="${id}"${sel}>${esc(nom)}</option>`;
+    }).join("");
+}
+
 /* =========================================================
    ATAJOS + (alta rapida de catalogos desde modales)
    data-config-nombre, data-config-controller
@@ -3604,6 +3669,9 @@ async function prepararFiltroSucursalDataTable($select, api, columnIndex, initSe
 
     async function irAFilaGrillaServerAsync(api, tableSelector, targetId, opts) {
         try {
+            $(tableSelector).trigger("rp:filtros-limpiados");
+            $(tableSelector).removeData("rpFiltrosExtra");
+
             const payload = {
                 draw: 1,
                 start: 0,

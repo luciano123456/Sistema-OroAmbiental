@@ -1125,3 +1125,40 @@ table.fixedHeader-locked thead tr.filters {
         grid-column: span 6;
     }
 }
+
+.cobro-origen-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    min-width: 9.5rem;
+}
+
+.cobro-origen-stack .cobro-tercero[hidden] {
+    display: none !important;
+}
+
+.entregas-nuevo .cg-origen-seg {
+    display: flex;
+    gap: 0.25rem;
+    width: 100%;
+}
+
+.entregas-nuevo .cg-origen-btn {
+    flex: 1;
+    min-width: 0;
+    margin: 0;
+    padding: 0.32rem 0.35rem;
+    border-radius: 8px;
+    border: 1px solid rgba(148, 163, 184, 0.4);
+    background: rgba(226, 232, 240, 0.14);
+    color: #dbe7f7;
+    font-size: 0.72rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.entregas-nuevo .cg-origen-btn.is-on {
+    border-color: rgba(52, 211, 153, 0.7);
+    background: rgba(16, 185, 129, 0.22);
+    color: #d1fae5;
+}

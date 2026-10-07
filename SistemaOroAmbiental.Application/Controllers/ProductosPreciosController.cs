@@ -27,6 +27,8 @@ namespace SistemaOroAmbiental.Application.Controllers
                 Id = x.Id,
                 IdListaPrecio = x.IdListaPrecio,
                 ListaPrecio = x.ListaPrecio,
+                IdProductoLista = x.IdProductoLista,
+                EsGeneral = x.EsGeneral,
                 PrecioVenta = x.PrecioVenta,
                 PorcRentabilidad = x.PorcRentabilidad
             }).ToList();

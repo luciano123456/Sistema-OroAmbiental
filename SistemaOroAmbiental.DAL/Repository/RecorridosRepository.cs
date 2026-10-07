@@ -145,6 +145,7 @@ namespace SistemaOroAmbiental.DAL.Repository
                     x.IdSemana == idSemana &&
                     x.IdDia == idDia)
                 .OrderBy(x => x.Posicion)
+                .ThenBy(x => x.Id)
                 .ToListAsync();
 
             var hoy = DateTime.Today;
@@ -255,20 +256,16 @@ namespace SistemaOroAmbiental.DAL.Repository
                 if (entity == null)
                     return false;
 
-                var cambiaSlot = entity.IdCamion != model.IdCamion
-                    || entity.IdSemana != model.IdSemana
-                    || entity.IdDia != model.IdDia
-                    || entity.Posicion != model.Posicion;
-
-                if (cambiaSlot && desplazarSiOcupada)
-                    await DesplazarPosicionesSiOcupada(model, idExcluir: entity.Id);
+                var camionAnterior = entity.IdCamion;
+                var semanaAnterior = entity.IdSemana;
+                var diaAnterior = entity.IdDia;
+                var posicionAnterior = entity.Posicion;
 
                 entity.IdCliente = model.IdCliente;
                 entity.IdEstablecimiento = model.IdEstablecimiento;
                 entity.IdCamion = model.IdCamion;
                 entity.IdSemana = model.IdSemana;
                 entity.IdDia = model.IdDia;
-                entity.Posicion = model.Posicion;
                 entity.Activo = model.Activo;
                 entity.Reprogramado = model.Reprogramado;
                 entity.Observacion = string.IsNullOrWhiteSpace(model.Observacion)
@@ -276,6 +273,32 @@ namespace SistemaOroAmbiental.DAL.Repository
                     : model.Observacion.Trim();
                 entity.IdUsuarioModifica = model.IdUsuarioModifica;
                 entity.FechaUsuarioModifica = model.FechaUsuarioModifica;
+
+                var cambiaRuta = camionAnterior != entity.IdCamion
+                    || semanaAnterior != entity.IdSemana
+                    || diaAnterior != entity.IdDia;
+                var cambiaPosicion = posicionAnterior != model.Posicion || cambiaRuta;
+
+                if (cambiaRuta)
+                    await CerrarHuecoRecorrido(camionAnterior, semanaAnterior, diaAnterior, entity.Id, posicionAnterior);
+
+                if (!cambiaRuta && posicionAnterior != model.Posicion && desplazarSiOcupada)
+                {
+                    // Saca al cliente de su puesto, cierra ese hueco y lo deja en el numero pedido.
+                    // Un 37 explicito se conserva; el resto queda 1..N.
+                    await ReubicarPosicionEnRecorrido(entity, model.Posicion);
+                }
+                else if (cambiaPosicion && desplazarSiOcupada)
+                {
+                    // Cambio de dia/unidad: en la ruta nueva solo se corre si el puesto esta ocupado.
+                    await DesplazarPosicionesSiOcupada(model, idExcluir: entity.Id);
+                    entity.Posicion = model.Posicion;
+                    await AplicarOrdenEstablecimientos(new[] { entity });
+                }
+                else if (!cambiaPosicion)
+                {
+                    entity.Posicion = posicionAnterior;
+                }
 
                 await _db.SaveChangesAsync();
                 return true;
@@ -294,7 +317,12 @@ namespace SistemaOroAmbiental.DAL.Repository
                 if (entity == null)
                     return false;
 
+                var idCamion = entity.IdCamion;
+                var idSemana = entity.IdSemana;
+                var idDia = entity.IdDia;
+
                 _db.ClientesRecorridos.Remove(entity);
+                await CerrarHuecoRecorrido(idCamion, idSemana, idDia, entity.Id, entity.Posicion);
                 await _db.SaveChangesAsync();
                 return true;
             }
@@ -429,6 +457,7 @@ namespace SistemaOroAmbiental.DAL.Repository
                     r.IdSemana == idSemana &&
                     r.IdDia == idDia)
                 .OrderBy(r => r.Posicion)
+                .ThenBy(r => r.Id)
                 .ToListAsync();
 
             // Licencia: se exportan marcados; solo se omiten si el usuario los excluyó en el momento.
@@ -1193,7 +1222,10 @@ namespace SistemaOroAmbiental.DAL.Repository
                 }
 
                 if (insertados > 0)
+                {
+                    await CompactarPosicionesRecorrido(idCamion, idSemana, idDia);
                     await _db.SaveChangesAsync();
+                }
 
                 return (insertados, "");
             }
@@ -1357,7 +1389,11 @@ namespace SistemaOroAmbiental.DAL.Repository
 
                         if (orden is > 0 && actual.Posicion != posicion)
                         {
+                            var posicionAnterior = actual.Posicion;
                             actual.Posicion = posicion;
+                            // Si el destino estaba libre (ej. pasar del 8 al 37), se cierra el hueco.
+                            // Si antes se desplazo porque estaba ocupado, el hueco ya no esta vacio y no hace nada.
+                            await CerrarHuecoRecorrido(slot.IdCamion, slot.IdSemana, slot.IdDia, actual.Id, posicionAnterior);
                             cambio = true;
                         }
 
@@ -1448,7 +1484,7 @@ namespace SistemaOroAmbiental.DAL.Repository
         }
 
         /// <summary>
-        /// Si la posición destino ya está ocupada, corre +1 a ese cliente y a todos los de ahí para abajo.
+        /// Si la posicion destino ya esta ocupada, suma 1 a ese cliente y a todos los de ahi para abajo.
         /// </summary>
         private async Task DesplazarPosicionesSiOcupada(ClientesRecorrido model, int? idExcluir)
         {
@@ -1476,6 +1512,214 @@ namespace SistemaOroAmbiental.DAL.Repository
                 row.Posicion += 1;
         }
 
+        /// <summary>
+        /// Mueve la fila a <paramref name="hasta"/> y cierra el hueco que deja.
+        /// Los que siguen pegados se renumeran (el 9 pasa a ser 8). Un salto ya elegido queda:
+        /// pasar el 8 al 37 deja 1..9 y despues el 37.
+        /// </summary>
+        private async Task ReubicarPosicionEnRecorrido(ClientesRecorrido entity, int hasta)
+        {
+            if (hasta <= 0)
+                return;
+
+            var desde = entity.Posicion;
+            var rows = await CargarFilasRecorrido(entity.IdCamion, entity.IdSemana, entity.IdDia, entity.Id);
+            var movidos = new List<ClientesRecorrido>();
+
+            // Al ir hacia un numero mas alto (50), no se arrastra ese puesto ni lo que este despues.
+            var techo = hasta > desde ? hasta : (int?)null;
+            if (desde > 0 && desde != hasta)
+                movidos.AddRange(CerrarHuecoContiguo(rows, desde, techo));
+
+            if (rows.Any(r => r.Posicion == hasta))
+                movidos.AddRange(DesplazarContiguoDesde(rows, hasta));
+
+            entity.Posicion = hasta;
+            movidos.Add(entity);
+            await AplicarOrdenEstablecimientos(movidos);
+            entity.Posicion = hasta;
+        }
+
+        /// <summary>
+        /// Corre +1 solo al bloque pegado que empieza en <paramref name="desde"/>.
+        /// Si mas adelante hay un salto (37), no lo toca.
+        /// </summary>
+        private static List<ClientesRecorrido> DesplazarContiguoDesde(List<ClientesRecorrido> rows, int desde)
+        {
+            var chain = new List<ClientesRecorrido>();
+            if (desde <= 0 || rows.Count == 0)
+                return chain;
+
+            var expected = desde;
+            while (true)
+            {
+                var enPosicion = rows.Where(r => r.Posicion == expected).ToList();
+                if (enPosicion.Count == 0)
+                    break;
+
+                chain.AddRange(enPosicion);
+                expected++;
+            }
+
+            for (var i = chain.Count - 1; i >= 0; i--)
+                chain[i].Posicion += 1;
+
+            return chain;
+        }
+
+        /// <summary>
+        /// Corre hacia arriba a los que estaban pegados detras del hueco (9 pasa a 8, 10 a 9)
+        /// y se detiene en el primer salto. Asi 1..10 con el 8 movido al 37 queda 1..9 y 37.
+        /// </summary>
+        private async Task CerrarHuecoRecorrido(
+            int idCamion,
+            int idSemana,
+            int idDia,
+            int excluirId,
+            int hueco)
+        {
+            if (hueco <= 0)
+                return;
+
+            var rows = await CargarFilasRecorrido(idCamion, idSemana, idDia, excluirId);
+            var movidos = CerrarHuecoContiguo(rows, hueco);
+            await AplicarOrdenEstablecimientos(movidos);
+        }
+
+        private async Task<List<ClientesRecorrido>> CargarFilasRecorrido(
+            int idCamion,
+            int idSemana,
+            int idDia,
+            int? excluirId)
+        {
+            if (idCamion <= 0 || idSemana <= 0 || idDia <= 0)
+                return new List<ClientesRecorrido>();
+
+            var desdeDb = await _db.ClientesRecorridos
+                .Where(r => r.IdCamion == idCamion && r.IdSemana == idSemana && r.IdDia == idDia)
+                .ToListAsync();
+
+            if (excluirId is > 0)
+                desdeDb = desdeDb.Where(r => r.Id != excluirId.Value).ToList();
+
+            desdeDb = desdeDb.Where(r => _db.Entry(r).State != EntityState.Deleted).ToList();
+
+            var ids = new HashSet<int>(desdeDb.Select(r => r.Id));
+            var pendientes = _db.ClientesRecorridos.Local
+                .Where(r => _db.Entry(r).State != EntityState.Deleted)
+                .Where(r =>
+                    r.IdCamion == idCamion &&
+                    r.IdSemana == idSemana &&
+                    r.IdDia == idDia &&
+                    (r.Id <= 0 || !ids.Contains(r.Id)) &&
+                    !(excluirId is > 0 && r.Id == excluirId.Value))
+                .ToList();
+
+            return desdeDb.Concat(pendientes).ToList();
+        }
+
+        private static List<ClientesRecorrido> CerrarHuecoContiguo(
+            List<ClientesRecorrido> rows,
+            int hueco,
+            int? techoExclusivo = null)
+        {
+            var movidos = new List<ClientesRecorrido>();
+            if (hueco <= 0 || rows.Count == 0)
+                return movidos;
+
+            var cursor = hueco;
+            while (rows.All(r => r.Posicion != cursor))
+            {
+                var siguienteNumero = cursor + 1;
+                if (techoExclusivo is > 0 && siguienteNumero >= techoExclusivo.Value)
+                    break;
+
+                var siguientes = rows.Where(r => r.Posicion == siguienteNumero).ToList();
+                if (siguientes.Count == 0)
+                    break;
+
+                foreach (var row in siguientes)
+                {
+                    row.Posicion = cursor;
+                    movidos.Add(row);
+                }
+
+                cursor++;
+            }
+
+            return movidos;
+        }
+
+        private async Task AplicarOrdenEstablecimientos(IEnumerable<ClientesRecorrido> rows)
+        {
+            var pares = rows
+                .Where(r => r.IdEstablecimiento is > 0 && r.Posicion > 0)
+                .GroupBy(r => r.IdEstablecimiento!.Value)
+                .Select(g => (Id: g.Key, Posicion: g.First().Posicion))
+                .ToList();
+            if (pares.Count == 0)
+                return;
+
+            var ids = pares.Select(p => p.Id).ToList();
+            var ests = await _db.ClientesEstablecimientos
+                .Where(e => ids.Contains(e.Id))
+                .ToListAsync();
+            var map = pares.ToDictionary(p => p.Id, p => p.Posicion);
+
+            foreach (var est in ests)
+            {
+                if (map.TryGetValue(est.Id, out var pos) && est.OrdenRecorrido != pos)
+                    est.OrdenRecorrido = pos;
+            }
+        }
+
+        /// <summary>
+        /// Reescribe Posicion = 1..N segun el orden visual actual (posicion, luego id).
+        /// Incluye altas todavia no guardadas del mismo recorrido.
+        /// </summary>
+        private async Task CompactarPosicionesRecorrido(
+            int idCamion,
+            int idSemana,
+            int idDia,
+            int? excluirId = null)
+        {
+            if (idCamion <= 0 || idSemana <= 0 || idDia <= 0)
+                return;
+
+            var desdeDb = await _db.ClientesRecorridos
+                .Where(r => r.IdCamion == idCamion && r.IdSemana == idSemana && r.IdDia == idDia)
+                .ToListAsync();
+
+            if (excluirId is > 0)
+                desdeDb = desdeDb.Where(r => r.Id != excluirId.Value).ToList();
+
+            var ids = new HashSet<int>(desdeDb.Select(r => r.Id));
+            var pendientes = _db.ClientesRecorridos.Local
+                .Where(r => _db.Entry(r).State != EntityState.Deleted)
+                .Where(r =>
+                    r.IdCamion == idCamion &&
+                    r.IdSemana == idSemana &&
+                    r.IdDia == idDia &&
+                    (r.Id <= 0 || !ids.Contains(r.Id)) &&
+                    !(excluirId is > 0 && r.Id == excluirId.Value))
+                .ToList();
+
+            var ordered = desdeDb
+                .Concat(pendientes)
+                .OrderBy(r => r.Posicion)
+                .ThenBy(r => r.Id)
+                .ThenBy(r => r.IdCliente)
+                .ToList();
+
+            AsignarPosicionesContiguas(ordered);
+        }
+
+        private static void AsignarPosicionesContiguas(List<ClientesRecorrido> ordered)
+        {
+            for (var i = 0; i < ordered.Count; i++)
+                ordered[i].Posicion = i + 1;
+        }
+
         private async Task<int> ResolverPosicionRecorridoAsync(
             int idCamion,
             int idSemana,
@@ -1491,11 +1735,14 @@ namespace SistemaOroAmbiental.DAL.Repository
 
             var ocupadas = await query.Select(r => r.Posicion).ToListAsync();
             var set = new HashSet<int>(ocupadas);
+            var max = ocupadas.Count == 0 ? 0 : ocupadas.Max();
 
-            if (ordenDeseado is > 0 && !set.Contains(ordenDeseado.Value))
+            // Un numero explicito y libre (por ejemplo 50 cuando el recorrido llega a 45) se respeta.
+            // No se reemplaza por max+1.
+            if (ordenDeseado is > 0 && (!set.Contains(ordenDeseado.Value) || ordenDeseado.Value > max))
                 return ordenDeseado.Value;
 
-            return (ocupadas.Count == 0 ? 0 : ocupadas.Max()) + 1;
+            return max + 1;
         }
 
         private async Task CargarProductosEnClientesRecorrido(List<ClientesRecorridoDto> list)
@@ -1702,6 +1949,7 @@ namespace SistemaOroAmbiental.DAL.Repository
                         r.IdSemana == idSemana &&
                         r.IdDia == idDia)
                     .OrderBy(r => r.Posicion)
+                    .ThenBy(r => r.Id)
                     .ToListAsync();
 
                 if (excluir != null)
@@ -1844,6 +2092,7 @@ namespace SistemaOroAmbiental.DAL.Repository
                         r.IdSemana == idSemana &&
                         r.IdDia == idDia)
                     .OrderBy(r => r.Posicion)
+                    .ThenBy(r => r.Id)
                     .ToListAsync();
 
                 if (incluir != null)

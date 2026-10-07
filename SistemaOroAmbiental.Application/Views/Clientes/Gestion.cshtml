@@ -11,9 +11,9 @@
     <link href="~/css/Productora.css?v=6.2" rel="stylesheet" />
     <link href="~/css/disenopantallas.css?v=6.2" rel="stylesheet" />
     <link href="~/css/M_Generico.css?v=6.3" rel="stylesheet" />
-    <link href="~/css/ClientesGestion.css?v=22.9" rel="stylesheet" />
-    <link href="~/css/ClientesEstablecimientos.css?v=6.9" rel="stylesheet" />
-    <link href="~/css/ContratosModal.css?v=5.4" rel="stylesheet" />
+    <link href="~/css/ClientesGestion.css?v=24.0" rel="stylesheet" />
+    <link href="~/css/ClientesEstablecimientos.css?v=7.1" rel="stylesheet" />
+    <link href="~/css/ContratosModal.css?v=5.6" rel="stylesheet" />
 }
 
 <div class="cg-page">
@@ -37,12 +37,12 @@
             </span>
 
             <div class="flex-grow-1 min-w-0 cg-switcher-wrap">
-                <label class="cg-switcher-label" for="cgClienteSwitcher">Cliente</label>
+                    <label class="cg-switcher-label" for="cgClienteSwitcher">Buscar</label>
                 <div class="cg-switcher-row">
                     <button type="button" id="btnClientePrevCg" class="cg-switcher-nav" title="Cliente anterior" hidden>
                         <i class="fa fa-chevron-left"></i>
                     </button>
-                    <select id="cgClienteSwitcher" class="form-control" aria-label="Buscar y cambiar de cliente"></select>
+                    <select id="cgClienteSwitcher" class="form-control" aria-label="Buscar cliente por nombre, CUIT, establecimiento u observación"></select>
                     <button type="button" id="btnClienteNextCg" class="cg-switcher-nav" title="Cliente siguiente" hidden>
                         <i class="fa fa-chevron-right"></i>
                     </button>
@@ -208,7 +208,7 @@
                                 <input id="cgCodPostal" class="form-control" maxlength="@IntercambioTxtCampos.CodigoPostal" />
                             </div>
 
-                            <div class="col-md-10">
+                            <div class="col-md-5">
                                 <label class="form-label">Provincia</label>
                                 <div class="rp-select-plus">
                                     <select id="cgProvincia" class="form-control"></select>
@@ -221,6 +221,22 @@
                             <div class="col-md-2">
                                 <label class="form-label">Cod. provincia</label>
                                 <input id="cgCodProvincia" class="form-control" readonly placeholder="-" />
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Localidad</label>
+                                <div class="rp-select-plus">
+                                    <select id="cgLocalidad" class="form-control"></select>
+                                    <button type="button" class="rp-btn-plus" title="Agregar localidad"
+                                            data-config-nombre="Localidades" data-config-controller="Localidades"
+                                            data-config-combo-nombre="Provincias" data-config-combo-controller="Provincias"
+                                            data-config-combo-label="Provincia">
+                                        <i class="fa fa-plus"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">Cod. localidad</label>
+                                <input id="cgCodLocalidad" class="form-control" readonly placeholder="-" />
                             </div>
                         </div>
                         </div>
@@ -553,7 +569,7 @@
                                         </button>
                                     </div>
                                     <div class="cg-ws-meta-field">
-                                        <button type="button" class="cg-btn cg-btn--danger-ghost cg-btn--sm" id="btnVaciarMontosMesCg" title="Pone en cero efectivo y transferencia de este mes">
+                                        <button type="button" class="cg-btn cg-btn--danger-ghost cg-btn--sm" id="btnVaciarMontosMesCg" title="Elegí si vaciar la plata, las entregas, o las dos">
                                             <i class="fa fa-eraser"></i> Vaciar montos
                                         </button>
                                     </div>
@@ -925,6 +941,19 @@
                         <label class="form-label">Cuenta</label>
                         <select id="cgCobroCuenta" class="form-control"></select>
                     </div>
+                    <div class="col-12">
+                        <label class="form-label">Origen del pago</label>
+                        <select id="cgCobroOrigen" class="form-control ws-cobro-origen">
+                            <option value="cliente" selected>Cliente</option>
+                            <option value="tercero">Pago de terceros</option>
+                        </select>
+                    </div>
+                    <div class="col-12" id="cgCobroTerceroWrap" hidden>
+                        <label class="form-label">¿Quién pagó?</label>
+                        <select id="cgCobroTercero" class="form-control">
+                            <option value="">Seleccionar pagador</option>
+                        </select>
+                    </div>
                     <div class="col-md-6">
                         <label class="form-label">Importe</label>
                         <input type="text" id="cgCobroImporte" class="form-control Inputmiles" disabled title="Seleccioná la cuenta para cargar el importe" />
@@ -942,6 +971,111 @@
         </div>
     </div>
 </div>
+
+<div class="modal fade rp-modal" id="modalVaciarMesCg" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered cg-vaciar-dialog">
+        <div class="modal-content rp-modal-content cg-vaciar-modal">
+            <div class="cg-vaciar-head">
+                <span class="cg-vaciar-badge" aria-hidden="true"><i class="fa fa-eraser"></i></span>
+                <div class="cg-vaciar-head-txt">
+                    <div class="cg-vaciar-title">Vaciar este mes</div>
+                    <div class="cg-vaciar-sub" id="cgVaciarMesSub"></div>
+                </div>
+                <button type="button" class="btn-close rp-btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body cg-vaciar-body">
+                <p class="cg-vaciar-lead">Elegí una sola opción. No se pueden combinar.</p>
+                <div class="cg-vaciar-choices" role="radiogroup" aria-label="Qué vaciar">
+                    <label class="cg-vaciar-card" for="cgVaciarModoPlata">
+                        <input type="radio" name="cgVaciarModo" id="cgVaciarModoPlata" value="plata" checked />
+                        <span class="cg-vaciar-card-ico" aria-hidden="true"><i class="fa fa-money"></i></span>
+                        <span class="cg-vaciar-card-copy">
+                            <strong>Solo la plata</strong>
+                            <small>Efectivo, transferencia y cobros de este mes. Las entregas quedan.</small>
+                        </span>
+                        <span class="cg-vaciar-card-mark" aria-hidden="true"></span>
+                    </label>
+                    <label class="cg-vaciar-card cg-vaciar-card--danger" for="cgVaciarModoEntregas">
+                        <input type="radio" name="cgVaciarModo" id="cgVaciarModoEntregas" value="entregas" />
+                        <span class="cg-vaciar-card-ico" aria-hidden="true"><i class="fa fa-trash-o"></i></span>
+                        <span class="cg-vaciar-card-copy">
+                            <strong>Todas las entregas</strong>
+                            <small>Borra las entregas y, con ellas, toda la plata y los intereses de este mes.</small>
+                        </span>
+                        <span class="cg-vaciar-card-mark" aria-hidden="true"></span>
+                    </label>
+                </div>
+                <p class="cg-vaciar-aviso" id="cgVaciarMesAviso"></p>
+            </div>
+            <div class="modal-footer cg-vaciar-foot">
+                <button type="button" class="rp-btn rp-btn-soft" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="rp-btn rp-btn-primary" id="btnVaciarMesConfirmar">Vaciar la plata</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="cgCobroDrawerBackdrop" class="cg-cobro-drawer-backdrop" hidden></div>
+<aside id="cgCobroDrawer" class="cg-cobro-drawer" hidden aria-hidden="true">
+    <div class="cg-cobro-drawer-glow" aria-hidden="true"></div>
+    <header class="cg-cobro-drawer-head">
+        <div class="cg-cobro-drawer-badge"><i class="fa fa-money"></i></div>
+        <div class="cg-cobro-drawer-head-txt">
+            <div class="cg-cobro-drawer-title">Cobro de la entrega</div>
+            <div class="cg-cobro-drawer-sub" id="cgDrawerCobroSub">Se va a listar en esta visita</div>
+        </div>
+        <button type="button" class="cg-cobro-drawer-x" id="cgDrawerCobroCerrar" title="Cerrar" aria-label="Cerrar">
+            <i class="fa fa-times"></i>
+        </button>
+    </header>
+    <div class="cg-cobro-drawer-body">
+        <div class="cg-cobro-drawer-pair">
+            <label class="cg-cobro-field">
+                <span>Fecha</span>
+                <input type="date" id="cgDrawerCobroFecha" class="form-control" />
+            </label>
+            <label class="cg-cobro-field">
+                <span>Cuenta (caja)</span>
+                <select id="cgDrawerCobroCuenta" class="form-control"></select>
+            </label>
+        </div>
+        <label class="cg-cobro-field">
+            <span>Origen del pago</span>
+            <select id="cgDrawerCobroOrigen" class="form-control ws-cobro-origen">
+                <option value="cliente" selected>Cliente</option>
+                <option value="tercero">Pago de terceros</option>
+            </select>
+        </label>
+        <div id="cgDrawerCobroTerceroWrap" class="cg-cobro-tercero-wrap" hidden>
+            <label class="cg-cobro-field">
+                <span>¿Quién pagó?</span>
+                <select id="cgDrawerCobroTercero" class="form-control">
+                    <option value="">Seleccionar pagador</option>
+                </select>
+            </label>
+            <small id="cgDrawerCobroTerceroHint" class="cg-ws-cobro-pagador-hint" hidden>
+                No hay pagadores en este establecimiento. Cargalos en la solapa Pago de terceros.
+            </small>
+        </div>
+        <label class="cg-cobro-field">
+            <span>Concepto</span>
+            <input type="text" id="cgDrawerCobroConcepto" class="form-control" placeholder="Cobro visita" />
+        </label>
+        <label class="cg-cobro-field cg-cobro-field--money">
+            <span>Importe</span>
+            <div class="cg-cobro-money">
+                <em>$</em>
+                <input type="text" id="cgDrawerCobroImporte" class="form-control Inputmiles" inputmode="decimal" disabled placeholder="0,00" />
+            </div>
+        </label>
+    </div>
+    <footer class="cg-cobro-drawer-foot">
+        <button type="button" class="cg-btn cg-btn--ghost" id="cgDrawerCobroCancelar">Cancelar</button>
+        <button type="button" class="cg-btn cg-btn--success" id="cgDrawerCobroGuardar">
+            <i class="fa fa-check"></i> <span>Agregar cobro</span>
+        </button>
+    </footer>
+</aside>
 
 <!-- Modal cargar interés -->
 <div class="modal fade rp-modal" id="modalInteresCg" tabindex="-1">
@@ -1067,16 +1201,16 @@
     </script>
     <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-    <script src="~/js/Entities/M_ClientesEstablecimientos.js?v=7.6" asp-append-version="true"></script>
+    <script src="~/js/Entities/M_ClientesEstablecimientos.js?v=7.7" asp-append-version="true"></script>
     <script src="~/js/ClientesEstablecimientosReclamo.js?v=1.9" asp-append-version="true"></script>
-    <script src="~/js/ContratosDocumentos.js?v=5.4"></script>
-    <script src="~/js/Entities/M_Contratos.js?v=5.4"></script>
-    <script src="~/js/ClientesGestion.js?v=45.4" asp-append-version="true"></script>
+    <script src="~/js/ContratosDocumentos.js?v=5.5"></script>
+    <script src="~/js/Entities/M_Contratos.js?v=5.7"></script>
+    <script src="~/js/ClientesGestion.js?v=48.0" asp-append-version="true"></script>
     <script>
         /* Guardia inline: corre aunque el .js esté cacheado viejo */
         (function () {
-            window.__OA_CG_BUILD = "inline-guard-v23-20260806";
-            console.info("[OA] ClientesGestion guard v23", window.__OA_CG_BUILD);
+            window.__OA_CG_BUILD = "inline-guard-v24-20261006";
+            console.info("[OA] ClientesGestion guard v24", window.__OA_CG_BUILD);
 
             function parseNum(v) {
                 if (v == null || v === "") return 0;
@@ -1114,16 +1248,26 @@
                 imp.title = ok ? "" : "Seleccioná la cuenta para cargar el importe";
                 imp.classList.toggle("ws-cobro-importe--locked", !ok);
             }
+            function syncLockedImporte(impId, ctaId) {
+                const imp = document.getElementById(impId);
+                const cta = document.getElementById(ctaId);
+                if (!imp || !cta) return;
+                const ok = (parseInt(cta.value || "0", 10) || 0) > 0;
+                imp.disabled = !ok;
+                imp.readOnly = !ok;
+                if (!ok) imp.value = "";
+            }
             function syncAllImportes(root) {
                 (root || document).querySelectorAll(".cg-ws-cobro-row").forEach(syncImporteRow);
-                const modalImp = document.getElementById("cgCobroImporte");
-                const modalCta = document.getElementById("cgCobroCuenta");
-                if (modalImp && modalCta) {
-                    const ok = (parseInt(modalCta.value || "0", 10) || 0) > 0;
-                    modalImp.disabled = !ok;
-                    modalImp.readOnly = !ok;
-                    if (!ok) modalImp.value = "";
-                }
+                syncLockedImporte("cgCobroImporte", "cgCobroCuenta");
+                syncLockedImporte("cgDrawerCobroImporte", "cgDrawerCobroCuenta");
+            }
+            function cuentaForImp(imp) {
+                if (!imp) return 0;
+                if (imp.id === "cgDrawerCobroImporte") return parseInt(document.getElementById("cgDrawerCobroCuenta")?.value || "0", 10) || 0;
+                if (imp.id === "cgCobroImporte") return parseInt(document.getElementById("cgCobroCuenta")?.value || "0", 10) || 0;
+                const row = imp.closest(".cg-ws-cobro-row");
+                return Number(row?.querySelector(".ws-cobro-cuenta")?.value || 0) || 0;
             }
             function syncDups(root) {
                 const scope = root || document;
@@ -1155,7 +1299,7 @@
             }
 
             document.addEventListener("change", function (e) {
-                if (e.target?.matches?.(".ws-cobro-cuenta, #cgCobroCuenta")) {
+                if (e.target?.matches?.(".ws-cobro-cuenta, #cgCobroCuenta, #cgDrawerCobroCuenta")) {
                     const row = e.target.closest(".cg-ws-cobro-row");
                     if (row) syncImporteRow(row);
                     else syncAllImportes(document);
@@ -1163,13 +1307,9 @@
                 if (e.target?.closest?.("#cgWsLineasBody, #cgEstWsLineasBody, .cg-ws-lineas-list")) syncDups(document);
             }, true);
             document.addEventListener("input", function (e) {
-                const imp = e.target?.closest?.(".ws-cobro-importe, #cgCobroImporte");
+                const imp = e.target?.closest?.(".ws-cobro-importe, #cgCobroImporte, #cgDrawerCobroImporte");
                 if (imp) {
-                    const row = imp.closest(".cg-ws-cobro-row");
-                    const cuenta = row
-                        ? (Number(row.querySelector(".ws-cobro-cuenta")?.value || 0) || 0)
-                        : (parseInt(document.getElementById("cgCobroCuenta")?.value || "0", 10) || 0);
-                    if (cuenta <= 0) {
+                    if (cuentaForImp(imp) <= 0) {
                         imp.value = "";
                         e.stopImmediatePropagation();
                     }
@@ -1177,26 +1317,18 @@
                 if (e.target?.closest?.("#cgWsLineasBody, #cgEstWsLineasBody, .cg-ws-lineas-list")) syncDups(document);
             }, true);
             document.addEventListener("focusin", function (e) {
-                const imp = e.target?.closest?.(".ws-cobro-importe, #cgCobroImporte");
+                const imp = e.target?.closest?.(".ws-cobro-importe, #cgCobroImporte, #cgDrawerCobroImporte");
                 if (!imp) return;
-                const row = imp.closest(".cg-ws-cobro-row");
-                const cuenta = row
-                    ? (Number(row.querySelector(".ws-cobro-cuenta")?.value || 0) || 0)
-                    : (parseInt(document.getElementById("cgCobroCuenta")?.value || "0", 10) || 0);
-                if (cuenta <= 0) {
+                if (cuentaForImp(imp) <= 0) {
                     imp.blur();
                     imp.value = "";
                     e.stopImmediatePropagation();
                 }
             }, true);
             document.addEventListener("keydown", function (e) {
-                const imp = e.target?.closest?.(".ws-cobro-importe, #cgCobroImporte");
+                const imp = e.target?.closest?.(".ws-cobro-importe, #cgCobroImporte, #cgDrawerCobroImporte");
                 if (!imp) return;
-                const row = imp.closest(".cg-ws-cobro-row");
-                const cuenta = row
-                    ? (Number(row.querySelector(".ws-cobro-cuenta")?.value || 0) || 0)
-                    : (parseInt(document.getElementById("cgCobroCuenta")?.value || "0", 10) || 0);
-                if (cuenta <= 0) {
+                if (cuentaForImp(imp) <= 0) {
                     e.preventDefault();
                     e.stopImmediatePropagation();
                     imp.value = "";

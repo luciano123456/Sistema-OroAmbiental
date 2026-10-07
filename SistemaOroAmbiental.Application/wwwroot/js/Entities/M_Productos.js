@@ -23,6 +23,8 @@
                     medidas: "/UnidadesMedida/Lista",
                     preciosLista: "/ProductosPrecios/ListaPorProducto?idProducto={id}",
                     preciosGuardar: "/ProductosPrecios/GuardarPorProducto",
+                    listasInsertar: "/ListasPrecios/Insertar",
+                    tiposPago: "/TiposPago/Lista",
                     verificarDescartador: "/Productos/VerificarDescartadorHojaRuta?esChico={esChico}&esGrande={esGrande}&idExcluir={idExcluir}"
                 },
                 onSaved: null,
@@ -43,6 +45,8 @@
             this.bsModal = new bootstrap.Modal(this.modalEl);
             const histEl = document.getElementById("modalHistorialCosto");
             this.bsModalHistorial = histEl ? new bootstrap.Modal(histEl) : null;
+            const listaEl = document.getElementById("modalNuevaListaProducto");
+            this.bsModalLista = listaEl ? new bootstrap.Modal(listaEl) : null;
             this._ultimoModo = "nuevo";
             this._modeloActual = null;
 
@@ -405,7 +409,7 @@
             const btnGuardar = this._id("btnGuardar");
             if (btnGuardar) btnGuardar.classList.toggle("d-none", disabled);
 
-            this.modalEl.querySelectorAll(".rp-btn-plus, .rp-config-atajo").forEach(btn => {
+            this.modalEl.querySelectorAll(".rp-btn-plus, .rp-config-atajo, .rp-precios-add").forEach(btn => {
                 btn.disabled = disabled;
                 btn.style.display = disabled ? "none" : "";
             });
@@ -573,12 +577,6 @@
             this.inicializarSelect2Modal();
         }
 
-        _escapeHtml(text) {
-            const div = document.createElement("div");
-            div.textContent = text ?? "";
-            return div.innerHTML;
-        }
-
         async cargarPreciosPorLista(idProducto) {
             const grid = this._id("gridPreciosLista");
             const lblSinListas = this._id("lblPreciosSinListas");
@@ -599,9 +597,11 @@
 
             (data || []).forEach(row => {
                 const card = document.createElement("div");
-                card.className = "rp-precio-card";
+                const esGeneral = row.EsGeneral !== false && !(Number(row.IdProductoLista) > 0);
+                card.className = "rp-precio-card" + (esGeneral ? "" : " rp-precio-card--propia");
                 card.dataset.idLista = row.IdListaPrecio;
                 card.dataset.idPrecio = row.Id || 0;
+                card.dataset.esGeneral = esGeneral ? "1" : "0";
 
                 const precioFmt = row.PrecioVenta > 0
                     ? (typeof formatearNumero === "function" ? formatearNumero(row.PrecioVenta) : row.PrecioVenta)
@@ -612,11 +612,23 @@
                     : "";
 
                 const nombreLista = this._escapeHtml(row.ListaPrecio || "");
+                const badgeAlcance = esGeneral
+                    ? `<span class="rp-precio-card-scope">General</span>`
+                    : `<span class="rp-precio-card-scope rp-precio-card-scope--propia">Este producto</span>`;
+                const btnEliminar = esGeneral
+                    ? ""
+                    : `<button type="button" class="rp-precio-card-del" title="Quitar lista de este producto" data-id-lista="${row.IdListaPrecio}"><i class="fa fa-trash"></i></button>`;
 
                 card.innerHTML = `
                     <div class="rp-precio-card-head">
                         <span class="rp-precio-card-badge"><i class="fa fa-tag"></i></span>
-                        <span class="rp-precio-card-name">${nombreLista}</span>
+                        <div class="rp-precio-card-main">
+                            <span class="rp-precio-card-name">${nombreLista}</span>
+                            <div class="rp-precio-card-meta">
+                                ${badgeAlcance}
+                                ${btnEliminar}
+                            </div>
+                        </div>
                     </div>
                     <div class="rp-precio-card-body">
                         <div class="rp-precio-card-field">
@@ -639,7 +651,177 @@
                 inp.addEventListener("input", () => this.actualizarAlertaHojaRuta());
                 inp.addEventListener("change", () => this.actualizarAlertaHojaRuta());
             });
+            grid.querySelectorAll(".rp-precio-card-del").forEach(btn => {
+                btn.addEventListener("click", (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const idLista = parseInt(btn.getAttribute("data-id-lista") || "0", 10);
+                    if (idLista > 0) this._eliminarListaEspecifica(idLista);
+                });
+            });
             this.actualizarAlertaHojaRuta();
+        }
+
+        async abrirModalNuevaLista() {
+            if (this.isSoloLectura()) return;
+            const id = this.getId();
+            if (!(id > 0)) {
+                if (typeof errorModal === "function") {
+                    errorModal("Guardá el producto antes de crear una lista solo para este producto.");
+                }
+                return;
+            }
+            if (!this.bsModalLista) return;
+
+            const nombreProd = (this._getFieldValue("txtNombre") || "").trim();
+            const sub = document.getElementById("lblNuevaListaProductoSub");
+            if (sub) {
+                sub.textContent = nombreProd
+                    ? `Solo aplica a «${nombreProd}», no al resto del catálogo.`
+                    : "Solo aplica a este producto, no al catálogo completo.";
+            }
+
+            this._resetFormNuevaLista();
+            await this._cargarTiposPagoNuevaLista();
+            this.bsModalLista.show();
+            setTimeout(() => document.getElementById("txtNuevaListaNombre")?.focus(), 250);
+        }
+
+        _resetFormNuevaLista() {
+            const nombre = document.getElementById("txtNuevaListaNombre");
+            const precio = document.getElementById("txtNuevaListaPrecio");
+            const rent = document.getElementById("txtNuevaListaRent");
+            const hid = document.getElementById("hidNuevaListaTipoPago");
+            if (nombre) nombre.value = "";
+            if (precio) precio.value = "";
+            if (rent) rent.value = "";
+            if (hid) hid.value = "";
+            document.querySelectorAll("#gridNuevaListaTipoPago .rp-lista-prod-tipo").forEach(b => b.classList.remove("is-active"));
+        }
+
+        async _cargarTiposPagoNuevaLista() {
+            const grid = document.getElementById("gridNuevaListaTipoPago");
+            if (!grid) return;
+            grid.innerHTML = `<div class="text-muted small"><i class="fa fa-spinner fa-spin"></i> Cargando tipos de pago...</div>`;
+
+            let data = [];
+            try {
+                data = await this._fetchJson(this.options.endpoints.tiposPago, { headers: this._headers(false) }) || [];
+            } catch (e) {
+                console.error(e);
+                grid.innerHTML = `<div class="text-danger small">No se pudieron cargar los tipos de pago.</div>`;
+                return;
+            }
+
+            if (!data.length) {
+                grid.innerHTML = `<div class="text-muted small">No hay tipos de pago. Crealos en Configuraciones.</div>`;
+                return;
+            }
+
+            grid.innerHTML = data.map(t => {
+                const id = t.Id ?? t.id;
+                const nom = this._escapeHtml(t.Nombre || t.nombre || "");
+                const codigo = String(t.Codigo || t.codigo || "").toLowerCase();
+                const icon = codigo.includes("transf") ? "fa-exchange" : "fa-money";
+                return `<button type="button" class="rp-lista-prod-tipo" data-id="${id}">
+                    <i class="fa ${icon}"></i><span>${nom}</span>
+                </button>`;
+            }).join("");
+
+            grid.querySelectorAll(".rp-lista-prod-tipo").forEach(btn => {
+                btn.addEventListener("click", () => {
+                    grid.querySelectorAll(".rp-lista-prod-tipo").forEach(b => b.classList.remove("is-active"));
+                    btn.classList.add("is-active");
+                    const hid = document.getElementById("hidNuevaListaTipoPago");
+                    if (hid) hid.value = btn.getAttribute("data-id") || "";
+                });
+            });
+        }
+
+        async _guardarNuevaListaProducto() {
+            const idProducto = this.getId();
+            if (!(idProducto > 0)) return;
+
+            const nombre = (document.getElementById("txtNuevaListaNombre")?.value || "").trim();
+            const idTipo = parseInt(document.getElementById("hidNuevaListaTipoPago")?.value || "0", 10);
+            const parse = typeof parseNumero === "function"
+                ? parseNumero
+                : (v) => parseFloat(String(v || "").replace(/\./g, "").replace(",", ".")) || 0;
+            const precio = parse(document.getElementById("txtNuevaListaPrecio")?.value || "");
+            const rent = parse(document.getElementById("txtNuevaListaRent")?.value || "");
+
+            if (!nombre) {
+                if (typeof errorModal === "function") errorModal("Ingresá el nombre de la lista.");
+                document.getElementById("txtNuevaListaNombre")?.focus();
+                return;
+            }
+            if (!(idTipo > 0)) {
+                if (typeof errorModal === "function") errorModal("Elegí el tipo de pago (Efectivo o Transferencia).");
+                return;
+            }
+
+            const btn = document.getElementById("btnGuardarNuevaListaProducto");
+            if (btn) btn.disabled = true;
+
+            try {
+                const data = await this._fetchJson(this.options.endpoints.listasInsertar, {
+                    method: "POST",
+                    headers: this._headers(true),
+                    body: JSON.stringify({
+                        Nombre: nombre,
+                        IdCombo: idTipo,
+                        IdProducto: idProducto
+                    })
+                });
+
+                if (!data?.valor) {
+                    if (typeof errorModal === "function") {
+                        errorModal(data?.mensaje || "No se pudo crear la lista.");
+                    }
+                    return;
+                }
+
+                const valores = this._capturarPreciosEnEdicion();
+                const nuevoId = String(data.id || data.Id || "");
+                if (nuevoId && (precio > 0 || rent > 0)) {
+                    valores[nuevoId] = {
+                        precio: document.getElementById("txtNuevaListaPrecio")?.value || "",
+                        rent: document.getElementById("txtNuevaListaRent")?.value || ""
+                    };
+                }
+
+                await this.cargarPreciosPorLista(idProducto);
+                this._restaurarPreciosEnEdicion(valores);
+
+                if (precio > 0 || rent > 0) {
+                    await this._guardarPreciosPorLista(idProducto);
+                }
+
+                this.bsModalLista?.hide();
+                if (typeof exitoModal === "function") {
+                    exitoModal("Lista creada solo para este producto.");
+                }
+            } catch (err) {
+                console.error(err);
+                if (typeof errorModal === "function") errorModal("Error al crear la lista de precios.");
+            } finally {
+                if (btn) btn.disabled = false;
+            }
+        }
+
+        async _eliminarListaEspecifica(idLista) {
+            if (!(idLista > 0) || typeof ejecutarEliminacionEntidad !== "function") return;
+            const resultado = await ejecutarEliminacionEntidad({
+                entidadLabel: "esta lista de precios del producto",
+                urlDependencias: "/ListasPrecios/DependenciasEliminar?id=" + idLista,
+                urlEliminar: cascada => "/ListasPrecios/Eliminar?id=" + idLista + "&cascada=" + (cascada ? "true" : "false"),
+                headers: {
+                    Authorization: "Bearer " + this.options.token,
+                    "Content-Type": "application/json"
+                }
+            });
+            if (resultado.accion !== "ok") return;
+            await this.cargarPreciosPorLista(this.getId());
         }
 
         _obtenerPreciosDesdeForm() {
@@ -1211,11 +1393,41 @@
             }
 
             this._validacion?.attachEvents({ select2Namespace: "mproductos" });
+
+            const btnLista = this._id("btnAtajoListaPrecioProd");
+            if (btnLista) {
+                btnLista.addEventListener("click", (e) => {
+                    e.preventDefault();
+                    this.abrirModalNuevaLista();
+                });
+            }
+
+            const btnGuardarLista = document.getElementById("btnGuardarNuevaListaProducto");
+            if (btnGuardarLista) {
+                btnGuardarLista.addEventListener("click", () => this._guardarNuevaListaProducto());
+            }
+
+            const txtNombreLista = document.getElementById("txtNuevaListaNombre");
+            if (txtNombreLista) {
+                txtNombreLista.addEventListener("keydown", (e) => {
+                    if (e.key === "Enter") {
+                        e.preventDefault();
+                        this._guardarNuevaListaProducto();
+                    }
+                });
+            }
         }
 
         _bindModalEvents() {
             this.modalEl.addEventListener("shown.bs.modal", () => {
                 this.inicializarSelect2Modal();
+            });
+
+            const listaEl = document.getElementById("modalNuevaListaProducto");
+            listaEl?.addEventListener("hidden.bs.modal", () => {
+                if (this.modalEl.classList.contains("show")) {
+                    document.body.classList.add("modal-open");
+                }
             });
         }
     }

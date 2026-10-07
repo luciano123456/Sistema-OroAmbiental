@@ -87,7 +87,78 @@ namespace SistemaOroAmbiental.Application.Helpers
             xml = ConvertirCorchetesALlaves(xml);
             xml = UnirEtiquetasFragmentadas(xml, '{', '}');
             xml = CorregirTyposPlantilla(xml);
+            // Tab fijo en la caja de datos: evita que valores vacíos/largos desalineen la 2.ª columna.
+            xml = AlinearColumnasCajaCliente(xml);
             return xml;
+        }
+
+        /// <summary>
+        /// La caja del encabezado usa tabs por defecto (~0.5"). Con valores cortos/vacíos
+        /// o largos la 2.ª columna se corre. Fija un tab stop (~260pt) y colapsa elementos
+        /// &lt;w:tab/&gt; consecutivos a uno solo (sin borrar &lt;w:r&gt;: la plantilla anida runs).
+        /// </summary>
+        private static string AlinearColumnasCajaCliente(string xml)
+        {
+            const string tabStop =
+                "<w:tabs><w:tab w:val=\"left\" w:pos=\"5200\"/></w:tabs>";
+
+            return Regex.Replace(
+                xml,
+                @"<w:p\b[^>]*>[\s\S]*?</w:p>",
+                m =>
+                {
+                    var p = m.Value;
+                    if (!EsParrafoColumnaDerechaCaja(p))
+                        return p;
+
+                    // Colapsar tabs consecutivos (posiblemente en runs distintos) a uno solo.
+                    // No borrar <w:r> por regex amplio: la plantilla anida runs dentro de <w:t>.
+                    p = Regex.Replace(
+                        p,
+                        @"<w:tab\s*/>(?:\s*</w:r>\s*<w:r\b[^>]*>\s*(?:<w:rPr\b[^>]*>[\s\S]*?</w:rPr>\s*)?<w:tab\s*/>)+",
+                        "<w:tab/>",
+                        RegexOptions.IgnoreCase);
+                    p = AsegurarTabStopEnParrafo(p, tabStop);
+                    return p;
+                },
+                RegexOptions.IgnoreCase);
+        }
+
+        private static bool EsParrafoColumnaDerechaCaja(string paragraph)
+        {
+            return paragraph.Contains(">Localidad<", StringComparison.OrdinalIgnoreCase)
+                || paragraph.Contains(">Localidad</", StringComparison.OrdinalIgnoreCase)
+                || paragraph.Contains("{LOCALIDADCLIENTE}", StringComparison.OrdinalIgnoreCase)
+                || paragraph.Contains("{CUITCLIENTE}", StringComparison.OrdinalIgnoreCase)
+                || paragraph.Contains("{IVACLIENTE}", StringComparison.OrdinalIgnoreCase)
+                || paragraph.Contains("{EMAILCLIENTE}", StringComparison.OrdinalIgnoreCase)
+                || paragraph.Contains("Condición Fiscal", StringComparison.OrdinalIgnoreCase)
+                || paragraph.Contains("Condicion Fiscal", StringComparison.OrdinalIgnoreCase)
+                || paragraph.Contains(">E-Mail<", StringComparison.OrdinalIgnoreCase)
+                || paragraph.Contains(">E-Mail</", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static string AsegurarTabStopEnParrafo(string paragraph, string tabStopXml)
+        {
+            if (paragraph.Contains("<w:tabs", StringComparison.OrdinalIgnoreCase))
+            {
+                return Regex.Replace(
+                    paragraph,
+                    @"<w:tabs\b[^>]*>[\s\S]*?</w:tabs>",
+                    tabStopXml,
+                    RegexOptions.IgnoreCase);
+            }
+
+            const string pPrOpen = "<w:pPr>";
+            var at = paragraph.IndexOf(pPrOpen, StringComparison.OrdinalIgnoreCase);
+            if (at >= 0)
+                return paragraph.Insert(at + pPrOpen.Length, tabStopXml);
+
+            var gt = paragraph.IndexOf('>');
+            if (gt < 0)
+                return paragraph;
+
+            return paragraph.Insert(gt + 1, "<w:pPr>" + tabStopXml + "</w:pPr>");
         }
 
         private static string CorregirTyposPlantilla(string xml)

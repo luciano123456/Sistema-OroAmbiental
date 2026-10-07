@@ -550,7 +550,9 @@ namespace SistemaOroAmbiental.DAL.Repository
                         concepto,
                         cobro.Importe,
                         idUsuario,
-                        entrega.Id);
+                        entrega.Id,
+                        cobro.IdTercero,
+                        cobro.EsPagoTercero);
 
                     if (!ok)
                         throw new InvalidOperationException("No se pudo registrar un cobro de la entrega.");
@@ -728,7 +730,9 @@ namespace SistemaOroAmbiental.DAL.Repository
                     existente.IdCuenta != payload.IdCuenta ||
                     existente.Fecha.Date != fechaCobro.Date ||
                     (existente.Concepto ?? "").Trim() != concepto ||
-                    existente.Importe != payload.Importe;
+                    existente.Importe != payload.Importe ||
+                    (existente.IdTercero ?? 0) != (payload.IdTercero ?? 0) ||
+                    existente.EsPagoTercero != payload.EsPagoTercero;
 
                 if (!cambio)
                     continue;
@@ -746,7 +750,9 @@ namespace SistemaOroAmbiental.DAL.Repository
                     concepto,
                     payload.Importe,
                     idUsuario,
-                    idEntrega);
+                    idEntrega,
+                    payload.IdTercero,
+                    payload.EsPagoTercero);
 
                 if (!ok)
                     throw new InvalidOperationException("No se pudo actualizar un cobro de la entrega.");
@@ -765,7 +771,9 @@ namespace SistemaOroAmbiental.DAL.Repository
                     concepto,
                     cobro.Importe,
                     idUsuario,
-                    idEntrega);
+                    idEntrega,
+                    cobro.IdTercero,
+                    cobro.EsPagoTercero);
 
                 if (!ok)
                     throw new InvalidOperationException("No se pudo registrar un cobro de la entrega.");
@@ -827,6 +835,7 @@ namespace SistemaOroAmbiental.DAL.Repository
                 .Include(x => x.IdCuentaNavigation)
                     .ThenInclude(c => c.IdSucursalNavigation)
                 .Include(x => x.IdUsuarioRegistraNavigation)
+                .Include(x => x.IdTerceroNavigation)
                 .Where(x => x.IdEntrega == idEntrega)
                 .OrderByDescending(x => x.Fecha)
                 .ThenByDescending(x => x.Id)

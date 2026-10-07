@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using SistemaOroAmbiental.DAL.Common;
 using SistemaOroAmbiental.DAL.DataContext;
 using SistemaOroAmbiental.Models;
 
@@ -16,10 +17,17 @@ namespace SistemaOroAmbiental.DAL.Repository
         };
 
         private readonly SistemaOroAmbientalContext _db;
+        private readonly IClientesCuentaCorrienteRepository _ccRepo;
+        private readonly IClientesEntregasRepository _entregas;
 
-        public ClientesOperativoRepository(SistemaOroAmbientalContext context)
+        public ClientesOperativoRepository(
+            SistemaOroAmbientalContext context,
+            IClientesCuentaCorrienteRepository ccRepo,
+            IClientesEntregasRepository entregas)
         {
             _db = context;
+            _ccRepo = ccRepo;
+            _entregas = entregas;
         }
 
         private static bool EstadoContiene(string? nombre, string patron)
@@ -998,36 +1006,258 @@ namespace SistemaOroAmbiental.DAL.Repository
             }
         }
 
-        public async Task<bool> VaciarAbonosMes(int idCliente, int anio, int mes, int? idEstablecimiento, int idUsuario)
+        public async Task<bool> VaciarAbonosMes(int idCliente, int anio, int mes, IReadOnlyList<int>? idsEstablecimiento, int idUsuario, bool vaciarPlata, bool eliminarEntregas)
         {
+            if (!vaciarPlata && !eliminarEntregas)
+                return false;
+
             try
             {
-                var query = _db.ClientesControlMensuales
-                    .Where(x => x.IdCliente == idCliente && x.Anio == anio && x.Mes == mes);
-
-                if (idEstablecimiento is > 0)
-                    query = query.Where(x => x.IdEstablecimiento == idEstablecimiento);
-
-                var rows = await query.ToListAsync();
-                if (rows.Count == 0)
-                    return true;
-
-                var ahora = DateTime.Now;
-                foreach (var entity in rows)
-                {
-                    entity.AbonoEfectivo = 0;
-                    entity.AbonoTransferencia = 0;
-                    entity.IdUsuarioModifica = idUsuario;
-                    entity.FechaUsuarioModifica = ahora;
-                }
-
-                await _db.SaveChangesAsync();
+                await _db.ExecuteInTransactionAsync(() =>
+                    VaciarAbonosMesEnTransaccion(idCliente, anio, mes, idsEstablecimiento, idUsuario, vaciarPlata, eliminarEntregas));
                 return true;
             }
             catch
             {
                 return false;
             }
+        }
+
+        private async Task VaciarAbonosMesEnTransaccion(
+            int idCliente,
+            int anio,
+            int mes,
+            IReadOnlyList<int>? idsEstablecimiento,
+            int idUsuario,
+            bool vaciarPlata,
+            bool eliminarEntregas)
+        {
+            var idsEst = (idsEstablecimiento ?? Array.Empty<int>())
+                .Where(x => x > 0)
+                .Distinct()
+                .ToList();
+            var filtrarEst = idsEst.Count > 0;
+            if (eliminarEntregas)
+                vaciarPlata = true;
+
+            if (eliminarEntregas)
+                await EliminarEntregasDelMes(idCliente, anio, mes, filtrarEst ? idsEst : null);
+
+            await PonerAbonosEnCero(
+                idCliente,
+                anio,
+                mes,
+                filtrarEst ? idsEst : null,
+                idUsuario,
+                incluirTodosLosEstablecimientos: eliminarEntregas && !filtrarEst);
+
+            if (vaciarPlata)
+                await QuitarCobrosDelMes(idCliente, anio, mes, filtrarEst ? idsEst : null);
+
+            if (eliminarEntregas)
+                await QuitarInteresesDelMes(idCliente, anio, mes, filtrarEst ? idsEst : null);
+        }
+
+        private async Task EliminarEntregasDelMes(int idCliente, int anio, int mes, List<int>? idsEst)
+        {
+            var inicio = new DateTime(anio, mes, 1);
+            var fin = inicio.AddMonths(1);
+
+            var query = _db.ClientesEntregas
+                .AsNoTracking()
+                .Where(e => e.IdCliente == idCliente && e.Fecha >= inicio && e.Fecha < fin);
+
+            if (idsEst is { Count: > 0 })
+            {
+                query = query.Where(e =>
+                    idsEst.Contains(e.IdEstablecimiento)
+                    || (e.IdEstablecimiento <= 0
+                        && e.IdContratoNavigation != null
+                        && idsEst.Contains(e.IdContratoNavigation.IdEstablecimiento)));
+            }
+
+            var ids = await query.Select(e => e.Id).ToListAsync();
+            foreach (var id in ids)
+            {
+                if (!await _entregas.EliminarSinTransaccion(id))
+                    throw new InvalidOperationException($"No se pudo eliminar la entrega #{id}.");
+            }
+        }
+
+        private async Task QuitarInteresesDelMes(int idCliente, int anio, int mes, List<int>? idsEst)
+        {
+            var ccId = await _db.ClientesCuentaCorrientes
+                .AsNoTracking()
+                .Where(x => x.IdCliente == idCliente)
+                .Select(x => (int?)x.Id)
+                .FirstOrDefaultAsync();
+            if (ccId is not > 0)
+                return;
+
+            var movs = await _db.ClientesCuentaCorrienteMovimientos
+                .AsNoTracking()
+                .Where(m =>
+                    m.IdCuentaCorriente == ccId &&
+                    m.TipoMovimiento == ClientesCuentaCorrienteRepository.TIPO_INTERES_CLIENTE)
+                .ToListAsync();
+
+            var ids = new List<int>();
+            foreach (var mov in movs)
+            {
+                var (anioRef, mesRef) = ResolverPeriodoInteres(mov);
+                if (anioRef != anio || mesRef != mes)
+                    continue;
+
+                var idEst = ResolverEstablecimientoInteres(mov.Concepto);
+                if (idsEst is { Count: > 0 })
+                {
+                    if (idEst is > 0 && idsEst.Contains(idEst.Value))
+                        ids.Add(mov.Id);
+                }
+                else
+                {
+                    ids.Add(mov.Id);
+                }
+            }
+
+            foreach (var id in ids)
+            {
+                if (!await _ccRepo.EliminarSinTransaccion(id))
+                    throw new InvalidOperationException($"No se pudo quitar el interés #{id}.");
+            }
+        }
+
+        private async Task PonerAbonosEnCero(int idCliente, int anio, int mes, List<int>? idsEst, int idUsuario, bool incluirTodosLosEstablecimientos)
+        {
+            var query = _db.ClientesControlMensuales
+                .Where(x => x.IdCliente == idCliente && x.Anio == anio && x.Mes == mes);
+
+            if (idsEst is { Count: > 0 })
+                query = query.Where(x => x.IdEstablecimiento != null && idsEst.Contains(x.IdEstablecimiento.Value));
+            else if (!incluirTodosLosEstablecimientos)
+                query = query.Where(x => x.IdEstablecimiento == null);
+
+            var rows = await query.ToListAsync();
+            if (rows.Count == 0)
+                return;
+
+            var ahora = DateTime.Now;
+            foreach (var entity in rows)
+            {
+                entity.AbonoEfectivo = 0;
+                entity.AbonoTransferencia = 0;
+                entity.IdUsuarioModifica = idUsuario;
+                entity.FechaUsuarioModifica = ahora;
+            }
+
+            await _db.SaveChangesAsync();
+        }
+
+        /// <summary>
+        /// La planilla muestra efectivo/transferencia desde los cobros del mes cuando existen.
+        /// Poner en cero solo el control mensual deja esos importes visibles.
+        /// </summary>
+        private async Task QuitarCobrosDelMes(int idCliente, int anio, int mes, List<int>? idsEst)
+        {
+            var inicio = new DateTime(anio, mes, 1);
+            var fin = inicio.AddMonths(1);
+
+            var cobrosQuery = _db.ClientesCobros
+                .AsNoTracking()
+                .Where(c => c.IdCliente == idCliente && c.Fecha >= inicio && c.Fecha < fin);
+
+            if (idsEst is { Count: > 0 })
+            {
+                var idsEntrega = await _db.ClientesEntregas
+                    .AsNoTracking()
+                    .Where(e =>
+                        e.IdCliente == idCliente &&
+                        (idsEst.Contains(e.IdEstablecimiento)
+                         || (e.IdEstablecimiento <= 0
+                             && e.IdContratoNavigation != null
+                             && idsEst.Contains(e.IdContratoNavigation.IdEstablecimiento))))
+                    .Select(e => e.Id)
+                    .ToListAsync();
+
+                if (idsEntrega.Count == 0)
+                    return;
+
+                cobrosQuery = cobrosQuery.Where(c => c.IdEntrega != null && idsEntrega.Contains(c.IdEntrega.Value));
+            }
+
+            var cobros = await cobrosQuery
+                .Select(c => new { c.Id, c.IdEntrega })
+                .ToListAsync();
+
+            if (cobros.Count == 0)
+                return;
+
+            var idsCobro = cobros.Select(c => c.Id).ToList();
+            var movs = await _db.ClientesCuentaCorrienteMovimientos
+                .AsNoTracking()
+                .Where(m =>
+                    m.TipoMovimiento == ClientesCuentaCorrienteRepository.TIPO_COBRO_CLIENTE &&
+                    idsCobro.Contains(m.IdMovimiento))
+                .Select(m => new { m.Id, CobroId = m.IdMovimiento })
+                .ToListAsync();
+
+            foreach (var cobro in cobros)
+            {
+                var movIds = movs.Where(m => m.CobroId == cobro.Id).Select(m => m.Id).ToList();
+                if (movIds.Count == 0)
+                {
+                    await QuitarCobroSinCuentaCorriente(cobro.Id);
+                    continue;
+                }
+
+                foreach (var idMov in movIds)
+                {
+                    if (!await _ccRepo.EliminarSinTransaccion(idMov))
+                        throw new InvalidOperationException($"No se pudo quitar el cobro #{cobro.Id}.");
+                }
+            }
+
+            foreach (var idEntrega in cobros.Where(c => c.IdEntrega is > 0).Select(c => c.IdEntrega!.Value).Distinct())
+                await RecalcularAbonadoEntrega(idEntrega);
+        }
+
+        private async Task QuitarCobroSinCuentaCorriente(int idCobro)
+        {
+            var cobro = await _db.ClientesCobros.FirstOrDefaultAsync(x => x.Id == idCobro);
+            if (cobro == null)
+                return;
+
+            if (cobro.IdMovCaja.HasValue)
+            {
+                var cajaMov = await _db.CajasMovimientos
+                    .Include(x => x.IdCajaNavigation)
+                    .FirstOrDefaultAsync(x => x.Id == cobro.IdMovCaja.Value);
+
+                if (cajaMov != null)
+                {
+                    if (cajaMov.IdCajaNavigation != null)
+                        cajaMov.IdCajaNavigation.Saldo -= cajaMov.Ingreso - cajaMov.Egreso;
+                    _db.CajasMovimientos.Remove(cajaMov);
+                }
+            }
+
+            _db.ClientesCobros.Remove(cobro);
+            await _db.SaveChangesAsync();
+        }
+
+        private async Task RecalcularAbonadoEntrega(int idEntrega)
+        {
+            var entrega = await _db.ClientesEntregas.FirstOrDefaultAsync(x => x.Id == idEntrega);
+            if (entrega == null)
+                return;
+
+            var abonado = await _db.ClientesCobros
+                .Where(x => x.IdEntrega == idEntrega)
+                .SumAsync(x => (decimal?)x.Importe) ?? 0m;
+
+            entrega.ImporteAbonado = abonado;
+            entrega.Saldo = entrega.ImporteTotal - abonado;
+            await _db.SaveChangesAsync();
         }
 
         private async Task<decimal> CalcularStockUnidadesCliente(int idCliente, IReadOnlyList<int>? idsEstablecimiento = null)

@@ -44,7 +44,9 @@ namespace SistemaOroAmbiental.BLL.Service
             DateTime fecha,
             string concepto,
             decimal importe,
-            int idUsuario)
+            int idUsuario,
+            int? idTercero = null,
+            bool esPagoTercero = false)
         {
             if (idCliente <= 0)
                 return ServiceResult.Error("Debe seleccionar un cliente.", "validacion");
@@ -58,13 +60,18 @@ namespace SistemaOroAmbiental.BLL.Service
             if (importe <= 0)
                 return ServiceResult.Error("El importe debe ser mayor a cero.", "validacion");
 
+            if (esPagoTercero && !(idTercero > 0))
+                return ServiceResult.Error("Seleccioná el pagador de terceros, o cambiá el origen a Cliente.", "validacion");
+
             var ok = await _repo.RegistrarCobro(
                 idCliente,
                 idCuenta,
                 fecha,
                 concepto.Trim(),
                 importe,
-                idUsuario);
+                idUsuario,
+                idTercero,
+                esPagoTercero);
 
             return ok
                 ? ServiceResult.Success("Cobro registrado correctamente.")

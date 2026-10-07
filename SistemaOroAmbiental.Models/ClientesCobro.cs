@@ -21,6 +21,10 @@ public partial class ClientesCobro
 
     public int IdCuenta { get; set; }
 
+    public int? IdTercero { get; set; }
+
+    public bool EsPagoTercero { get; set; }
+
     public decimal Importe { get; set; }
 
     public int IdUsuarioRegistra { get; set; }
@@ -34,6 +38,8 @@ public partial class ClientesCobro
     public virtual Cliente IdClienteNavigation { get; set; } = null!;
 
     public virtual Cuenta IdCuentaNavigation { get; set; } = null!;
+
+    public virtual ClientesEstablecimientosTercero? IdTerceroNavigation { get; set; }
 
     public virtual ClientesEntrega? IdEntregaNavigation { get; set; }
 

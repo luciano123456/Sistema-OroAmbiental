@@ -12,6 +12,12 @@ public partial class ListasPrecio
     /// <summary>Tipo de pago asociado (Efectivo / Transferencia) para totales de hoja de ruta.</summary>
     public int? IdTipoPago { get; set; }
 
+    /// <summary>
+    /// Null = lista general (Configuraciones, aplica a todos los productos).
+    /// Con valor = lista exclusiva de ese producto.
+    /// </summary>
+    public int? IdProducto { get; set; }
+
     public int IdUsuarioRegistra { get; set; }
 
     public DateTime FechaUsuarioRegistra { get; set; }
@@ -27,6 +33,8 @@ public partial class ListasPrecio
     public virtual ICollection<ClientesEntregasProducto> ClientesEntregasProductos { get; set; } = new List<ClientesEntregasProducto>();
 
     public virtual ICollection<ClientesEntregasProductosRecuperado> ClientesEntregasProductosRecuperados { get; set; } = new List<ClientesEntregasProductosRecuperado>();
+
+    public virtual Producto? IdProductoNavigation { get; set; }
 
     public virtual TiposPago? IdTipoPagoNavigation { get; set; }
 

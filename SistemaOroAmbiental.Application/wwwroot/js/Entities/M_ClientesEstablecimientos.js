@@ -37,6 +37,11 @@
                     contactosInsertar: "/ClientesEstablecimientosContactos/Insertar",
                     contactosActualizar: "/ClientesEstablecimientosContactos/Actualizar",
                     contactosEliminar: "/ClientesEstablecimientosContactos/Eliminar?id={id}",
+                    tercerosLista: "/ClientesEstablecimientosTerceros/ListaPorEstablecimiento?idEstablecimiento={idEstablecimiento}",
+                    tercerosInsertar: "/ClientesEstablecimientosTerceros/Insertar",
+                    tercerosActualizar: "/ClientesEstablecimientosTerceros/Actualizar",
+                    tercerosEliminar: "/ClientesEstablecimientosTerceros/Eliminar?id={id}",
+                    tercerosAnalisis: "/ClientesEstablecimientosTerceros/Analisis?idEstablecimiento={idEstablecimiento}",
                     productosCatalogo: "/Productos/Lista?soloActivos=true",
                     productosPrecios: "/ProductosPrecios/ListaPorProducto?idProducto={idProducto}",
                     productosLista: "/ClientesEstablecimientosProductos/ListaPorEstablecimiento?idEstablecimiento={idEstablecimiento}",
@@ -70,6 +75,8 @@
             this._modeloActual = null;
             this._contactosCache = [];
             this._contactoSeleccionadoId = 0;
+            this._tercerosCache = [];
+            this._terceroSeleccionadoId = 0;
             this._productosCache = [];
             this._productoSeleccionadoId = 0;
             this._productosPrecioBound = false;
@@ -117,6 +124,7 @@
             this._bindEvents();
             this._bindModalEvents();
             this._bindContactosEvents();
+            this._bindTercerosEvents();
             this._bindProductosEvents();
             this._bindConfiguracionActualizada();
         }
@@ -321,6 +329,8 @@
             const badgeContacto = this._id("contactoEstNombre");
             const badgeProducto = this._id("productoEstNombre");
             if (badgeContacto) badgeContacto.textContent = nombre || "Nuevo";
+            const badgeTercero = this._id("terceroEstNombre");
+            if (badgeTercero) badgeTercero.textContent = nombre || "Nuevo";
             if (badgeProducto) badgeProducto.textContent = nombre || "Nuevo";
         }
 
@@ -636,6 +646,259 @@
             }
         }
 
+        prepararTercerosNuevo() {
+            this._tercerosCache = [];
+            this._terceroSeleccionadoId = 0;
+            this.limpiarFormTercero();
+            this.renderListaTerceros();
+            this.renderAnalisisTerceros([]);
+            this.habilitarSeccionTerceros(false);
+        }
+
+        habilitarSeccionTerceros(habilitar) {
+            const section = this._id("sectionTercerosEst");
+            const hint = this._id("terceroEstHint");
+            if (!section || !hint) return;
+            if (habilitar) {
+                section.classList.remove("rp-section-disabled");
+                hint.classList.add("success");
+                hint.innerHTML = `<i class="fa fa-check-circle"></i> Cargá quién transfiere o paga por este establecimiento.`;
+            } else {
+                section.classList.add("rp-section-disabled");
+                hint.classList.remove("success");
+                hint.innerHTML = `<i class="fa fa-info-circle"></i> Guardá el establecimiento para cargar quién paga por este local.`;
+            }
+            this.bloquearControlesTerceros(this.isSoloLectura() || !habilitar);
+        }
+
+        bloquearControlesTerceros(bloquear) {
+            ["txtTerceroEstNombre", "txtTerceroEstCuit", "txtTerceroEstTelefono", "txtTerceroEstEmail",
+                "txtTerceroEstBanco", "txtTerceroEstCbu", "txtTerceroEstObs", "chkTerceroEstActivo"
+            ].forEach(id => {
+                const el = this._id(id);
+                if (el) el.disabled = bloquear;
+            });
+            const btnGuardar = this._id("btnGuardarTerceroEst");
+            const btnNuevo = this._id("btnNuevoTerceroEst");
+            if (btnGuardar) btnGuardar.disabled = bloquear;
+            if (btnNuevo) btnNuevo.disabled = bloquear;
+        }
+
+        limpiarFormTercero() {
+            this._terceroSeleccionadoId = 0;
+            this._setFieldValue("txtTerceroEstId", "");
+            this._setFieldValue("txtTerceroEstNombre", "");
+            this._setFieldValue("txtTerceroEstCuit", "");
+            this._setFieldValue("txtTerceroEstTelefono", "");
+            this._setFieldValue("txtTerceroEstEmail", "");
+            this._setFieldValue("txtTerceroEstBanco", "");
+            this._setFieldValue("txtTerceroEstCbu", "");
+            this._setFieldValue("txtTerceroEstObs", "");
+            const chk = this._id("chkTerceroEstActivo");
+            if (chk) chk.checked = true;
+            const titulo = this._id("terceroEstFormTitulo");
+            if (titulo) titulo.textContent = "Nuevo pagador";
+            this._id("listaTercerosEst")?.querySelectorAll(".rp-sub-item")
+                .forEach(el => el.classList.remove("active"));
+        }
+
+        renderListaTerceros() {
+            const cont = this._id("listaTercerosEst");
+            const cant = this._id("terceroEstCantidad");
+            if (!cont) return;
+            const items = this._tercerosCache || [];
+            if (cant) cant.textContent = String(items.length);
+            if (!items.length) {
+                const idEst = this.getId();
+                cont.innerHTML = `
+                    <div class="rp-sub-empty">
+                        <i class="fa fa-exchange"></i>
+                        <p>${idEst > 0
+                            ? "No hay pagadores. Agregá uno desde el formulario."
+                            : "Guardá el establecimiento para ver pagadores."}</p>
+                    </div>`;
+                return;
+            }
+            cont.innerHTML = items.map(c => {
+                const meta = [c.Cuit, c.Banco, c.CbuAlias].filter(Boolean).join(" · ");
+                const active = c.Id === this._terceroSeleccionadoId ? " active" : "";
+                const inact = c.Activo === false ? " (inactivo)" : "";
+                return `
+                    <div class="rp-sub-item${active}" data-id="${c.Id}">
+                        <div class="rp-sub-item-avatar"><i class="fa fa-exchange"></i></div>
+                        <div class="rp-sub-item-body">
+                            <span class="rp-sub-item-title">${this._escapeHtml((c.Nombre || "") + inact)}</span>
+                            ${meta ? `<div class="rp-sub-item-meta">${this._escapeHtml(meta)}</div>` : ""}
+                        </div>
+                        <div class="rp-sub-item-actions">
+                            <button type="button" class="btn btn-sm btn-outline-danger btn-eliminar-tercero" data-id="${c.Id}" title="Eliminar">
+                                <i class="fa fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>`;
+            }).join("");
+        }
+
+        renderAnalisisTerceros(rows) {
+            const box = this._id("terceroEstAnalisis");
+            if (!box) return;
+            const list = Array.isArray(rows) ? rows : [];
+            if (!list.length) {
+                box.hidden = true;
+                box.innerHTML = "";
+                return;
+            }
+            box.hidden = false;
+            const max = Math.max(...list.map(r => Number(r.Total) || 0), 1);
+            box.innerHTML = `<div class="est-tercero-analisis-title">De dónde entró más plata</div>`
+                + list.map(r => {
+                    const pct = Number(r.Porcentaje) || 0;
+                    const w = Math.max(6, (Number(r.Total) || 0) * 100 / max);
+                    const total = Number(r.Total) || 0;
+                    const totalTxt = typeof fmtMoneyCg === "function"
+                        ? fmtMoneyCg(total)
+                        : total.toLocaleString("es-AR", { minimumFractionDigits: 2 });
+                    return `<div class="est-tercero-bar-row">
+                        <div class="est-tercero-bar-lab">
+                            <strong>${this._escapeHtml(r.Nombre || "")}</strong>
+                            <span>${r.Cantidad || 0} cobro(s) · ${this._escapeHtml(String(pct))}% · ${this._escapeHtml(totalTxt)}</span>
+                        </div>
+                        <div class="est-tercero-bar-track"><span style="width:${w}%"></span></div>
+                    </div>`;
+                }).join("");
+        }
+
+        seleccionarTercero(id) {
+            const item = (this._tercerosCache || []).find(x => x.Id === id);
+            if (!item) return;
+            this._terceroSeleccionadoId = id;
+            this._setFieldValue("txtTerceroEstId", item.Id);
+            this._setFieldValue("txtTerceroEstNombre", item.Nombre || "");
+            this._setFieldValue("txtTerceroEstCuit", item.Cuit || "");
+            this._setFieldValue("txtTerceroEstTelefono", item.Telefono || "");
+            this._setFieldValue("txtTerceroEstEmail", item.Email || "");
+            this._setFieldValue("txtTerceroEstBanco", item.Banco || "");
+            this._setFieldValue("txtTerceroEstCbu", item.CbuAlias || "");
+            this._setFieldValue("txtTerceroEstObs", item.Observaciones || "");
+            const chk = this._id("chkTerceroEstActivo");
+            if (chk) chk.checked = item.Activo !== false;
+            const titulo = this._id("terceroEstFormTitulo");
+            if (titulo) titulo.textContent = "Editar pagador";
+            this.renderListaTerceros();
+        }
+
+        nuevoTercero() {
+            if (!this.getId()) return;
+            this.limpiarFormTercero();
+        }
+
+        async cargarTerceros(idEstablecimiento) {
+            if (!idEstablecimiento || idEstablecimiento <= 0) {
+                this.prepararTercerosNuevo();
+                return;
+            }
+            try {
+                const url = this._replaceUrl(this.options.endpoints.tercerosLista, { idEstablecimiento });
+                const data = await this._fetchJson(url, { method: "GET", headers: this._headers(false) });
+                this._tercerosCache = Array.isArray(data) ? data : [];
+                this.limpiarFormTercero();
+                this.renderListaTerceros();
+                this.habilitarSeccionTerceros(true);
+                const aUrl = this._replaceUrl(this.options.endpoints.tercerosAnalisis, { idEstablecimiento });
+                const analisis = await this._fetchJson(aUrl, { method: "GET", headers: this._headers(false) });
+                this.renderAnalisisTerceros(analisis);
+            } catch (e) {
+                console.error(e);
+                this._tercerosCache = [];
+                this.renderListaTerceros();
+                this.renderAnalisisTerceros([]);
+            }
+        }
+
+        async guardarTercero() {
+            if (this.isSoloLectura()) return;
+            const idEstablecimiento = this.getId();
+            if (!idEstablecimiento) {
+                if (typeof errorModal === "function") errorModal("Guardá el establecimiento antes de agregar pagadores.");
+                return;
+            }
+            const nombre = (this._getFieldValue("txtTerceroEstNombre") || "").trim();
+            if (!nombre) {
+                if (typeof errorModal === "function") errorModal("El nombre del pagador es obligatorio.");
+                return;
+            }
+            const idTercero = this._toInt(this._getFieldValue("txtTerceroEstId")) || 0;
+            const modelo = {
+                Id: idTercero,
+                IdEstablecimiento: idEstablecimiento,
+                Nombre: nombre,
+                Cuit: this._getFieldValue("txtTerceroEstCuit") || null,
+                Telefono: this._getFieldValue("txtTerceroEstTelefono") || null,
+                Email: this._getFieldValue("txtTerceroEstEmail") || null,
+                Banco: this._getFieldValue("txtTerceroEstBanco") || null,
+                CbuAlias: this._getFieldValue("txtTerceroEstCbu") || null,
+                Observaciones: this._getFieldValue("txtTerceroEstObs") || null,
+                Activo: this._id("chkTerceroEstActivo")?.checked !== false
+            };
+            const esNuevo = !modelo.Id;
+            try {
+                const data = await this._fetchJson(
+                    esNuevo ? this.options.endpoints.tercerosInsertar : this.options.endpoints.tercerosActualizar,
+                    { method: esNuevo ? "POST" : "PUT", headers: this._headers(true), body: JSON.stringify(modelo) }
+                );
+                if (!data?.valor) {
+                    if (typeof errorModal === "function") errorModal(data?.mensaje || "No se pudo guardar el pagador.");
+                    return;
+                }
+                if (typeof exitoModal === "function") exitoModal(data.mensaje || "Pagador guardado.");
+                await this.cargarTerceros(idEstablecimiento);
+                if (esNuevo && data.id) this.seleccionarTercero(data.id);
+            } catch (e) {
+                console.error(e);
+                if (typeof errorModal === "function") errorModal("Ha ocurrido un error al guardar el pagador.");
+            }
+        }
+
+        async eliminarTercero(id) {
+            if (this.isSoloLectura()) return;
+            const confirmado = typeof confirmarModal === "function"
+                ? await confirmarModal("¿Eliminar este pagador?")
+                : window.confirm("¿Eliminar este pagador?");
+            if (!confirmado) return;
+            try {
+                const url = this._replaceUrl(this.options.endpoints.tercerosEliminar, { id });
+                const data = await this._fetchJson(url, { method: "DELETE", headers: this._headers(false) });
+                if (!data?.valor) {
+                    if (typeof errorModal === "function") errorModal(data?.mensaje || "No se pudo eliminar.");
+                    return;
+                }
+                if (typeof exitoModal === "function") exitoModal(data.mensaje || "Pagador eliminado.");
+                await this.cargarTerceros(this.getId());
+            } catch (e) {
+                console.error(e);
+                if (typeof errorModal === "function") errorModal("Ha ocurrido un error al eliminar el pagador.");
+            }
+        }
+
+        _bindTercerosEvents() {
+            const lista = this._id("listaTercerosEst");
+            if (!lista) return;
+            lista.addEventListener("click", (e) => {
+                const btnDel = e.target.closest(".btn-eliminar-tercero");
+                if (btnDel) {
+                    e.stopPropagation();
+                    const id = parseInt(btnDel.getAttribute("data-id"), 10);
+                    if (id) this.eliminarTercero(id);
+                    return;
+                }
+                const item = e.target.closest(".rp-sub-item");
+                if (item) {
+                    const id = parseInt(item.getAttribute("data-id"), 10);
+                    if (id) this.seleccionarTercero(id);
+                }
+            });
+        }
+
         // --- Productos ---
 
         prepararProductosNuevo() {
@@ -701,7 +964,7 @@
             this._setFieldValue("txtProductoEstId", "");
             this._setFieldValue("cmbProductoEst", "", true);
             this._setCantidadField("");
-            this._setFieldValue("cmbListaPrecioProdEst", "", true);
+            this._filtrarListasPrecioPorProducto(null, "");
             this._setPrecioField("");
             const titulo = this._id("productoEstFormTitulo");
             if (titulo) titulo.textContent = "Agregar producto";
@@ -794,8 +1057,8 @@
             this._omitirAutoPrecio = true;
             this._setFieldValue("txtProductoEstId", item.Id);
             this._setFieldValue("cmbProductoEst", item.IdProducto, true);
+            this._filtrarListasPrecioPorProducto(item.IdProducto, item.IdListaPrecio || "");
             this._setCantidadField(item.Cantidad);
-            this._setFieldValue("cmbListaPrecioProdEst", item.IdListaPrecio || "", true);
             this._setPrecioField(item.PrecioVenta);
             setTimeout(() => { this._omitirAutoPrecio = false; }, 0);
 
@@ -991,7 +1254,11 @@
             if (window.jQuery && !this._productosPrecioBound) {
                 this._productosPrecioBound = true;
                 const $modal = window.jQuery(this.modalEl);
-                $modal.on("change.rpEstProducto", "#cmbProductoEst, #cmbListaPrecioProdEst", () => {
+                $modal.on("change.rpEstProducto", "#cmbProductoEst", () => {
+                    this._filtrarListasPrecioPorProducto(this._getIntOrNull("cmbProductoEst"));
+                    this.aplicarPrecioDesdeLista();
+                });
+                $modal.on("change.rpEstLista", "#cmbListaPrecioProdEst", () => {
                     this.aplicarPrecioDesdeLista();
                 });
             }
@@ -1076,6 +1343,7 @@
                 this.limpiarModal();
                 this.setModalSoloLectura(false);
                 this.prepararContactosNuevo();
+                this.prepararTercerosNuevo();
                 this.prepararProductosNuevo();
 
                 await this.cargarCombos();
@@ -1255,11 +1523,13 @@
             if (modelo?.Id > 0) {
                 await Promise.all([
                     this.cargarContactos(modelo.Id),
+                    this.cargarTerceros(modelo.Id),
                     this.cargarProductos(modelo.Id)
                 ]);
                 this.setModalSoloLectura(soloLectura);
             } else {
                 this.prepararContactosNuevo();
+                this.prepararTercerosNuevo();
                 this.prepararProductosNuevo();
             }
 
@@ -1418,6 +1688,34 @@
             });
         }
 
+        async _cargarListasPrecioCache(seq) {
+            const data = await this._fetchJson(this.options.endpoints.listasPrecios, { headers: this._headers(false) });
+            if (seq !== this._cargarCombosSeq) return;
+            this._listasPreciosCache = Array.isArray(data) ? data : [];
+            this._filtrarListasPrecioPorProducto(this._getIntOrNull("cmbProductoEst"));
+        }
+
+        _filtrarListasPrecioPorProducto(idProducto, valorPreferido) {
+            const select = this._id("cmbListaPrecioProdEst");
+            if (!select) return;
+
+            const current = valorPreferido !== undefined && valorPreferido !== null
+                ? String(valorPreferido || "")
+                : (select.value || "");
+            const listas = typeof listasPrecioParaProducto === "function"
+                ? listasPrecioParaProducto(this._listasPreciosCache || [], idProducto)
+                : (this._listasPreciosCache || []);
+
+            select.innerHTML = "";
+            select.append(new Option("Seleccionar", ""));
+            listas.forEach(x => select.append(new Option(x.Nombre, x.Id)));
+            this._refreshSelect2Field("cmbListaPrecioProdEst");
+
+            if (current && Array.from(select.options).some(o => o.value === current)) {
+                this._setFieldValue("cmbListaPrecioProdEst", current, true);
+            }
+        }
+
         async _llenarComboTiposGenerador(seq) {
             await this._llenarCombo("cmbTipoGeneradorEst", this.options.endpoints.tiposGenerador, seq, "Etiqueta");
         }
@@ -1455,7 +1753,7 @@
                 this._llenarCombo("cmbSemanaEst", this.options.endpoints.semanas, seq),
                 this._llenarCombo("cmbCamionEst", this.options.endpoints.camiones, seq),
                 this._llenarCombo("cmbProductoEst", this.options.endpoints.productosCatalogo, seq),
-                this._llenarCombo("cmbListaPrecioProdEst", this.options.endpoints.listasPrecios, seq)
+                this._cargarListasPrecioCache(seq)
             ]);
 
             if (seq !== this._cargarCombosSeq) return;
@@ -1564,6 +1862,7 @@
                     this.actualizarBadgeEstablecimiento();
                     await Promise.all([
                         this.cargarContactos(data.id),
+                        this.cargarTerceros(data.id),
                         this.cargarProductos(data.id)
                     ]);
                 }
@@ -1639,6 +1938,7 @@
             if (this._id("infoModificacionEst")) this._id("infoModificacionEst").innerHTML = "";
             this._refreshAllSelect2();
             this.prepararContactosNuevo();
+            this.prepararTercerosNuevo();
             this.prepararProductosNuevo();
             this._syncIvaCardUI();
             this._syncMotivoDetalle();
@@ -2024,6 +2324,15 @@
 
     window.nuevoContactoEstablecimiento = function () {
         return window.establecimientoModal?.nuevoContacto?.();
+    };
+
+    window.guardarTerceroEstablecimiento = function () {
+        const btn = document.getElementById("btnGuardarTerceroEst");
+        return withBusy(btn, () => window.establecimientoModal?.guardarTercero?.());
+    };
+
+    window.nuevoTerceroEstablecimiento = function () {
+        return window.establecimientoModal?.nuevoTercero?.();
     };
 
     window.guardarProductoEstablecimiento = function () {

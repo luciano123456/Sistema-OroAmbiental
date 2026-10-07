@@ -41,7 +41,8 @@ const API = {
     registrarAjuste: "/ClientesCuentaCorriente/RegistrarAjuste",
     eliminar: id => `/ClientesCuentaCorriente/Eliminar?id=${id}`,
     sucursales: "/Sucursales/Lista",
-    cuentas: "/Cuentas/Lista"
+    cuentas: "/Cuentas/Lista",
+    tercerosCliente: id => `/ClientesEstablecimientosTerceros/ListaPorCliente?idCliente=${id}&soloActivos=true`
 };
 
 const columnConfig = [
@@ -121,6 +122,10 @@ function wireEventos() {
         renderClientes();
     });
     $("#btnPago").on("click", abrirModalPago);
+    $("#modalPago").on("click", ".cg-origen-btn", function (e) {
+        e.preventDefault();
+        aplicarOrigenPagoCC($(this).attr("data-origen") === "tercero");
+    });
     $("#btnAjuste").on("click", abrirModalAjuste);
 
 }
@@ -929,11 +934,40 @@ function abrirModalPago() {
     });
     const idSucPago = aplicarBloqueoSucursalUnica($("#pSucursal"), { triggerChange: false });
     cargarCuentasModalCC("#pCuenta", idSucPago || null, "#modalPago");
+    aplicarOrigenPagoCC(false);
+    cargarTercerosPagoCC(ACC.ClienteSel.Id);
 
     // TEXTO BOTON
     $("#modalPago .btn-primary").text("Registrar");
 
     $('#modalPago').modal('show');
+}
+
+async function cargarTercerosPagoCC(idCliente) {
+    const $sel = $("#pTercero");
+    if (!$sel.length) return;
+    $sel.empty().append(new Option("Seleccionar pagador", ""));
+    const id = Number(idCliente) || 0;
+    if (!(id > 0)) return;
+    try {
+        const r = await fetch(API.tercerosCliente(id), { headers: authHeaders() });
+        if (!r.ok) return;
+        const rows = await r.json();
+        (Array.isArray(rows) ? rows : []).forEach(t => {
+            const extra = [t.Cuit, t.EstablecimientoNombre].filter(Boolean).join(" · ");
+            $sel.append(new Option(`${t.Nombre || "Pagador"}${extra ? ` (${extra})` : ""}`, t.Id));
+        });
+    } catch (e) {
+        console.warn("No se pudieron cargar pagadores de terceros:", e);
+    }
+}
+
+function aplicarOrigenPagoCC(esTercero) {
+    const $modal = $("#modalPago");
+    $modal.find(".cg-origen-btn").removeClass("is-on");
+    $modal.find(`.cg-origen-btn[data-origen="${esTercero ? "tercero" : "cliente"}"]`).addClass("is-on");
+    $("#pTerceroWrap").prop("hidden", !esTercero);
+    if (!esTercero) $("#pTercero").val("");
 }
 
 function validarPago() {
@@ -947,11 +981,19 @@ async function guardarPago() {
 
     if (!validarPago()) return;
 
+    const esTercero = $("#modalPago .cg-origen-btn.is-on").attr("data-origen") === "tercero";
+    const idTercero = esTercero ? (parseInt($("#pTercero").val(), 10) || 0) : 0;
+    if (esTercero && !idTercero) {
+        return errorModal("Si el origen es pago de terceros, seleccioná quién pagó. Si pagó el cliente, dejá Origen en Cliente.");
+    }
+
     return withBusy("#btnGuardarPago", async () => {
     const modelo = {
         IdCliente: ACC.ClienteSel.Id,
         Fecha: $("#pFecha").val(),
         IdCuenta: parseInt($("#pCuenta").val(), 10),
+        EsPagoTercero: esTercero,
+        IdTercero: idTercero || null,
         Importe: leerNumCC($("#pImporte").val()),
         Concepto: $("#pConcepto").val()
     };

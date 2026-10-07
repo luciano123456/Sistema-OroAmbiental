@@ -84,6 +84,10 @@ public partial class User
 
     public virtual ICollection<ClientesEstablecimientosContacto> ClientesEstablecimientosContactoIdUsuarioRegistraNavigations { get; set; } = new List<ClientesEstablecimientosContacto>();
 
+    public virtual ICollection<ClientesEstablecimientosTercero> ClientesEstablecimientosTerceroIdUsuarioModificaNavigations { get; set; } = new List<ClientesEstablecimientosTercero>();
+
+    public virtual ICollection<ClientesEstablecimientosTercero> ClientesEstablecimientosTerceroIdUsuarioRegistraNavigations { get; set; } = new List<ClientesEstablecimientosTercero>();
+
     public virtual ICollection<ClientesEstablecimientosDia> ClientesEstablecimientosDiaIdUsuarioModificaNavigations { get; set; } = new List<ClientesEstablecimientosDia>();
 
     public virtual ICollection<ClientesEstablecimientosDia> ClientesEstablecimientosDiaIdUsuarioRegistraNavigations { get; set; } = new List<ClientesEstablecimientosDia>();

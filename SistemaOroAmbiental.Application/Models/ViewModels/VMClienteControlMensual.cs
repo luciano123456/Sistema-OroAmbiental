@@ -8,6 +8,8 @@ namespace SistemaOroAmbiental.Application.Models.ViewModels
 
         public int? IdEstablecimiento { get; set; }
 
+        public List<int>? IdsEstablecimiento { get; set; }
+
         public int Anio { get; set; }
 
         public int Mes { get; set; }
@@ -25,5 +27,9 @@ namespace SistemaOroAmbiental.Application.Models.ViewModels
         public decimal AbonoTransferencia { get; set; }
 
         public DateTime? FechaTransferencia { get; set; }
+
+        public bool VaciarPlata { get; set; }
+
+        public bool EliminarEntregas { get; set; }
     }
 }

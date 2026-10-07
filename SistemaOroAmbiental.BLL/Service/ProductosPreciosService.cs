@@ -15,7 +15,7 @@ namespace SistemaOroAmbiental.BLL.Service
 
         public async Task<IReadOnlyList<ProductoPrecioListaDto>> ObtenerMatrizPorProducto(int idProducto)
         {
-            var listas = await _repo.ObtenerListasPrecios();
+            var listas = await _repo.ObtenerListasPrecios(idProducto);
             var precios = idProducto > 0
                 ? await _repo.ObtenerPorProducto(idProducto)
                 : new List<ProductosPrecio>();
@@ -32,6 +32,8 @@ namespace SistemaOroAmbiental.BLL.Service
                     Id = precio?.Id ?? 0,
                     IdListaPrecio = lista.Id,
                     ListaPrecio = lista.Nombre,
+                    IdProductoLista = lista.IdProducto,
+                    EsGeneral = lista.IdProducto == null,
                     PrecioVenta = precio?.PrecioVenta ?? 0,
                     PorcRentabilidad = precio?.PorcRentabilidad ?? 0
                 };

@@ -25,6 +25,9 @@ namespace SistemaOroAmbiental.BLL.Service
         public string Cuenta { get; set; } = "";
         public string Sucursal { get; set; } = "";
         public string? Usuario { get; set; }
+        public int? IdTercero { get; set; }
+        public bool EsPagoTercero { get; set; }
+        public string? TerceroNombre { get; set; }
     }
 
     public interface IClientesEntregasService

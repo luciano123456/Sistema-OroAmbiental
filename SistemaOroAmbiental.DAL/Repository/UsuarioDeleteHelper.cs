@@ -25,6 +25,7 @@ namespace SistemaOroAmbiental.DAL.Repository
             ["UsuariosConexiones"] = "Sesiones de conexión",
             ["Clientes"] = "Clientes (auditoría)",
             ["ClientesEstablecimientos"] = "Establecimientos (auditoría)",
+            ["ClientesEstablecimientosTerceros"] = "Pagadores de terceros (auditoría)",
             ["ClientesEntregas"] = "Entregas (auditoría)",
             ["ClientesCobros"] = "Cobros (auditoría)",
             ["Compras"] = "Compras (auditoría)",
@@ -35,6 +36,7 @@ namespace SistemaOroAmbiental.DAL.Repository
             ["Productos"] = "Productos (auditoría)",
             ["Proveedores"] = "Proveedores (auditoría)",
             ["Choferes"] = "Choferes (auditoría)",
+            ["Firmas"] = "Firmas (auditoría)",
             ["Camiones"] = "Camiones (auditoría)",
             ["RecorridosMatriz"] = "Recorridos (auditoría)"
         };

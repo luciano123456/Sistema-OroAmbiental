@@ -135,10 +135,17 @@ namespace SistemaBronx.Application.Controllers
                 var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["JwtSettings:SecretKey"]));
                 var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
                 var jti = Guid.NewGuid().ToString();
+                var nombreCompleto = $"{user.Nombre} {user.Apellido}".Trim();
+                if (string.IsNullOrWhiteSpace(nombreCompleto))
+                    nombreCompleto = user.Usuario ?? "";
 
                 var claims = new[]
                 {
-                    new Claim(JwtRegisteredClaimNames.Sub, user.Usuario),
+                    new Claim(JwtRegisteredClaimNames.Sub, user.Usuario ?? nombreCompleto),
+                    new Claim(ClaimTypes.Name, nombreCompleto),
+                    new Claim("NombreCompleto", nombreCompleto),
+                    new Claim("Nombre", user.Nombre ?? ""),
+                    new Claim("Apellido", user.Apellido ?? ""),
                     new Claim("Id", user.Id.ToString()),
                     new Claim("UsuariosRol", user.IdRol.ToString()),
                     new Claim(JwtRegisteredClaimNames.Jti, jti)

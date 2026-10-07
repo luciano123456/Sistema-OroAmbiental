@@ -18,6 +18,7 @@ namespace SistemaOroAmbiental.DAL.Repository
         private readonly IClientesCuentaCorrienteRepository _cliCcRepo;
         private readonly IGastosRepository _gastosRepo;
         private readonly IChoferesRepository _choferesRepo;
+        private readonly IFirmasRepository _firmasRepo;
         private readonly IUsuariosRepository<User> _usuariosRepo;
 
         public EntidadCascadeRepository(
@@ -32,6 +33,7 @@ namespace SistemaOroAmbiental.DAL.Repository
             IClientesCuentaCorrienteRepository cliCcRepo,
             IGastosRepository gastosRepo,
             IChoferesRepository choferesRepo,
+            IFirmasRepository firmasRepo,
             IUsuariosRepository<User> usuariosRepo)
         {
             _db = db;
@@ -45,6 +47,7 @@ namespace SistemaOroAmbiental.DAL.Repository
             _cliCcRepo = cliCcRepo;
             _gastosRepo = gastosRepo;
             _choferesRepo = choferesRepo;
+            _firmasRepo = firmasRepo;
             _usuariosRepo = usuariosRepo;
         }
 

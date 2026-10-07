@@ -90,6 +90,8 @@ namespace SistemaOroAmbiental.DAL.Repository
                 .Include(x => x.IdClienteNavigation)
                     .ThenInclude(c => c.IdProvinciaNavigation)
                 .Include(x => x.IdClienteNavigation)
+                    .ThenInclude(c => c.IdLocalidadNavigation)
+                .Include(x => x.IdClienteNavigation)
                     .ThenInclude(c => c.IdCondicionIvaNavigation)
                 .Include(x => x.IdClienteNavigation)
                     .ThenInclude(c => c.IdProfesionNavigation)

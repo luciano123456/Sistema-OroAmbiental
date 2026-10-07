@@ -9,34 +9,97 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
     <link href="~/css/Productora.css?v=5.2" rel="stylesheet" />
     <link href="~/css/disenopantallas.css?v=8.1" rel="stylesheet" />
+    <link href="~/css/EliminacionesLog.css" rel="stylesheet" asp-append-version="true" />
 }
 
-<div class="container-fluid mt-4 ventas-index">
-    <div class="vi-header cc-header shadow-lg rounded-4 p-3 mb-3">
-        <div class="d-flex align-items-center gap-3 flex-wrap">
-            <span class="cc-badge"><i class="fa fa-history"></i></span>
-            <div>
-                <h2 class="m-0 fw-800">Log de eliminaciones</h2>
-                <div class="text-white-50">Quien borro, que se borro y que se llevo en cascada</div>
+<div class="container-fluid mt-4 el-page">
+    <div class="el-hero shadow-lg">
+        <div class="el-hero-glow" aria-hidden="true"></div>
+        <div class="d-flex align-items-center gap-3 flex-wrap el-hero-row">
+            <span class="el-badge"><i class="fa fa-shield"></i></span>
+            <div class="el-hero-copy">
+                <div class="el-kicker">Auditoria</div>
+                <h2 class="m-0">Log de eliminaciones</h2>
+                <p class="el-sub">Quien borro, que se borro y que se llevo en cascada</p>
             </div>
-            <div class="ms-auto">
-                <button id="btnRefreshEliminacionesLog" class="btn btn-outline-light vi-btn" type="button">
+            <div class="ms-auto d-flex gap-2 flex-wrap">
+                <button id="btnRefreshEliminacionesLog" class="btn el-btn-ghost" type="button">
                     <i class="fa fa-refresh me-2"></i> Actualizar
                 </button>
             </div>
         </div>
     </div>
 
-    <div class="cc-card">
-        <div class="cc-card-body">
-            <table id="grdEliminacionesLog" class="display nowrap" style="width:100%">
+    <div class="el-kpis" id="elKpis">
+        <button type="button" class="el-kpi is-active" data-tipo="">
+            <span class="el-kpi-icon el-kpi-icon--all"><i class="fa fa-database"></i></span>
+            <span class="el-kpi-meta">
+                <span class="el-kpi-lbl">Registros</span>
+                <span class="el-kpi-val" id="kpiTotal">0</span>
+            </span>
+        </button>
+        <button type="button" class="el-kpi" data-tipo="simple">
+            <span class="el-kpi-icon el-kpi-icon--simple"><i class="fa fa-trash"></i></span>
+            <span class="el-kpi-meta">
+                <span class="el-kpi-lbl">Simple</span>
+                <span class="el-kpi-val" id="kpiSimple">0</span>
+            </span>
+        </button>
+        <button type="button" class="el-kpi" data-tipo="cascada">
+            <span class="el-kpi-icon el-kpi-icon--cascada"><i class="fa fa-sitemap"></i></span>
+            <span class="el-kpi-meta">
+                <span class="el-kpi-lbl">Cascada</span>
+                <span class="el-kpi-val" id="kpiCascada">0</span>
+            </span>
+        </button>
+        <button type="button" class="el-kpi" data-tipo="desvincular">
+            <span class="el-kpi-icon el-kpi-icon--desv"><i class="fa fa-unlink"></i></span>
+            <span class="el-kpi-meta">
+                <span class="el-kpi-lbl">Desvincular</span>
+                <span class="el-kpi-val" id="kpiDesvincular">0</span>
+            </span>
+        </button>
+    </div>
+
+    <div class="el-card">
+        <div class="el-toolbar">
+            <div class="el-search">
+                <i class="fa fa-search"></i>
+                <input type="search" id="elSearch" placeholder="Buscar usuario, entidad, nombre, IP..." autocomplete="off" />
+            </div>
+            <div class="el-filters">
+                <label class="el-field">
+                    <span>Entidad</span>
+                    <select id="elEntidad"></select>
+                </label>
+                <label class="el-field">
+                    <span>Desde</span>
+                    <input type="date" id="elDesde" />
+                </label>
+                <label class="el-field">
+                    <span>Hasta</span>
+                    <input type="date" id="elHasta" />
+                </label>
+                <button type="button" class="btn el-btn-ghost el-btn-clear" id="elLimpiarFiltros">
+                    <i class="fa fa-times me-1"></i> Limpiar
+                </button>
+            </div>
+        </div>
+
+        <div class="el-empty" id="elEmpty" hidden>
+            <div class="el-empty-orb"><i class="fa fa-history"></i></div>
+            <h3>Todavia no hay eliminaciones</h3>
+            <p>Cuando alguien borre un registro, aca vas a ver fecha, usuario, entidad y si arrastro datos en cascada.</p>
+        </div>
+
+        <div class="dt-dark-wrap el-table-wrap" id="elTableWrap">
+            <table id="grdEliminacionesLog" class="display nowrap dt-dark el-table" style="width:100%">
                 <thead>
                     <tr>
                         <th>Fecha</th>
                         <th>Usuario</th>
                         <th>Entidad</th>
-                        <th>Id</th>
-                        <th>Nombre</th>
+                        <th>Registro</th>
                         <th>Tipo</th>
                         <th>Detalle</th>
                         <th>IP</th>
@@ -47,38 +110,25 @@
     </div>
 </div>
 
+<div class="modal fade" id="elDetalleModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+        <div class="modal-content el-modal">
+            <div class="modal-header">
+                <div>
+                    <h5 class="modal-title mb-0" id="elDetalleTitulo">Detalle</h5>
+                    <small class="el-modal-sub" id="elDetalleSub"></small>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <pre class="el-detalle-pre" id="elDetalleBody"></pre>
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
     <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/fixedheader/3.2.2/js/dataTables.fixedHeader.min.js"></script>
-    <script>
-        (function () {
-            const tabla = $("#grdEliminacionesLog").DataTable({
-                ajax: {
-                    url: "/EliminacionesLog/Lista",
-                    dataSrc: "",
-                    headers: {
-                        Authorization: "Bearer " + (window.token || (localStorage.getItem("JwtToken") || ""))
-                    }
-                },
-                columns: [
-                    { data: "Fecha" },
-                    { data: "UsuarioNombre", defaultContent: "" },
-                    { data: "Entidad" },
-                    { data: "IdEntidad", defaultContent: "" },
-                    { data: "NombreEntidad", defaultContent: "" },
-                    { data: "Tipo" },
-                    { data: "Detalle", defaultContent: "" },
-                    { data: "Ip", defaultContent: "" }
-                ],
-                order: [[0, "desc"]],
-                pageLength: 25,
-                scrollX: true,
-                language: { url: "https://cdn.datatables.net/plug-ins/1.11.5/i18n/es-ES.json" }
-            });
-
-            $("#btnRefreshEliminacionesLog").on("click", function () {
-                tabla.ajax.reload(null, false);
-            });
-        })();
-    </script>
+    <script src="~/js/EliminacionesLog.js" asp-append-version="true"></script>
 }

@@ -27,6 +27,7 @@ window.__OA_ENTREGA_BUILD = "precio-entrega-lista-20260811";
         cuentasCaja: [],
         nextCobroKey: 1,
         establecimientos: [],
+        terceros: [],
         contratos: [],
         idEstablecimientoSel: 0
     };
@@ -48,6 +49,7 @@ window.__OA_ENTREGA_BUILD = "precio-entrega-lista-20260811";
         sucursales: "/Sucursales/Lista",
         cuentas: "/Cuentas/Lista",
         establecimientosPorCliente: id => `/ClientesEstablecimientos/ListaPorCliente?idCliente=${id}`,
+        tercerosPorEst: id => `/ClientesEstablecimientosTerceros/ListaPorEstablecimiento?idEstablecimiento=${id}&soloActivos=true`,
         contratosPorCliente: id => `/Contratos/Lista?idCliente=${id}`
     };
 
@@ -352,6 +354,9 @@ window.__OA_ENTREGA_BUILD = "precio-entrega-lista-20260811";
             if (!p.Fecha || !p.IdSucursal || !p.IdCuenta || !(p.Concepto || "").trim() || p.Importe <= 0) {
                 return { ok: false, mensaje: "Revise los cobros: fecha, sucursal, cuenta, concepto e importe son obligatorios." };
             }
+            if (p.EsPagoTercero && !(Number(p.IdTercero) > 0)) {
+                return { ok: false, mensaje: "Si el origen es pago de terceros, seleccioná quién pagó. Si pagó el cliente, dejá Origen en Cliente." };
+            }
         }
 
         return { ok: true, mensaje: "" };
@@ -562,6 +567,8 @@ window.__OA_ENTREGA_BUILD = "precio-entrega-lista-20260811";
             const idEst = parseInt($(this).val(), 10) || 0;
             CM.idEstablecimientoSel = idEst;
             await cargarProductosEstablecimientoEntrega(idEst);
+            await cargarTercerosEntrega(idEst);
+            renderCobrosLineas();
         });
     }
 
@@ -607,6 +614,7 @@ window.__OA_ENTREGA_BUILD = "precio-entrega-lista-20260811";
         CM.idEstablecimientoSel = idSel;
         $sel.val(idSel > 0 ? String(idSel) : "").trigger("change.select2");
         await cargarProductosEstablecimientoEntrega(idSel);
+        await cargarTercerosEntrega(idSel);
     }
 
     async function cargarProductosEstablecimientoEntrega(idEstablecimiento) {
@@ -792,6 +800,9 @@ window.__OA_ENTREGA_BUILD = "precio-entrega-lista-20260811";
 
     function htmlOpcionesListaPrecio(linea) {
         const idSel = Number(linea.IdListaPrecio || 0);
+        if (typeof htmlOpcionesListaPrecioCatalogo === "function") {
+            return htmlOpcionesListaPrecioCatalogo(CM.listasPrecios, linea.IdProducto, idSel, (t) => t);
+        }
         return (CM.listasPrecios || []).map(l => {
             const id = Number(l.Id || l.id || 0);
             const nom = l.Nombre || l.nombre || `Lista #${id}`;
@@ -1007,6 +1018,8 @@ window.__OA_ENTREGA_BUILD = "precio-entrega-lista-20260811";
             Fecha: hoy,
             IdSucursal: idSuc,
             IdCuenta: 0,
+            EsPagoTercero: false,
+            IdTercero: 0,
             Concepto: conceptoCobroDefault(),
             Importe: 0
         };
@@ -1034,6 +1047,10 @@ window.__OA_ENTREGA_BUILD = "precio-entrega-lista-20260811";
         cobro.Fecha = $tr.find(".cobro-fecha").val() || "";
         cobro.IdSucursal = parseInt($tr.find(".cobro-sucursal").val(), 10) || 0;
         cobro.IdCuenta = parseInt($tr.find(".cobro-cuenta").val(), 10) || 0;
+        cobro.EsPagoTercero = $tr.find(".cg-origen-btn.is-on").attr("data-origen") === "tercero";
+        cobro.IdTercero = cobro.EsPagoTercero
+            ? (parseInt($tr.find(".cobro-tercero").val(), 10) || 0)
+            : 0;
         cobro.Concepto = ($tr.find(".cobro-concepto").val() || "").trim();
         cobro.Importe = leerNum($tr.find(".cobro-importe").val());
     }
@@ -1073,6 +1090,17 @@ window.__OA_ENTREGA_BUILD = "precio-entrega-lista-20260811";
                                     data-config-combo-label="Sucursal">
                                 <i class="fa fa-plus"></i>
                             </button>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="cobro-origen-stack">
+                            <div class="cg-origen-seg" role="group">
+                                <button type="button" class="cg-origen-btn${esCobroTerceroEntrega(cobro) ? "" : " is-on"}" data-origen="cliente">Cliente</button>
+                                <button type="button" class="cg-origen-btn${esCobroTerceroEntrega(cobro) ? " is-on" : ""}" data-origen="tercero">Terceros</button>
+                            </div>
+                            <select class="form-select vn-input vn-mini cobro-tercero"${esCobroTerceroEntrega(cobro) ? "" : " hidden"}>
+                                ${htmlOpcionesTerceroEntrega(cobro.IdTercero)}
+                            </select>
                         </div>
                     </td>
                     <td><input type="text" class="form-control vn-input vn-mini cobro-concepto" maxlength="200" /></td>
@@ -1138,7 +1166,17 @@ window.__OA_ENTREGA_BUILD = "precio-entrega-lista-20260811";
                 actualizarResumenCobrosUI();
             });
 
-            tr.find(".cobro-fecha, .cobro-concepto, .cobro-importe").on("input change", function () {
+            tr.find(".cobro-fecha, .cobro-concepto, .cobro-importe, .cobro-tercero").on("input change", function () {
+                syncCobroFromRow(tr, cobro);
+                actualizarResumenCobrosUI();
+            });
+            tr.find(".cg-origen-btn").on("click", function (e) {
+                e.preventDefault();
+                const es = $(this).attr("data-origen") === "tercero";
+                tr.find(".cg-origen-btn").removeClass("is-on");
+                $(this).addClass("is-on");
+                tr.find(".cobro-tercero").prop("hidden", !es);
+                if (!es) tr.find(".cobro-tercero").val("");
                 syncCobroFromRow(tr, cobro);
                 actualizarResumenCobrosUI();
             });
@@ -1165,6 +1203,39 @@ window.__OA_ENTREGA_BUILD = "precio-entrega-lista-20260811";
             .replace(/</g, "&lt;")
             .replace(/>/g, "&gt;")
             .replace(/"/g, "&quot;");
+    }
+
+    async function cargarTercerosEntrega(idEstablecimiento) {
+        const idEst = Number(idEstablecimiento) || 0;
+        if (!(idEst > 0)) {
+            CM.terceros = [];
+            return;
+        }
+        try {
+            const r = await fetch(API.tercerosPorEst(idEst), { headers: authHeaders() });
+            CM.terceros = r.ok ? (await r.json()) || [] : [];
+            if (!Array.isArray(CM.terceros)) CM.terceros = [];
+        } catch {
+            CM.terceros = [];
+        }
+    }
+
+    function esCobroTerceroEntrega(c) {
+        if (!c) return false;
+        if (c.EsPagoTercero === true || c.esPagoTercero === true) return true;
+        return Number(c.IdTercero || c.idTercero) > 0;
+    }
+
+    function htmlOpcionesTerceroEntrega(selectedId) {
+        const sel = Number(selectedId) || 0;
+        let html = `<option value="">Seleccionar pagador</option>`;
+        (CM.terceros || []).forEach(t => {
+            const id = Number(t.Id) || 0;
+            const extra = [t.Cuit, t.Banco].filter(Boolean).join(" · ");
+            const lab = `${t.Nombre || "Pagador"}${extra ? ` (${extra})` : ""}`;
+            html += `<option value="${id}"${id === sel ? " selected" : ""}>${escapeHtmlCm(lab)}</option>`;
+        });
+        return html;
     }
 
     function actualizarResumenCobrosUI() {
@@ -1224,6 +1295,8 @@ window.__OA_ENTREGA_BUILD = "precio-entrega-lista-20260811";
                 Fecha: fechaInputValor(p.Fecha || p.fecha),
                 IdSucursal: p.IdSucursal ?? p.idSucursal ?? 0,
                 IdCuenta: p.IdCuenta ?? p.idCuenta ?? 0,
+                EsPagoTercero: !!(p.EsPagoTercero ?? p.esPagoTercero) || Number(p.IdTercero ?? p.idTercero) > 0,
+                IdTercero: p.IdTercero ?? p.idTercero ?? 0,
                 Concepto: p.Concepto || p.concepto || conceptoCobroDefault(),
                 Importe: Number(p.Importe ?? p.importe ?? 0)
             }));
@@ -1913,6 +1986,8 @@ window.__OA_ENTREGA_BUILD = "precio-entrega-lista-20260811";
                 IdCobro: p.IdCobro || 0,
                 IdMovimientoCc: p.IdMovimientoCc || 0,
                 IdCuenta: p.IdCuenta,
+                EsPagoTercero: !!p.EsPagoTercero,
+                IdTercero: p.EsPagoTercero && Number(p.IdTercero) ? Number(p.IdTercero) : null,
                 Fecha: p.Fecha,
                 Concepto: p.Concepto,
                 Importe: p.Importe

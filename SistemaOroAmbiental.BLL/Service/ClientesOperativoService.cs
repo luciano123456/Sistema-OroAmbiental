@@ -86,15 +86,25 @@ namespace SistemaOroAmbiental.BLL.Service
             }
         }
 
-        public async Task<ServiceResult> VaciarAbonosMes(int idCliente, int anio, int mes, int? idEstablecimiento, int idUsuario)
+        public async Task<ServiceResult> VaciarAbonosMes(int idCliente, int anio, int mes, IReadOnlyList<int>? idsEstablecimiento, int idUsuario, bool vaciarPlata, bool eliminarEntregas)
         {
             if (idCliente <= 0 || anio < 2000 || mes is < 1 or > 12)
                 return ServiceResult.Error("Cliente, año y mes son obligatorios.", "validacion");
 
-            var ok = await _repo.VaciarAbonosMes(idCliente, anio, mes, idEstablecimiento, idUsuario);
-            return ok
-                ? ServiceResult.Success("Se pusieron en cero los montos de efectivo y transferencia de ese mes.")
-                : ServiceResult.Error("No se pudieron vaciar los montos del mes.");
+            if (!vaciarPlata && !eliminarEntregas)
+                return ServiceResult.Error("Elegí una opción.", "validacion");
+
+            if (eliminarEntregas)
+                vaciarPlata = true;
+
+            var ok = await _repo.VaciarAbonosMes(idCliente, anio, mes, idsEstablecimiento, idUsuario, vaciarPlata, eliminarEntregas);
+            if (!ok)
+                return ServiceResult.Error("No se pudo vaciar el mes.");
+
+            if (eliminarEntregas)
+                return ServiceResult.Success("Se borró el mes: entregas, plata e intereses.");
+
+            return ServiceResult.Success("Se puso en cero la plata de ese mes. Las entregas quedaron.");
         }
     }
 }

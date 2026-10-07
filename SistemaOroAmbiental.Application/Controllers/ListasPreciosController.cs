@@ -23,10 +23,17 @@ namespace SistemaOroAmbiental.Application.Controllers
 
         [AllowAnonymous]
         [HttpGet]
-        public async Task<IActionResult> Lista()
+        public async Task<IActionResult> Lista(int? idProducto = null, bool soloGenerales = false)
         {
-            var items = (await _service.ObtenerTodos())
-                .Include(x => x.IdTipoPagoNavigation)
+            IQueryable<ListasPrecio> query = (await _service.ObtenerTodos())
+                .Include(x => x.IdTipoPagoNavigation);
+
+            if (soloGenerales)
+                query = query.Where(x => x.IdProducto == null);
+            else if (idProducto is > 0)
+                query = query.Where(x => x.IdProducto == null || x.IdProducto == idProducto);
+
+            var items = query
                 .OrderBy(x => x.Nombre)
                 .Select(x => new VMGenericModelConfCombo
                 {
@@ -34,7 +41,8 @@ namespace SistemaOroAmbiental.Application.Controllers
                     Nombre = x.Nombre,
                     IdCombo = x.IdTipoPago ?? 0,
                     NombreCombo = x.IdTipoPagoNavigation != null ? x.IdTipoPagoNavigation.Nombre : null,
-                    Codigo = x.IdTipoPagoNavigation != null ? x.IdTipoPagoNavigation.Codigo : null
+                    Codigo = x.IdTipoPagoNavigation != null ? x.IdTipoPagoNavigation.Codigo : null,
+                    IdProducto = x.IdProducto
                 })
                 .ToList();
 
@@ -54,6 +62,7 @@ namespace SistemaOroAmbiental.Application.Controllers
             {
                 Nombre = nombre,
                 IdTipoPago = model.IdCombo > 0 ? model.IdCombo : null,
+                IdProducto = model.IdProducto is > 0 ? model.IdProducto : null,
                 IdUsuarioRegistra = idUsuario,
                 FechaUsuarioRegistra = DateTime.Now
             };
@@ -155,7 +164,8 @@ namespace SistemaOroAmbiental.Application.Controllers
             {
                 Id = entity.Id,
                 Nombre = entity.Nombre,
-                IdCombo = entity.IdTipoPago ?? 0
+                IdCombo = entity.IdTipoPago ?? 0,
+                IdProducto = entity.IdProducto
             });
         }
     }

@@ -363,7 +363,10 @@ namespace SistemaOroAmbiental.BLL.Service
                 Importe = c.Importe,
                 Cuenta = c.IdCuentaNavigation?.Nombre ?? "",
                 Sucursal = c.IdCuentaNavigation?.IdSucursalNavigation?.Nombre ?? "",
-                Usuario = c.IdUsuarioRegistraNavigation?.Usuario
+                Usuario = c.IdUsuarioRegistraNavigation?.Usuario,
+                IdTercero = c.IdTercero,
+                EsPagoTercero = c.EsPagoTercero || c.IdTercero != null,
+                TerceroNombre = c.IdTerceroNavigation?.Nombre
             }).ToList();
 
             var totalCobrado = items.Sum(x => x.Importe);

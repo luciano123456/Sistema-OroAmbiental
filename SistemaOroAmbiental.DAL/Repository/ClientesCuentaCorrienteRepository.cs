@@ -235,14 +235,16 @@ namespace SistemaOroAmbiental.DAL.Repository
             DateTime fecha,
             string concepto,
             decimal importe,
-            int idUsuario)
+            int idUsuario,
+            int? idTercero = null,
+            bool esPagoTercero = false)
         {
             if (importe <= 0)
                 return Task.FromResult(false);
 
             return _db.ExecuteInTransactionAsync(() =>
                 RegistrarCobroSinTransaccion(
-                    idCliente, idCuenta, fecha, concepto, importe, idUsuario, null));
+                    idCliente, idCuenta, fecha, concepto, importe, idUsuario, null, idTercero, esPagoTercero));
         }
 
         public async Task<bool> RegistrarCobroSinTransaccion(
@@ -252,13 +254,17 @@ namespace SistemaOroAmbiental.DAL.Repository
             string concepto,
             decimal importe,
             int idUsuario,
-            int? idEntrega = null)
+            int? idEntrega = null,
+            int? idTercero = null,
+            bool esPagoTercero = false)
         {
             if (importe <= 0)
                 return false;
 
             var cc = await ObtenerOCrearCuentaCorriente(idCliente);
             var ahora = DateTime.Now;
+            var terc = (esPagoTercero || idTercero > 0) && idTercero > 0 ? idTercero : null;
+            var esTerc = esPagoTercero || terc != null;
 
             var cobro = new ClientesCobro
             {
@@ -266,6 +272,8 @@ namespace SistemaOroAmbiental.DAL.Repository
                 IdCuentaCorriente = cc.Id,
                 IdEntrega = idEntrega,
                 IdCuenta = idCuenta,
+                IdTercero = terc,
+                EsPagoTercero = esTerc,
                 Fecha = fecha,
                 Concepto = concepto,
                 Importe = importe,

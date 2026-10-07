@@ -1129,3 +1129,140 @@
 [data-establecimiento-modal] .rp-recoleccion-warn.is-on {
     display: block;
 }
+
+.est-tercero-analisis {
+    margin: 0 0 1rem;
+    padding: 0.85rem 1rem;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(10, 18, 32, 0.45);
+}
+
+.est-tercero-analisis-title {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #8fa3bf;
+    margin-bottom: 0.65rem;
+}
+
+.est-tercero-bar-row {
+    margin-bottom: 0.55rem;
+}
+
+.est-tercero-bar-lab {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    font-size: 0.82rem;
+    margin-bottom: 0.2rem;
+}
+
+.est-tercero-bar-lab span {
+    color: #8fa3bf;
+}
+
+.est-tercero-bar-track {
+    height: 8px;
+    border-radius: 99px;
+    background: rgba(255, 255, 255, 0.08);
+    overflow: hidden;
+}
+
+.est-tercero-bar-track span {
+    display: block;
+    height: 100%;
+    border-radius: 99px;
+    background: linear-gradient(90deg, #3b82f6, #22c55e);
+}
+
+.est-tercero-activo {
+    display: block;
+    margin: 0;
+    cursor: pointer;
+    user-select: none;
+}
+
+.est-tercero-activo-input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.est-tercero-activo-ui {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-height: 42px;
+    padding: 0.45rem 0.75rem;
+    border-radius: 10px;
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    background: #e8eef6;
+    color: #1e293b;
+    transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.est-tercero-activo-track {
+    position: relative;
+    flex-shrink: 0;
+    width: 42px;
+    height: 24px;
+    border-radius: 999px;
+    background: #94a3b8;
+    box-shadow: inset 0 1px 3px rgba(15, 23, 42, 0.2);
+}
+
+.est-tercero-activo-track span {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.25);
+    transition: transform 0.2s ease;
+}
+
+.est-tercero-activo-copy {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.15;
+    min-width: 0;
+}
+
+.est-tercero-activo-copy strong {
+    font-size: 0.86rem;
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.est-tercero-activo-copy small {
+    font-size: 0.72rem;
+    color: #475569;
+}
+
+.est-tercero-activo-input:checked + .est-tercero-activo-ui {
+    background: #dcfce7;
+    border-color: #4ade80;
+}
+
+.est-tercero-activo-input:checked + .est-tercero-activo-ui .est-tercero-activo-track {
+    background: #16a34a;
+}
+
+.est-tercero-activo-input:checked + .est-tercero-activo-ui .est-tercero-activo-track span {
+    transform: translateX(18px);
+}
+
+.est-tercero-activo-input:focus-visible + .est-tercero-activo-ui {
+    box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.35);
+}
+
+.est-tercero-activo-input:disabled + .est-tercero-activo-ui {
+    opacity: 0.55;
+    cursor: not-allowed;
+}

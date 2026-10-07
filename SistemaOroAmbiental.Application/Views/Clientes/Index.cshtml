@@ -15,7 +15,7 @@
     <link href="~/css/Productora.css?v=6.2" rel="stylesheet" />
     <link href="~/css/disenopantallas.css?v=6.2" rel="stylesheet" />
     <link href="~/css/M_Generico.css?v=6.2" rel="stylesheet" />
-    <link href="~/css/Clientes.css?v=7.0" rel="stylesheet" />
+    <link href="~/css/Clientes.css?v=7.5" rel="stylesheet" />
 }
 
 <div class="cl-page">
@@ -55,24 +55,24 @@
     </div>
 
     <div class="cl-kpis-dashboard mb-4">
-        <div class="cl-kpi-card cl-kpi-activos">
+        <div class="cl-kpi-card cl-kpi-activos" data-situacion="activos" role="button" tabindex="0" title="Filtrar clientes activos">
             <div class="lbl"><i class="fa fa-check-circle me-1"></i> Activos</div>
             <div class="val" id="kpiActivos">0</div>
         </div>
-        <div class="cl-kpi-card cl-kpi-suspendidos">
+        <div class="cl-kpi-card cl-kpi-suspendidos" data-situacion="suspendidos" role="button" tabindex="0" title="Filtrar suspendidos">
             <div class="lbl"><i class="fa fa-pause-circle me-1"></i> Suspendidos</div>
             <div class="val" id="kpiSuspendidos">0</div>
         </div>
-        <div class="cl-kpi-card cl-kpi-baja">
+        <div class="cl-kpi-card cl-kpi-baja" data-situacion="baja" role="button" tabindex="0" title="Filtrar dados de baja">
             <div class="lbl"><i class="fa fa-times-circle me-1"></i> Baja</div>
             <div class="val" id="kpiBaja">0</div>
             <div class="sub"><span id="kpiBajasMes">0</span> este mes</div>
         </div>
-        <div class="cl-kpi-card cl-kpi-licencia">
+        <div class="cl-kpi-card cl-kpi-licencia" data-situacion="licencia" role="button" tabindex="0" title="Filtrar en licencia">
             <div class="lbl"><i class="fa fa-calendar me-1"></i> Licencia</div>
             <div class="val" id="kpiLicencia">0</div>
         </div>
-        <div class="cl-kpi-card cl-kpi-alertas">
+        <div class="cl-kpi-card cl-kpi-alertas" data-situacion="alertas" role="button" tabindex="0" title="Filtrar licencias por vencer">
             <div class="lbl"><i class="fa fa-exclamation-triangle me-1"></i> Alertas</div>
             <div class="val" id="kpiAlertasLicencia">0</div>
         </div>
@@ -108,6 +108,8 @@
                         <th>Condicion IVA</th>
                         <th>Telefono</th>
                         <th>Email</th>
+                        <th>Recorrido</th>
+                        <th>Recorridos</th>
                         <th>Activo</th>
                     </tr>
                 </thead>
@@ -129,5 +131,5 @@
     <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
-    <script src="~/js/Clientes.js?v=7.0"></script>
+    <script src="~/js/Clientes.js?v=7.5"></script>
 }

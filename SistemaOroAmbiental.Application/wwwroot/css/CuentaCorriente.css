@@ -433,3 +433,33 @@
     border-color: #198754 !important;
     box-shadow: none !important;
 }
+
+.cg-origen-seg {
+    display: flex;
+    gap: 0.3rem;
+    width: 100%;
+}
+
+.cg-origen-btn {
+    flex: 1;
+    min-width: 0;
+    margin: 0;
+    padding: 0.42rem 0.5rem;
+    border-radius: 8px;
+    border: 1px solid rgba(148, 163, 184, 0.4);
+    background: #e8eef6;
+    color: #334155;
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.cg-origen-btn.is-on {
+    border-color: #22c55e;
+    background: #dcfce7;
+    color: #14532d;
+}
+
+#pTerceroWrap[hidden] {
+    display: none !important;
+}

@@ -131,6 +131,20 @@ namespace SistemaOroAmbiental.DAL.Repository
                 .ToListAsync();
             _db.ClientesEstablecimientosContactos.RemoveRange(contactos);
 
+            var terceros = await _db.ClientesEstablecimientosTerceros
+                .Where(x => x.IdEstablecimiento == id)
+                .ToListAsync();
+            var idsTerceros = terceros.Select(t => t.Id).ToList();
+            if (idsTerceros.Count > 0)
+            {
+                var cobrosTerc = await _db.ClientesCobros
+                    .Where(c => c.IdTercero != null && idsTerceros.Contains(c.IdTercero.Value))
+                    .ToListAsync();
+                foreach (var c in cobrosTerc)
+                    c.IdTercero = null;
+            }
+            _db.ClientesEstablecimientosTerceros.RemoveRange(terceros);
+
             var recorridos = await _db.ClientesRecorridos
                 .Where(x => x.IdEstablecimiento == id)
                 .ToListAsync();

@@ -344,7 +344,7 @@
                         <div class="rp-config-icon blue"><i class="fa fa-list-alt"></i></div>
                         <div>
                             <div class="rp-config-title">Listas de Precio</div>
-                            <div class="rp-config-sub">Cada lista va con un tipo de pago</div>
+                            <div class="rp-config-sub">Generales: se aplican a todos los productos</div>
                         </div>
                     </button>
 
@@ -385,6 +385,14 @@
                         <div>
                             <div class="rp-config-title">Plantillas Word</div>
                             <div class="rp-config-sub">Archivos .docx por tipo</div>
+                        </div>
+                    </button>
+
+                    <button class="rp-config-card" type="button" onclick="window.location.href='@Url.Action("Index", "Firmas")'">
+                        <div class="rp-config-icon purple"><i class="fa fa-pencil"></i></div>
+                        <div>
+                            <div class="rp-config-title">Firmas</div>
+                            <div class="rp-config-sub">Sello de la empresa en contratos</div>
                         </div>
                     </button>
 
@@ -557,7 +565,7 @@
                         <i class="fa fa-cogs"></i>
                         Configuracion
                     </div>
-                    <div class="rp-modal-subtitle">
+                    <div class="rp-modal-subtitle" id="modalConfiguracionSubtitulo">
                         Edita los valores disponibles
                     </div>
                 </div>

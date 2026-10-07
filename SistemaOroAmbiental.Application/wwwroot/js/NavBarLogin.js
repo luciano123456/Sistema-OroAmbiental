@@ -180,6 +180,15 @@ function urlListaCatalogoConfig(controller) {
     if (controller === "Sucursales") {
         return `/${controller}/ListaTodas`;
     }
+    if (controller === "ListasPrecios") {
+        if (window.esModoAtajo) {
+            const id = Number(window._rpUltimoAtajoConfigBtn?.getAttribute("data-config-id-producto") || 0);
+            return id > 0
+                ? `/${controller}/Lista?idProducto=${id}`
+                : `/${controller}/Lista?soloGenerales=true`;
+        }
+        return `/${controller}/Lista?soloGenerales=true`;
+    }
     return `/${controller}/Lista`;
 }
 
@@ -251,6 +260,11 @@ function formatearNombreConfigGeo(configuracion) {
 
     if (configuracion.Codigo) {
         nombreConfig = `[${configuracion.Codigo}] ${nombreConfig}`;
+    }
+
+    if (controllerConfiguracion === "ListasPrecios") {
+        const idProd = Number(configuracion.IdProducto || 0);
+        nombreConfig += idProd > 0 ? " (este producto)" : " (general)";
     }
 
     if (configuracion.NombreCombo) {
@@ -373,7 +387,7 @@ function aplicarPrefillGeoAtajo() {
     if (!perfil) return Promise.resolve();
 
     if (perfil.provincia) {
-        const idProvincia = valorSelectAtajo(["cmbProvinciaEst", "cgProvincia"]) || "";
+        const idProvincia = valorSelectAtajo(["cmbProvinciaEst", "cgProvincia", "cmbProvincia"]) || "";
         const cmbProvincia = document.getElementById("cmbConfiguracion");
         if (cmbProvincia && idProvincia) {
             cmbProvincia.value = idProvincia;
@@ -408,7 +422,8 @@ async function listaConfiguracion() {
         Codigo: configuracion.Codigo,
         NombreCombo: configuracion.NombreCombo,
         IdProvincia: configuracion.IdProvincia,
-        IdPartido: configuracion.IdPartido
+        IdPartido: configuracion.IdPartido,
+        IdProducto: configuracion.IdProducto
     }));
 }
 
@@ -488,6 +503,17 @@ async function abrirConfiguracion(
 
         document.getElementById("modalConfiguracionLabel").innerText =
             "Configuracion de " + nombreConfiguracion;
+
+        const sub = document.getElementById("modalConfiguracionSubtitulo");
+        if (sub) {
+            if (controllerConfiguracion === "ListasPrecios") {
+                sub.textContent = window.esModoAtajo
+                    ? "Las listas que agregás acá quedan solo en este producto. Las generales se crean en Configuraciones."
+                    : "Listas generales: se muestran en todos los productos.";
+            } else {
+                sub.textContent = "Edita los valores disponibles";
+            }
+        }
 
         const buscador = document.getElementById("txtBuscarConfiguracion");
         if (buscador) buscador.value = "";
@@ -763,6 +789,12 @@ function guardarCambiosConfiguracion() {
 
         if (controllerConfiguracion === "Cuentas") {
             nuevoModelo.Codigo = $("#cmbConfiguracionTipoCuenta").val() || "Efectivo";
+        }
+
+        if (controllerConfiguracion === "ListasPrecios" && window.esModoAtajo && idConfiguracion === "") {
+            const idProducto = Number(window._rpUltimoAtajoConfigBtn?.getAttribute("data-config-id-producto") || 0);
+            if (idProducto > 0)
+                nuevoModelo.IdProducto = idProducto;
         }
     }
 

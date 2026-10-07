@@ -27,6 +27,11 @@
             </button>
         </li>
         <li class="nav-item">
+            <button class="nav-link" id="tabBtnTercerosEst" data-bs-toggle="tab" data-bs-target="#tabTercerosEst" type="button">
+                <i class="fa fa-exchange"></i><span>Pago de terceros</span>
+            </button>
+        </li>
+        <li class="nav-item">
             <button class="nav-link" id="tabBtnContratosEst" data-bs-toggle="tab" data-bs-target="#tabContratosEst" type="button">
                 <i class="fa fa-file-text-o"></i><span>Contratos</span>
             </button>
@@ -165,7 +170,7 @@
 
             <div class="col-md-5">
                 <label class="form-label">Calle</label>
-                <input id="txtCalleEst" class="form-control" maxlength="@IntercambioTxtCampos.Calle" />
+                <input id="txtCalleEst" class="form-control" maxlength="@IntercambioTxtCampos.Calle" autocomplete="section-domicilio street-address" />
             </div>
 
             <div class="col-md-7">
@@ -179,17 +184,17 @@
 
             <div class="col-md-2">
                 <label class="form-label">Numero</label>
-                <input id="txtNumeroEst" class="form-control" maxlength="@IntercambioTxtCampos.Numero" />
+                <input id="txtNumeroEst" class="form-control" maxlength="@IntercambioTxtCampos.Numero" autocomplete="section-domicilio address-line1" />
             </div>
 
             <div class="col-md-2">
                 <label class="form-label">Piso / Depto</label>
-                <input id="txtPisoDeptoEst" class="form-control" maxlength="@IntercambioTxtCampos.Adicional" />
+                <input id="txtPisoDeptoEst" class="form-control" maxlength="@IntercambioTxtCampos.Adicional" autocomplete="section-domicilio address-line2" />
             </div>
 
             <div class="col-md-2">
                 <label class="form-label">Codigo postal</label>
-                <input id="txtCodPostalEst" class="form-control" maxlength="@IntercambioTxtCampos.CodigoPostal" />
+                <input id="txtCodPostalEst" class="form-control" maxlength="@IntercambioTxtCampos.CodigoPostal" autocomplete="section-domicilio postal-code" />
             </div>
 
             <div class="col-md-3">
@@ -300,7 +305,7 @@
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Nº recorrido</label>
-                        <input id="txtOrdenRecorridoEst" class="form-control" type="number" min="0" step="1" placeholder="Auto" title="Posición en la hoja de ruta. Vacío o 0 = al final." />
+                        <input id="txtOrdenRecorridoEst" class="form-control" type="number" min="0" step="1" placeholder="Auto" autocomplete="one-time-code" title="Posición en la hoja de ruta. Vacío o 0 = al final." />
                         <div class="form-text text-muted" style="font-size:0.72rem;line-height:1.25;">Vacío o 0 = se asigna al final</div>
                         <div id="avisoOrdenRecorridoEst" class="rp-orden-aviso" hidden>
                             <div class="rp-orden-aviso-text"></div>
@@ -313,7 +318,7 @@
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Kilos</label>
-                        <input id="txtKilosEst" class="form-control" type="number" min="0" step="0.01" />
+                        <input id="txtKilosEst" class="form-control" type="number" min="0" step="0.01" autocomplete="one-time-code" />
                     </div>
                     <div class="col-12">
                         <label class="form-label">Dias y horarios</label>
@@ -394,6 +399,101 @@
                                 <i class="fa fa-check"></i> Guardar contacto
                             </button>
                             <button type="button" id="btnNuevoContactoEst" class="btn btn-outline-light btn-sm" onclick="nuevoContactoEstablecimiento()">
+                                <i class="fa fa-plus"></i> Nuevo
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="tab-pane fade" id="tabTercerosEst">
+        <div id="sectionTercerosEst" class="rp-sub-page rp-section-disabled">
+            <div class="rp-sub-hero">
+                <div>
+                    <div class="text-muted small">Establecimiento</div>
+                    <div class="rp-sub-hero-name" id="terceroEstNombre">Nuevo</div>
+                    <div class="rp-sub-hero-hint" id="terceroEstHint">
+                        <i class="fa fa-info-circle"></i> Guardá el establecimiento para cargar quién paga por este local.
+                    </div>
+                </div>
+                <div class="rp-kpi-card-mini">
+                    <span>Pagadores</span>
+                    <strong id="terceroEstCantidad">0</strong>
+                </div>
+            </div>
+            <div id="terceroEstAnalisis" class="est-tercero-analisis" hidden></div>
+            <div class="rp-sub-layout">
+                <div class="rp-sub-panel">
+                    <div class="rp-sub-panel-head">
+                        <i class="fa fa-list"></i> Listado
+                        <small>Seleccioná para editar</small>
+                    </div>
+                    <div class="rp-sub-panel-body">
+                        <div id="listaTercerosEst" class="rp-sub-list">
+                            <div class="rp-sub-empty">
+                                <i class="fa fa-exchange"></i>
+                                <p>Guardá el establecimiento para ver pagadores.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="rp-sub-panel">
+                    <div class="rp-sub-panel-head">
+                        <i class="fa fa-user-plus"></i>
+                        <span id="terceroEstFormTitulo">Nuevo pagador</span>
+                    </div>
+                    <div class="rp-sub-panel-body rp-sub-form">
+                        <input type="hidden" id="txtTerceroEstId" />
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label class="form-label"><i class="fa fa-user"></i> Nombre</label>
+                                <input id="txtTerceroEstNombre" class="form-control" maxlength="100" placeholder="Persona o razón social" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label"><i class="fa fa-id-card"></i> CUIT</label>
+                                <input id="txtTerceroEstCuit" class="form-control" maxlength="20" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label"><i class="fa fa-phone"></i> Teléfono</label>
+                                <input id="txtTerceroEstTelefono" class="form-control" maxlength="50" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label"><i class="fa fa-envelope-o"></i> Email</label>
+                                <input id="txtTerceroEstEmail" class="form-control" type="email" maxlength="100" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label"><i class="fa fa-university"></i> Banco</label>
+                                <input id="txtTerceroEstBanco" class="form-control" maxlength="80" placeholder="Banco desde el que transfiere" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label"><i class="fa fa-barcode"></i> CBU / alias</label>
+                                <input id="txtTerceroEstCbu" class="form-control" maxlength="40" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label"><i class="fa fa-toggle-on"></i> Estado</label>
+                                <label class="est-tercero-activo" for="chkTerceroEstActivo">
+                                    <input type="checkbox" id="chkTerceroEstActivo" class="est-tercero-activo-input" checked />
+                                    <span class="est-tercero-activo-ui">
+                                        <span class="est-tercero-activo-track" aria-hidden="true"><span></span></span>
+                                        <span class="est-tercero-activo-copy">
+                                            <strong>Activo</strong>
+                                            <small>Aparece como pagador en cobros</small>
+                                        </span>
+                                    </span>
+                                </label>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Observaciones</label>
+                                <textarea id="txtTerceroEstObs" class="form-control" rows="2" maxlength="500"></textarea>
+                            </div>
+                        </div>
+                        <div class="rp-form-actions">
+                            <button type="button" id="btnGuardarTerceroEst" class="btn btn-primary btn-sm" onclick="guardarTerceroEstablecimiento()">
+                                <i class="fa fa-check"></i> Guardar pagador
+                            </button>
+                            <button type="button" id="btnNuevoTerceroEst" class="btn btn-outline-light btn-sm" onclick="nuevoTerceroEstablecimiento()">
                                 <i class="fa fa-plus"></i> Nuevo
                             </button>
                         </div>

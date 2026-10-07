@@ -12,8 +12,8 @@
         documentoGuardar: (idContrato, idTipo, formato) =>
             `/ContratosDocumentos/Guardar?idContrato=${idContrato}&idTipoContrato=${idTipo || 0}&formato=${encodeURIComponent(formato || "")}`,
         documentoEliminar: id => `/ContratosDocumentos/Eliminar?id=${id}`,
-        generar: (idContrato, idTipo, formato) =>
-            `/ContratosDocumentos/Generar?idContrato=${idContrato}&idTipoContrato=${idTipo}&formato=${encodeURIComponent(formato || "word")}`,
+        generar: (idContrato, idTipo, formato, idFirma) =>
+            `/ContratosDocumentos/Generar?idContrato=${idContrato}&idTipoContrato=${idTipo}&formato=${encodeURIComponent(formato || "word")}&idFirma=${idFirma || 0}`,
         tiposContrato: "/TiposContratos/Lista"
     };
 
@@ -349,7 +349,7 @@
         const timeoutId = setTimeout(() => controller.abort(), 180000);
 
         try {
-            const r = await fetch(API_DOC.generar(idContrato, idTipoContrato, tipo), {
+            const r = await fetch(API_DOC.generar(idContrato, idTipoContrato, tipo, opts.idFirma), {
                 method: "POST",
                 headers: authHeaders(false),
                 signal: controller.signal

@@ -16,6 +16,8 @@ namespace SistemaOroAmbiental.DAL.Repository
 
         Task<GrillaPaginadaResult<Cliente>> ListarPaginado(GrillaPaginadaConsulta consulta);
 
+        Task<Dictionary<int, string>> ObtenerTextosRecorrido(IReadOnlyCollection<int> idsClientes);
+
         Task<int> ObtenerIndiceEnLista(int id, GrillaPaginadaConsulta consulta);
 
         Task<bool> CambiarActivo(int id, bool activo);

@@ -150,29 +150,22 @@
                                 <div class="rp-precios-header-icon"><i class="fa fa-tags"></i></div>
                                 <div>
                                     <h6 class="rp-precios-title mb-0">Lista de precios</h6>
-                                    <small class="rp-precios-sub">Precio de venta y rentabilidad por cada lista (Efectivo, Transferencia, etc.)</small>
+                                    <small class="rp-precios-sub">Las listas generales (Configuraciones) aparecen en todos los productos. Las que agregás acá son solo de este producto.</small>
                                 </div>
                             </div>
 
-                            <button type="button"
-                                    id="btnAtajoListaPrecioProd"
-                                    class="rp-precios-add rp-config-atajo"
-                                    data-config-nombre="Listas de Precio"
-                                    data-config-controller="ListasPrecios"
-                                    data-config-combo-nombre="Tipos de Pago"
-                                    data-config-combo-controller="TiposPago"
-                                    data-config-combo-label="Tipo de pago">
+                            <button type="button" id="btnAtajoListaPrecioProd" class="rp-precios-add">
                                 <span class="rp-precios-add-icon"><i class="fa fa-tags"></i></span>
                                 <span class="rp-precios-add-text">
-                                    <strong>Nueva lista de precios</strong>
-                                    <small>Asociá la lista a un tipo de pago (Efectivo o Transferencia)</small>
+                                    <strong>Nueva lista de este producto</strong>
+                                    <small>No se comparte con el resto del catálogo. Para todos los productos, usá Configuraciones.</small>
                                 </span>
                                 <span class="rp-precios-add-action">Agregar</span>
                             </button>
 
                             <div id="lblPreciosSinListas" class="rp-precios-empty d-none">
                                 <i class="fa fa-info-circle"></i>
-                                <span>Todavía no hay listas. Usá <strong>Nueva lista de precios</strong> para crear la primera.</span>
+                                <span>Todavía no hay listas. Creá una general en <strong>Configuraciones</strong> o una solo para este producto con el botón de arriba.</span>
                             </div>
 
                             <div id="gridPreciosLista" class="rp-precios-grid"></div>
@@ -223,6 +216,51 @@
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                     <i class="fa fa-times"></i> Cerrar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* Nueva lista exclusiva de este producto *@
+<div class="modal fade" id="modalNuevaListaProducto" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rp-lista-prod-modal">
+            <div class="modal-header rp-lista-prod-head">
+                <div class="rp-lista-prod-head-icon"><i class="fa fa-tag"></i></div>
+                <div class="min-w-0">
+                    <h5 class="modal-title fw-bold mb-0">Nueva lista de este producto</h5>
+                    <small class="rp-lista-prod-head-sub" id="lblNuevaListaProductoSub">Solo aplica a este producto, no al catálogo completo.</small>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="rp-lista-prod-field">
+                    <label class="form-label" for="txtNuevaListaNombre">Nombre de la lista</label>
+                    <input id="txtNuevaListaNombre" class="form-control" maxlength="100" placeholder="Ej. Mayorista efectivo" autocomplete="off" />
+                </div>
+                <div class="rp-lista-prod-field">
+                    <label class="form-label">Tipo de pago</label>
+                    <div id="gridNuevaListaTipoPago" class="rp-lista-prod-tipos" role="group" aria-label="Tipo de pago"></div>
+                    <input type="hidden" id="hidNuevaListaTipoPago" value="" />
+                </div>
+                <div class="rp-lista-prod-grid">
+                    <div class="rp-lista-prod-field">
+                        <label class="form-label" for="txtNuevaListaPrecio">Precio venta <span class="rp-lista-prod-opcional">(opcional)</span></label>
+                        <input id="txtNuevaListaPrecio" type="text" inputmode="decimal" autocomplete="off" class="form-control Inputmiles" placeholder="0,00" />
+                    </div>
+                    <div class="rp-lista-prod-field">
+                        <label class="form-label" for="txtNuevaListaRent">% Rentabilidad <span class="rp-lista-prod-opcional">(opcional)</span></label>
+                        <input id="txtNuevaListaRent" type="text" inputmode="decimal" autocomplete="off" class="form-control Inputmiles" placeholder="0,00" />
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer rp-lista-prod-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fa fa-times"></i> Cancelar
+                </button>
+                <button type="button" class="btn rp-lista-prod-save" id="btnGuardarNuevaListaProducto">
+                    <i class="fa fa-check"></i> Crear lista
                 </button>
             </div>
         </div>

@@ -32,7 +32,9 @@ namespace SistemaOroAmbiental.DAL.Repository
             DateTime fecha,
             string concepto,
             decimal importe,
-            int idUsuario);
+            int idUsuario,
+            int? idTercero = null,
+            bool esPagoTercero = false);
 
         Task<bool> RegistrarCobroSinTransaccion(
             int idCliente,
@@ -41,7 +43,9 @@ namespace SistemaOroAmbiental.DAL.Repository
             string concepto,
             decimal importe,
             int idUsuario,
-            int? idEntrega = null);
+            int? idEntrega = null,
+            int? idTercero = null,
+            bool esPagoTercero = false);
 
         Task<bool> RegistrarAjuste(
             int idCliente,

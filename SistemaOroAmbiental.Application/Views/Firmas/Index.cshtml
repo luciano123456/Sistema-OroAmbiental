@@ -1,0 +1,131 @@
+@{
+    ViewData["Title"] = "Firmas";
+}
+
+@section Estilos {
+    <link href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css" rel="stylesheet" />
+    <link href="https://cdn.datatables.net/buttons/2.2.2/css/buttons.dataTables.min.css" rel="stylesheet" />
+    <link href="https://cdn.datatables.net/fixedheader/3.2.2/css/fixedHeader.dataTables.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link href="~/css/Productora.css?v=5.2" rel="stylesheet" />
+    <link href="~/css/Camiones.css?v=6.4" rel="stylesheet" />
+    <link href="~/css/disenopantallas.css?v=8.1" rel="stylesheet" />
+    <link href="~/css/M_Generico.css?v=5.2" rel="stylesheet" />
+    <link href="~/css/Firmas.css?v=1.0" rel="stylesheet" asp-append-version="true" />
+}
+
+<div class="container-fluid mt-5">
+    <div class="container page-99" style="margin-top:40px">
+        <div class="cc-header shadow-lg rounded-4 p-4 mb-4">
+            <div class="d-flex align-items-center gap-3 flex-wrap">
+                <div class="d-flex align-items-center gap-3">
+                    <span class="cc-badge camiones-badge">
+                        <i class="fa fa-pencil"></i>
+                    </span>
+                    <div>
+                        <h2 class="m-0 fw-800">Firmas</h2>
+                    </div>
+                </div>
+                <div class="ms-auto d-flex gap-4 flex-wrap align-items-center">
+                    <div class="cc-stat">
+                        <div class="label">Firmas</div>
+                        <div class="value"><strong id="kpiCantFirmas">0</strong></div>
+                    </div>
+                    <div class="dropdown cc-dd">
+                        <button class="btn btn-secondary dropdown-toggle" type="button" id="dropdownColumnas"
+                                data-bs-toggle="dropdown" data-bs-display="static" data-bs-auto-close="outside">
+                            <i class="fa fa-cog me-2"></i> Config. Columnas
+                        </button>
+                        <ul class="dropdown-menu cc-dropdown-menu" id="configColumnasMenu"></ul>
+                    </div>
+                    <button class="btn btn-success d-flex align-items-center px-3 py-2 btnnuevo"
+                            type="button" onclick="nuevaFirma()">
+                        <i class="fa fa-plus-square me-2"></i> Nuevo
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="card-glass p-3">
+            <div class="dt-dark-wrap">
+                <table class="dt-dark display nowrap compact" id="grd_Firmas" style="width:100%">
+                    <thead>
+                        <tr>
+                            <th></th>
+                            <th>Id</th>
+                            <th>Nombre</th>
+                            <th>Firma</th>
+                            <th>Activo</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalEdicionFirma" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content rp-modal-shell">
+            <div class="modal-header colorEncabezado rp-modal-header">
+                <div class="rp-modal-title-wrap">
+                    <h5 class="modal-title fw-bold mb-0" id="modalEdicionFirmaLabel">Nueva firma</h5>
+                    <small class="rp-modal-subtitle">Nombre y sello para contratos de la empresa</small>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form class="row g-3">
+                    <input type="hidden" id="txtIdFirma" />
+                    <div class="col-12">
+                        <label class="form-label" for="txtNombreFirma">Nombre</label>
+                        <input id="txtNombreFirma" class="form-control" maxlength="120" required />
+                    </div>
+                    <div class="col-12">
+                        <div class="rp-activo-box">
+                            <div class="rp-activo-box-head">
+                                <span class="rp-activo-box-title">Estado</span>
+                            </div>
+                            <label class="rp-switch mb-0 rp-switch-block">
+                                <input type="checkbox" id="chkActivoFirma" class="rp-switch-input" checked>
+                                <span class="rp-switch-slider"></span>
+                                <span class="rp-activo-estado-text" id="lblActivoFirma">Activo</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Firma</label>
+                        <p class="frm-firma-hint">Dibujala con el mouse o el dedo, o subí una foto. Se usa al generar el contrato Word de la empresa.</p>
+                        <div class="frm-firma-toolbar">
+                            <button type="button" class="btn btn-outline-light btn-sm" id="btnLimpiarFirmaEmpresa">Borrar trazo</button>
+                            <label class="btn btn-outline-light btn-sm mb-0">
+                                Subir foto
+                                <input type="file" id="fileFirmaEmpresa" accept="image/*" hidden />
+                            </label>
+                            <button type="button" class="btn btn-outline-danger btn-sm" id="btnQuitarFirmaEmpresa">Quitar firma guardada</button>
+                        </div>
+                        <div class="frm-firma-pad-wrap">
+                            <canvas id="canvasFirmaEmpresa" width="560" height="180" aria-label="Pad de firma"></canvas>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-success" id="btnGuardarFirma" onclick="guardarFirma()">Guardar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
+    <script src="~/js/Firmas.js?v=1.0" asp-append-version="true"></script>
+}

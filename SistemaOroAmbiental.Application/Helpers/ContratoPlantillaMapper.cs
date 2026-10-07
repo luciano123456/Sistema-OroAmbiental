@@ -23,13 +23,14 @@ namespace SistemaOroAmbiental.Application.Helpers
             var localidadEst = !string.IsNullOrWhiteSpace(est?.Localidad)
                 ? est!.Localidad!.Trim()
                 : (est?.IdLocalidadNavigation?.Nombre?.Trim() ?? "");
+            var localidadCli = cli?.IdLocalidadNavigation?.Nombre?.Trim() ?? "";
             var provinciaEst = est?.IdProvinciaNavigation?.Nombre?.Trim() ?? "";
             var provinciaCli = cli?.IdProvinciaNavigation?.Nombre?.Trim() ?? "";
             var cpEst = est?.CodPostal?.Trim() ?? "";
             var cpCli = cli?.CodPostal?.Trim() ?? "";
 
             var localidadGen = ArmarLocalidadCompleta(
-                localidadEst,
+                !string.IsNullOrWhiteSpace(localidadEst) ? localidadEst : localidadCli,
                 !string.IsNullOrWhiteSpace(provinciaEst) ? provinciaEst : provinciaCli,
                 !string.IsNullOrWhiteSpace(cpEst) ? cpEst : cpCli);
 

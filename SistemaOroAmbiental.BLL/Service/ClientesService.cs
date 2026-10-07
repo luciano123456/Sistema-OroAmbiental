@@ -102,6 +102,9 @@ namespace SistemaOroAmbiental.BLL.Service
         public Task<GrillaPaginadaResult<Cliente>> ListarPaginado(GrillaPaginadaConsulta consulta)
             => _repo.ListarPaginado(consulta);
 
+        public Task<Dictionary<int, string>> ObtenerTextosRecorrido(IReadOnlyCollection<int> idsClientes)
+            => _repo.ObtenerTextosRecorrido(idsClientes);
+
         public Task<int> ObtenerIndiceEnLista(int id, GrillaPaginadaConsulta consulta)
             => _repo.ObtenerIndiceEnLista(id, consulta);
 

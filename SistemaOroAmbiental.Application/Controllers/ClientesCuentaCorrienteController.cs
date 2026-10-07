@@ -164,7 +164,9 @@ namespace SistemaOroAmbiental.Application.Controllers
                 model.Fecha,
                 model.Concepto,
                 model.Importe,
-                idUsuario);
+                idUsuario,
+                model.IdTercero,
+                model.EsPagoTercero);
 
             return Ok(new { valor = result.Ok, mensaje = result.Mensaje, tipo = result.Tipo });
         }

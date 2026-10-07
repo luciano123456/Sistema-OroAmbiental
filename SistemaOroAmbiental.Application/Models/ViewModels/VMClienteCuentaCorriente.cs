@@ -47,6 +47,8 @@ namespace SistemaOroAmbiental.Application.Models.ViewModels
         public DateTime Fecha { get; set; }
         public string Concepto { get; set; } = "";
         public decimal Importe { get; set; }
+        public int? IdTercero { get; set; }
+        public bool EsPagoTercero { get; set; }
     }
 
     public class VMClienteCCAjuste

@@ -133,6 +133,8 @@ namespace SistemaOroAmbiental.Application.Models.ViewModels
         public DateTime Fecha { get; set; }
         public string Concepto { get; set; } = "";
         public decimal Importe { get; set; }
+        public int? IdTercero { get; set; }
+        public bool EsPagoTercero { get; set; }
     }
 
     public class VMClienteEntregaCobroItem
@@ -147,6 +149,9 @@ namespace SistemaOroAmbiental.Application.Models.ViewModels
         public string Cuenta { get; set; } = "";
         public string Sucursal { get; set; } = "";
         public string? Usuario { get; set; }
+        public int? IdTercero { get; set; }
+        public bool EsPagoTercero { get; set; }
+        public string? TerceroNombre { get; set; }
     }
 
     public class VMClienteEntregaCobrosResumen

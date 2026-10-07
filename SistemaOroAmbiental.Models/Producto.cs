@@ -57,4 +57,6 @@ public partial class Producto
     public virtual ICollection<InventarioRecuperado> InventarioRecuperados { get; set; } = new List<InventarioRecuperado>();
 
     public virtual ICollection<ProductosPrecio> ProductosPrecios { get; set; } = new List<ProductosPrecio>();
+
+    public virtual ICollection<ListasPrecio> ListasPrecios { get; set; } = new List<ListasPrecio>();
 }

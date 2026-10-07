@@ -161,7 +161,7 @@
                                     Usa <strong>solo llaves</strong> en Word:
                                     {NOMBRECLIENTE}, {DOMICILIOCLIENTE}, {LOCALIDADCLIENTE}, {TELEFONOCLIENTE},
                                     {CUITCLIENTE}, {TIPOGENERADORCLIENTE}, {IVACLIENTE}, {DIASCLIENTE},
-                                    {EMAILCLIENTE}, {DIA}, {MES}, {ANIO}.
+                                    {EMAILCLIENTE}, {DIA}, {MES}, {ANIO}, {FIRMAEMPRESA}.
                                     Subi la plantilla .docx en Configuraciones → Plantillas Word.
                                 </p>
                             </details>
@@ -260,6 +260,34 @@
                 <button type="button" class="btn btn-primary" id="btnGuardarContrato">
                     <i class="fa fa-check"></i> Registrar
                 </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalFirmaContrato" data-contrato-modal="firma" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rp-modal-shell">
+            <div class="modal-header colorEncabezado rp-modal-header">
+                <div class="rp-modal-title-wrap">
+                    <h5 class="modal-title fw-bold mb-0">Firma de la empresa</h5>
+                    <small class="rp-modal-subtitle">Opcional: se impone sobre la línea de ORO AMBIENTAL GROUP S.R.L.</small>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="frm-pick-label">Qué firma deseas imponer</div>
+                <div id="listaFirmaContrato" class="frm-pick-list" role="listbox" aria-label="Firmas de la empresa">
+                    <button type="button" class="frm-pick-item is-selected" data-id="0">
+                        <span class="frm-pick-preview frm-pick-preview--empty">Sin imagen</span>
+                        <span class="frm-pick-name">Sin firma</span>
+                    </button>
+                </div>
+                <input type="hidden" id="cmbFirmaContrato" value="0" />
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="btnConfirmarFirmaContrato">Generar Word</button>
             </div>
         </div>
     </div>

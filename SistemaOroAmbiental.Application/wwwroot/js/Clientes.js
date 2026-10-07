@@ -9,11 +9,15 @@ const columnConfig = [
     { index: 7, filterType: 'select_local' },
     { index: 8, filterType: 'text' },
     { index: 9, filterType: 'text' },
-    { index: 10, filterType: 'activo' }
+    { index: 10, filterType: 'text' },
+    { index: 11, filterType: 'text' },
+    { index: 12, filterType: 'activo' }
 ];
 
 registrarFiltrosGrilla('grd_Clientes', columnConfig, {
     defaultActivoModo: 'todos',
+    panelTitle: "Filtros",
+    panelExpanded: true,
     initSelect2: ($el) => inicializarSelect2Filtro($el)
 });
 
@@ -29,7 +33,9 @@ function columnDefsClientesGrid() {
         { targets: 7, className: "rp-col-iva", width: "170px" },
         { targets: 8, className: "rp-col-tel", width: "135px" },
         { targets: 9, className: "rp-col-email", width: "280px" },
-        { targets: 10, className: "rp-col-activo", width: "108px" }
+        { targets: 10, className: "rp-col-recorrido", width: "108px" },
+        { targets: 11, className: "rp-col-recorridos", width: "260px" },
+        { targets: 12, className: "rp-col-activo", width: "108px" }
     ];
 }
 
@@ -92,6 +98,21 @@ function renderNombreClienteConLicencia(data, type) {
     </span>`;
 }
 
+function renderRecorridoCliente(row, type) {
+    const val = String(row?.Recorrido || "No").toLowerCase() === "si" ? "Si" : "No";
+    if (type && type !== "display") return val;
+    const si = val === "Si";
+    return `<span class="cl-rec-badge ${si ? "is-si" : "is-no"}">${val}</span>`;
+}
+
+function renderRecorridosCliente(row, type) {
+    const full = String(row?.Recorridos || "");
+    if (type && type !== "display") return full;
+    if (!full) return `<span class="cl-rec-vacio">—</span>`;
+    const visible = full.length > 140 ? full.slice(0, 137) + "…" : full;
+    return `<span class="cl-rec-lista" title="${escapeHtmlClientes(full)}">${escapeHtmlClientes(visible)}</span>`;
+}
+
 const URL_GESTION_CLIENTE = id => id > 0 ? `/Clientes/Gestion?id=${id}` : "/Clientes/Gestion";
 
 const API_CLIENTES = {
@@ -124,6 +145,16 @@ $(document).ready(() => {
             e.preventDefault();
             const $card = $(this).closest(".cl-alerta-card");
             irDesdeAlertaLicencia($card.data("id"));
+        });
+
+    $(".cl-page")
+        .on("click.clKpi", ".cl-kpi-card[data-situacion]", function () {
+            toggleSituacionCliente(String($(this).data("situacion") || ""));
+        })
+        .on("keydown.clKpi", ".cl-kpi-card[data-situacion]", function (e) {
+            if (e.key !== "Enter" && e.key !== " ") return;
+            e.preventDefault();
+            $(this).trigger("click");
         });
 });
 
@@ -280,8 +311,34 @@ function inicializarSelect2Filtro($select) {
     });
 }
 
+const CLIENTES_GRID_HEADERS = [
+    "", "Id", "Nombre", "CUIT", "Sucursal", "Provincia", "Profesion",
+    "Condicion IVA", "Telefono", "Email", "Recorrido", "Recorridos", "Activo"
+];
+
+/** Una sola fila de encabezado, con la misma cantidad de celdas que columns. */
+function normalizarTheadClientes() {
+    const $thead = $("#grd_Clientes").children("thead");
+    if (!$thead.length) return;
+
+    $thead.find("tr.filters").remove();
+    let $row = $thead.children("tr").first();
+    if (!$row.length) $row = $("<tr></tr>").appendTo($thead);
+    $thead.children("tr").not($row).remove();
+
+    const $cells = $row.children("th,td");
+    if ($cells.length === CLIENTES_GRID_HEADERS.length) return;
+
+    $row.empty();
+    CLIENTES_GRID_HEADERS.forEach(text => {
+        $row.append($("<th></th>").text(text));
+    });
+}
+
 async function initGridClientes() {
     if (gridClientes) return;
+
+    normalizarTheadClientes();
 
     gridClientes = $('#grd_Clientes').DataTable({
         serverSide: true,
@@ -317,6 +374,22 @@ async function initGridClientes() {
             { data: 'CondicionIva', className: 'rp-col-iva' },
             { data: 'Telefono', className: 'rp-col-tel' },
             { data: 'Email', className: 'rp-col-email' },
+            {
+                data: 'Recorrido',
+                className: 'rp-col-recorrido',
+                defaultContent: "",
+                render: function (_data, type, row) {
+                    return renderRecorridoCliente(row, type);
+                }
+            },
+            {
+                data: 'Recorridos',
+                className: 'rp-col-recorridos',
+                defaultContent: "",
+                render: function (_data, type, row) {
+                    return renderRecorridosCliente(row, type);
+                }
+            },
             typeof columnaGridActivo === "function" ? columnaGridActivo("Clientes") : { data: "Activo", className: "rp-col-activo" },
         ],
         createdRow: function (row, data) {
@@ -337,12 +410,15 @@ async function initGridClientes() {
         },
         initComplete: async function () {
             const api = this.api();
+            configurarOpcionesColumnas();
             await initFiltrosGrillaListaEnInitComplete(api, '#grd_Clientes', columnConfig, {
                 defaultActivoModo: 'todos',
+                panelTitle: "Filtros",
+                panelExpanded: true,
                 initSelect2: ($el) => inicializarSelect2Filtro($el)
             }, {
-                afterFilters: () => {
-                    configurarOpcionesColumnas();
+                afterFilters: async () => {
+                    await montarFiltrosExtraClientes();
                 },
                 afterAdjust: () => {
                     setTimeout(() => ajustarColumnasGrillaLista(api, '#grd_Clientes'), 200);
@@ -389,7 +465,7 @@ function configurarOpcionesColumnas() {
     const grid = $('#grd_Clientes').DataTable();
     const columnas = grid.settings().init().columns;
     const container = $('#configColumnasMenu');
-    const storageKey = `Clientes_Columnas`;
+    const storageKey = `Clientes_Columnas_v2`;
     const savedConfig = JSON.parse(localStorage.getItem(storageKey)) || {};
 
     container.empty();
@@ -400,9 +476,8 @@ function configurarOpcionesColumnas() {
                 ? savedConfig[`col_${index}`]
                 : true;
 
-            grid.column(index).visible(isChecked);
-
-            const name = $('#grd_Clientes thead tr').first().find('th').eq(index).text();
+            const name = ($(grid.column(index).header()).text() || CLIENTES_GRID_HEADERS[index] || "").trim();
+            grid.column(index).visible(isChecked, false);
 
             container.append(`
                 <li class="rp-dd-item">
@@ -423,8 +498,21 @@ function configurarOpcionesColumnas() {
         const isChecked = $(this).is(':checked');
         savedConfig[`col_${columnIdx}`] = isChecked;
         localStorage.setItem(storageKey, JSON.stringify(savedConfig));
-        grid.column(columnIdx).visible(isChecked);
+        aplicarVisibilidadColumnaClientes(grid, columnIdx, isChecked);
     });
+
+    try { grid.columns.adjust(); } catch { /* scrollX aun no listo */ }
+}
+
+function aplicarVisibilidadColumnaClientes(grid, columnIdx, isChecked) {
+    const $wrap = $("#grd_Clientes").closest(".dataTables_wrapper");
+    $wrap.find("thead tr.filters").remove();
+    grid.column(columnIdx).visible(isChecked, false);
+    if (typeof sincronizarFilaFiltrosScrollHeadGrilla === "function") {
+        sincronizarFilaFiltrosScrollHeadGrilla(grid, "#grd_Clientes");
+    }
+    try { grid.columns.adjust(); } catch { /* sin scroll */ }
+    grid.draw(false);
 }
 
 function actualizarKpis(totalOrData) {
@@ -442,4 +530,541 @@ function actualizarKpis(totalOrData) {
 
 function escapeRegex(text) {
     return (text || "").replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+const filtrosCli = {
+    dias: [],
+    semanas: [],
+    camion: "",
+    zona: "",
+    cobertura: "",
+    situacion: "",
+    tipoGenerador: "",
+    calificacion: "",
+    localidad: "",
+    nroCliente: "",
+    contrato: "",
+    contacto: ""
+};
+
+const catFiltrosCli = {
+    dias: [],
+    semanas: [],
+    camiones: [],
+    tipos: [],
+    calificaciones: []
+};
+
+const SITUACIONES_CLI = [
+    { id: "", label: "Todas" },
+    { id: "activos", label: "Activos" },
+    { id: "suspendidos", label: "Suspendidos" },
+    { id: "baja", label: "Baja" },
+    { id: "licencia", label: "Licencia" },
+    { id: "alertas", label: "Por vencer" }
+];
+
+const aplicarFiltrosExtraClientesDebounced = rpDebounce(() => aplicarFiltrosExtraClientes(), 300);
+
+function toggleSituacionCliente(sit) {
+    filtrosCli.situacion = filtrosCli.situacion === sit ? "" : sit;
+    syncSituacionVisual();
+    aplicarFiltrosExtraClientes();
+}
+
+function normNombreFiltro(nombre) {
+    return String(nombre || "")
+        .trim()
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "");
+}
+
+function etiquetaDiaCorta(nombre) {
+    const map = {
+        lunes: "Lun",
+        martes: "Mar",
+        miercoles: "Mie",
+        jueves: "Jue",
+        viernes: "Vie",
+        sabado: "Sab",
+        domingo: "Dom"
+    };
+    return map[normNombreFiltro(nombre)] || String(nombre || "").slice(0, 3);
+}
+
+function etiquetaSemanaCorta(nombre) {
+    const n = String(nombre || "").trim();
+    const num = n.match(/(\d+)/);
+    if (/semana/i.test(n) && num) return "S" + num[1];
+    return n.length > 16 ? n.slice(0, 14) + "…" : n;
+}
+
+function idItemLista(item) {
+    return Number(item?.Id ?? item?.id ?? 0);
+}
+
+function nombreItemLista(item) {
+    return String(item?.Etiqueta || item?.Nombre || item?.nombre || "").trim();
+}
+
+async function fetchListaFiltroCliente(url) {
+    try {
+        const response = await fetch(url, {
+            headers: { Authorization: "Bearer " + (window.token || token) }
+        });
+        if (!response.ok) return [];
+        const data = await response.json();
+        return Array.isArray(data) ? data : [];
+    } catch (e) {
+        console.warn("No se pudo cargar el filtro", url, e);
+        return [];
+    }
+}
+
+function armarPayloadFiltrosExtra() {
+    const p = {};
+    const sinRuta = filtrosCli.cobertura === "sin";
+
+    if (!sinRuta) {
+        if (filtrosCli.dias.length) p.RecDia = filtrosCli.dias.join(",");
+        if (filtrosCli.semanas.length) p.RecSemana = filtrosCli.semanas.join(",");
+        if (filtrosCli.camion) p.RecCamion = String(filtrosCli.camion);
+        if (filtrosCli.zona.trim()) p.RecZona = filtrosCli.zona.trim();
+    }
+    if (filtrosCli.cobertura === "con" || filtrosCli.cobertura === "sin")
+        p.RecCobertura = filtrosCli.cobertura;
+    if (filtrosCli.situacion) p.Situacion = filtrosCli.situacion;
+    if (filtrosCli.tipoGenerador) p.TipoGenerador = String(filtrosCli.tipoGenerador);
+    if (filtrosCli.calificacion) p.Calificacion = String(filtrosCli.calificacion);
+    if (filtrosCli.localidad.trim()) p.Localidad = filtrosCli.localidad.trim();
+    if (filtrosCli.nroCliente.trim()) p.NroCliente = filtrosCli.nroCliente.trim();
+    if (filtrosCli.contrato) p.Contrato = filtrosCli.contrato;
+    if (filtrosCli.contacto) p.Contacto = filtrosCli.contacto;
+    return p;
+}
+
+function aplicarFiltrosExtraClientes() {
+    const payload = armarPayloadFiltrosExtra();
+    const $table = $("#grd_Clientes");
+    const $panel = $("#panelFiltrosGrid_grd_Clientes");
+    $table.data("rpFiltrosExtra", payload);
+    $panel.data("rpExtraCount", Object.keys(payload).length);
+    if (typeof refrescarBadgeFiltrosPanel === "function" && $panel.length)
+        refrescarBadgeFiltrosPanel($panel);
+    renderResumenFiltrosCliente(payload);
+    syncCoberturaVisual();
+    if (gridClientes) gridClientes.draw();
+}
+
+function resetFiltrosExtraClientes() {
+    filtrosCli.dias = [];
+    filtrosCli.semanas = [];
+    filtrosCli.camion = "";
+    filtrosCli.zona = "";
+    filtrosCli.cobertura = "";
+    filtrosCli.situacion = "";
+    filtrosCli.tipoGenerador = "";
+    filtrosCli.calificacion = "";
+    filtrosCli.localidad = "";
+    filtrosCli.nroCliente = "";
+    filtrosCli.contrato = "";
+    filtrosCli.contacto = "";
+    $("#grd_Clientes").data("rpFiltrosExtra", {});
+    $("#panelFiltrosGrid_grd_Clientes").data("rpExtraCount", 0);
+    volcarFiltrosExtraEnUi();
+    renderResumenFiltrosCliente({});
+}
+
+function syncSituacionVisual() {
+    $("#clChipsSituacion .cl-chip").each(function () {
+        const id = String($(this).attr("data-id") ?? "");
+        const on = id === (filtrosCli.situacion || "");
+        $(this).toggleClass("is-on", on).attr("aria-pressed", on);
+    });
+    $(".cl-kpi-card[data-situacion]").each(function () {
+        const id = String($(this).data("situacion") || "");
+        const on = !!filtrosCli.situacion && id === filtrosCli.situacion;
+        $(this).toggleClass("is-on", on).attr("aria-pressed", on);
+    });
+}
+
+function syncCoberturaVisual() {
+    const sin = filtrosCli.cobertura === "sin";
+    $("#clFiltrosExtra").toggleClass("is-sin-recorrido", sin);
+    $("#clSegCobertura button").each(function () {
+        const on = String($(this).attr("data-val") ?? "") === filtrosCli.cobertura;
+        $(this).toggleClass("is-on", on).attr("aria-pressed", on);
+    });
+    $("#clSegContrato button").each(function () {
+        const on = String($(this).attr("data-val") ?? "") === filtrosCli.contrato;
+        $(this).toggleClass("is-on", on).attr("aria-pressed", on);
+    });
+}
+
+function setSelectFiltroCliente(selector, value) {
+    const $el = $(selector);
+    if (!$el.length) return;
+    $el.val(value || "");
+    if ($el.data("select2")) $el.trigger("change.select2");
+}
+
+function initSelectsFiltroCliente($root) {
+    if (!$root?.length || typeof $.fn.select2 !== "function") return;
+    $root.find("select.cl-filtro-select").each(function () {
+        const $el = $(this);
+        if ($el.data("select2")) return;
+        const placeholder = $el.find("option[value='']").first().text() || "Todos";
+        $el.select2({
+            width: "100%",
+            dropdownParent: $(document.body),
+            dropdownCssClass: "cl-s2-dropdown",
+            placeholder: placeholder,
+            allowClear: true,
+            minimumResultsForSearch: 8
+        });
+        $el.on("select2:open.clExtra", function () {
+            $(".select2-container--open .select2-dropdown").last().addClass("cl-s2-dropdown");
+        });
+    });
+}
+
+function volcarFiltrosExtraEnUi() {
+    $("#clChipsDias .cl-chip").each(function () {
+        const id = Number($(this).data("id"));
+        const on = filtrosCli.dias.includes(id);
+        $(this).toggleClass("is-on", on).attr("aria-pressed", on);
+    });
+    $("#clChipsSemanas .cl-chip").each(function () {
+        const id = Number($(this).data("id"));
+        const on = filtrosCli.semanas.includes(id);
+        $(this).toggleClass("is-on", on).attr("aria-pressed", on);
+    });
+    setSelectFiltroCliente("#clFiltroCamion", filtrosCli.camion);
+    $("#clFiltroZona").val(filtrosCli.zona || "");
+    setSelectFiltroCliente("#clFiltroTipo", filtrosCli.tipoGenerador);
+    setSelectFiltroCliente("#clFiltroCalificacion", filtrosCli.calificacion);
+    $("#clFiltroLocalidad").val(filtrosCli.localidad || "");
+    $("#clFiltroNro").val(filtrosCli.nroCliente || "");
+    setSelectFiltroCliente("#clFiltroContacto", filtrosCli.contacto);
+    syncSituacionVisual();
+    syncCoberturaVisual();
+}
+
+function nombreCatalogo(lista, id) {
+    const item = (lista || []).find(x => idItemLista(x) === Number(id));
+    return item ? nombreItemLista(item) : "";
+}
+
+function renderResumenFiltrosCliente(payload) {
+    const $box = $("#clFiltrosResumen");
+    if (!$box.length) return;
+
+    const pills = [];
+    if (!filtrosCli.cobertura || filtrosCli.cobertura !== "sin") {
+        filtrosCli.dias.forEach(id => {
+            const nombre = nombreCatalogo(catFiltrosCli.dias, id);
+            pills.push({ kind: "dia", id, label: etiquetaDiaCorta(nombre) || nombre || ("Dia " + id) });
+        });
+        filtrosCli.semanas.forEach(id => {
+            const nombre = nombreCatalogo(catFiltrosCli.semanas, id);
+            pills.push({ kind: "semana", id, label: etiquetaSemanaCorta(nombre) || nombre || ("Semana " + id) });
+        });
+        if (payload.RecCamion) {
+            pills.push({
+                kind: "camion",
+                label: nombreCatalogo(catFiltrosCli.camiones, payload.RecCamion) || "Camion"
+            });
+        }
+        if (payload.RecZona) pills.push({ kind: "zona", label: "Zona: " + payload.RecZona });
+    }
+    if (payload.RecCobertura === "con") pills.push({ kind: "cobertura", label: "Con recorrido" });
+    if (payload.RecCobertura === "sin") pills.push({ kind: "cobertura", label: "Sin recorrido" });
+
+    const sit = SITUACIONES_CLI.find(s => s.id === payload.Situacion);
+    if (sit) pills.push({ kind: "situacion", label: sit.label });
+    if (payload.TipoGenerador) {
+        pills.push({
+            kind: "tipo",
+            label: nombreCatalogo(catFiltrosCli.tipos, payload.TipoGenerador) || "Tipo generador"
+        });
+    }
+    if (payload.Calificacion) {
+        pills.push({
+            kind: "calificacion",
+            label: nombreCatalogo(catFiltrosCli.calificaciones, payload.Calificacion) || "Calificacion"
+        });
+    }
+    if (payload.Localidad) pills.push({ kind: "localidad", label: payload.Localidad });
+    if (payload.NroCliente) pills.push({ kind: "nro", label: "Nro. " + payload.NroCliente });
+    if (payload.Contrato === "vigente") pills.push({ kind: "contrato", label: "Contrato vigente" });
+    if (payload.Contrato === "vencido") pills.push({ kind: "contrato", label: "Contrato vencido" });
+    if (payload.Contrato === "sin") pills.push({ kind: "contrato", label: "Sin contrato" });
+    if (payload.Contacto === "conemail") pills.push({ kind: "contacto", label: "Con email" });
+    if (payload.Contacto === "sinemail") pills.push({ kind: "contacto", label: "Sin email" });
+    if (payload.Contacto === "contel") pills.push({ kind: "contacto", label: "Con telefono" });
+    if (payload.Contacto === "sintel") pills.push({ kind: "contacto", label: "Sin telefono" });
+
+    if (!pills.length) {
+        $box.addClass("d-none").empty();
+        return;
+    }
+
+    $box.removeClass("d-none").html(
+        `<span class="cl-resumen-label"><i class="fa fa-filter"></i> Viendo</span>` +
+        pills.map(p => `<button type="button" class="cl-resumen-pill" data-kind="${escapeHtmlCl(p.kind)}" data-id="${p.id ?? ""}">
+            <span>${escapeHtmlCl(p.label)}</span><i class="fa fa-times" aria-hidden="true"></i>
+        </button>`).join("") +
+        `<button type="button" class="cl-resumen-clear">Limpiar</button>`
+    );
+}
+
+function quitarPillFiltroCliente(kind, id) {
+    const num = Number(id);
+    if (kind === "dia") filtrosCli.dias = filtrosCli.dias.filter(x => x !== num);
+    else if (kind === "semana") filtrosCli.semanas = filtrosCli.semanas.filter(x => x !== num);
+    else if (kind === "camion") filtrosCli.camion = "";
+    else if (kind === "zona") filtrosCli.zona = "";
+    else if (kind === "cobertura") filtrosCli.cobertura = "";
+    else if (kind === "situacion") filtrosCli.situacion = "";
+    else if (kind === "tipo") filtrosCli.tipoGenerador = "";
+    else if (kind === "calificacion") filtrosCli.calificacion = "";
+    else if (kind === "localidad") filtrosCli.localidad = "";
+    else if (kind === "nro") filtrosCli.nroCliente = "";
+    else if (kind === "contrato") filtrosCli.contrato = "";
+    else if (kind === "contacto") filtrosCli.contacto = "";
+    volcarFiltrosExtraEnUi();
+    aplicarFiltrosExtraClientes();
+}
+
+function toggleIdFiltro(lista, id) {
+    const n = Number(id);
+    const i = lista.indexOf(n);
+    if (i >= 0) lista.splice(i, 1);
+    else lista.push(n);
+}
+
+function opcionesSelectFiltro(items, placeholder, textFn) {
+    const opts = [`<option value="">${escapeHtmlCl(placeholder)}</option>`];
+    (items || []).forEach(item => {
+        const id = idItemLista(item);
+        const texto = textFn ? textFn(item) : nombreItemLista(item);
+        if (!id || !texto) return;
+        opts.push(`<option value="${id}">${escapeHtmlCl(texto)}</option>`);
+    });
+    return opts.join("");
+}
+
+function htmlChips(items, cortoFn) {
+    if (!items.length) return `<span class="cl-filtro-vacio">Sin datos</span>`;
+    return items.map(item => {
+        const id = idItemLista(item);
+        const nombre = nombreItemLista(item);
+        if (!id || !nombre) return "";
+        const corto = cortoFn(nombre);
+        return `<button type="button" class="cl-chip" data-id="${id}" title="${escapeHtmlCl(nombre)}" aria-pressed="false">${escapeHtmlCl(corto)}</button>`;
+    }).join("");
+}
+
+async function montarFiltrosExtraClientes() {
+    const $panel = $("#panelFiltrosGrid_grd_Clientes");
+    if (!$panel.length || $("#clFiltrosExtra").length) return;
+
+    const [dias, semanas, camiones, tipos, calificaciones] = await Promise.all([
+        fetchListaFiltroCliente("/Dias/Lista"),
+        fetchListaFiltroCliente("/Semanas/Lista"),
+        fetchListaFiltroCliente("/Camiones/Lista"),
+        fetchListaFiltroCliente("/ClientesTiposGenerador/Lista"),
+        fetchListaFiltroCliente("/ClientesCalificaciones/Lista")
+    ]);
+
+    const ordenDia = ["lunes", "martes", "miercoles", "jueves", "viernes", "sabado", "domingo"];
+    catFiltrosCli.dias = dias.slice().sort((a, b) => {
+        const ia = ordenDia.indexOf(normNombreFiltro(nombreItemLista(a)));
+        const ib = ordenDia.indexOf(normNombreFiltro(nombreItemLista(b)));
+        return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+    });
+    catFiltrosCli.semanas = semanas.slice().sort((a, b) => idItemLista(a) - idItemLista(b));
+    catFiltrosCli.camiones = camiones;
+    catFiltrosCli.tipos = tipos;
+    catFiltrosCli.calificaciones = calificaciones;
+
+    const html = `
+        <div class="cl-filtros-extra" id="clFiltrosExtra">
+            <section class="cl-filtro-sec">
+                <div class="cl-filtro-sec-h">
+                    <i class="fa fa-road"></i>
+                    <div>
+                        <strong>Recorrido</strong>
+                        <span>Dia, semana, camion o zona. Se puede combinar.</span>
+                    </div>
+                </div>
+                <div class="cl-rec-detalle">
+                    <div class="cl-filtro-line">
+                        <span class="cl-filtro-k">Dia</span>
+                        <div class="cl-chips" id="clChipsDias">${htmlChips(catFiltrosCli.dias, etiquetaDiaCorta)}</div>
+                    </div>
+                    <div class="cl-filtro-line">
+                        <span class="cl-filtro-k">Semana</span>
+                        <div class="cl-chips" id="clChipsSemanas">${htmlChips(catFiltrosCli.semanas, etiquetaSemanaCorta)}</div>
+                    </div>
+                    <div class="cl-filtro-grid">
+                        <label class="cl-filtro-field">
+                            <span>Camion</span>
+                            <select id="clFiltroCamion" class="cl-filtro-select">${opcionesSelectFiltro(camiones, "Todos los camiones")}</select>
+                        </label>
+                        <label class="cl-filtro-field">
+                            <span>Zona</span>
+                            <input id="clFiltroZona" class="cl-filtro-input" type="text" placeholder="Norte, Centro..." autocomplete="off">
+                        </label>
+                    </div>
+                </div>
+                <div class="cl-filtro-line cl-filtro-line-seg">
+                    <span class="cl-filtro-k">En ruta</span>
+                    <div class="cl-seg" id="clSegCobertura">
+                        <button type="button" data-val="" class="is-on" aria-pressed="true">Todos</button>
+                        <button type="button" data-val="con" aria-pressed="false">Con recorrido</button>
+                        <button type="button" data-val="sin" aria-pressed="false">Sin recorrido</button>
+                    </div>
+                </div>
+            </section>
+            <section class="cl-filtro-sec">
+                <div class="cl-filtro-sec-h">
+                    <i class="fa fa-user"></i>
+                    <div>
+                        <strong>Cliente</strong>
+                        <span>Situacion, contrato, zona y contacto.</span>
+                    </div>
+                </div>
+                <div class="cl-filtro-line">
+                    <span class="cl-filtro-k">Situacion</span>
+                    <div class="cl-chips" id="clChipsSituacion">
+                        ${SITUACIONES_CLI.map(s => `<button type="button" class="cl-chip cl-chip-sit cl-chip-sit-${s.id || "todas"}${s.id ? "" : " is-on"}" data-id="${s.id}" aria-pressed="${s.id ? "false" : "true"}">${s.label}</button>`).join("")}
+                    </div>
+                </div>
+                <div class="cl-filtro-grid">
+                    <label class="cl-filtro-field">
+                        <span>Tipo generador</span>
+                        <select id="clFiltroTipo" class="cl-filtro-select">${opcionesSelectFiltro(tipos, "Todos", item => nombreItemLista(item))}</select>
+                    </label>
+                    <label class="cl-filtro-field">
+                        <span>Calificacion</span>
+                        <select id="clFiltroCalificacion" class="cl-filtro-select">${opcionesSelectFiltro(calificaciones, "Todas")}</select>
+                    </label>
+                    <label class="cl-filtro-field">
+                        <span>Localidad o domicilio</span>
+                        <input id="clFiltroLocalidad" class="cl-filtro-input" type="text" placeholder="Localidad, partido, calle..." autocomplete="off">
+                    </label>
+                    <label class="cl-filtro-field">
+                        <span>Nro. cliente</span>
+                        <input id="clFiltroNro" class="cl-filtro-input" type="text" inputmode="numeric" placeholder="Ej. 120" autocomplete="off">
+                    </label>
+                    <label class="cl-filtro-field">
+                        <span>Contacto</span>
+                        <select id="clFiltroContacto" class="cl-filtro-select">
+                            <option value="">Todos</option>
+                            <option value="conemail">Con email</option>
+                            <option value="sinemail">Sin email</option>
+                            <option value="contel">Con telefono</option>
+                            <option value="sintel">Sin telefono</option>
+                        </select>
+                    </label>
+                </div>
+                <div class="cl-filtro-line cl-filtro-line-seg">
+                    <span class="cl-filtro-k">Contrato</span>
+                    <div class="cl-seg" id="clSegContrato">
+                        <button type="button" data-val="" class="is-on" aria-pressed="true">Todos</button>
+                        <button type="button" data-val="vigente" aria-pressed="false">Vigente</button>
+                        <button type="button" data-val="vencido" aria-pressed="false">Vencido</button>
+                        <button type="button" data-val="sin" aria-pressed="false">Sin contrato</button>
+                    </div>
+                </div>
+            </section>
+        </div>`;
+
+    const $actions = $panel.find(".rp-filtros-actions");
+    if ($actions.length) $actions.before(html);
+    else $panel.find(".rp-filtros-body").append(html);
+
+    if (!$("#clFiltrosResumen").length)
+        $panel.after(`<div id="clFiltrosResumen" class="cl-filtros-resumen d-none"></div>`);
+
+    $panel.off(".clExtra");
+    $panel.on("click.clExtra", "#clChipsDias .cl-chip", function () {
+        toggleIdFiltro(filtrosCli.dias, $(this).data("id"));
+        volcarFiltrosExtraEnUi();
+        aplicarFiltrosExtraClientes();
+    });
+    $panel.on("click.clExtra", "#clChipsSemanas .cl-chip", function () {
+        toggleIdFiltro(filtrosCli.semanas, $(this).data("id"));
+        volcarFiltrosExtraEnUi();
+        aplicarFiltrosExtraClientes();
+    });
+    $panel.on("click.clExtra", "#clChipsSituacion .cl-chip", function () {
+        toggleSituacionCliente(String($(this).attr("data-id") ?? ""));
+    });
+    $panel.on("click.clExtra", "#clSegCobertura button", function () {
+        filtrosCli.cobertura = String($(this).attr("data-val") ?? "");
+        syncCoberturaVisual();
+        aplicarFiltrosExtraClientes();
+    });
+    $panel.on("click.clExtra", "#clSegContrato button", function () {
+        filtrosCli.contrato = String($(this).attr("data-val") ?? "");
+        syncCoberturaVisual();
+        aplicarFiltrosExtraClientes();
+    });
+    $panel.on("change.clExtra", "#clFiltroCamion", function () {
+        filtrosCli.camion = this.value || "";
+        aplicarFiltrosExtraClientes();
+    });
+    $panel.on("change.clExtra", "#clFiltroTipo", function () {
+        filtrosCli.tipoGenerador = this.value || "";
+        aplicarFiltrosExtraClientes();
+    });
+    $panel.on("change.clExtra", "#clFiltroCalificacion", function () {
+        filtrosCli.calificacion = this.value || "";
+        aplicarFiltrosExtraClientes();
+    });
+    $panel.on("change.clExtra", "#clFiltroContacto", function () {
+        filtrosCli.contacto = this.value || "";
+        aplicarFiltrosExtraClientes();
+    });
+    $panel.on("input.clExtra", "#clFiltroZona", function () {
+        filtrosCli.zona = this.value || "";
+        aplicarFiltrosExtraClientesDebounced();
+    });
+    $panel.on("input.clExtra", "#clFiltroLocalidad", function () {
+        filtrosCli.localidad = this.value || "";
+        aplicarFiltrosExtraClientesDebounced();
+    });
+    $panel.on("input.clExtra", "#clFiltroNro", function () {
+        filtrosCli.nroCliente = this.value || "";
+        aplicarFiltrosExtraClientesDebounced();
+    });
+
+    $("#clFiltrosResumen")
+        .off(".clExtra")
+        .on("click.clExtra", ".cl-resumen-pill", function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            quitarPillFiltroCliente(String($(this).data("kind") || ""), $(this).data("id"));
+        })
+        .on("click.clExtra", ".cl-resumen-clear", function (e) {
+            e.preventDefault();
+            const $btn = $panel.find(".rp-grid-filtros-limpiar");
+            if ($btn.length) $btn.trigger("click");
+            else {
+                resetFiltrosExtraClientes();
+                if (gridClientes) gridClientes.draw();
+            }
+        });
+
+    $("#grd_Clientes")
+        .off("rp:filtros-limpiados.clExtra")
+        .on("rp:filtros-limpiados.clExtra", function () {
+            resetFiltrosExtraClientes();
+        });
+
+    initSelectsFiltroCliente($("#clFiltrosExtra"));
+    volcarFiltrosExtraEnUi();
 }

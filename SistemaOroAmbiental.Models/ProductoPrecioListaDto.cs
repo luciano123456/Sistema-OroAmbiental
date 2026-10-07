@@ -8,6 +8,10 @@ public class ProductoPrecioListaDto
 
     public string ListaPrecio { get; set; } = "";
 
+    public int? IdProductoLista { get; set; }
+
+    public bool EsGeneral { get; set; }
+
     public decimal PrecioVenta { get; set; }
 
     public decimal PorcRentabilidad { get; set; }

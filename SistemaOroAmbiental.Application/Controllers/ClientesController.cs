@@ -64,7 +64,18 @@ namespace SistemaOroAmbiental.Application.Controllers
         {
             var consulta = GrillaServerHelper.ToConsulta(req);
             var result = await _service.ListarPaginado(consulta);
-            var data = result.Items.Select(MapVm).ToList();
+            var ids = result.Items.Select(c => c.Id).ToList();
+            var textosRecorrido = await _service.ObtenerTextosRecorrido(ids);
+            var data = result.Items.Select(c =>
+            {
+                var vm = MapVm(c);
+                if (textosRecorrido.TryGetValue(c.Id, out var texto) && !string.IsNullOrWhiteSpace(texto))
+                {
+                    vm.Recorrido = "Si";
+                    vm.Recorridos = texto;
+                }
+                return vm;
+            }).ToList();
             return Ok(GrillaServerHelper.Respuesta(req, result.Total, result.Filtered, data));
         }
 
@@ -92,26 +103,18 @@ namespace SistemaOroAmbiental.Application.Controllers
         {
             take = Math.Clamp(take, 1, 80);
             var query = await _service.ObtenerTodos(!incluirInactivos);
-            var texto = (q ?? "").Trim();
-            if (texto.Length > 0)
+            var (campo, termino) = ParseComboBusqueda(q);
+
+            if (!string.IsNullOrEmpty(campo) && string.IsNullOrEmpty(termino))
             {
-                if (int.TryParse(texto, out var nro))
-                {
-                    query = query.Where(c =>
-                        c.Id == nro ||
-                        c.Nombre.Contains(texto) ||
-                        (c.Cuit != null && c.Cuit.Contains(texto)) ||
-                        c.NumeroCliente == nro);
-                }
-                else
-                {
-                    query = query.Where(c =>
-                        c.Nombre.Contains(texto) ||
-                        (c.Cuit != null && c.Cuit.Contains(texto)));
-                }
+                query = query.Where(c => false);
+            }
+            else if (!string.IsNullOrEmpty(termino))
+            {
+                query = FiltrarComboClientes(query, campo, termino);
             }
 
-            var list = await query
+            var crudos = await query
                 .OrderBy(c => c.Nombre)
                 .Take(take)
                 .Select(c => new
@@ -120,9 +123,64 @@ namespace SistemaOroAmbiental.Application.Controllers
                     c.Nombre,
                     c.Cuit,
                     c.NumeroCliente,
-                    c.Activo
+                    c.Activo,
+                    c.Domicilio,
+                    c.Calle,
+                    c.Telefono,
+                    c.Email,
+                    c.MotivoDetalle,
+                    Ests = c.ClientesEstablecimientos.Select(e => new
+                    {
+                        e.Nombre,
+                        e.Domicilio,
+                        e.Calle,
+                        e.Localidad,
+                        e.Cuit,
+                        e.Descripcion,
+                        e.IdEstablecimientoCliente
+                    }),
+                    Contactos = c.ClientesContactos.Select(x => new
+                    {
+                        x.Nombre,
+                        x.Telefono,
+                        x.Email
+                    }),
+                    Obs = c.ClientesControlMensuales
+                        .Where(m => m.Observaciones != null && m.Observaciones != "")
+                        .OrderByDescending(m => m.Anio)
+                        .ThenByDescending(m => m.Mes)
+                        .Select(m => m.Observaciones!)
+                        .Take(4)
                 })
                 .ToListAsync();
+
+            var list = crudos.Select(c =>
+            {
+                var (matchCampo, matchDetalle) = ResolverMatchCombo(
+                    campo,
+                    termino,
+                    c.Nombre,
+                    c.Cuit,
+                    c.NumeroCliente,
+                    c.Domicilio,
+                    c.Calle,
+                    c.Telefono,
+                    c.Email,
+                    c.MotivoDetalle,
+                    c.Ests.Select(e => (e.Nombre, e.Domicilio, e.Calle, e.Localidad, e.Cuit, e.Descripcion, e.IdEstablecimientoCliente)),
+                    c.Contactos.Select(x => (x.Nombre, x.Telefono, x.Email)),
+                    c.Obs);
+                return new
+                {
+                    c.Id,
+                    c.Nombre,
+                    c.Cuit,
+                    c.NumeroCliente,
+                    c.Activo,
+                    MatchCampo = matchCampo,
+                    MatchDetalle = matchDetalle
+                };
+            }).ToList();
 
             if (id is > 0 && list.All(x => x.Id != id.Value))
             {
@@ -134,7 +192,9 @@ namespace SistemaOroAmbiental.Application.Controllers
                         c.Nombre,
                         c.Cuit,
                         c.NumeroCliente,
-                        c.Activo
+                        c.Activo,
+                        MatchCampo = (string?)null,
+                        MatchDetalle = (string?)null
                     })
                     .FirstOrDefaultAsync();
                 if (extra != null)
@@ -309,6 +369,8 @@ namespace SistemaOroAmbiental.Application.Controllers
                     Domicilio = DomicilioHelper.Componer(cliente.Calle, cliente.Numero, cliente.PisoDepartamento, cliente.Domicilio),
                     IdCondicionIva = cliente.IdCondicionIva,
                     IdProvincia = cliente.IdProvincia,
+                    IdLocalidad = cliente.IdLocalidad,
+                    Localidad = cliente.IdLocalidadNavigation?.Nombre,
                     CodPostal = cliente.CodPostal,
                     IdDiaRecoleccion = idDia,
                     IdSemanaRecoleccion = idSemana,
@@ -512,6 +574,7 @@ namespace SistemaOroAmbiental.Application.Controllers
                     ? c.IdTipoGeneradorNavigation.Codigo + " - " + c.IdTipoGeneradorNavigation.Nombre
                     : null,
                 IdProvincia = c.IdProvincia,
+                IdLocalidad = c.IdLocalidad,
                 CodPostal = c.CodPostal,
                 IdCondicionIva = c.IdCondicionIva,
                 Email = c.Email,
@@ -522,6 +585,7 @@ namespace SistemaOroAmbiental.Application.Controllers
                 IdCalificacion = c.IdCalificacion,
                 Sucursal = c.IdSucursalNavigation?.Nombre ?? "",
                 Provincia = c.IdProvinciaNavigation?.Nombre ?? "",
+                Localidad = c.IdLocalidadNavigation?.Nombre ?? "",
                 CondicionIva = c.IdCondicionIvaNavigation?.Nombre ?? "",
                 Profesion = c.IdProfesionNavigation?.Nombre ?? "",
                 Estado = c.IdEstadoNavigation?.Nombre,
@@ -574,6 +638,7 @@ namespace SistemaOroAmbiental.Application.Controllers
                 Domicilio = DomicilioHelper.Componer(calle, numero, piso, model.Domicilio),
                 IdTipoGenerador = model.IdTipoGenerador,
                 IdProvincia = model.IdProvincia,
+                IdLocalidad = model.IdLocalidad,
                 CodPostal = model.CodPostal,
                 IdCondicionIva = model.IdCondicionIva,
                 Email = model.Email,
@@ -699,6 +764,179 @@ namespace SistemaOroAmbiental.Application.Controllers
                 mensaje = result.Mensaje,
                 tipo = result.Tipo
             });
+        }
+
+        private static (string campo, string termino) ParseComboBusqueda(string? q)
+        {
+            var raw = (q ?? "").Trim();
+            if (raw.Length == 0) return ("", "");
+            if (raw.StartsWith("#")) return ("nro", raw[1..].Trim());
+
+            foreach (var (keys, campo) in ComboPrefijos)
+            {
+                foreach (var key in keys)
+                {
+                    if (raw.StartsWith(key + ":", StringComparison.OrdinalIgnoreCase))
+                        return (campo, raw[(key.Length + 1)..].Trim());
+                    if (raw.StartsWith(key + " ", StringComparison.OrdinalIgnoreCase))
+                        return (campo, raw[(key.Length + 1)..].Trim());
+                }
+            }
+
+            return ("todos", raw);
+        }
+
+        private static readonly (string[] keys, string campo)[] ComboPrefijos =
+        {
+            (new[] { "establecimiento", "est", "sucursal", "suc" }, "est"),
+            (new[] { "domicilio", "direccion", "dir", "dom" }, "dir"),
+            (new[] { "observaciones", "observacion", "obs" }, "obs"),
+            (new[] { "telefono", "tel", "cel", "email", "mail" }, "tel"),
+            (new[] { "numero", "nro", "n" }, "nro"),
+            (new[] { "cliente", "nombre", "cli" }, "nombre"),
+            (new[] { "cuit", "dni", "cuil" }, "cuit")
+        };
+
+        private static IQueryable<Cliente> FiltrarComboClientes(IQueryable<Cliente> query, string campo, string term)
+        {
+            var digits = new string(term.Where(char.IsDigit).ToArray());
+            int.TryParse(term, out var nro);
+            var hayNro = nro > 0 && digits == term;
+
+            return campo switch
+            {
+                "cuit" => query.Where(c =>
+                    (c.Cuit != null && (c.Cuit.Contains(term) || (digits.Length > 0 && c.Cuit.Replace("-", "").Replace(" ", "").Replace("/", "").Contains(digits)))) ||
+                    c.ClientesEstablecimientos.Any(e =>
+                        e.Cuit != null && (e.Cuit.Contains(term) || (digits.Length > 0 && e.Cuit.Replace("-", "").Replace(" ", "").Replace("/", "").Contains(digits))))),
+                "nro" => query.Where(c =>
+                    (hayNro && (c.NumeroCliente == nro || c.Id == nro)) ||
+                    c.Nombre.Contains(term) ||
+                    (c.NumeroCliente != null && c.NumeroCliente.ToString()!.Contains(term))),
+                "nombre" => query.Where(c =>
+                    c.Nombre.Contains(term) ||
+                    (hayNro && (c.NumeroCliente == nro || c.Id == nro))),
+                "est" => query.Where(c => c.ClientesEstablecimientos.Any(e =>
+                    e.Nombre.Contains(term) ||
+                    (e.IdEstablecimientoCliente != null && e.IdEstablecimientoCliente.Contains(term)) ||
+                    (e.Domicilio != null && e.Domicilio.Contains(term)) ||
+                    (e.Calle != null && e.Calle.Contains(term)) ||
+                    (e.Localidad != null && e.Localidad.Contains(term)) ||
+                    (e.Cuit != null && e.Cuit.Contains(term)) ||
+                    (e.Descripcion != null && e.Descripcion.Contains(term)))),
+                "dir" => query.Where(c =>
+                    (c.Domicilio != null && c.Domicilio.Contains(term)) ||
+                    (c.Calle != null && c.Calle.Contains(term)) ||
+                    (c.Numero != null && c.Numero.Contains(term)) ||
+                    c.ClientesEstablecimientos.Any(e =>
+                        (e.Domicilio != null && e.Domicilio.Contains(term)) ||
+                        (e.Calle != null && e.Calle.Contains(term)) ||
+                        (e.Numero != null && e.Numero.Contains(term)) ||
+                        (e.Localidad != null && e.Localidad.Contains(term)))),
+                "obs" => query.Where(c =>
+                    (c.MotivoDetalle != null && c.MotivoDetalle.Contains(term)) ||
+                    c.ClientesControlMensuales.Any(m => m.Observaciones != null && m.Observaciones.Contains(term)) ||
+                    c.ClientesRecorridos.Any(r => r.Observacion != null && r.Observacion.Contains(term)) ||
+                    c.ClientesEstablecimientos.Any(e => e.Descripcion != null && e.Descripcion.Contains(term))),
+                "tel" => query.Where(c =>
+                    (c.Telefono != null && c.Telefono.Contains(term)) ||
+                    (c.TelefonoAlt != null && c.TelefonoAlt.Contains(term)) ||
+                    (c.Email != null && c.Email.Contains(term)) ||
+                    c.ClientesContactos.Any(x =>
+                        x.Nombre.Contains(term) ||
+                        (x.Telefono != null && x.Telefono.Contains(term)) ||
+                        (x.TelefonoAlt != null && x.TelefonoAlt.Contains(term)) ||
+                        (x.Email != null && x.Email.Contains(term)))),
+                _ => query.Where(c =>
+                    c.Nombre.Contains(term) ||
+                    (hayNro && (c.NumeroCliente == nro || c.Id == nro)) ||
+                    (c.Cuit != null && (c.Cuit.Contains(term) || (digits.Length > 0 && c.Cuit.Replace("-", "").Replace(" ", "").Replace("/", "").Contains(digits)))) ||
+                    (c.Domicilio != null && c.Domicilio.Contains(term)) ||
+                    (c.Calle != null && c.Calle.Contains(term)) ||
+                    (c.Telefono != null && c.Telefono.Contains(term)) ||
+                    (c.TelefonoAlt != null && c.TelefonoAlt.Contains(term)) ||
+                    (c.Email != null && c.Email.Contains(term)) ||
+                    (c.MotivoDetalle != null && c.MotivoDetalle.Contains(term)) ||
+                    c.ClientesEstablecimientos.Any(e =>
+                        e.Nombre.Contains(term) ||
+                        (e.IdEstablecimientoCliente != null && e.IdEstablecimientoCliente.Contains(term)) ||
+                        (e.Domicilio != null && e.Domicilio.Contains(term)) ||
+                        (e.Calle != null && e.Calle.Contains(term)) ||
+                        (e.Localidad != null && e.Localidad.Contains(term)) ||
+                        (e.Cuit != null && e.Cuit.Contains(term)) ||
+                        (e.Descripcion != null && e.Descripcion.Contains(term))) ||
+                    c.ClientesContactos.Any(x =>
+                        x.Nombre.Contains(term) ||
+                        (x.Telefono != null && x.Telefono.Contains(term)) ||
+                        (x.Email != null && x.Email.Contains(term))) ||
+                    c.ClientesControlMensuales.Any(m => m.Observaciones != null && m.Observaciones.Contains(term)))
+            };
+        }
+
+        private static (string? campo, string? detalle) ResolverMatchCombo(
+            string campo,
+            string term,
+            string? nombre,
+            string? cuit,
+            int? numeroCliente,
+            string? domicilio,
+            string? calle,
+            string? telefono,
+            string? email,
+            string? motivo,
+            IEnumerable<(string Nombre, string? Domicilio, string? Calle, string? Localidad, string? Cuit, string? Descripcion, string? Codigo)> ests,
+            IEnumerable<(string Nombre, string? Telefono, string? Email)> contactos,
+            IEnumerable<string> obs)
+        {
+            if (string.IsNullOrEmpty(term)) return (null, null);
+
+            bool Hit(string? hay) =>
+                !string.IsNullOrEmpty(hay) && hay.Contains(term, StringComparison.OrdinalIgnoreCase);
+
+            var digits = new string(term.Where(char.IsDigit).ToArray());
+            bool HitCuit(string? val)
+            {
+                if (string.IsNullOrEmpty(val)) return false;
+                if (val.Contains(term, StringComparison.OrdinalIgnoreCase)) return true;
+                if (digits.Length == 0) return false;
+                var norm = new string(val.Where(char.IsDigit).ToArray());
+                return norm.Contains(digits);
+            }
+
+            foreach (var e in ests)
+            {
+                if (Hit(e.Nombre) || Hit(e.Codigo) || Hit(e.Descripcion) || HitCuit(e.Cuit))
+                    return ("Establecimiento", e.Nombre);
+                if (Hit(e.Domicilio) || Hit(e.Calle) || Hit(e.Localidad))
+                    return ("Domicilio est.", string.Join(" · ", new[] { e.Nombre, e.Domicilio ?? e.Calle, e.Localidad }.Where(x => !string.IsNullOrWhiteSpace(x))));
+            }
+
+            if (HitCuit(cuit)) return ("CUIT / DNI", cuit);
+            if (Hit(domicilio) || Hit(calle)) return ("Domicilio", domicilio ?? calle);
+            if (Hit(telefono) || Hit(email)) return ("Tel / mail", telefono ?? email);
+            if (Hit(motivo)) return ("Observación", TruncarCombo(motivo, 80));
+
+            foreach (var o in obs)
+            {
+                if (Hit(o)) return ("Observación", TruncarCombo(o, 80));
+            }
+
+            foreach (var x in contactos)
+            {
+                if (Hit(x.Nombre) || Hit(x.Telefono) || Hit(x.Email))
+                    return ("Contacto", x.Nombre);
+            }
+
+            if (numeroCliente != null && numeroCliente.ToString() == term) return ("N° cliente", "#" + numeroCliente);
+            if (Hit(nombre) || campo is "nombre" or "todos" or "nro" or "") return (null, null);
+            return (null, null);
+        }
+
+        private static string TruncarCombo(string? texto, int max)
+        {
+            var t = (texto ?? "").Trim();
+            if (t.Length <= max) return t;
+            return t[..max].TrimEnd() + "…";
         }
     }
 }

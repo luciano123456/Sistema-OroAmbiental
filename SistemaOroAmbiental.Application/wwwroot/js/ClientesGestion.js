@@ -2,7 +2,7 @@
    CLIENTES GESTION - Hub unificado por cliente
    (cliente + establecimientos: lineas completas + importe tras cuenta)
 ========================================================= */
-window.__OA_CG_BUILD = "contratos-ctr-v38-20260826";
+window.__OA_CG_BUILD = "vaciar-mes-v48-20261006";
 
 const CG = {
     id: 0,
@@ -48,7 +48,9 @@ const CG = {
     secMoving: false,
     viewPref: "auto",
     listMeta: {},
-    geoCache: { provincias: [] },
+    geoCache: { provincias: [], localidades: [] },
+    tercerosCache: [],
+    cobroDrawer: null,
     switcherNav: [],
     idDiaRecoleccionLegacy: 0,
     hubActivo: "cliente",
@@ -171,6 +173,80 @@ function hubIdEstablecimientoCg() {
     return ids.length === 1 ? ids[0] : null;
 }
 
+function etiquetaTerceroCg(t) {
+    if (!t) return "";
+    const extra = [t.Cuit, t.Banco].filter(Boolean).join(" · ");
+    const est = t.EstablecimientoNombre ? ` — ${t.EstablecimientoNombre}` : "";
+    return `${t.Nombre || "Pagador"}${extra ? ` (${extra})` : ""}${est}`;
+}
+
+function htmlOpcionesTerceroCg(items, selectedId) {
+    const sel = Number(selectedId) || 0;
+    let html = `<option value="">Seleccionar pagador</option>`;
+    (items || []).forEach(t => {
+        const id = Number(t.Id) || 0;
+        html += `<option value="${id}"${id === sel ? " selected" : ""}>${escapeCg(etiquetaTerceroCg(t))}</option>`;
+    });
+    return html;
+}
+
+function esCobroTerceroCg(c) {
+    if (!c) return false;
+    if (c.EsPagoTercero === true || c.esPagoTercero === true) return true;
+    return Number(c.IdTercero || c.idTercero) > 0;
+}
+
+function htmlOrigenSegCg(esTercero) {
+    return `<select class="form-control ws-cobro-origen" aria-label="Origen del pago">
+        <option value="cliente"${esTercero ? "" : " selected"}>Cliente</option>
+        <option value="tercero"${esTercero ? " selected" : ""}>Pago de terceros</option>
+    </select>`;
+}
+
+function origenEsTerceroDomCg($scope) {
+    const $sel = $scope.find(".ws-cobro-origen, #cgCobroOrigen, #cgDrawerCobroOrigen").first();
+    if ($sel.length) return $sel.val() === "tercero";
+    return $scope.find(".cg-origen-btn.is-on").attr("data-origen") === "tercero";
+}
+
+function aplicarOrigenCobroCg($scope, esTercero) {
+    if (!$scope?.length) return;
+    $scope.find(".ws-cobro-origen, #cgCobroOrigen, #cgDrawerCobroOrigen").val(esTercero ? "tercero" : "cliente");
+    $scope.find(".cg-origen-btn").removeClass("is-on");
+    $scope.find(`.cg-origen-btn[data-origen="${esTercero ? "tercero" : "cliente"}"]`).addClass("is-on");
+    $scope.find(".cg-ws-cobro-pagador, #cgCobroTerceroWrap, #cgDrawerCobroTerceroWrap").prop("hidden", !esTercero);
+    if (!esTercero) $scope.find(".ws-cobro-tercero, #cgCobroTercero, #cgDrawerCobroTercero").val("");
+}
+
+function nombreCuentaCg(id) {
+    const c = (CG.cuentas || []).find(x => Number(x.Id) === Number(id));
+    return c?.Nombre || (id ? `Cuenta #${id}` : "Sin cuenta");
+}
+
+function etiquetaTerceroPorIdCg(id) {
+    const t = (CG.tercerosCache || []).find(x => Number(x.Id) === Number(id));
+    return t ? etiquetaTerceroCg(t) : (id ? `Pagador #${id}` : "");
+}
+
+async function cargarTercerosCobroCg(idEstablecimiento) {
+    const idEst = Number(idEstablecimiento) || 0;
+    try {
+        let data;
+        if (idEst > 0) {
+            data = await fetchJsonCg(API_CG.tercerosPorEst(idEst), { headers: authCg() });
+        } else if (CG.id > 0) {
+            data = await fetchJsonCg(API_CG.tercerosPorCliente(CG.id), { headers: authCg() });
+        } else {
+            data = [];
+        }
+        CG.tercerosCache = Array.isArray(data) ? data : [];
+    } catch (e) {
+        console.warn("No se pudieron cargar pagadores de terceros:", e);
+        CG.tercerosCache = [];
+    }
+    return CG.tercerosCache;
+}
+
 function esMultiEstCg() {
     return hubIdsEstablecimientoCg().length > 1;
 }
@@ -208,6 +284,7 @@ const API_CG = {
     dependencias: id => `/Clientes/DependenciasEliminar?id=${id}`,
     sucursales: "/Sucursales/Lista",
     provincias: "/Provincias/Lista",
+    localidadesPorProvincia: id => `/Localidades/ListaPorProvincia?idProvincia=${id || 0}`,
     condicionesIva: "/CondicionesIva/Lista",
     profesiones: "/ClientesProfesiones/Lista",
     estados: "/ClientesEstados/Lista",
@@ -221,6 +298,8 @@ const API_CG = {
     establecimientosLista: "/ClientesEstablecimientos/Lista",
     combo: "/Clientes/Combo",
     establecimientosPorCliente: idCliente => `/ClientesEstablecimientos/ListaPorCliente?idCliente=${idCliente}`,
+    tercerosPorEst: idEst => `/ClientesEstablecimientosTerceros/ListaPorEstablecimiento?idEstablecimiento=${idEst}&soloActivos=true`,
+    tercerosPorCliente: idCliente => `/ClientesEstablecimientosTerceros/ListaPorCliente?idCliente=${idCliente}&soloActivos=true`,
     contratosLista: id => `/Contratos/Lista?idCliente=${id}`,
     entregasLista: "/ClientesEntregas/ListaFiltrada",
     ccMovimientos: "/ClientesCuentaCorriente/Movimientos",
@@ -895,7 +974,11 @@ function wireEventosCg() {
         $("#lblActivoCg").text(this.checked ? "Activo" : "Inactivo");
     });
 
-    $("#cgProvincia").on("change", actualizarCodigoProvinciaCg);
+    $("#cgProvincia").on("change", function () {
+        actualizarCodigoProvinciaCg();
+        cargarLocalidadesCg(intOrNullCg("#cgProvincia"), null).catch(console.error);
+    });
+    $("#cgLocalidad").on("change", actualizarCodigoLocalidadCg);
 
     $('button[data-cg-tab]').on("shown.bs.tab", async function () {
         const tab = $(this).data("cgTab");
@@ -1162,7 +1245,6 @@ function wireEventosCg() {
         setHubPropCg("wsCobros", (hubPropCg("wsCobros") || []).filter(c => Number(c._key) !== key));
         renderCobrosWsCg();
     });
-    // Cliente + Establecimientos (clon cgEst*): importe solo tras cuenta
     $(document).on("change", "#cgWsCobrosBody .ws-cobro-cuenta, #cgEstWsCobrosBody .ws-cobro-cuenta", function () {
         const $row = $(this).closest(".cg-ws-cobro-row");
         syncImporteHabilitadoCobroWsCg($row);
@@ -1173,13 +1255,33 @@ function wireEventosCg() {
         sincronizarCobrosWsDesdeDomCg();
         actualizarResumenCobrosWsCg();
     });
+    $(document).on("change", "#cgCobroOrigen", function () {
+        aplicarOrigenCobroCg($("#modalCobroCg"), $(this).val() === "tercero");
+    });
+    $(document).on("change", "#cgDrawerCobroOrigen", function () {
+        aplicarOrigenCobroCg($("#cgCobroDrawer"), $(this).val() === "tercero");
+    });
     $("#cgCobroCuenta").on("change", function () {
         syncImporteHabilitadoModalCobroCg();
+    });
+    $("#cgDrawerCobroCuenta").on("change", function () {
+        syncImporteHabilitadoDrawerCobroCg();
+    });
+    $("#cgDrawerCobroCerrar, #cgDrawerCobroCancelar, #cgCobroDrawerBackdrop").on("click", function () {
+        cerrarDrawerCobroWsCg();
+    });
+    $("#cgDrawerCobroGuardar").on("click", function () {
+        confirmarDrawerCobroWsCg();
+    });
+    $(document).on("keydown.cgCobroDrawer", function (e) {
+        if (e.key === "Escape" && CG.cobroDrawer) cerrarDrawerCobroWsCg();
     });
     instalarBloqueoImporteSinCuentaCg();
     syncImporteHabilitadoModalCobroCg();
     $h("cgWsEstablecimiento").on("change", async function () {
         await cargarSugeridosWsCg(Number($(this).val()) || null);
+        CG._tercerosEstId = null;
+        renderCobrosWsCg();
     });
     $h("cgWsSugeridos").on("click", ".cg-ws-chip", function () {
         const idx = Number($(this).data("idx"));
@@ -1245,6 +1347,15 @@ function wireEventosCg() {
         syncHubActivoFromElCg(this);
         agregarCobroWsCg(null, this);
     });
+    $(document).off("click.wsAccCobroEdit").on("click.wsAccCobroEdit", ".cg-ws-acc .cg-ws-cobro-item", function (e) {
+        if ($(e.target).closest(".btn-ws-quitar-cobro").length) return;
+        e.preventDefault();
+        e.stopPropagation();
+        syncHubActivoFromElCg(this);
+        const key = Number($(this).data("key"));
+        const cobro = cobrosWsDeCg(this).find(c => Number(c._key) === key);
+        if (cobro) abrirDrawerCobroWsCg(this, cobro, false);
+    });
     $(document).off("click.wsAccChip").on("click.wsAccChip", ".cg-ws-acc .cg-ws-chip", function (e) {
         e.preventDefault();
         e.stopPropagation();
@@ -1272,6 +1383,7 @@ function wireEventosCg() {
         const cobros = cobrosWsDeCg(this);
         const i = cobros.findIndex(c => Number(c._key) === key);
         if (i >= 0) cobros.splice(i, 1);
+        if (CG.cobroDrawer && Number(CG.cobroDrawer.key) === key) cerrarDrawerCobroWsCg();
         renderCobrosWsCg(this);
     });
     $(document).off("change.wsAccCobro input.wsAccCobro").on("change.wsAccCobro input.wsAccCobro", ".cg-ws-acc .cg-ws-cobro-row input, .cg-ws-acc .cg-ws-cobro-row select", function () {
@@ -1378,14 +1490,21 @@ function wireEventosCg() {
         const sel = map[tipo];
         if (sel) {
             await recargarComboCg(sel, nuevoId, tipo === "ClientesTiposGenerador" ? "Etiqueta" : "Nombre");
+            if (tipo === "Provincias") {
+                actualizarCodigoProvinciaCg();
+                await cargarLocalidadesCg(intOrNullCg("#cgProvincia"), intOrNullCg("#cgLocalidad"));
+            }
             return;
+        }
+        if (tipo === "Localidades") {
+            await cargarLocalidadesCg(intOrNullCg("#cgProvincia"), nuevoId || intOrNullCg("#cgLocalidad"));
         }
     });
 }
 
 function initSelect2Cg() {
     const opts = { width: "100%", allowClear: true, placeholder: "Seleccionar" };
-    ["#cgSucursal", "#cgProvincia", "#cgProfesion",
+    ["#cgSucursal", "#cgProvincia", "#cgLocalidad", "#cgProfesion",
         "#cgCondicionIva", "#cgTipoGenerador", "#cgCobroCuenta",
         ...CG_REC_CAMION_SELECTORS,
         "#cgRecSemana"].forEach(sel => {
@@ -1440,6 +1559,40 @@ function actualizarCodigoProvinciaCg() {
     const idProv = intOrNullCg("#cgProvincia");
     const prov = (CG.geoCache.provincias || []).find(x => x.Id === idProv);
     $("#cgCodProvincia").val(prov?.Codigo ?? "");
+}
+
+let _seqLocalidadesCg = 0;
+
+async function cargarLocalidadesCg(idProvincia, selectedId) {
+    const seq = ++_seqLocalidadesCg;
+    const $sel = $("#cgLocalidad");
+    $sel.empty().append(new Option("Seleccionar", ""));
+    CG.geoCache.localidades = [];
+
+    if (idProvincia) {
+        try {
+            const data = await fetchJsonCg(API_CG.localidadesPorProvincia(idProvincia), { headers: authCg() });
+            if (seq !== _seqLocalidadesCg) return;
+            CG.geoCache.localidades = data || [];
+            CG.geoCache.localidades.forEach(x => $sel.append(new Option(x.Nombre, x.Id)));
+        } catch (e) {
+            console.warn("No se pudo cargar localidades:", e);
+        }
+    }
+
+    if (seq !== _seqLocalidadesCg) return;
+    const id = selectedId && CG.geoCache.localidades.some(x => Number(x.Id) === Number(selectedId))
+        ? String(selectedId)
+        : "";
+    $sel.val(id);
+    refreshSelect2Cg($sel);
+    actualizarCodigoLocalidadCg();
+}
+
+function actualizarCodigoLocalidadCg() {
+    const idLoc = intOrNullCg("#cgLocalidad");
+    const loc = (CG.geoCache.localidades || []).find(x => Number(x.Id) === Number(idLoc));
+    $("#cgCodLocalidad").val(loc?.Codigo ?? "");
 }
 
 async function recargarComboCg(selector, nuevoId, textField = "Nombre") {
@@ -1752,6 +1905,7 @@ async function cargarClienteCg(id) {
             refreshSelect2Cg($("#cgProvincia"));
         }
         actualizarCodigoProvinciaCg();
+        await cargarLocalidadesCg(m.IdProvincia, m.IdLocalidad);
 
         setAuditoriaCg(m);
         actualizarHeaderCg(m.Nombre || "Cliente", m.Cuit ? `CUIT ${m.Cuit}` : "");
@@ -1868,12 +2022,28 @@ function initClienteSwitcherCg() {
         $sel.append(new Option("Cargando…", CG.id, true, true));
     }
 
+    const hintsHtml = `
+        <div class="cg-switcher-hints" role="group" aria-label="Atajos de búsqueda">
+            <span class="cg-switcher-hints-lbl">Atajos</span>
+            <button type="button" class="cg-switcher-hint" data-prefix="cuit:">CUIT / DNI</button>
+            <button type="button" class="cg-switcher-hint" data-prefix="est:">Establecimiento</button>
+            <button type="button" class="cg-switcher-hint" data-prefix="dir:">Domicilio</button>
+            <button type="button" class="cg-switcher-hint" data-prefix="obs:">Observaciones</button>
+            <button type="button" class="cg-switcher-hint" data-prefix="tel:">Tel / mail</button>
+            <button type="button" class="cg-switcher-hint" data-prefix="nro:">N° cliente</button>
+        </div>`;
+
     $sel.select2({
         width: "100%",
         allowClear: false,
-        placeholder: "Buscar cliente…",
+        placeholder: "Nombre, CUIT, est:, dir:, obs:…",
         minimumInputLength: 0,
         dropdownParent: $(".cg-page"),
+        dropdownCssClass: "cg-switcher-drop",
+        language: {
+            searching: function () { return "Buscando…"; },
+            noResults: function () { return "Sin resultados. Probá un atajo: cuit:  est:  dir:  obs:"; }
+        },
         ajax: {
             delay: 220,
             transport: function (params, success, failure) {
@@ -1892,7 +2062,9 @@ function initClienteSwitcherCg() {
                                 id: c.Id,
                                 text: textoClienteComboCg(c),
                                 cuit: c.Cuit || "",
-                                activo: c.Activo !== false
+                                activo: c.Activo !== false,
+                                matchCampo: c.MatchCampo || "",
+                                matchDetalle: c.MatchDetalle || ""
                             }))
                         });
                     })
@@ -1902,9 +2074,12 @@ function initClienteSwitcherCg() {
         templateResult: function (item) {
             if (!item.id) return item.text;
             const $el = $("<span class='cg-switcher-opt'/>");
-            $el.append($("<span/>").text(item.text));
-            if (item.cuit) {
-                $el.append($("<small class='d-block'/>").css("opacity", 0.65).text("CUIT " + item.cuit));
+            $el.append($("<span class='cg-switcher-opt-name'/>").text(item.text));
+            if (item.matchCampo && item.matchDetalle) {
+                $el.append($("<small class='cg-switcher-opt-hit'/>")
+                    .text(item.matchCampo + " · " + item.matchDetalle));
+            } else if (item.cuit) {
+                $el.append($("<small class='cg-switcher-opt-hit'/>").text("CUIT " + item.cuit));
             }
             return $el;
         },
@@ -1915,6 +2090,33 @@ function initClienteSwitcherCg() {
         }
     });
 
+    $sel.on("select2:open", function () {
+        const $drop = $(".select2-container--open .cg-switcher-drop");
+        if ($drop.length && !$drop.find(".cg-switcher-hints").length) {
+            $drop.prepend(hintsHtml);
+        }
+        const $field = $(".select2-container--open .select2-search__field");
+        $field.attr("placeholder", "Ej: cuit:33  ·  est:centro  ·  obs:deuda");
+        marcarHintActivoSwitcherCg($field.val());
+    });
+
+    $(document).off("mousedown.cgSwitcherHint").on("mousedown.cgSwitcherHint", ".cg-switcher-hint", function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        const prefix = String($(this).data("prefix") || "");
+        const $field = $(".select2-container--open .select2-search__field");
+        if (!$field.length) return;
+        const cur = String($field.val() || "");
+        const sinPref = cur.replace(/^(cuit|dni|cuil|est|establecimiento|suc|dir|dom|domicilio|obs|observacion|observaciones|tel|telefono|nro|numero|cli|nombre)\s*:?\s*/i, "");
+        $field.val(prefix + sinPref).trigger("input");
+        $field.focus();
+        marcarHintActivoSwitcherCg($field.val());
+    });
+
+    $(document).off("input.cgSwitcherHint").on("input.cgSwitcherHint", ".select2-container--open .select2-search__field", function () {
+        marcarHintActivoSwitcherCg($(this).val());
+    });
+
     $sel.on("select2:select", function (e) {
         irAClienteGestionCg(e.params?.data?.id);
     });
@@ -1922,6 +2124,24 @@ function initClienteSwitcherCg() {
     $("#btnClientePrevCg").on("click", () => moverClienteSwitcherCg(-1));
     $("#btnClienteNextCg").on("click", () => moverClienteSwitcherCg(1));
     cargarNavClienteSwitcherCg();
+}
+
+function marcarHintActivoSwitcherCg(term) {
+    const t = String(term || "").trim().toLowerCase();
+    $(".cg-switcher-hint").removeClass("is-on");
+    const map = [
+        ["cuit:", ["cuit:", "dni:", "cuil:"]],
+        ["est:", ["est:", "establecimiento:", "suc:"]],
+        ["dir:", ["dir:", "dom:", "domicilio:"]],
+        ["obs:", ["obs:", "observacion:", "observaciones:"]],
+        ["tel:", ["tel:", "telefono:", "mail:", "email:"]],
+        ["nro:", ["nro:", "numero:", "#"]]
+    ];
+    map.forEach(([btn, keys]) => {
+        if (keys.some(k => t.startsWith(k) || t.startsWith(k.replace(":", " ")))) {
+            $(`.cg-switcher-hint[data-prefix="${btn}"]`).addClass("is-on");
+        }
+    });
 }
 
 function actualizarEnlacesAccionCg() {
@@ -2005,6 +2225,7 @@ function obtenerModeloCg() {
         IdTipoGenerador: intOrNullCg("#cgTipoGenerador"),
         CodPostal: $("#cgCodPostal").val() || null,
         IdProvincia: intOrNullCg("#cgProvincia"),
+        IdLocalidad: intOrNullCg("#cgLocalidad"),
         IdProfesion: intOrNullCg("#cgProfesion"),
         IdCondicionIva: intOrNullCg("#cgCondicionIva"),
         NumeroCliente: intOrNullCg("#cgNumeroCliente"),
@@ -2978,10 +3199,6 @@ function bindEstHubEventsCg() {
     $(root).on("click", "#btnEstGuardarDatosMesCg", busyHandler(() => {
         CG.hubActivo = "est";
         return guardarControlMensualCg({ silent: false });
-    }));
-    $(root).on("click", "#btnEstVaciarMontosMesCg", busyHandler(() => {
-        CG.hubActivo = "est";
-        return vaciarAbonosMesCg();
     }));
     $(root).on("click", "#btnEstWsNuevaEntregaMes", () => {
         CG.hubActivo = "est";
@@ -4557,7 +4774,10 @@ function cobrosWsDeCg(el) {
     const $acc = $wsAccFromCg(el);
     if ($acc.length) {
         const ent = entregaByUidCg($acc.attr("data-uid"));
-        if (ent) return ent.Cobros;
+        if (ent) {
+            if (!Array.isArray(ent.Cobros)) ent.Cobros = [];
+            return ent.Cobros;
+        }
     }
     return hubPropCg("wsCobros") || [];
 }
@@ -4605,6 +4825,8 @@ function cobroDesdeDetalleCg(c) {
         IdMovimientoCc: Number(c.IdMovimientoCc || c.idMovimientoCc) || 0,
         Fecha: fechaIsoLocalCg(c.Fecha || c.fecha),
         IdCuenta: Number(c.IdCuenta || c.idCuenta) || 0,
+        EsPagoTercero: esCobroTerceroCg(c),
+        IdTercero: Number(c.IdTercero || c.idTercero) || 0,
         Concepto: c.Concepto || c.concepto || "Cobro visita",
         Importe: Number(c.Importe || c.importe) || 0
     };
@@ -5059,6 +5281,20 @@ async function sincronizarPrecioLineaWsCg($row, linea, campo) {
 
     if (campo !== "prod" && campo !== "lista") return;
 
+    if (campo === "prod") {
+        const $lista = $row.find(".ws-lista");
+        if ($lista.length && typeof htmlOpcionesListaPrecioCatalogo === "function") {
+            const html = htmlOpcionesListaPrecioCatalogo(CG.wsListasPrecios, linea.IdProducto, linea.IdListaPrecio, escapeCg);
+            $lista.html(`<option value="">Seleccionar</option>${html}`);
+            const ok = linea.IdListaPrecio && $lista.find(`option[value="${linea.IdListaPrecio}"]`).length;
+            if (ok) $lista.val(String(linea.IdListaPrecio));
+            else {
+                linea.IdListaPrecio = 0;
+                $lista.val("");
+            }
+        }
+    }
+
     if (campo === "prod" && linea.IdProducto > 0 && !linea.IdListaPrecio) {
         const precios = await obtenerPreciosProductoWsCg(linea.IdProducto);
         const conPrecio = (precios || []).filter(p => Number(p.PrecioVenta) > 0);
@@ -5253,6 +5489,9 @@ function renderLineasWsCg(el) {
             ? (noretSign < 0 ? "is-on is-neg" : "is-on is-pos")
             : "";
         const cantMostrar = magnitudCantidadWsCg(l.Cantidad) || Number(l.Cantidad) || 0;
+        const optsListaLinea = typeof htmlOpcionesListaPrecioCatalogo === "function"
+            ? htmlOpcionesListaPrecioCatalogo(CG.wsListasPrecios, l.IdProducto, l.IdListaPrecio, escapeCg)
+            : optsLista;
         return `
         <div class="cg-ws-linea" data-idx="${i}">
             <div class="cg-ws-linea-top">
@@ -5277,7 +5516,7 @@ function renderLineasWsCg(el) {
                     <span>Lista / Tipo pago</span>
                     <select class="form-control ws-lista">
                         <option value="">Seleccionar</option>
-                        ${optsLista}
+                        ${optsListaLinea}
                     </select>
                 </label>
                 <label class="cg-ws-field cg-ws-field--num">
@@ -5466,11 +5705,12 @@ function agregarCobroWsCg(preset, el) {
     activarLineasHubDesdeAccCg(el);
     const $acc = $wsAccFromCg(el);
     const hoy = ($acc.find(".ws-acc-fecha").val() || $h("cgCmFechaVisita").val() || $h("cgWsFechaEntrega").val() || new Date().toISOString().slice(0, 10));
-    const cobros = cobrosWsDeCg(el);
     const cobro = preset || {
         _key: CG.wsNextCobroKey++,
         Fecha: hoy,
         IdCuenta: 0,
+        EsPagoTercero: false,
+        IdTercero: 0,
         Concepto: "Cobro visita",
         Importe: 0
     };
@@ -5478,20 +5718,160 @@ function agregarCobroWsCg(preset, el) {
     if (!cobro.IdCuenta && (CG.cuentas || []).length === 1) {
         cobro.IdCuenta = Number(CG.cuentas[0].Id) || 0;
     }
-    cobros.push(cobro);
+    abrirDrawerCobroWsCg(el, cobro, !preset);
+}
+
+function cobroDrawerCtxElCg() {
+    const d = CG.cobroDrawer;
+    if (!d) return null;
+    if (d.uid) {
+        const $acc = $(`.cg-ws-acc[data-uid="${String(d.uid).replace(/"/g, "")}"]`);
+        if ($acc.length) return $acc[0];
+    }
+    return $h("cgWsCobrosBody")[0] || document.body;
+}
+
+function idEstCobroCtxCg(el) {
+    const $acc = $wsAccFromCg(el);
+    if ($acc.length) return Number($acc.find(".ws-acc-est").val()) || 0;
+    return Number($h("cgWsEstablecimiento").val()) || hubIdEstablecimientoCg() || 0;
+}
+
+function syncImporteHabilitadoDrawerCobroCg() {
+    const idCuenta = parseInt($("#cgDrawerCobroCuenta").val(), 10) || 0;
+    const $imp = $("#cgDrawerCobroImporte");
+    const habilitar = idCuenta > 0;
+    $imp.prop("disabled", !habilitar).prop("readonly", !habilitar);
+    $imp.attr("tabindex", habilitar ? "0" : "-1");
+    if (!habilitar) $imp.val("");
+    $imp.attr("placeholder", habilitar ? "" : "Elegí cuenta");
+    $imp.attr("title", habilitar ? "" : "Seleccioná la cuenta para cargar el importe");
+}
+
+async function abrirDrawerCobroWsCg(el, cobro, isNew) {
+    const $acc = $wsAccFromCg(el);
+    CG.cobroDrawer = {
+        uid: $acc.attr("data-uid") || null,
+        key: cobro._key,
+        isNew: !!isNew,
+        cobro
+    };
+    const optsCuentas = `<option value="">Seleccionar</option>` + (CG.cuentas || []).map(c =>
+        `<option value="${c.Id}">${escapeCg(c.Nombre || ("Cuenta #" + c.Id))}</option>`
+    ).join("");
+    $("#cgDrawerCobroCuenta").html(optsCuentas);
+    if (cobro.IdCuenta) $("#cgDrawerCobroCuenta").val(String(cobro.IdCuenta));
+    $("#cgDrawerCobroFecha").val(cobro.Fecha || "");
+    $("#cgDrawerCobroConcepto").val(cobro.Concepto || "Cobro visita");
+    $("#cgDrawerCobroImporte").val(cobro.Importe ? fmtQtyCg(cobro.Importe) : "");
+    aplicarOrigenCobroCg($("#cgCobroDrawer"), esCobroTerceroCg(cobro));
+    const idEst = idEstCobroCtxCg(el);
+    await cargarTercerosCobroCg(idEst);
+    $("#cgDrawerCobroTercero").html(htmlOpcionesTerceroCg(CG.tercerosCache, cobro.IdTercero));
+    $("#cgDrawerCobroTerceroHint").prop("hidden", (CG.tercerosCache || []).length > 0);
+    $("#cgDrawerCobroSub").text(isNew ? "Se va a listar en esta visita" : "Editando cobro de la entrega");
+    $("#cgDrawerCobroGuardar span").text(isNew ? "Agregar cobro" : "Guardar cobro");
+    syncImporteHabilitadoDrawerCobroCg();
+    if (typeof prepararInputMiles === "function") {
+        $("#cgDrawerCobroImporte").each(function () { prepararInputMiles(this); });
+    }
+    syncImporteHabilitadoDrawerCobroCg();
+    mostrarDrawerCobroWsCg();
+}
+
+function mostrarDrawerCobroWsCg() {
+    if (CG.cobroDrawerTimer) {
+        clearTimeout(CG.cobroDrawerTimer);
+        CG.cobroDrawerTimer = null;
+    }
+    const drawer = document.getElementById("cgCobroDrawer");
+    const backdrop = document.getElementById("cgCobroDrawerBackdrop");
+    if (!drawer || !backdrop) return;
+    drawer.hidden = false;
+    backdrop.hidden = false;
+    drawer.setAttribute("aria-hidden", "false");
+    backdrop.setAttribute("aria-hidden", "false");
+    document.body.classList.add("cg-cobro-drawer-open");
+    drawer.classList.remove("is-open");
+    backdrop.classList.remove("is-open");
+    void drawer.offsetWidth;
+    requestAnimationFrame(() => {
+        drawer.classList.add("is-open");
+        backdrop.classList.add("is-open");
+    });
+}
+
+function cerrarDrawerCobroWsCg() {
+    const drawer = document.getElementById("cgCobroDrawer");
+    const backdrop = document.getElementById("cgCobroDrawerBackdrop");
+    CG.cobroDrawer = null;
+    document.body.classList.remove("cg-cobro-drawer-open");
+    if (drawer) drawer.classList.remove("is-open");
+    if (backdrop) backdrop.classList.remove("is-open");
+    if (CG.cobroDrawerTimer) clearTimeout(CG.cobroDrawerTimer);
+    CG.cobroDrawerTimer = setTimeout(() => {
+        if (drawer) {
+            drawer.hidden = true;
+            drawer.setAttribute("aria-hidden", "true");
+        }
+        if (backdrop) {
+            backdrop.hidden = true;
+            backdrop.setAttribute("aria-hidden", "true");
+        }
+        CG.cobroDrawerTimer = null;
+    }, 420);
+}
+
+function confirmarDrawerCobroWsCg() {
+    const d = CG.cobroDrawer;
+    if (!d) return;
+    const el = cobroDrawerCtxElCg();
+    const idCuenta = parseInt($("#cgDrawerCobroCuenta").val(), 10) || 0;
+    const importe = leerNumeroWsCg($("#cgDrawerCobroImporte").val());
+    const esTercero = origenEsTerceroDomCg($("#cgCobroDrawer"));
+    const idTercero = esTercero ? (parseInt($("#cgDrawerCobroTercero").val(), 10) || 0) : 0;
+    if (!idCuenta || importe <= 0) {
+        errorModal("Indique importe y cuenta.");
+        return;
+    }
+    if (esTercero && !idTercero) {
+        errorModal("Si el origen es pago de terceros, seleccioná quién pagó. Si pagó el cliente, dejá Origen en Cliente.");
+        return;
+    }
+    const cobros = cobrosWsDeCg(el);
+    let cobro = cobros.find(c => Number(c._key) === Number(d.key));
+    if (!cobro) {
+        cobro = d.cobro || { _key: d.key };
+        cobros.push(cobro);
+    }
+    cobro.Fecha = $("#cgDrawerCobroFecha").val() || "";
+    cobro.IdCuenta = idCuenta;
+    cobro.EsPagoTercero = esTercero;
+    cobro.IdTercero = idTercero;
+    cobro.Concepto = ($("#cgDrawerCobroConcepto").val() || "").trim() || "Cobro visita";
+    cobro.Importe = importe;
+    cerrarDrawerCobroWsCg();
     renderCobrosWsCg(el);
 }
 
 function sincronizarCobrosWsDesdeDomCg(el) {
+    const $body = $wsCobrosBodyCg(el);
+    if (!$body.find(".cg-ws-cobro-row").length) return;
     const cobros = cobrosWsDeCg(el);
-    $wsCobrosBodyCg(el).find(".cg-ws-cobro-row").each(function () {
+    $body.find(".cg-ws-cobro-row").each(function () {
         const key = Number($(this).data("key"));
         const cobro = cobros.find(c => Number(c._key) === key);
         if (!cobro) return;
-        cobro.Fecha = $(this).find(".ws-cobro-fecha").val() || "";
-        cobro.IdCuenta = Number($(this).find(".ws-cobro-cuenta").val()) || 0;
-        cobro.Concepto = ($(this).find(".ws-cobro-concepto").val() || "").trim();
-        cobro.Importe = leerNumeroWsCg($(this).find(".ws-cobro-importe").val());
+        cobro.Fecha = $(this).find(".ws-cobro-fecha").val() || cobro.Fecha || "";
+        cobro.IdCuenta = Number($(this).find(".ws-cobro-cuenta").val()) || cobro.IdCuenta || 0;
+        if ($(this).find(".ws-cobro-origen, .cg-origen-btn").length) {
+            cobro.EsPagoTercero = origenEsTerceroDomCg($(this));
+            cobro.IdTercero = cobro.EsPagoTercero
+                ? (Number($(this).find(".ws-cobro-tercero").val()) || 0)
+                : 0;
+        }
+        cobro.Concepto = ($(this).find(".ws-cobro-concepto").val() || cobro.Concepto || "").trim();
+        cobro.Importe = leerNumeroWsCg($(this).find(".ws-cobro-importe").val() || cobro.Importe);
     });
 }
 
@@ -5531,10 +5911,11 @@ function instalarBloqueoImporteSinCuentaCg() {
     if (window.__oaBloqueoImporteSinCuenta) return;
     window.__oaBloqueoImporteSinCuenta = true;
 
-    const selector = ".ws-cobro-importe, #cgCobroImporte";
+    const selector = ".ws-cobro-importe, #cgCobroImporte, #cgDrawerCobroImporte";
     const cuentaDe = (el) => {
         if (!el) return 0;
         if (el.id === "cgCobroImporte") return parseInt($("#cgCobroCuenta").val(), 10) || 0;
+        if (el.id === "cgDrawerCobroImporte") return parseInt($("#cgDrawerCobroCuenta").val(), 10) || 0;
         const $row = $(el).closest(".cg-ws-cobro-row");
         return Number($row.find(".ws-cobro-cuenta").val()) || 0;
     };
@@ -5622,59 +6003,36 @@ function renderCobrosWsCg(el) {
     const $body = $wsCobrosBodyCg(el);
     if (!$body.length) return;
 
+    const idEst = idEstCobroCtxCg(el);
+    if (CG._tercerosEstId !== idEst) {
+        CG._tercerosEstId = idEst;
+        cargarTercerosCobroCg(idEst).then(() => renderCobrosWsCg(el));
+    }
+
     if (!cobros.length) {
-        $body.html(`<div class="cg-ws-lineas-empty">Sin cobros de esta entrega. Usá + Cobro si cobrás junto con la visita.</div>`);
+        $body.html(`<div class="cg-ws-lineas-empty">Sin cobros de esta entrega. Usá + Cobro para cargarlo en el panel.</div>`);
         actualizarResumenCobrosWsCg(el);
         return;
     }
 
-    const optsCuentas = (CG.cuentas || []).map(c =>
-        `<option value="${c.Id}">${escapeCg(c.Nombre || ("Cuenta #" + c.Id))}</option>`
-    ).join("");
-
     $body.html(cobros.map(c => {
-        const tieneCuenta = Number(c.IdCuenta) > 0;
+        const esTerc = esCobroTerceroCg(c);
+        const origenTxt = esTerc
+            ? (etiquetaTerceroPorIdCg(c.IdTercero) || "Pago de terceros")
+            : "Cliente";
+        const fechaTxt = formatearFechaCortaCg(c.Fecha) || c.Fecha || "Sin fecha";
         return `
-        <div class="cg-ws-cobro-row" data-key="${c._key}">
-            <label>
-                <span>Fecha</span>
-                <input type="date" class="form-control ws-cobro-fecha" value="${escapeCg(c.Fecha || "")}" />
-            </label>
-            <label>
-                <span>Cuenta</span>
-                <select class="form-control ws-cobro-cuenta">
-                    <option value="">Seleccionar</option>
-                    ${optsCuentas}
-                </select>
-            </label>
-            <label>
-                <span>Concepto</span>
-                <input type="text" class="form-control ws-cobro-concepto" value="${escapeCg(c.Concepto || "")}" />
-            </label>
-            <label>
-                <span>Importe</span>
-                <input type="text" class="form-control Inputmiles ws-cobro-importe" inputmode="decimal"
-                       value="${tieneCuenta && c.Importe ? fmtQtyCg(c.Importe) : ""}"
-                       ${tieneCuenta ? "" : "disabled readonly tabindex=\"-1\""}
-                       placeholder="${tieneCuenta ? "" : "Elegí cuenta"}"
-                       title="${tieneCuenta ? "" : "Seleccioná la cuenta para cargar el importe"}" />
-            </label>
+        <div class="cg-ws-cobro-item" data-key="${c._key}" title="Editar cobro">
+            <div class="cg-ws-cobro-item-meta">
+                <div class="cg-ws-cobro-item-title">${escapeCg(fechaTxt)} · ${escapeCg(nombreCuentaCg(c.IdCuenta))}</div>
+                <div class="cg-ws-cobro-item-sub">${escapeCg(origenTxt)} · ${escapeCg(c.Concepto || "Cobro")}</div>
+            </div>
+            <strong class="cg-ws-cobro-item-imp">${fmtMoneyCg(c.Importe || 0)}</strong>
             <button type="button" class="btn btn-outline-danger btn-sm btn-ws-quitar-cobro" data-key="${c._key}" title="Quitar">
                 <i class="fa fa-trash"></i>
             </button>
         </div>`;
     }).join(""));
-
-    cobros.forEach(c => {
-        const $row = $body.find(`.cg-ws-cobro-row[data-key="${c._key}"]`);
-        if (c.IdCuenta) $row.find(".ws-cobro-cuenta").val(String(c.IdCuenta));
-        syncImporteHabilitadoCobroWsCg($row);
-        if (typeof prepararInputMiles === "function") {
-            $row.find(".ws-cobro-importe").each(function () { prepararInputMiles(this); });
-        }
-        // Reafirmar por si prepararInputMiles toca el input
-        syncImporteHabilitadoCobroWsCg($row);
-    });
     actualizarResumenCobrosWsCg(el);
 }
 
@@ -5792,6 +6150,10 @@ async function guardarVisitaUnificadaCg(el) {
         errorModal("Cada cobro con importe debe tener una cuenta de caja.");
         return;
     }
+    if (cobros.some(c => c.EsPagoTercero && !(Number(c.IdTercero) > 0))) {
+        errorModal("Si el origen es pago de terceros, seleccioná quién pagó. Si pagó el cliente, dejá Origen en Cliente.");
+        return;
+    }
 
     if (hayProductos) {
         const fecha = ($acc.find(".ws-acc-fecha").val() || $h("cgCmFechaVisita").val() || $h("cgWsFechaEntrega").val());
@@ -5843,6 +6205,8 @@ async function guardarVisitaUnificadaCg(el) {
                 IdCobro: Number(c.IdCobro) || 0,
                 IdMovimientoCc: Number(c.IdMovimientoCc) || 0,
                 IdCuenta: c.IdCuenta,
+                EsPagoTercero: !!c.EsPagoTercero,
+                IdTercero: c.EsPagoTercero && Number(c.IdTercero) ? Number(c.IdTercero) : null,
                 Fecha: c.Fecha,
                 Concepto: c.Concepto || "Cobro visita",
                 Importe: c.Importe
@@ -7287,18 +7651,94 @@ function abrirModalControlMensual(anio, mes) {
     return abrirWorkspaceMesCg(anio, mes);
 }
 
+function idsEstVaciarMontosCg() {
+    if (!isHubEstCg()) return [];
+    let ids = idsEstablecimientoSeleccionadosCg();
+    if (!ids.length) {
+        const idHub = Number(hubEstStateCg().idEstablecimiento) || 0;
+        if (idHub > 0) ids = [idHub];
+    }
+    return ids;
+}
+
+function syncVaciarMesModalCg() {
+    const entregas = $("input[name='cgVaciarModo']:checked").val() === "entregas";
+    const $btn = $("#btnVaciarMesConfirmar");
+    const $aviso = $("#cgVaciarMesAviso");
+    $btn.toggleClass("is-danger", entregas);
+    if (entregas) {
+        $btn.text("Borrar el mes");
+        $aviso.text("Se eliminan las entregas, la plata y los intereses de este mes. No se puede deshacer.");
+    } else {
+        $btn.text("Vaciar la plata");
+        $aviso.text("Las entregas y los intereses quedan. Solo se va la plata del mes.");
+    }
+}
+
+function elegirVaciarMesCg(anio, mes, enEst, idsEst) {
+    return new Promise((resolve) => {
+        const modalEl = document.getElementById("modalVaciarMesCg");
+        if (!modalEl || !window.bootstrap?.Modal) {
+            resolve(null);
+            return;
+        }
+
+        const mesNombre = MES_NOMBRES_CG[mes] || String(mes);
+        const alcance = enEst
+            ? (idsEst.length > 1 ? "establecimientos seleccionados" : "este establecimiento")
+            : "este cliente";
+        $("#cgVaciarMesSub").text(`${mesNombre} ${anio} · ${alcance}`);
+        $("#cgVaciarModoPlata").prop("checked", true);
+        syncVaciarMesModalCg();
+
+        const modal = bootstrap.Modal.getOrCreateInstance(modalEl, { backdrop: "static", keyboard: false });
+        let resuelto = false;
+        const limpiar = () => {
+            modalEl.removeEventListener("hidden.bs.modal", onHide);
+            $("#btnVaciarMesConfirmar").off("click.vaciarMes");
+            $("input[name='cgVaciarModo']").off("change.vaciarMes");
+        };
+        const fin = (val) => {
+            if (resuelto) return;
+            resuelto = true;
+            limpiar();
+            resolve(val);
+        };
+        const onHide = () => fin(null);
+        modalEl.addEventListener("hidden.bs.modal", onHide);
+        $("input[name='cgVaciarModo']").on("change.vaciarMes", syncVaciarMesModalCg);
+        $("#btnVaciarMesConfirmar").on("click.vaciarMes", () => {
+            const entregas = $("input[name='cgVaciarModo']:checked").val() === "entregas";
+            fin({ plata: true, entregas });
+            modal.hide();
+        });
+        modal.show();
+    });
+}
+
 async function vaciarAbonosMesCg(opts) {
     const silent = !!(opts && opts.silent);
     const mes = parseInt($h("cgCmMes").val(), 10);
     const anio = parseInt($h("cgCmAnio").val(), 10);
     if (!mes || !anio || !(CG.id > 0)) return;
 
-    if (!silent) {
-        const ok = typeof confirmarModal === "function"
-            ? await confirmarModal("¿Poner en cero el pago en efectivo y la transferencia de este mes? No borra entregas ni intereses.")
-            : window.confirm("¿Vaciar los montos de este mes?");
-        if (!ok) return;
+    const enEst = isHubEstCg();
+    const idsEst = idsEstVaciarMontosCg();
+    if (enEst && !idsEst.length) {
+        if (!silent) errorModal("Seleccioná un establecimiento para vaciar los montos.");
+        return;
     }
+
+    let vaciarPlata = true;
+    let eliminarEntregas = false;
+    if (!silent) {
+        const eleccion = await elegirVaciarMesCg(anio, mes, enEst, idsEst);
+        if (!eleccion) return;
+        vaciarPlata = !!eleccion.plata;
+        eliminarEntregas = !!eleccion.entregas;
+    }
+
+    const mesSel = hubPropCg("hubMesSel");
 
     setImporteInputCg("#cgCmAbonoEfectivo", 0);
     setImporteInputCg("#cgCmAbonoTransferencia", 0);
@@ -7310,31 +7750,42 @@ async function vaciarAbonosMesCg(opts) {
             headers: authCg(),
             body: JSON.stringify({
                 IdCliente: CG.id,
-                IdEstablecimiento: hubIdEstablecimientoCg(),
+                IdEstablecimiento: idsEst.length === 1 ? idsEst[0] : null,
+                IdsEstablecimiento: idsEst,
                 Anio: anio,
-                Mes: mes
+                Mes: mes,
+                VaciarPlata: vaciarPlata,
+                EliminarEntregas: eliminarEntregas
             })
         });
     } catch (e) {
-        if (!silent) errorModal("No se pudieron vaciar los montos del mes.");
+        if (!silent) errorModal("No se pudo vaciar el mes.");
         throw e;
     }
 
     if (!data?.valor) {
-        if (!silent) errorModal(data?.mensaje || "No se pudieron vaciar los montos.");
+        if (!silent) errorModal(data?.mensaje || "No se pudo vaciar el mes.");
         return;
     }
 
-    if (!silent) exitoModal(data.mensaje || "Montos del mes en cero.");
+    if (!silent) exitoModal(data.mensaje || "Mes actualizado.");
 
-    if (isHubEstCg()) await cargarHubEstablecimientoCg(true);
-    else {
+    CG.tabsLoaded.cuentaCorriente = false;
+    CG.tabsLoaded.cobros = false;
+    CG.tabsLoaded.entregas = false;
+
+    if (enEst) {
+        CG.hubActivo = "est";
+        await cargarHubEstablecimientoCg(true);
+        CG.hubActivo = "est";
+    } else {
         CG.tabsLoaded.controlMensual = false;
         await cargarTabControlMensual(true);
         await cargarHubStockCg(true);
     }
-    if (hubPropCg("hubMesSel")) {
-        await abrirWorkspaceMesCg(hubPropCg("hubMesSel").anio, hubPropCg("hubMesSel").mes, true);
+    if (mesSel) {
+        if (enEst) CG.hubActivo = "est";
+        await abrirWorkspaceMesCg(mesSel.anio, mesSel.mes, true);
     }
 }
 
@@ -7549,10 +8000,14 @@ async function cargarTabCobros() {
     CG.tabsLoaded.cobros = true;
 }
 
-function abrirModalCobroCg() {
+async function abrirModalCobroCg() {
     $("#cgCobroFecha").val(new Date().toISOString().slice(0, 10));
     $("#cgCobroImporte, #cgCobroConcepto").val("");
     $("#cgCobroCuenta").val("").trigger("change");
+    aplicarOrigenCobroCg($("#modalCobroCg"), false);
+    const idEst = Number($h("cgWsEstablecimiento").val()) || hubIdEstablecimientoCg() || 0;
+    await cargarTercerosCobroCg(idEst);
+    $("#cgCobroTercero").html(htmlOpcionesTerceroCg(CG.tercerosCache, 0));
     syncImporteHabilitadoModalCobroCg();
     CG.modalCobro?.show();
 }
@@ -7567,12 +8022,21 @@ async function confirmarCobroCg() {
         return;
     }
 
+    const esTercero = origenEsTerceroDomCg($("#modalCobroCg"));
+    const idTercero = esTercero ? (parseInt($("#cgCobroTercero").val(), 10) || 0) : 0;
+    if (esTercero && !idTercero) {
+        errorModal("Si el origen es pago de terceros, seleccioná quién pagó. Si pagó el cliente, dejá Origen en Cliente.");
+        return;
+    }
+
     const data = await fetchJsonCg(API_CG.ccRegistrarCobro, {
         method: "POST",
         headers: authCg(),
         body: JSON.stringify({
             IdCliente: CG.id,
             IdCuenta: idCuenta,
+            EsPagoTercero: esTercero,
+            IdTercero: idTercero || null,
             Fecha: $("#cgCobroFecha").val() || new Date().toISOString().slice(0, 10),
             Concepto: concepto,
             Importe: importe

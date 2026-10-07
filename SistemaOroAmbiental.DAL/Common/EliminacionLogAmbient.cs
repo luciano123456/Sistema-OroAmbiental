@@ -40,12 +40,12 @@ namespace SistemaOroAmbiental.DAL.Common
                     Fecha = DateTime.Now,
                     IdUsuario = actor?.IdUsuario,
                     UsuarioNombre = Truncar(actor?.UsuarioNombre, 100),
-                    Entidad = Truncar(entidad, 120) ?? "",
+                    Entidad = Truncar(HumanizarEntidad(entidad), 120) ?? "",
                     IdEntidad = idEntidad,
                     NombreEntidad = Truncar(nombreEntidad, 250),
-                    Tipo = Truncar(tipo, 20) ?? EliminacionLog.TipoSimple,
+                    Tipo = Truncar(NormalizarTipo(tipo), 20) ?? EliminacionLog.TipoSimple,
                     Detalle = detalle,
-                    Ip = Truncar(actor?.Ip, 64)
+                    Ip = Truncar(NormalizarIp(actor?.Ip), 64)
                 });
             }
             catch
@@ -62,6 +62,64 @@ namespace SistemaOroAmbiental.DAL.Common
             return string.Equals(deps.TipoCascada, "desvincular", StringComparison.OrdinalIgnoreCase)
                 ? EliminacionLog.TipoDesvincular
                 : EliminacionLog.TipoCascada;
+        }
+
+        public static string NormalizarTipo(string? tipo)
+        {
+            var t = (tipo ?? "").Trim().ToLowerInvariant();
+            if (t is EliminacionLog.TipoDesvincular || t.Contains("desvincular"))
+                return EliminacionLog.TipoDesvincular;
+            if (t is EliminacionLog.TipoCascada || t.Contains("borrar asociados") || t.Contains("cascada"))
+                return EliminacionLog.TipoCascada;
+            return EliminacionLog.TipoSimple;
+        }
+
+        public static string HumanizarEntidad(string? entidad)
+        {
+            var raw = (entidad ?? "").Trim();
+            if (raw.Length == 0)
+                return raw;
+
+            return raw.ToLowerInvariant() switch
+            {
+                "el producto" => "Producto",
+                "el producto del establecimiento" => "Producto de establecimiento",
+                "el cliente" => "Cliente",
+                "el contrato" => "Contrato",
+                "el establecimiento" => "Establecimiento",
+                "el proveedor" => "Proveedor",
+                "el chofer" => "Chofer",
+                "el gasto" => "Gasto",
+                "la compra" => "Compra",
+                "la entrega" => "Entrega",
+                "el usuario" => "Usuario",
+                "la firma" => "Firma",
+                "la sucursal" => "Sucursal",
+                _ => char.ToUpperInvariant(raw[0]) + raw[1..]
+            };
+        }
+
+        public static string? NormalizarIp(string? ip)
+        {
+            if (string.IsNullOrWhiteSpace(ip))
+                return ip;
+
+            var v = ip.Trim().Trim('[', ']');
+            if (v.StartsWith("::ffff:", StringComparison.OrdinalIgnoreCase))
+                v = v[7..];
+
+            if (v is "::1" or ":1" or "0:0:0:0:0:0:0:1" or "127.0.0.1" or "localhost")
+                return "localhost";
+
+            return v;
+        }
+
+        public static string? NombreUsuario(string? nombre, string? apellido, string? usuario)
+        {
+            var full = $"{nombre} {apellido}".Trim();
+            if (!string.IsNullOrWhiteSpace(full))
+                return full;
+            return string.IsNullOrWhiteSpace(usuario) ? null : usuario.Trim();
         }
 
         private static string? FormatearDetalle(DependenciasEliminacionInfo? deps)

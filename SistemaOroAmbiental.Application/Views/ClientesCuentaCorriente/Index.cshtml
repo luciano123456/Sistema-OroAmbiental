@@ -19,7 +19,7 @@
 
     <!-- Estilos base -->
 
-    <link href="~/css/CuentaCorriente.css?v=5.3" rel="stylesheet" />
+    <link href="~/css/CuentaCorriente.css?v=5.4" rel="stylesheet" />
     <link href="~/css/Ventas.css?v=5.2" rel="stylesheet" />
     <link href="~/css/disenopantallas.css?v=8.1" rel="stylesheet" />
     <link href="~/css/M_Generico.css?v=5.2" rel="stylesheet" />
@@ -386,6 +386,20 @@
                         <div class="invalid-feedback">Campo obligatorio</div>
                     </div>
 
+                    <div class="col-12">
+                        <label class="form-label">Origen del pago</label>
+                        <div class="cg-origen-seg">
+                            <button type="button" class="cg-origen-btn is-on" data-origen="cliente">Cliente</button>
+                            <button type="button" class="cg-origen-btn" data-origen="tercero">Terceros</button>
+                        </div>
+                    </div>
+                    <div class="col-12" id="pTerceroWrap" hidden>
+                        <label class="form-label">¿Quién pagó?</label>
+                        <select id="pTercero" class="form-control">
+                            <option value="">Seleccionar pagador</option>
+                        </select>
+                    </div>
+
                     <div class="col-md-6">
                         <label class="form-label">Concepto</label>
                         <input id="pConcepto" class="form-control" placeholder="Ej: Pago parcial, liquidacion...">
@@ -646,7 +660,7 @@
     <!-- moment -->
     <script src="~/js/utils/moment.js?v=5.2"></script>
 
-    <script src="~/js/ClientesCuentaCorriente.js?v=5.4"></script>
+    <script src="~/js/ClientesCuentaCorriente.js?v=5.7"></script>
 }
 
 
