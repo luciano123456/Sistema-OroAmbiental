@@ -277,36 +277,55 @@
                     <i class="fa fa-truck"></i> Recoleccion
                 </div>
                 <div class="row g-3">
-                    <div class="col-md-4">
-                        <label class="form-label">Dia recoleccion</label>
-                        <div class="rp-select-plus">
-                            <select id="cmbDiaEst" class="form-control"></select>
-                            <button type="button" class="rp-btn-plus" data-config-nombre="Dias" data-config-controller="Dias"><i class="fa fa-plus"></i></button>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Semana recoleccion</label>
-                        <div class="rp-select-plus">
-                            <select id="cmbSemanaEst" class="form-control"></select>
-                            <button type="button" class="rp-btn-plus" data-config-nombre="Semanas" data-config-controller="Semanas"><i class="fa fa-plus"></i></button>
-                        </div>
-                    </div>
                     <div class="col-12">
+                        <div class="rp-visitas">
+                            <div class="rp-visitas-head">
+                                <div class="rp-visitas-title"><i class="fa fa-map-marker"></i> Visitas del recorrido</div>
+                                <div class="rp-visitas-sub">Varios días o varias semanas. Cada una entra en la hoja de ruta.</div>
+                            </div>
+                            <div class="rp-visita-cols" aria-hidden="true">
+                                <span></span>
+                                <span>Día</span>
+                                <span>Semana</span>
+                                <span>Unidad</span>
+                                <span>Nº</span>
+                                <span></span>
+                            </div>
+                            <div id="listaVisitasEst" class="rp-visitas-list">
+                                <div class="rp-visita-row" data-visita-principal="1">
+                                    <div class="rp-visita-index" aria-hidden="true">1</div>
+                                    <div class="rp-visita-field">
+                                        <div class="rp-select-plus">
+                                            <select id="cmbDiaEst" class="form-control"></select>
+                                            <button type="button" class="rp-btn-plus" data-config-nombre="Dias" data-config-controller="Dias"><i class="fa fa-plus"></i></button>
+                                        </div>
+                                    </div>
+                                    <div class="rp-visita-field">
+                                        <div class="rp-select-plus">
+                                            <select id="cmbSemanaEst" class="form-control"></select>
+                                            <button type="button" class="rp-btn-plus" data-config-nombre="Semanas" data-config-controller="Semanas"><i class="fa fa-plus"></i></button>
+                                        </div>
+                                    </div>
+                                    <div class="rp-visita-field">
+                                        <div class="rp-select-plus">
+                                            <select id="cmbCamionEst" class="form-control"></select>
+                                            <button type="button" class="rp-btn-plus" data-config-nombre="Camiones" data-config-controller="Camiones" title="Agregar camion"><i class="fa fa-plus"></i></button>
+                                        </div>
+                                    </div>
+                                    <div class="rp-visita-field">
+                                        <input id="txtOrdenRecorridoEst" class="form-control" type="number" min="0" step="1" placeholder="Auto" autocomplete="one-time-code" title="Posición en la hoja. Vacío = al final." />
+                                    </div>
+                                    <div class="rp-visita-actions"></div>
+                                </div>
+                            </div>
+                            <button type="button" class="rp-visita-add" id="btnAgregarVisitaEst">
+                                <i class="fa fa-plus"></i> Agregar otra visita
+                            </button>
+                            <div class="rp-visitas-note">Nº vacío se asigna al final de esa hoja. Para sacar la primera visita, vaciá día y semana.</div>
+                        </div>
                         <div id="avisoRecoleccionEst" class="rp-recoleccion-warn">
-                            Sin día o semana de recolección, este establecimiento no entra en recorridos ni en la hoja de ruta.
+                            Sin al menos un día y una semana, este establecimiento no entra en recorridos ni en la hoja de ruta.
                         </div>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Unidad / Camion</label>
-                        <div class="rp-select-plus">
-                            <select id="cmbCamionEst" class="form-control"></select>
-                            <button type="button" class="rp-btn-plus" data-config-nombre="Camiones" data-config-controller="Camiones" title="Agregar camion"><i class="fa fa-plus"></i></button>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Nº recorrido</label>
-                        <input id="txtOrdenRecorridoEst" class="form-control" type="number" min="0" step="1" placeholder="Auto" autocomplete="one-time-code" title="Posición en la hoja de ruta. Vacío o 0 = al final." />
-                        <div class="form-text text-muted" style="font-size:0.72rem;line-height:1.25;">Vacío o 0 = se asigna al final</div>
                         <div id="avisoOrdenRecorridoEst" class="rp-orden-aviso" hidden>
                             <div class="rp-orden-aviso-text"></div>
                             <div class="rp-orden-aviso-actions">

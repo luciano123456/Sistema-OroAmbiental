@@ -1,3 +1,8 @@
+@using Microsoft.Extensions.Configuration
+@inject IConfiguration Configuration
+@{
+    var ambienteTest = Configuration.GetValue<int>("AmbienteTest");
+}
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
 <link href="~/css/NavBarLogin.css?v=6.0" rel="stylesheet" />
 <link href="~/css/RpAvatar.css?v=1.0" rel="stylesheet" />
@@ -12,6 +17,14 @@
                 <span class="rp-brand-sub">Sistema de gestion</span>
             </span>
         </a>
+
+        @if (ambienteTest == 1)
+        {
+            <span class="oa-ambiente-test-nav" title="Este sistema esta en ambiente de prueba">
+                <i class="fa fa-exclamation-triangle" aria-hidden="true"></i>
+                Ambiente test
+            </span>
+        }
 
         <div class="rp-nav-toolbar">
             <ul class="navbar-nav rp-nav-user">

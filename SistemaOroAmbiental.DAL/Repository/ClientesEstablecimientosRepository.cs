@@ -390,6 +390,9 @@ namespace SistemaOroAmbiental.DAL.Repository
                 .FirstOrDefaultAsync();
         }
 
+        public Task<Dictionary<int, List<VisitaRecorridoTexto>>> ListarVisitas(IReadOnlyCollection<int> idsEstablecimiento)
+            => VisitasRecorridoLectura.PorEstablecimientos(_db, idsEstablecimiento);
+
         public async Task<List<ClientesEstablecimientosDia>> ObtenerDiasAdicionales(int idEstablecimiento)
         {
             return await _db.ClientesEstablecimientosDias
@@ -425,15 +428,21 @@ namespace SistemaOroAmbiental.DAL.Repository
                 }
 
                 var ahora = DateTime.Now;
+                var claves = new HashSet<(int Dia, int Semana)>();
                 foreach (var dia in dias)
                 {
                     if (dia.IdDia <= 0) continue;
+                    var semana = dia.IdSemana is > 0 ? dia.IdSemana.Value : 0;
+                    if (!claves.Add((dia.IdDia, semana)))
+                        continue;
 
                     _db.ClientesEstablecimientosDias.Add(new ClientesEstablecimientosDia
                     {
                         IdEstablecimiento = idEstablecimiento,
                         IdDia = dia.IdDia,
+                        IdSemana = dia.IdSemana is > 0 ? dia.IdSemana : null,
                         IdCamion = dia.IdCamion,
+                        OrdenRecorrido = dia.OrdenRecorrido is > 0 ? dia.OrdenRecorrido : null,
                         IdUsuarioRegistra = idUsuario,
                         FechaUsuarioRegistra = ahora
                     });
@@ -484,6 +493,31 @@ namespace SistemaOroAmbiental.DAL.Repository
 
             if (est != null)
                 return est;
+
+            var extraQuery = _db.ClientesEstablecimientosDias.AsNoTracking()
+                .Where(d => d.IdCamion == idCamion
+                    && d.IdDia == idDia
+                    && d.OrdenRecorrido == orden
+                    && (d.IdSemana == idSemana
+                        || (d.IdSemana == null && d.IdEstablecimientoNavigation.IdSemanaRecoleccion == idSemana)));
+
+            if (idExcluirEstablecimiento is > 0)
+                extraQuery = extraQuery.Where(d => d.IdEstablecimiento != idExcluirEstablecimiento.Value);
+
+            var extra = await extraQuery
+                .Select(d => new OrdenRecorridoOcupanteDto
+                {
+                    Ocupado = true,
+                    Posicion = orden,
+                    IdEstablecimiento = d.IdEstablecimiento,
+                    IdCliente = d.IdEstablecimientoNavigation.IdCliente,
+                    Nombre = d.IdEstablecimientoNavigation.Nombre,
+                    Cliente = d.IdEstablecimientoNavigation.IdClienteNavigation.Nombre
+                })
+                .FirstOrDefaultAsync();
+
+            if (extra != null)
+                return extra;
 
             var recQuery = _db.ClientesRecorridos.AsNoTracking()
                 .Where(r => r.IdCamion == idCamion
@@ -540,11 +574,28 @@ namespace SistemaOroAmbiental.DAL.Repository
             var recs = await recQuery.OrderByDescending(r => r.Posicion).ToListAsync();
             var ocupadaRec = recs.Any(r => r.Posicion == orden);
 
-            if (!ocupadaEst && !ocupadaRec)
+            var extraQuery = _db.ClientesEstablecimientosDias
+                .Where(d => d.IdCamion == idCamion
+                    && d.IdDia == idDia
+                    && d.OrdenRecorrido != null
+                    && d.OrdenRecorrido >= orden
+                    && (d.IdSemana == idSemana
+                        || (d.IdSemana == null && d.IdEstablecimientoNavigation.IdSemanaRecoleccion == idSemana)));
+
+            if (idExcluirEstablecimiento is > 0)
+                extraQuery = extraQuery.Where(d => d.IdEstablecimiento != idExcluirEstablecimiento.Value);
+
+            var extras = await extraQuery.OrderByDescending(d => d.OrdenRecorrido).ToListAsync();
+            var ocupadaExtra = extras.Any(d => d.OrdenRecorrido == orden);
+
+            if (!ocupadaEst && !ocupadaRec && !ocupadaExtra)
                 return;
 
             foreach (var e in ests)
                 e.OrdenRecorrido = (e.OrdenRecorrido ?? orden) + 1;
+
+            foreach (var d in extras)
+                d.OrdenRecorrido = (d.OrdenRecorrido ?? orden) + 1;
 
             foreach (var r in recs)
                 r.Posicion += 1;

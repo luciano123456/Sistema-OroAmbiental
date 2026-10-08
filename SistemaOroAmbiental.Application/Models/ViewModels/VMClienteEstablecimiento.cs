@@ -1,3 +1,5 @@
+using SistemaOroAmbiental.Models;
+
 namespace SistemaOroAmbiental.Application.Models.ViewModels
 {
     public class VMClienteEstablecimiento
@@ -54,6 +56,8 @@ namespace SistemaOroAmbiental.Application.Models.ViewModels
         public string? SemanaRecoleccion { get; set; }
         public string? ListaPrecio { get; set; }
         public string? Camion { get; set; }
+
+        public List<VisitaRecorridoTexto>? Recorridos { get; set; }
 
         public int IdUsuarioRegistra { get; set; }
         public DateTime FechaUsuarioRegistra { get; set; }

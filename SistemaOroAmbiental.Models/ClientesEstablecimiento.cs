@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace SistemaOroAmbiental.Models;
 
@@ -128,4 +129,7 @@ public partial class ClientesEstablecimiento
     public virtual User? IdUsuarioModificaNavigation { get; set; }
 
     public virtual User IdUsuarioRegistraNavigation { get; set; } = null!;
+
+    [NotMapped]
+    public List<VisitaRecorridoTexto> VisitasRecorrido { get; set; } = new();
 }

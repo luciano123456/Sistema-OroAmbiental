@@ -1,0 +1,16 @@
+@using Microsoft.Extensions.Configuration
+@inject IConfiguration Configuration
+@{
+    var ambienteTest = Configuration.GetValue<int>("AmbienteTest");
+}
+@if (ambienteTest == 1)
+{
+    <link rel="stylesheet" href="~/css/AmbienteTest.css?v=1.0" asp-append-version="true" />
+    <div class="oa-ambiente-test" aria-hidden="true">
+        <div class="oa-ambiente-test-pattern"></div>
+        <div class="oa-ambiente-test-stamp">
+            <span class="oa-ambiente-test-stamp-ring">TEST</span>
+            <span class="oa-ambiente-test-stamp-sub">de prueba</span>
+        </div>
+    </div>
+}

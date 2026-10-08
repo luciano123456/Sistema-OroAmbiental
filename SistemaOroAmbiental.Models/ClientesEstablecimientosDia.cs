@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace SistemaOroAmbiental.Models;
@@ -11,7 +11,11 @@ public partial class ClientesEstablecimientosDia
 
     public int IdDia { get; set; }
 
+    public int? IdSemana { get; set; }
+
     public int? IdCamion { get; set; }
+
+    public int? OrdenRecorrido { get; set; }
 
     public int IdUsuarioRegistra { get; set; }
 

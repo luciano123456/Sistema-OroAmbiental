@@ -792,10 +792,9 @@ public partial class SistemaOroAmbientalContext : DbContext
             entity.Property(e => e.FechaUsuarioModifica).HasColumnType("datetime");
             entity.Property(e => e.FechaUsuarioRegistra).HasColumnType("datetime");
 
-            entity.HasOne(d => d.IdDiaNavigation).WithMany(p => p.InverseIdDiaNavigation)
-                .HasForeignKey(d => d.IdDia)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_ClientesEstablecimientosDias_ClientesEstablecimientosDias");
+            // IdDia es el día del catálogo, no una fila de esta misma tabla.
+            entity.Ignore(e => e.IdDiaNavigation);
+            entity.Ignore(e => e.InverseIdDiaNavigation);
 
             entity.HasOne(d => d.IdEstablecimientoNavigation).WithMany(p => p.ClientesEstablecimientosDia)
                 .HasForeignKey(d => d.IdEstablecimiento)

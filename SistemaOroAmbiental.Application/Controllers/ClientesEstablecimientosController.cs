@@ -67,7 +67,7 @@ namespace SistemaOroAmbiental.Application.Controllers
         public async Task<IActionResult> Lista()
         {
             var items = (await _service.ObtenerTodos()).ToList();
-            return Ok(items.Select(MapEstablecimientoVm).ToList());
+            return Ok(await MapearConVisitas(items));
         }
 
         [HttpPost]
@@ -75,7 +75,7 @@ namespace SistemaOroAmbiental.Application.Controllers
         {
             var consulta = GrillaServerHelper.ToConsulta(req);
             var result = await _service.ListarPaginado(consulta);
-            var data = result.Items.Select(MapEstablecimientoVm).ToList();
+            var data = await MapearConVisitas(result.Items.ToList());
             return Ok(GrillaServerHelper.Respuesta(req, result.Total, result.Filtered, data));
         }
 
@@ -168,6 +168,9 @@ namespace SistemaOroAmbiental.Application.Controllers
             var e = await _service.Obtener(id);
             if (e == null) return NotFound();
 
+            var visitas = await _service.ListarVisitas(new[] { e.Id });
+            visitas.TryGetValue(e.Id, out var recorridos);
+
             return Ok(new
             {
                 e.Id,
@@ -208,6 +211,7 @@ namespace SistemaOroAmbiental.Application.Controllers
                 HorarioRecoleccionDesde = FormatearHora(e.HorarioRecoleccionDesde),
                 HorarioRecoleccionHasta = FormatearHora(e.HorarioRecoleccionHasta),
                 DiasHorarios = e.DiasHorarios,
+                Recorridos = recorridos ?? new List<VisitaRecorridoTexto>(),
                 e.FechaUsuarioRegistra,
                 UsuarioRegistra = e.IdUsuarioRegistraNavigation?.Usuario,
                 e.FechaUsuarioModifica,
@@ -408,9 +412,16 @@ namespace SistemaOroAmbiental.Application.Controllers
             if (geoError != null)
                 return Ok(new { valor = false, mensaje = geoError, tipo = "validacion" });
 
+            var visitasError = ValidarVisitasUnicas(model);
+            if (visitasError != null)
+                return Ok(new { valor = false, mensaje = visitasError, tipo = "validacion" });
+
+            var slots = AplicarVisitasAlModelo(model);
             var entity = MapearEntidad(model, idUsuario, esNuevo: true);
 
             ServiceResult result = await _service.Insertar(entity, model.DesplazarOrdenRecorrido);
+            if (result.Ok && slots != null)
+                await _service.GuardarVisitasAdicionales(entity.Id, VisitasExtra(slots), idUsuario, model.DesplazarOrdenRecorrido);
 
             return Ok(new
             {
@@ -431,9 +442,16 @@ namespace SistemaOroAmbiental.Application.Controllers
             if (geoError != null)
                 return Ok(new { valor = false, mensaje = geoError, tipo = "validacion" });
 
+            var visitasError = ValidarVisitasUnicas(model);
+            if (visitasError != null)
+                return Ok(new { valor = false, mensaje = visitasError, tipo = "validacion" });
+
+            var slots = AplicarVisitasAlModelo(model);
             var entity = MapearEntidad(model, idUsuario, esNuevo: false);
 
             ServiceResult result = await _service.Actualizar(entity, model.DesplazarOrdenRecorrido);
+            if (result.Ok && slots != null)
+                await _service.GuardarVisitasAdicionales(entity.Id, VisitasExtra(slots), idUsuario, model.DesplazarOrdenRecorrido);
 
             return Ok(new
             {
@@ -465,6 +483,92 @@ namespace SistemaOroAmbiental.Application.Controllers
                 dependencias = result.Dependencias?.Items,
                 instruccionesPasoAPaso = result.InstruccionesPasoAPaso
             });
+        }
+
+        private async Task<List<VMClienteEstablecimiento>> MapearConVisitas(List<ClientesEstablecimiento> items)
+        {
+            var vms = items.Select(MapEstablecimientoVm).ToList();
+            if (vms.Count == 0)
+                return vms;
+
+            var visitas = await _service.ListarVisitas(vms.Select(v => v.Id).ToList());
+            foreach (var vm in vms)
+            {
+                if (!visitas.TryGetValue(vm.Id, out var slots) || slots.Count == 0)
+                {
+                    vm.Recorridos = new List<VisitaRecorridoTexto>();
+                    continue;
+                }
+
+                vm.Recorridos = slots;
+                var dias = slots.Select(s => s.Dia).Where(s => !string.IsNullOrWhiteSpace(s)).ToList();
+                var semanas = slots.Select(s => s.Semana).Where(s => !string.IsNullOrWhiteSpace(s)).ToList();
+                var camiones = slots.Select(s => s.Camion).Where(s => !string.IsNullOrWhiteSpace(s)).Distinct().ToList();
+                if (dias.Count > 0)
+                    vm.DiaRecoleccion = string.Join(" · ", dias);
+                if (semanas.Count > 0)
+                    vm.SemanaRecoleccion = string.Join(" · ", semanas);
+                if (camiones.Count > 0)
+                    vm.Camion = string.Join(" · ", camiones);
+            }
+
+            return vms;
+        }
+
+        private const string MensajeVisitasDuplicadas =
+            "Hay dos visitas iguales (mismo día y misma semana). Dejá una sola.";
+
+        private static string? ValidarVisitasUnicas(VMClienteEstablecimiento model)
+        {
+            if (model.Recorridos == null)
+                return null;
+
+            var repetida = model.Recorridos
+                .Where(v => v.IdDia > 0 && v.IdSemana > 0)
+                .GroupBy(v => (v.IdDia, v.IdSemana))
+                .Any(g => g.Count() > 1);
+
+            return repetida ? MensajeVisitasDuplicadas : null;
+        }
+
+        private static List<VisitaRecorridoTexto>? AplicarVisitasAlModelo(VMClienteEstablecimiento model)
+        {
+            if (model.Recorridos == null)
+                return null;
+
+            var slots = model.Recorridos
+                .Where(v => v.IdDia > 0 && v.IdSemana > 0)
+                .ToList();
+
+            if (slots.Count == 0)
+            {
+                model.IdDiaRecoleccion = null;
+                model.IdSemanaRecoleccion = null;
+                model.IdCamion = null;
+                model.OrdenRecorrido = null;
+                return slots;
+            }
+
+            var principal = slots[0];
+            model.IdDiaRecoleccion = principal.IdDia;
+            model.IdSemanaRecoleccion = principal.IdSemana;
+            model.IdCamion = principal.IdCamion;
+            model.OrdenRecorrido = principal.OrdenRecorrido is > 0 ? principal.OrdenRecorrido : null;
+            return slots;
+        }
+
+        private static List<ClientesEstablecimientosDia> VisitasExtra(List<VisitaRecorridoTexto> slots)
+        {
+            return slots
+                .Skip(1)
+                .Select(s => new ClientesEstablecimientosDia
+                {
+                    IdDia = s.IdDia,
+                    IdSemana = s.IdSemana,
+                    IdCamion = s.IdCamion,
+                    OrdenRecorrido = s.OrdenRecorrido is > 0 ? s.OrdenRecorrido : null
+                })
+                .ToList();
         }
 
         private static ClientesEstablecimiento MapearEntidad(VMClienteEstablecimiento model, int idUsuario, bool esNuevo)

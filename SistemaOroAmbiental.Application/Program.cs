@@ -22,7 +22,8 @@ Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
 builder.Services.AddResponseCompression(options =>
 {
     options.EnableForHttps = true;
-    options.Providers.Add<BrotliCompressionProvider>();
+    // Brotli en nivel Fastest arma un stream que Chrome no puede decodificar
+    // (ERR_CONTENT_DECODING_FAILED en el HTML). Gzip sí lo abre.
     options.Providers.Add<GzipCompressionProvider>();
     options.MimeTypes = ResponseCompressionDefaults.MimeTypes.Concat(new[]
     {
@@ -31,7 +32,6 @@ builder.Services.AddResponseCompression(options =>
         "image/svg+xml"
     });
 });
-builder.Services.Configure<BrotliCompressionProviderOptions>(o => o.Level = CompressionLevel.Fastest);
 builder.Services.Configure<GzipCompressionProviderOptions>(o => o.Level = CompressionLevel.Fastest);
 
 builder.Services.AddMemoryCache();
@@ -257,6 +257,12 @@ builder.Services.AddAuthorization(options =>
 });
 
 var app = builder.Build();
+
+using (var scopeVisitas = app.Services.CreateScope())
+{
+    var dbVisitas = scopeVisitas.ServiceProvider.GetRequiredService<SistemaOroAmbientalContext>();
+    VisitasRecorridoSchema.AsegurarAsync(dbVisitas).GetAwaiter().GetResult();
+}
 
 if (!app.Environment.IsDevelopment())
 {

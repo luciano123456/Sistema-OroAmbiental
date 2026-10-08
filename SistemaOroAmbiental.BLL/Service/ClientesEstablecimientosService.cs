@@ -105,6 +105,39 @@ namespace SistemaOroAmbiental.BLL.Service
             int idCamion, int idDia, int idSemana, int orden, int? idExcluirEstablecimiento)
             => _repo.ObtenerOcupanteOrdenRecorrido(idCamion, idDia, idSemana, orden, idExcluirEstablecimiento);
 
+        public Task<Dictionary<int, List<VisitaRecorridoTexto>>> ListarVisitas(IReadOnlyCollection<int> idsEstablecimiento)
+            => _repo.ListarVisitas(idsEstablecimiento);
+
+        public async Task GuardarVisitasAdicionales(
+            int idEstablecimiento,
+            IReadOnlyList<ClientesEstablecimientosDia> visitas,
+            int idUsuario,
+            bool desplazarOrden)
+        {
+            if (idEstablecimiento <= 0)
+                return;
+
+            if (desplazarOrden)
+            {
+                foreach (var visita in visitas)
+                {
+                    if (visita.OrdenRecorrido is not > 0 || visita.IdCamion is not > 0
+                        || visita.IdDia <= 0 || visita.IdSemana is not > 0)
+                        continue;
+
+                    await _repo.DesplazarOrdenRecorridoSiOcupado(
+                        visita.IdCamion.Value,
+                        visita.IdDia,
+                        visita.IdSemana.Value,
+                        visita.OrdenRecorrido.Value,
+                        idEstablecimiento);
+                }
+            }
+
+            await _repo.ReemplazarDiasAdicionales(idEstablecimiento, visitas, idUsuario);
+            await SyncRecorridosSafe(idEstablecimiento, idUsuario);
+        }
+
         private Task DesplazarSiCorresponde(ClientesEstablecimiento model, int? idExcluir)
         {
             if (model.OrdenRecorrido is not > 0 || model.IdCamion is not > 0

@@ -239,6 +239,7 @@ namespace SistemaOroAmbiental.DAL.Repository
                     await DesplazarPosicionesSiOcupada(model, idExcluir: null);
 
                 _db.ClientesRecorridos.Add(model);
+                await AsegurarSlotEstablecimiento(model, overwriteOrder: true);
                 await _db.SaveChangesAsync();
                 return true;
             }
@@ -260,6 +261,7 @@ namespace SistemaOroAmbiental.DAL.Repository
                 var semanaAnterior = entity.IdSemana;
                 var diaAnterior = entity.IdDia;
                 var posicionAnterior = entity.Posicion;
+                var estAnterior = entity.IdEstablecimiento;
 
                 entity.IdCliente = model.IdCliente;
                 entity.IdEstablecimiento = model.IdEstablecimiento;
@@ -300,6 +302,7 @@ namespace SistemaOroAmbiental.DAL.Repository
                     entity.Posicion = posicionAnterior;
                 }
 
+                await ReflejarCambioSlotEstablecimiento(estAnterior, camionAnterior, semanaAnterior, diaAnterior, entity);
                 await _db.SaveChangesAsync();
                 return true;
             }
@@ -320,6 +323,9 @@ namespace SistemaOroAmbiental.DAL.Repository
                 var idCamion = entity.IdCamion;
                 var idSemana = entity.IdSemana;
                 var idDia = entity.IdDia;
+
+                if (entity.IdEstablecimiento is > 0)
+                    await QuitarSlotEstablecimiento(entity.IdEstablecimiento.Value, idCamion, idSemana, idDia);
 
                 _db.ClientesRecorridos.Remove(entity);
                 await CerrarHuecoRecorrido(idCamion, idSemana, idDia, entity.Id, entity.Posicion);
@@ -1075,15 +1081,28 @@ namespace SistemaOroAmbiental.DAL.Repository
                 .Distinct()
                 .ToList();
 
+            var extraIds = await _db.ClientesEstablecimientosDias.AsNoTracking()
+                .Where(d => d.IdDia == idDia
+                    && d.IdCamion == idCamion
+                    && (d.IdSemana == idSemana
+                        || (d.IdSemana == null && d.IdEstablecimientoNavigation.IdSemanaRecoleccion == idSemana))
+                    && !enRutaEstIds.Contains(d.IdEstablecimiento))
+                .Select(d => d.IdEstablecimiento)
+                .Distinct()
+                .ToListAsync();
+
             var raw = await (
                 from e in _db.ClientesEstablecimientos.AsNoTracking()
                 join c in _db.Clientes.AsNoTracking() on e.IdCliente equals c.Id
-                where e.IdSemanaRecoleccion == idSemana
-                   && e.IdDiaRecoleccion == idDia
-                   && (e.IdCamion == null || e.IdCamion == idCamion)
-                   && c.Activo
+                where c.Activo
                    && !enRutaEstIds.Contains(e.Id)
                    && !enRutaCliSinEst.Contains(e.IdCliente)
+                   && (
+                        (e.IdSemanaRecoleccion == idSemana
+                            && e.IdDiaRecoleccion == idDia
+                            && (e.IdCamion == null || e.IdCamion == idCamion))
+                        || extraIds.Contains(e.Id)
+                   )
                 orderby e.HorarioRecoleccionDesde, c.Nombre, e.Nombre
                 select new
                 {
@@ -1156,21 +1175,66 @@ namespace SistemaOroAmbiental.DAL.Repository
                     .Distinct()
                     .ToList();
 
-                var ordenPorEst = estIds.Count == 0
-                    ? new Dictionary<int, int?>()
-                    : await _db.ClientesEstablecimientos
+                var estSlots = new List<(int Id, int? Orden, int? Dia, int? Semana, int? Camion)>();
+                var extrasOrden = new List<(int IdEst, int? Semana, int? Camion, int? Orden)>();
+                if (estIds.Count > 0)
+                {
+                    var rawEst = await _db.ClientesEstablecimientos
                         .AsNoTracking()
                         .Where(e => estIds.Contains(e.Id))
-                        .ToDictionaryAsync(e => e.Id, e => e.OrdenRecorrido);
+                        .Select(e => new
+                        {
+                            e.Id,
+                            e.OrdenRecorrido,
+                            e.IdDiaRecoleccion,
+                            e.IdSemanaRecoleccion,
+                            e.IdCamion
+                        })
+                        .ToListAsync();
+                    estSlots.AddRange(rawEst.Select(e => (
+                        Id: e.Id,
+                        Orden: e.OrdenRecorrido,
+                        Dia: e.IdDiaRecoleccion,
+                        Semana: e.IdSemanaRecoleccion,
+                        Camion: e.IdCamion)));
+
+                    var rawExtra = await _db.ClientesEstablecimientosDias
+                        .AsNoTracking()
+                        .Where(d => estIds.Contains(d.IdEstablecimiento) && d.IdDia == idDia)
+                        .Select(d => new { d.IdEstablecimiento, d.IdSemana, d.IdCamion, d.OrdenRecorrido })
+                        .ToListAsync();
+                    extrasOrden.AddRange(rawExtra.Select(d => (
+                        IdEst: d.IdEstablecimiento,
+                        Semana: d.IdSemana,
+                        Camion: d.IdCamion,
+                        Orden: d.OrdenRecorrido)));
+                }
 
                 var itemsOrdenados = items
                     .Select(item =>
                     {
                         int? orden = null;
-                        if (item.IdEstablecimiento.HasValue && item.IdEstablecimiento > 0
-                            && ordenPorEst.TryGetValue(item.IdEstablecimiento.Value, out var o))
+                        if (item.IdEstablecimiento is > 0)
                         {
-                            orden = o;
+                            var est = estSlots.FirstOrDefault(e => e.Id == item.IdEstablecimiento.Value);
+                            var coincidePrincipal = est.Id != 0
+                                && est.Dia == idDia
+                                && est.Semana == idSemana
+                                && (est.Camion == null || est.Camion == idCamion);
+                            if (coincidePrincipal)
+                            {
+                                orden = est.Orden;
+                            }
+                            else
+                            {
+                                var ex = extrasOrden.FirstOrDefault(d =>
+                                    d.IdEst == item.IdEstablecimiento.Value
+                                    && (d.Semana == idSemana || d.Semana == null)
+                                    && (d.Camion == null || d.Camion == idCamion));
+                                orden = ex.IdEst != 0 && ex.Orden is > 0
+                                    ? ex.Orden
+                                    : (est.Id != 0 ? est.Orden : null);
+                            }
                         }
 
                         return new { Item = item, Orden = orden };
@@ -1183,6 +1247,7 @@ namespace SistemaOroAmbiental.DAL.Repository
                 var pos = maxPos;
                 var insertados = 0;
                 var ahora = DateTime.Now;
+                var agregados = new List<ClientesRecorrido>();
 
                 foreach (var entry in itemsOrdenados)
                 {
@@ -1217,6 +1282,7 @@ namespace SistemaOroAmbiental.DAL.Repository
                     };
 
                     _db.ClientesRecorridos.Add(entity);
+                    agregados.Add(entity);
                     enRutaPairs.Add((entity.IdCliente, entity.IdEstablecimiento));
                     insertados++;
                 }
@@ -1224,6 +1290,8 @@ namespace SistemaOroAmbiental.DAL.Repository
                 if (insertados > 0)
                 {
                     await CompactarPosicionesRecorrido(idCamion, idSemana, idDia);
+                    foreach (var agregado in agregados)
+                        await AsegurarSlotEstablecimiento(agregado, overwriteOrder: false);
                     await _db.SaveChangesAsync();
                 }
 
@@ -1313,40 +1381,41 @@ namespace SistemaOroAmbiental.DAL.Repository
                 if (est == null)
                     return (false, "Establecimiento no encontrado.");
 
-                var idSemana = est.IdSemanaRecoleccion;
-                var orden = est.OrdenRecorrido;
-                var desired = new List<(int IdCamion, int IdSemana, int IdDia)>();
+                var desired = new List<(int IdCamion, int IdSemana, int IdDia, int? Orden)>();
 
-                if (idSemana is > 0)
+                void AgregarSlot(int camion, int semana, int dia, int? ordenSlot)
                 {
-                    if (est.IdCamion is > 0 && est.IdDiaRecoleccion is > 0)
-                        desired.Add((est.IdCamion.Value, idSemana.Value, est.IdDiaRecoleccion.Value));
-
-                    var diasExtra = await _db.ClientesEstablecimientosDias.AsNoTracking()
-                        .Where(d =>
-                            d.IdEstablecimiento == idEstablecimiento &&
-                            d.IdDia > 0 &&
-                            d.IdCamion != null &&
-                            d.IdCamion > 0)
-                        .Select(d => new { d.IdDia, IdCamion = d.IdCamion!.Value })
-                        .ToListAsync();
-
-                    foreach (var d in diasExtra)
-                    {
-                        if (!desired.Any(x =>
-                                x.IdCamion == d.IdCamion &&
-                                x.IdSemana == idSemana.Value &&
-                                x.IdDia == d.IdDia))
-                        {
-                            desired.Add((d.IdCamion, idSemana.Value, d.IdDia));
-                        }
-                    }
+                    if (camion <= 0 || semana <= 0 || dia <= 0)
+                        return;
+                    if (desired.Any(x => x.IdSemana == semana && x.IdDia == dia))
+                        return;
+                    desired.Add((camion, semana, dia, ordenSlot is > 0 ? ordenSlot : null));
                 }
 
-                desired = desired
-                    .GroupBy(x => (x.IdCamion, x.IdSemana, x.IdDia))
-                    .Select(g => g.First())
-                    .ToList();
+                if (est.IdCamion is > 0 && est.IdSemanaRecoleccion is > 0 && est.IdDiaRecoleccion is > 0)
+                {
+                    AgregarSlot(
+                        est.IdCamion.Value,
+                        est.IdSemanaRecoleccion.Value,
+                        est.IdDiaRecoleccion.Value,
+                        est.OrdenRecorrido);
+                }
+
+                var diasExtra = await _db.ClientesEstablecimientosDias.AsNoTracking()
+                    .Where(d =>
+                        d.IdEstablecimiento == idEstablecimiento &&
+                        d.IdDia > 0 &&
+                        d.IdCamion != null &&
+                        d.IdCamion > 0)
+                    .Select(d => new { d.IdDia, d.IdSemana, IdCamion = d.IdCamion!.Value, d.OrdenRecorrido })
+                    .ToListAsync();
+
+                foreach (var d in diasExtra)
+                {
+                    var semana = d.IdSemana is > 0 ? d.IdSemana.Value : (est.IdSemanaRecoleccion ?? 0);
+                    var ordenSlot = d.OrdenRecorrido is > 0 ? d.OrdenRecorrido : est.OrdenRecorrido;
+                    AgregarSlot(d.IdCamion, semana, d.IdDia, ordenSlot);
+                }
 
                 var existentes = await _db.ClientesRecorridos
                     .Where(r => r.IdEstablecimiento == idEstablecimiento)
@@ -1375,7 +1444,7 @@ namespace SistemaOroAmbiental.DAL.Repository
                         slot.IdCamion,
                         slot.IdSemana,
                         slot.IdDia,
-                        orden,
+                        slot.Orden,
                         actual?.Id);
 
                     if (actual != null)
@@ -1387,7 +1456,7 @@ namespace SistemaOroAmbiental.DAL.Repository
                             cambio = true;
                         }
 
-                        if (orden is > 0 && actual.Posicion != posicion)
+                        if (slot.Orden is > 0 && actual.Posicion != posicion)
                         {
                             var posicionAnterior = actual.Posicion;
                             actual.Posicion = posicion;
@@ -1652,25 +1721,171 @@ namespace SistemaOroAmbiental.DAL.Repository
 
         private async Task AplicarOrdenEstablecimientos(IEnumerable<ClientesRecorrido> rows)
         {
-            var pares = rows
+            var lista = rows
                 .Where(r => r.IdEstablecimiento is > 0 && r.Posicion > 0)
-                .GroupBy(r => r.IdEstablecimiento!.Value)
-                .Select(g => (Id: g.Key, Posicion: g.First().Posicion))
                 .ToList();
-            if (pares.Count == 0)
+            if (lista.Count == 0)
                 return;
 
-            var ids = pares.Select(p => p.Id).ToList();
+            var ids = lista.Select(r => r.IdEstablecimiento!.Value).Distinct().ToList();
             var ests = await _db.ClientesEstablecimientos
                 .Where(e => ids.Contains(e.Id))
                 .ToListAsync();
-            var map = pares.ToDictionary(p => p.Id, p => p.Posicion);
+            var extras = await _db.ClientesEstablecimientosDias
+                .Where(d => ids.Contains(d.IdEstablecimiento))
+                .ToListAsync();
+            var mapEst = ests.ToDictionary(e => e.Id);
 
-            foreach (var est in ests)
+            foreach (var row in lista)
             {
-                if (map.TryGetValue(est.Id, out var pos) && est.OrdenRecorrido != pos)
-                    est.OrdenRecorrido = pos;
+                if (!mapEst.TryGetValue(row.IdEstablecimiento!.Value, out var est))
+                    continue;
+
+                var esPrincipal = est.IdDiaRecoleccion == row.IdDia
+                    && est.IdSemanaRecoleccion == row.IdSemana
+                    && (est.IdCamion == null || est.IdCamion == row.IdCamion);
+                if (esPrincipal)
+                {
+                    if (est.OrdenRecorrido != row.Posicion)
+                        est.OrdenRecorrido = row.Posicion;
+                    continue;
+                }
+
+                var extra = extras.FirstOrDefault(d =>
+                    d.IdEstablecimiento == est.Id
+                    && d.IdDia == row.IdDia
+                    && (d.IdSemana == row.IdSemana || (d.IdSemana == null && est.IdSemanaRecoleccion == row.IdSemana))
+                    && (d.IdCamion == null || d.IdCamion == row.IdCamion));
+                if (extra != null && extra.OrdenRecorrido != row.Posicion)
+                    extra.OrdenRecorrido = row.Posicion;
             }
+        }
+
+        private async Task ReflejarCambioSlotEstablecimiento(
+            int? idEstAnterior,
+            int camionAnterior,
+            int semanaAnterior,
+            int diaAnterior,
+            ClientesRecorrido nuevo)
+        {
+            var cambioEst = idEstAnterior != nuevo.IdEstablecimiento;
+            var cambioSlot = camionAnterior != nuevo.IdCamion
+                || semanaAnterior != nuevo.IdSemana
+                || diaAnterior != nuevo.IdDia;
+
+            if (idEstAnterior is > 0 && (cambioEst || cambioSlot || !nuevo.Activo))
+                await QuitarSlotEstablecimiento(idEstAnterior.Value, camionAnterior, semanaAnterior, diaAnterior);
+
+            if (nuevo.IdEstablecimiento is > 0 && nuevo.Activo)
+                await AsegurarSlotEstablecimiento(nuevo, overwriteOrder: true);
+        }
+
+        private async Task AsegurarSlotEstablecimiento(ClientesRecorrido model, bool overwriteOrder)
+        {
+            if (model.IdEstablecimiento is not > 0 || model.IdDia <= 0 || model.IdSemana <= 0 || model.IdCamion <= 0)
+                return;
+
+            var est = await _db.ClientesEstablecimientos
+                .FirstOrDefaultAsync(e => e.Id == model.IdEstablecimiento.Value);
+            if (est == null)
+                return;
+
+            var sinPrincipal = est.IdDiaRecoleccion is not > 0 || est.IdSemanaRecoleccion is not > 0;
+            var esPrincipal = !sinPrincipal
+                && est.IdDiaRecoleccion == model.IdDia
+                && est.IdSemanaRecoleccion == model.IdSemana;
+
+            if (sinPrincipal || esPrincipal)
+            {
+                est.IdDiaRecoleccion = model.IdDia;
+                est.IdSemanaRecoleccion = model.IdSemana;
+                if (est.IdCamion is not > 0 || esPrincipal)
+                    est.IdCamion = model.IdCamion;
+                if ((overwriteOrder || est.OrdenRecorrido is not > 0) && model.Posicion > 0)
+                    est.OrdenRecorrido = model.Posicion;
+                return;
+            }
+
+            var extra = await _db.ClientesEstablecimientosDias.FirstOrDefaultAsync(d =>
+                d.IdEstablecimiento == est.Id
+                && d.IdDia == model.IdDia
+                && (d.IdSemana == model.IdSemana || d.IdSemana == null));
+
+            if (extra != null)
+            {
+                extra.IdSemana = model.IdSemana;
+                extra.IdCamion = model.IdCamion;
+                if (overwriteOrder && model.Posicion > 0)
+                    extra.OrdenRecorrido = model.Posicion;
+                extra.IdUsuarioModifica = model.IdUsuarioModifica ?? model.IdUsuarioRegistra;
+                extra.FechaUsuarioModifica = DateTime.Now;
+                return;
+            }
+
+            var idUsuario = model.IdUsuarioRegistra > 0
+                ? model.IdUsuarioRegistra
+                : (model.IdUsuarioModifica ?? est.IdUsuarioRegistra);
+            if (idUsuario <= 0)
+                idUsuario = est.IdUsuarioRegistra;
+
+            _db.ClientesEstablecimientosDias.Add(new ClientesEstablecimientosDia
+            {
+                IdEstablecimiento = est.Id,
+                IdDia = model.IdDia,
+                IdSemana = model.IdSemana,
+                IdCamion = model.IdCamion,
+                OrdenRecorrido = model.Posicion > 0 ? model.Posicion : null,
+                IdUsuarioRegistra = idUsuario,
+                FechaUsuarioRegistra = DateTime.Now
+            });
+        }
+
+        private async Task QuitarSlotEstablecimiento(int idEst, int idCamion, int idSemana, int idDia)
+        {
+            var est = await _db.ClientesEstablecimientos.FirstOrDefaultAsync(e => e.Id == idEst);
+            if (est == null)
+                return;
+
+            var extras = await _db.ClientesEstablecimientosDias
+                .Where(d => d.IdEstablecimiento == idEst)
+                .ToListAsync();
+
+            var esPrincipal = est.IdDiaRecoleccion == idDia
+                && est.IdSemanaRecoleccion == idSemana
+                && (est.IdCamion == null || est.IdCamion == idCamion || idCamion <= 0);
+
+            var extra = extras.FirstOrDefault(d =>
+                d.IdDia == idDia
+                && (d.IdSemana == idSemana || (d.IdSemana == null && est.IdSemanaRecoleccion == idSemana))
+                && (d.IdCamion == null || d.IdCamion == idCamion || idCamion <= 0));
+
+            if (!esPrincipal)
+            {
+                if (extra != null)
+                    _db.ClientesEstablecimientosDias.Remove(extra);
+                return;
+            }
+
+            if (extra != null)
+                _db.ClientesEstablecimientosDias.Remove(extra);
+
+            var siguiente = extras.FirstOrDefault(d => d != extra && d.IdDia > 0);
+            if (siguiente != null)
+            {
+                est.IdDiaRecoleccion = siguiente.IdDia;
+                est.IdSemanaRecoleccion = siguiente.IdSemana is > 0 ? siguiente.IdSemana : est.IdSemanaRecoleccion;
+                if (siguiente.IdCamion is > 0)
+                    est.IdCamion = siguiente.IdCamion;
+                if (siguiente.OrdenRecorrido is > 0)
+                    est.OrdenRecorrido = siguiente.OrdenRecorrido;
+                _db.ClientesEstablecimientosDias.Remove(siguiente);
+                return;
+            }
+
+            est.IdDiaRecoleccion = null;
+            est.IdSemanaRecoleccion = null;
+            est.IdCamion = null;
+            est.OrdenRecorrido = null;
         }
 
         /// <summary>

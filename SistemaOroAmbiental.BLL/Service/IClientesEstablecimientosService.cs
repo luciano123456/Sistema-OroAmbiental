@@ -17,5 +17,11 @@ namespace SistemaOroAmbiental.BLL.Service
         Task<int> ObtenerIndiceEnLista(int id, GrillaPaginadaConsulta consulta);
         Task<OrdenRecorridoOcupanteDto> ObtenerOcupanteOrdenRecorrido(
             int idCamion, int idDia, int idSemana, int orden, int? idExcluirEstablecimiento);
+        Task<Dictionary<int, List<VisitaRecorridoTexto>>> ListarVisitas(IReadOnlyCollection<int> idsEstablecimiento);
+        Task GuardarVisitasAdicionales(
+            int idEstablecimiento,
+            IReadOnlyList<ClientesEstablecimientosDia> visitas,
+            int idUsuario,
+            bool desplazarOrden);
     }
 }

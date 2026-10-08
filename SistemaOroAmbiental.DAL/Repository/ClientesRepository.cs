@@ -473,20 +473,30 @@ namespace SistemaOroAmbiental.DAL.Repository
             if (filtrarSemanas)
             {
                 extra = extra.Where(d =>
-                    d.IdEstablecimientoNavigation.IdSemanaRecoleccion != null
-                    && semanas.Contains(d.IdEstablecimientoNavigation.IdSemanaRecoleccion.Value));
+                    (d.IdSemana != null && semanas.Contains(d.IdSemana.Value))
+                    || (d.IdSemana == null
+                        && d.IdEstablecimientoNavigation.IdSemanaRecoleccion != null
+                        && semanas.Contains(d.IdEstablecimientoNavigation.IdSemanaRecoleccion.Value)));
             }
             if (filtrarCamion) extra = extra.Where(d => d.IdCamion == camion);
             if (filtrarZona)
             {
                 extra = extra.Where(d =>
                     d.IdCamion != null
-                    && d.IdEstablecimientoNavigation.IdSemanaRecoleccion != null
-                    && _db.RecorridosMatriz.Any(m =>
-                        m.IdCamion == d.IdCamion.Value
-                        && m.IdSemana == d.IdEstablecimientoNavigation.IdSemanaRecoleccion.Value
-                        && m.IdDia == d.IdDia
-                        && m.Zona.Contains(zona)));
+                    && (
+                        (d.IdSemana != null && _db.RecorridosMatriz.Any(m =>
+                            m.IdCamion == d.IdCamion.Value
+                            && m.IdSemana == d.IdSemana.Value
+                            && m.IdDia == d.IdDia
+                            && m.Zona.Contains(zona)))
+                        || (d.IdSemana == null
+                            && d.IdEstablecimientoNavigation.IdSemanaRecoleccion != null
+                            && _db.RecorridosMatriz.Any(m =>
+                                m.IdCamion == d.IdCamion.Value
+                                && m.IdSemana == d.IdEstablecimientoNavigation.IdSemanaRecoleccion.Value
+                                && m.IdDia == d.IdDia
+                                && m.Zona.Contains(zona)))
+                    ));
             }
 
             var idsRec = rec.Select(r => r.IdCliente);

@@ -296,6 +296,12 @@
             const btnGuardar = this._id("btnGuardarEst");
             if (btnGuardar) btnGuardar.classList.toggle("d-none", disabled);
 
+            const btnVisita = this._id("btnAgregarVisitaEst");
+            if (btnVisita) btnVisita.classList.toggle("d-none", disabled);
+            this.modalEl.querySelectorAll(".rp-visita-quitar").forEach(btn => {
+                btn.classList.toggle("d-none", disabled);
+            });
+
             this.modalEl.querySelectorAll(".rp-btn-plus").forEach(btn => {
                 btn.disabled = disabled;
                 btn.style.display = disabled ? "none" : "";
@@ -1510,6 +1516,7 @@
             if (modelo.IdSemanaRecoleccion) this._setFieldValue("cmbSemanaEst", modelo.IdSemanaRecoleccion, true);
             if (modelo.IdCamion) this._setFieldValue("cmbCamionEst", modelo.IdCamion, true);
             this._setFieldValue("txtOrdenRecorridoEst", modelo.OrdenRecorrido != null ? modelo.OrdenRecorrido : "");
+            this._pintarVisitasExtra(modelo.Recorridos || modelo.recorridos || []);
             this._setFieldValue("txtKilosEst", modelo.Kilos != null ? modelo.Kilos : "");
 
             this._setAuditoria(modelo);
@@ -1765,6 +1772,12 @@
             if (this.isSoloLectura()) return true;
             if (!this.validarCampos()) return false;
 
+            const visitasDuplicadas = this._mensajeVisitasDuplicadas();
+            if (visitasDuplicadas) {
+                this.mostrarErrorCampos(visitasDuplicadas, null, "validacion");
+                return false;
+            }
+
             const avisoPendiente = this._id("avisoOrdenRecorridoEst");
             if (avisoPendiente && !avisoPendiente.hidden
                 && typeof rpDecisionAvisoOrdenRecorrido === "function"
@@ -1806,14 +1819,12 @@
                     ? (this._id("cmbLocalidadEst")?.selectedOptions?.[0]?.text || "").trim() || null
                     : this._localidadLegacy,
                 CodPostal: this._getFieldValue("txtCodPostalEst") || null,
-                IdDiaRecoleccion: this._getIntOrNull("cmbDiaEst"),
-                IdSemanaRecoleccion: this._getIntOrNull("cmbSemanaEst"),
+                IdDiaRecoleccion: (this._leerVisitas()[0] || {}).IdDia || null,
+                IdSemanaRecoleccion: (this._leerVisitas()[0] || {}).IdSemana || null,
                 IdListaPrecio: null,
-                IdCamion: this._getIntOrNull("cmbCamionEst"),
-                OrdenRecorrido: (() => {
-                    const n = this._getIntOrNull("txtOrdenRecorridoEst");
-                    return n && n > 0 ? n : null;
-                })(),
+                IdCamion: (this._leerVisitas()[0] || {}).IdCamion || null,
+                OrdenRecorrido: (this._leerVisitas()[0] || {}).OrdenRecorrido || null,
+                Recorridos: this._leerVisitas(),
                 DesplazarOrdenRecorrido: (() => {
                     const aviso = this._id("avisoOrdenRecorridoEst");
                     return typeof rpDecisionAvisoOrdenRecorrido === "function"
@@ -1924,6 +1935,7 @@
         }
 
         limpiarModal() {
+            this._limpiarVisitasExtra();
             this.setSoloLecturaAttribute(false);
             this._localidadLegacy = null;
             this.modalEl.querySelectorAll("input, select, textarea").forEach(el => {
@@ -1976,6 +1988,10 @@
 
             if (valorActual && Array.from(el.options).some(o => o.value === String(valorActual))) {
                 this._setFieldValue(selectId, valorActual, true);
+            }
+
+            if (selectId === "cmbDiaEst" || selectId === "cmbSemanaEst" || selectId === "cmbCamionEst") {
+                this._refrescarOpcionesVisitas();
             }
         }
 
@@ -2128,8 +2144,162 @@
         _syncAvisoRecoleccion() {
             const aviso = this._id("avisoRecoleccionEst");
             if (!aviso) return;
-            const falta = !this._getIntOrNull("cmbDiaEst") || !this._getIntOrNull("cmbSemanaEst");
-            aviso.classList.toggle("is-on", falta);
+            aviso.classList.toggle("is-on", this._leerVisitas().length === 0);
+        }
+
+        _limpiarVisitasExtra() {
+            const list = this._id("listaVisitasEst");
+            if (!list) return;
+            list.querySelectorAll(".rp-visita-row:not([data-visita-principal])").forEach(row => {
+                row.querySelectorAll("select").forEach(sel => {
+                    const $el = window.jQuery?.(sel);
+                    if ($el?.data("select2")) $el.select2("destroy");
+                });
+                row.remove();
+            });
+        }
+
+        _pintarVisitasExtra(visitas) {
+            this._limpiarVisitasExtra();
+            const principalDia = this._getIntOrNull("cmbDiaEst") || 0;
+            const principalSem = this._getIntOrNull("cmbSemanaEst") || 0;
+            const principalCam = this._getIntOrNull("cmbCamionEst") || 0;
+            (visitas || []).forEach(v => {
+                const dia = Number(v.IdDia || v.idDia || 0);
+                const sem = Number(v.IdSemana || v.idSemana || 0);
+                const cam = Number(v.IdCamion || v.idCamion || 0);
+                if (!dia || !sem) return;
+                if (dia === principalDia && sem === principalSem && cam === principalCam) return;
+                this._agregarVisita(v);
+            });
+            this._numerarVisitas();
+        }
+
+        _agregarVisita(slot) {
+            const list = this._id("listaVisitasEst");
+            if (!list) return;
+            const row = document.createElement("div");
+            row.className = "rp-visita-row";
+            row.innerHTML = `
+                <div class="rp-visita-index" aria-hidden="true"></div>
+                <div class="rp-visita-field">
+                    <select class="form-control js-visita-dia"></select>
+                </div>
+                <div class="rp-visita-field">
+                    <select class="form-control js-visita-semana"></select>
+                </div>
+                <div class="rp-visita-field">
+                    <select class="form-control js-visita-camion"></select>
+                </div>
+                <div class="rp-visita-field">
+                    <input class="form-control js-visita-orden" type="number" min="0" step="1" placeholder="Auto" title="Posición en la hoja. Vacío = al final." />
+                </div>
+                <div class="rp-visita-actions">
+                    <button type="button" class="rp-visita-quitar" title="Quitar esta visita">
+                        <i class="fa fa-times"></i>
+                    </button>
+                </div>`;
+            list.appendChild(row);
+            this._copiarOpciones(this._id("cmbDiaEst"), row.querySelector(".js-visita-dia"), slot?.IdDia || slot?.idDia);
+            this._copiarOpciones(this._id("cmbSemanaEst"), row.querySelector(".js-visita-semana"), slot?.IdSemana || slot?.idSemana);
+            this._copiarOpciones(this._id("cmbCamionEst"), row.querySelector(".js-visita-camion"), slot?.IdCamion || slot?.idCamion);
+            const orden = slot?.OrdenRecorrido ?? slot?.ordenRecorrido;
+            const inputOrden = row.querySelector(".js-visita-orden");
+            if (inputOrden && orden != null && Number(orden) > 0) inputOrden.value = String(orden);
+            if (window.jQuery?.fn?.select2) {
+                row.querySelectorAll("select").forEach(sel => {
+                    this.ensureSelect2(window.jQuery(sel), {
+                        placeholder: "Seleccionar",
+                        allowClear: true,
+                        width: "100%",
+                        dropdownParent: window.jQuery(this.modalEl)
+                    });
+                });
+            }
+            this._numerarVisitas();
+        }
+
+        _numerarVisitas() {
+            const list = this._id("listaVisitasEst");
+            if (!list) return;
+            list.querySelectorAll(".rp-visita-row").forEach((row, i) => {
+                const badge = row.querySelector(".rp-visita-index");
+                if (badge) badge.textContent = String(i + 1);
+            });
+        }
+
+        _copiarOpciones(origen, destino, selected) {
+            if (!origen || !destino) return;
+            destino.innerHTML = "";
+            Array.from(origen.options).forEach(o => destino.append(new Option(o.text, o.value)));
+            if (selected) destino.value = String(selected);
+        }
+
+        _refrescarOpcionesVisitas() {
+            const list = this._id("listaVisitasEst");
+            if (!list) return;
+            list.querySelectorAll(".rp-visita-row:not([data-visita-principal])").forEach(row => {
+                const dia = row.querySelector(".js-visita-dia");
+                const sem = row.querySelector(".js-visita-semana");
+                const cam = row.querySelector(".js-visita-camion");
+                this._copiarOpciones(this._id("cmbDiaEst"), dia, dia?.value);
+                this._copiarOpciones(this._id("cmbSemanaEst"), sem, sem?.value);
+                this._copiarOpciones(this._id("cmbCamionEst"), cam, cam?.value);
+                [dia, sem, cam].forEach(sel => {
+                    if (!sel || !window.jQuery) return;
+                    const $el = window.jQuery(sel);
+                    if ($el.data("select2")) $el.trigger("change.select2");
+                });
+            });
+        }
+
+        _leerVisitaFila(dia, semana, camion, ordenRaw) {
+            const idDia = this._toInt(dia);
+            const idSemana = this._toInt(semana);
+            if (!idDia || !idSemana) return null;
+            const idCamion = this._toInt(camion);
+            const orden = this._toInt(ordenRaw);
+            return {
+                IdDia: idDia,
+                IdSemana: idSemana,
+                IdCamion: idCamion || null,
+                OrdenRecorrido: orden && orden > 0 ? orden : null
+            };
+        }
+
+        _leerVisitas() {
+            const rows = [];
+            const principal = this._leerVisitaFila(
+                this._getFieldValue("cmbDiaEst"),
+                this._getFieldValue("cmbSemanaEst"),
+                this._getFieldValue("cmbCamionEst"),
+                this._getFieldValue("txtOrdenRecorridoEst")
+            );
+            if (principal) rows.push(principal);
+
+            const list = this._id("listaVisitasEst");
+            list?.querySelectorAll(".rp-visita-row:not([data-visita-principal])").forEach(row => {
+                const visita = this._leerVisitaFila(
+                    row.querySelector(".js-visita-dia")?.value,
+                    row.querySelector(".js-visita-semana")?.value,
+                    row.querySelector(".js-visita-camion")?.value,
+                    row.querySelector(".js-visita-orden")?.value
+                );
+                if (visita) rows.push(visita);
+            });
+
+            return rows;
+        }
+
+        _mensajeVisitasDuplicadas() {
+            const vistas = new Set();
+            for (const visita of this._leerVisitas()) {
+                const clave = `${visita.IdDia}|${visita.IdSemana}`;
+                if (vistas.has(clave))
+                    return "Hay dos visitas iguales (mismo día y misma semana). Dejá una sola.";
+                vistas.add(clave);
+            }
+            return null;
         }
 
         _aplicarEstadoLicencia() {
@@ -2236,6 +2406,46 @@
             }
 
             this._bindAvisoOrdenRecorrido();
+            this._bindVisitasRecorrido();
+        }
+
+        _bindVisitasRecorrido() {
+            const btn = this._id("btnAgregarVisitaEst");
+            if (btn && !btn.dataset.bound) {
+                btn.dataset.bound = "1";
+                btn.addEventListener("click", () => this._agregarVisita(null));
+            }
+
+            const lista = this._id("listaVisitasEst");
+            if (!lista || lista.dataset.bound) return;
+            lista.dataset.bound = "1";
+
+            lista.addEventListener("click", (e) => {
+                const quitar = e.target.closest(".rp-visita-quitar");
+                if (!quitar || !lista.contains(quitar)) return;
+                const row = quitar.closest(".rp-visita-row");
+                if (!row || row.hasAttribute("data-visita-principal")) return;
+                row.querySelectorAll("select").forEach(sel => {
+                    const $el = window.jQuery?.(sel);
+                    if ($el?.data("select2")) $el.select2("destroy");
+                });
+                row.remove();
+                this._numerarVisitas();
+                this._verificarOrdenRecorrido();
+                this._syncAvisoRecoleccion();
+            });
+
+            lista.addEventListener("input", (e) => {
+                if (e.target.classList?.contains("js-visita-orden") || e.target.id === "txtOrdenRecorridoEst")
+                    this._verificarOrdenRecorrido();
+            });
+
+            if (window.jQuery) {
+                window.jQuery(lista).on("change.visitasEst", "select", () => {
+                    this._verificarOrdenRecorrido();
+                    this._syncAvisoRecoleccion();
+                });
+            }
         }
 
         _bindAvisoOrdenRecorrido() {
@@ -2267,31 +2477,33 @@
 
         async _verificarOrdenRecorridoNow() {
             const root = this._id("avisoOrdenRecorridoEst");
-            const orden = this._getIntOrNull("txtOrdenRecorridoEst");
-            const idCamion = this._getIntOrNull("cmbCamionEst");
-            const idDia = this._getIntOrNull("cmbDiaEst");
-            const idSemana = this._getIntOrNull("cmbSemanaEst");
             const idExcluir = this._getIntOrNull("txtIdEst") || 0;
+            const visitas = this._leerVisitas().filter(v =>
+                v.OrdenRecorrido > 0 && v.IdCamion && v.IdDia && v.IdSemana);
 
-            if (!orden || orden <= 0 || !idCamion || !idDia || !idSemana) {
+            if (!visitas.length) {
                 if (typeof rpOcultarAvisoOrdenRecorrido === "function")
                     rpOcultarAvisoOrdenRecorrido(root);
                 return;
             }
 
             try {
-                const url = `/ClientesEstablecimientos/OcupanteOrdenRecorrido?idCamion=${idCamion}&idDia=${idDia}&idSemana=${idSemana}&orden=${orden}&idExcluir=${idExcluir}`;
-                const info = await this._fetchJson(url, { headers: this._headers(false) });
-                if (info?.Ocupado || info?.ocupado) {
-                    if (typeof rpMostrarAvisoOrdenRecorrido === "function") {
-                        rpMostrarAvisoOrdenRecorrido(root, {
-                            posicion: orden,
-                            nombre: typeof rpNombreOcupanteOrden === "function" ? rpNombreOcupanteOrden(info) : "otra persona"
-                        });
+                for (const v of visitas) {
+                    const url = `/ClientesEstablecimientos/OcupanteOrdenRecorrido?idCamion=${v.IdCamion}&idDia=${v.IdDia}&idSemana=${v.IdSemana}&orden=${v.OrdenRecorrido}&idExcluir=${idExcluir}`;
+                    const info = await this._fetchJson(url, { headers: this._headers(false) });
+                    if (info?.Ocupado || info?.ocupado) {
+                        if (typeof rpMostrarAvisoOrdenRecorrido === "function") {
+                            rpMostrarAvisoOrdenRecorrido(root, {
+                                posicion: v.OrdenRecorrido,
+                                nombre: typeof rpNombreOcupanteOrden === "function" ? rpNombreOcupanteOrden(info) : "otra persona"
+                            });
+                        }
+                        return;
                     }
-                } else if (typeof rpOcultarAvisoOrdenRecorrido === "function") {
-                    rpOcultarAvisoOrdenRecorrido(root);
                 }
+
+                if (typeof rpOcultarAvisoOrdenRecorrido === "function")
+                    rpOcultarAvisoOrdenRecorrido(root);
             } catch (e) {
                 console.warn(e);
             }

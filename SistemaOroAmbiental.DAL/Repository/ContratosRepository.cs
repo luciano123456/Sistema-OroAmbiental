@@ -68,7 +68,7 @@ namespace SistemaOroAmbiental.DAL.Repository
 
         public async Task<Contrato?> Obtener(int id)
         {
-            return await _db.Contratos
+            var contrato = await _db.Contratos
                 .AsNoTracking()
                 .AsSplitQuery()
                 .Include(x => x.IdClienteNavigation)
@@ -101,6 +101,16 @@ namespace SistemaOroAmbiental.DAL.Repository
                 .Include(x => x.IdUsuarioRegistraNavigation)
                 .Include(x => x.IdUsuarioModificaNavigation)
                 .FirstOrDefaultAsync(x => x.Id == id);
+
+            if (contrato != null && contrato.IdEstablecimiento > 0 && contrato.IdEstablecimientoNavigation != null)
+            {
+                var idEst = contrato.IdEstablecimiento;
+                var map = await VisitasRecorridoLectura.PorEstablecimientos(_db, new[] { idEst });
+                if (map.TryGetValue(idEst, out var visitas))
+                    contrato.IdEstablecimientoNavigation.VisitasRecorrido = visitas;
+            }
+
+            return contrato;
         }
 
         public async Task<Contrato?> BuscarDuplicado(int? idExcluir, int idCliente, int idEstablecimiento)

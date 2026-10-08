@@ -47,6 +47,7 @@
     <link href="~/css/HojaRuta.css?v=5.1" rel="stylesheet" asp-append-version="true" />
 </head>
 <body class="hr-page@(multiplesHojas ? " hr-page--multi" : "")">
+    <partial name="~/Views/Shared/Partials/_MarcaAgua.cshtml" />
     <div class="hr-toolbar no-print">
         <button type="button" class="hr-btn-print" onclick="window.print()">Imprimir / PDF</button>
         <button type="button" class="hr-btn-close" onclick="window.close()">Cerrar</button>

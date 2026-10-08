@@ -107,8 +107,8 @@ namespace SistemaOroAmbiental.Application.Helpers
                 LocalidadGenerador = localidadGen,
                 ProvinciaGenerador = !string.IsNullOrWhiteSpace(provinciaEst) ? provinciaEst : provinciaCli,
                 DiasHorariosCliente = diasHorarios,
-                DiaRecoleccion = est?.IdDiaRecoleccionNavigation?.Nombre ?? "",
-                SemanaRecoleccion = est?.IdSemanaRecoleccionNavigation?.Nombre ?? "",
+                DiaRecoleccion = TextoVisitas(est, v => v.Dia, est?.IdDiaRecoleccionNavigation?.Nombre),
+                SemanaRecoleccion = TextoVisitas(est, v => v.Semana, est?.IdSemanaRecoleccionNavigation?.Nombre),
                 HorarioRecoleccion = est != null
                     ? (!string.IsNullOrWhiteSpace(est.DiasHorarios)
                         ? est.DiasHorarios.Trim()
@@ -224,6 +224,22 @@ namespace SistemaOroAmbiental.Application.Helpers
             return (fecha.Day.ToString(), mes, fecha.Year.ToString());
         }
 
+        private static string TextoVisitas(
+            ClientesEstablecimiento? est,
+            Func<VisitaRecorridoTexto, string> selector,
+            string? fallback)
+        {
+            var visitas = est?.VisitasRecorrido;
+            if (visitas == null || visitas.Count == 0)
+                return fallback ?? "";
+
+            var texto = string.Join(" · ", visitas
+                .Select(selector)
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Select(x => x.Trim()));
+            return string.IsNullOrWhiteSpace(texto) ? (fallback ?? "") : texto;
+        }
+
         private static string FormatearHorarioRecoleccion(TimeSpan t)
             => $"{t.Hours:D2}:{t.Minutes:D2}";
 
@@ -242,6 +258,20 @@ namespace SistemaOroAmbiental.Application.Helpers
 
             if (!string.IsNullOrWhiteSpace(est.DiasHorarios))
                 return est.DiasHorarios.Trim();
+
+            var visitas = (est.VisitasRecorrido ?? new List<VisitaRecorridoTexto>())
+                .Where(v => !string.IsNullOrWhiteSpace(v.Dia) || !string.IsNullOrWhiteSpace(v.Semana))
+                .ToList();
+            if (visitas.Count > 1)
+            {
+                return string.Join(" · ", visitas.Select(v =>
+                {
+                    var partesVisita = new List<string>();
+                    if (!string.IsNullOrWhiteSpace(v.Dia)) partesVisita.Add(v.Dia.Trim());
+                    if (!string.IsNullOrWhiteSpace(v.Semana)) partesVisita.Add(v.Semana.Trim());
+                    return string.Join(" ", partesVisita);
+                }));
+            }
 
             var dia = est.IdDiaRecoleccionNavigation?.Nombre?.Trim() ?? "";
             var semana = est.IdSemanaRecoleccionNavigation?.Nombre?.Trim() ?? "";
